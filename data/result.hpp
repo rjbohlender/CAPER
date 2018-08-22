@@ -25,6 +25,8 @@ struct Result {
 
   friend std::ostream &operator<<(std::ostream &stream, const Result &rhs);
 
+  Result &combine(const Result& res);
+
   std::string gene;
   std::string transcript;
   int successes;

@@ -25,6 +25,149 @@
 
 using namespace std::chrono_literals;
 
+void calc_mgit_pvalues(std::map<std::string, Result> &results, std::vector<std::string> &transcripts, const std::string &method) {
+  // Skip MGIT if only a single transcript
+  if (transcripts.size() == 1) {
+    for(const auto &tr : transcripts) {
+      auto &v = results[tr];
+	  v.mgit_p = v.empirical_p;
+	  v.mgit_successes = v.successes;
+	}
+	return;
+  }
+
+  // Shorthand
+  unsigned long n = transcripts.size();
+  int i, j, k;
+  double successes;
+  int max_perm = 0;
+
+  // Get max_perm
+  for(const auto &tr : transcripts) {
+    if(results[tr].permutations > max_perm) {
+      max_perm = results[tr].permutations;
+    }
+  }
+
+  arma::mat mgit_pval_mat = arma::mat(max_perm + 1, n);
+
+  // For each transcript
+  for (i = 0; i < n; i++) {
+	// For each statistic
+	const std::string &ts = transcripts[i];
+	int m = static_cast<int>(results[ts].permuted.size());  // Total permutations
+
+	assert(m == max_perm); // Sanity check - All equal
+
+	results[ts].permuted.push_back(results[ts].original);
+	arma::vec permuted = arma::conv_to<arma::vec>::from(results[ts].permuted);
+
+	arma::vec pvals;
+	if (method == "SKATO") {
+	  // SKATO Returns pvalues so reverse success criteria
+	  pvals = rank(permuted, "ascend");
+	} else {
+	  pvals = rank(permuted, "descend");
+	}
+
+	pvals /= permuted.n_rows;
+
+	try {
+	  mgit_pval_mat.col(i) = pvals;
+	} catch (const std::logic_error &e) {
+	  std::cerr << "n_row: " << mgit_pval_mat.n_rows << " n_col: " << mgit_pval_mat.n_cols << "\n";
+	  throw (e);
+	}
+  }
+
+  arma::vec mgit_pval_dist_ = arma::min(mgit_pval_mat, 1);
+
+  for (i = 0; i < n; i++) {
+	const std::string &ts = transcripts[i];
+	unsigned long m = mgit_pval_dist_.n_rows;  // Total permutations
+
+	successes = arma::find(mgit_pval_dist_ <= results[ts].empirical_p).eval().n_rows;
+
+	// Store multi-transcript p-value
+	results[ts].mgit_p = (1.0 + successes) / (1.0 + m);
+	results[ts].mgit_successes = static_cast<int>(successes);
+  }
+}
+
+void print_results(TaskQueue &tq, int ntranscripts, int ngenes, bool genes) {
+  std::cout << std::setw(20) << "Gene";
+  std::cout << std::setw(20) << "Transcript";
+  std::cout << std::setw(20) << "Original";
+  std::cout << std::setw(20) << "Empirical_P";
+  std::cout << std::setw(20) << "Empirical_MidP";
+  std::cout << std::setw(20) << "Successes";
+  std::cout << std::setw(20) << "Permutations";
+  std::cout << std::setw(20) << "MGIT";
+  std::cout << std::setw(20) << "MGIT_Successes" << std::endl;
+  if(!genes) {
+	// Print header and formatted results
+	double permutation_mean = 0;
+	double permutation_variance = 0;
+
+	for (auto &v : tq.get_results()) {
+	  std::cout << v.min_empirical_pvalue();
+
+	  for (const auto &k : v.get_gene().get_transcripts()) {
+		permutation_mean += v.results[k].permutations;
+	  }
+	}
+	permutation_mean /= ntranscripts;
+	for (auto &v : tq.get_results()) {
+	  for (const auto &k : v.get_gene().get_transcripts()) {
+		permutation_variance += std::pow(v.results[k].permutations - permutation_mean, 2) / ntranscripts;
+	  }
+	}
+	std::cerr << "Permutation mean: " << permutation_mean << std::endl;
+	std::cerr << "Permutation sd: " << std::sqrt(permutation_variance) << std::endl;
+	std::cerr << "Genes submitted: " << ngenes << std::endl;
+	std::cerr << "Transcripts submitted: " << ntranscripts << std::endl;
+  } else {
+    std::map<std::string, Result> res;
+    // Merge gene results
+    do {
+      auto &v = tq.get_results().front();
+
+	  std::vector<std::string> transcripts = v.get_gene().get_transcripts();
+
+	  for(const auto &k : transcripts) {
+		res[k] = std::move(v.results[k]);
+	  }
+
+	  // Check for additional results
+	  if(tq.get_results().size() > 1) {
+		std::vector<int> to_pop;
+		for(int i = 1; i < tq.get_results().size(); i++) {
+		  auto &cur_transcripts = tq.get_results()[i].get_gene().get_transcripts();
+		  if(std::equal(cur_transcripts.cbegin(), cur_transcripts.cend(), transcripts.cbegin())) {
+			// Mark for removal
+			to_pop.push_back(i);
+			// Combine
+			for(const auto &k : cur_transcripts) {
+			  res[k].combine(tq.get_results()[i].results[k]);
+			}
+		  }
+		}
+		// Remove remaining
+		for(auto rit = to_pop.rbegin(); rit != to_pop.rend(); rit++) {
+		  tq.get_results().erase(tq.get_results().begin() + *rit);
+		}
+		calc_mgit_pvalues(res, transcripts, v.get_methods().str());
+	  }
+	  tq.get_results().erase(tq.get_results().begin());
+	  // Renew iterators
+    } while(!tq.get_results().empty());
+
+    for(const auto &v : res) {
+      std::cout << v.second;
+    }
+  }
+}
+
 void initialize_jobs(const std::string &ifile,
 					 const std::string &bed_file,
 					 const std::string &casm_file,
@@ -35,7 +178,9 @@ void initialize_jobs(const std::string &ifile,
 					 int stage_1_perm,
 					 int stage_2_perm,
 					 Covariates &cov,
-					 TaskQueue &tq) {
+					 TaskQueue &tq,
+					 std::string gene_options,
+					 bool genes) {
   std::stringstream current;
   std::string gene;
   std::string transcript;
@@ -48,6 +193,12 @@ void initialize_jobs(const std::string &ifile,
   std::ifstream ifs(ifile);
   std::string line;
 
+  RJBUtil::Splitter<std::string> gene_list;
+  // Parse gene list
+  if (genes) {
+	gene_list = RJBUtil::Splitter<std::string>(gene_options, ",");
+  }
+
   Bed bed;
   if (!bed_file.empty())
 	bed = Bed(bed_file);
@@ -58,20 +209,20 @@ void initialize_jobs(const std::string &ifile,
 	casm = CASM(casm_file);
 
   while (std::getline(ifs, line)) {
-	if (i==0) {
+	if (i == 0) {
 	  header = line;
 	  i++;
 	  continue;
 	}
 	RJBUtil::Splitter<std::string> splitter(line, "\t");
 
-	if (splitter[0]==gene) {
+	if (splitter[0] == gene) {
 	  // Add to current
 	  RJBUtil::Splitter<std::string> var_split(splitter[2], "-");
 	  if (have_bed) {
 		if (!bed.check_variant(var_split[0], var_split[1])) {
 		  current << line << "\n";
-		  if (splitter[1]==transcript) {
+		  if (splitter[1] == transcript) {
 			nvariants[transcript]++;
 		  } else {
 			transcript = splitter[1];
@@ -81,7 +232,7 @@ void initialize_jobs(const std::string &ifile,
 		}
 	  } else {
 		current << line << "\n";
-		if (splitter[1]==transcript) {
+		if (splitter[1] == transcript) {
 		  nvariants[transcript]++;
 		} else {
 		  transcript = splitter[1];
@@ -101,23 +252,77 @@ void initialize_jobs(const std::string &ifile,
 		  stage = Stage::Stage2;
 		}
 
-		// Ensure we have at least one variant for a submitted gene
-		if (std::any_of(nvariants.cbegin(), nvariants.cend(), [&](const auto &v) { return v.second > 0; })) {
-		  TaskArgs ta(stage,
-					  gene_data,
-					  cov,
-					  successes,
-					  stage_1_perm,
-					  stage_2_perm,
-					  method,
-					  kernel,
-					  permutations);
-		  // Limit adding jobs to prevent excessive memory usage
-		  while (!tq.empty()) {
-			std::this_thread::sleep_for(0.1s);
+		// If we're looking at specific genes;
+		if (genes) {
+		  // Found gene
+		  if (std::find(gene_list.cbegin(), gene_list.cend(), gene_data.get_gene()) != gene_list.cend()) {
+			// Ensure we have at least one variant for a submitted gene
+			if (std::any_of(nvariants.cbegin(), nvariants.cend(), [&](const auto &v) { return v.second > 0; })) {
+			  // TODO Change logic for multiple jobs
+			  int total_s1_perm = 0;
+			  int total_s2_perm = 0;
+			  for (int i = 0; i < tq.get_nthreads(); i++) {
+				if (i == tq.get_nthreads() - 1) {
+				  TaskArgs ta(stage,
+							  gene_data,
+							  cov,
+							  successes,
+							  stage_1_perm - total_s1_perm,
+							  stage_2_perm - total_s2_perm,
+							  method,
+							  kernel,
+							  permutations);
+
+				  // Limit adding jobs to prevent excessive memory usage
+				  while (!tq.empty()) {
+					std::this_thread::sleep_for(0.1s);
+				  }
+				  tq.dispatch(ta);
+				} else {
+				  TaskArgs ta(stage,
+							  gene_data,
+							  cov,
+							  successes,
+							  stage_1_perm / tq.get_nthreads(),
+							  stage_2_perm / tq.get_nthreads(),
+							  method,
+							  kernel,
+							  permutations);
+				  // Add current permutations
+				  total_s1_perm += stage_1_perm / tq.get_nthreads();
+				  total_s2_perm += stage_2_perm / tq.get_nthreads();
+
+				  // Limit adding jobs to prevent excessive memory usage
+				  while (!tq.empty()) {
+					std::this_thread::sleep_for(0.1s);
+				  }
+				  tq.dispatch(ta);
+				}
+			  }
+			  ngenes++;
+			} else {
+			  std::cerr << "No variants in " << gene_data.get_gene() << ".\n";
+			}
 		  }
-		  tq.dispatch(std::move(ta));
-		  ngenes++;
+		} else {
+		  // Ensure we have at least one variant for a submitted gene
+		  if (std::any_of(nvariants.cbegin(), nvariants.cend(), [&](const auto &v) { return v.second > 0; })) {
+			TaskArgs ta(stage,
+						gene_data,
+						cov,
+						successes,
+						stage_1_perm,
+						stage_2_perm,
+						method,
+						kernel,
+						permutations);
+			// Limit adding jobs to prevent excessive memory usage
+			while (!tq.empty()) {
+			  std::this_thread::sleep_for(0.1s);
+			}
+			tq.dispatch(std::move(ta));
+			ngenes++;
+		  }
 		}
 	  }
 	  if (have_bed) {
@@ -165,18 +370,71 @@ void initialize_jobs(const std::string &ifile,
   } else {
 	stage = Stage::Stage2;
   }
+  // If we're looking at specific genes;
+  if (genes) {
+	// Found gene
+	if (std::find(gene_list.cbegin(), gene_list.cend(), gene_data.get_gene()) != gene_list.cend()) {
+	  // Ensure we have at least one variant for a submitted gene
+	  if (std::any_of(nvariants.cbegin(), nvariants.cend(), [&](const auto &v) { return v.second > 0; })) {
+		// TODO Change logic for multiple jobs
+		int total_s1_perm = 0;
+		int total_s2_perm = 0;
+		for (int i = 0; i < tq.get_nthreads(); i++) {
+		  if (i == tq.get_nthreads() - 1) {
+			TaskArgs ta(stage,
+						gene_data,
+						cov,
+						successes,
+						stage_1_perm - total_s1_perm,
+						stage_2_perm - total_s2_perm,
+						method,
+						kernel,
+						permutations);
 
-  // Ensure at least one transcript
-  if (std::any_of(nvariants.cbegin(), nvariants.cend(), [&](const auto &v) { return v.second > 0; })) {
-	TaskArgs
-		ta(stage, gene_data, cov, successes, stage_1_perm, stage_2_perm, method, kernel, permutations);
+			// Limit adding jobs to prevent excessive memory usage
+			while (!tq.empty()) {
+			  std::this_thread::sleep_for(0.1s);
+			}
+			tq.dispatch(ta);
+		  } else {
+			TaskArgs ta(stage,
+						gene_data,
+						cov,
+						successes,
+						stage_1_perm / tq.get_nthreads(),
+						stage_2_perm / tq.get_nthreads(),
+						method,
+						kernel,
+						permutations);
+			// Add current permutations
+			total_s1_perm += stage_1_perm / tq.get_nthreads();
+			total_s2_perm += stage_2_perm / tq.get_nthreads();
 
-	// Limit adding jobs to prevent excessive memory usage
-	while (!tq.empty()) {
-	  std::this_thread::sleep_for(0.1s);
+			// Limit adding jobs to prevent excessive memory usage
+			while (!tq.empty()) {
+			  std::this_thread::sleep_for(0.1s);
+			}
+			tq.dispatch(ta);
+		  }
+		}
+		ngenes++;
+	  } else {
+		std::cerr << "No variants in " << gene_data.get_gene() << ".\n";
+	  }
 	}
-	tq.dispatch(std::move(ta));
-	ngenes++;
+  } else {
+	// Ensure at least one transcript
+	if (std::any_of(nvariants.cbegin(), nvariants.cend(), [&](const auto &v) { return v.second > 0; })) {
+	  TaskArgs
+		  ta(stage, gene_data, cov, successes, stage_1_perm, stage_2_perm, method, kernel, permutations);
+
+	  // Limit adding jobs to prevent excessive memory usage
+	  while (!tq.empty()) {
+		std::this_thread::sleep_for(0.1s);
+	  }
+	  tq.dispatch(std::move(ta));
+	  ngenes++;
+	}
   }
 
   // Wait for queue to finish processing
@@ -185,37 +443,9 @@ void initialize_jobs(const std::string &ifile,
   // Free permutation memory
   permutations.clear();
 
-  // Print header and formatted results
-  double permutation_mean = 0;
-  double permutation_variance = 0;
-
-  std::cout << std::setw(20) << "Gene";
-  std::cout << std::setw(20) << "Transcript";
-  std::cout << std::setw(20) << "Original";
-  std::cout << std::setw(20) << "Empirical_P";
-  std::cout << std::setw(20) << "Empirical_MidP";
-  std::cout << std::setw(20) << "Successes";
-  std::cout << std::setw(20) << "Permutations";
-  std::cout << std::setw(20) << "MGIT";
-  std::cout << std::setw(20) << "MGIT_Successes" << std::endl;
-  for (auto &v : tq.get_results()) {
-	std::cout << v.min_empirical_pvalue();
-
-	for (const auto &k : v.get_gene().get_transcripts()) {
-	  permutation_mean += v.results[k].permutations;
-	}
-  }
-  permutation_mean /= ntranscripts;
-  for (auto &v : tq.get_results()) {
-	for (const auto &k : v.get_gene().get_transcripts()) {
-	  permutation_variance += std::pow(v.results[k].permutations - permutation_mean, 2)/ntranscripts;
-	}
-  }
-  std::cerr << "Permutation mean: " << permutation_mean << std::endl;
-  std::cerr << "Permutation sd: " << std::sqrt(permutation_variance) << std::endl;
-  std::cerr << "Genes submitted: " << ngenes << std::endl;
-  std::cerr << "Transcripts submitted: " << ntranscripts << std::endl;
+  print_results(tq, ntranscripts, ngenes, genes);
 }
+
 
 int main(int argc, char **argv) {
   // Only using C++ IO.
@@ -242,7 +472,7 @@ int main(int argc, char **argv) {
 	  .dest("covariates")
 	  .nargs(1)
 	  .help("The covariate table file, including phenotypes.\n"
-		    "Phenotypes {0=control, 1=case} should be in the first column.");
+			"Phenotypes {0=control, 1=case} should be in the first column.");
   parser.add_option("-b", "--bed_file")
 	  .dest("bed_file")
 	  .set_default("")
@@ -253,7 +483,7 @@ int main(int argc, char **argv) {
 	  .help("A file providing weights for VAAST.");
   parser.add_option("-n", "--nthreads")
 	  .dest("nthreads")
-	  .set_default(std::thread::hardware_concurrency()/2)
+	  .set_default(std::thread::hardware_concurrency() / 2)
 	  .type("size_t")
 	  .help("The number of threads. The default is half of the cpu count.");
   parser.add_option("-1", "--stage_1_max_perm")
@@ -284,6 +514,10 @@ int main(int argc, char **argv) {
 	  .dest("kernel")
 	  .set_default("Linear")
 	  .help("Kernel for use with SKAT.\nOne of: {Linear, wLinear, IBS, wIBS, Quadratic, twoWayX}.\nDefault is Linear.");
+  parser.add_option("-l", "--genes")
+	  .dest("genes")
+	  .set_default("")
+	  .help("A comma separated list of genes to analyze.");
   parser.add_help_option();
 
   const optparse::Values options = parser.parse_args(argc, argv);
@@ -354,6 +588,8 @@ int main(int argc, char **argv) {
 				  options.get("stage_1_max_perm"),
 				  options.get("stage_2_max_perm"),
 				  cov,
-				  tq);
+				  tq,
+				  options["genes"],
+				  options.is_set_by_user("genes"));
   return 0;
 }

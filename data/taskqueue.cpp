@@ -9,7 +9,8 @@ TaskQueue::TaskQueue(size_t thread_cnt)
 	  ntasks_(0),
 	  quit_(false),
 	  gen_(rd_()),
-	  verbose_(false) {
+	  verbose_(false),
+	  nthreads_(thread_cnt) {
   for (size_t i = 0; i < threads_.size(); i++) {
 	threads_[i] = std::thread(
 		std::bind(&TaskQueue::thread_handler, this));
@@ -21,7 +22,8 @@ TaskQueue::TaskQueue(size_t thread_cnt, bool verbose)
 	  ntasks_(0),
 	  quit_(false),
 	  gen_(rd_()),
-	  verbose_(verbose) {
+	  verbose_(verbose),
+	  nthreads_(thread_cnt) {
   for (size_t i = 0; i < threads_.size(); i++) {
 	threads_[i] = std::thread(
 		std::bind(&TaskQueue::thread_handler, this));
@@ -159,7 +161,7 @@ void TaskQueue::stage_1(TaskArgs &ta) {
 	  if (!(ta.get_methods().str() == "SKAT") && !(ta.get_methods().str() == "SKATO")) {
 		perm_val = ta.get_methods().call(v.second.transcript, ta.get_gene(), ta.get_cov());
 	  } else {
-		if (transcript_no) {
+		if (transcript_no == 0) {
 		  perm_val = ta.get_methods().call(k, ta.get_gene(), ta.get_cov(), true);
 		} else {
 		  perm_val = ta.get_methods().call(k, ta.get_gene(), ta.get_cov(), false);
@@ -436,7 +438,7 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 
 		perm_val = ta.get_methods().call(k, ta.get_gene(), ta.get_cov());
 	  } else {
-		if (transcript_no) {
+		if (transcript_no == 0) {
 		  perm_val = ta.get_methods().call(k, ta.get_gene(), ta.get_cov(), true);
 		} else {
 		  perm_val = ta.get_methods().call(k, ta.get_gene(), ta.get_cov(), false);
@@ -495,5 +497,9 @@ void TaskQueue::stage_2(TaskArgs &ta) {
   }
   ta.set_stage(Stage::Done);
   dispatch(ta);
+}
+
+size_t TaskQueue::get_nthreads() {
+  return nthreads_;
 }
 

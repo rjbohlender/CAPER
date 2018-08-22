@@ -34,6 +34,7 @@ public:
   bool empty();
 
   std::vector<TaskArgs> &get_results();
+  size_t get_nthreads();
 
 private:
   // PRNG
@@ -49,6 +50,7 @@ private:
   std::condition_variable cv_;
   std::vector<std::thread> threads_;
   bool quit_;
+  size_t nthreads_;
 
   // Ensuring all jobs are finished
   std::atomic<int> ntasks_;

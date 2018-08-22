@@ -84,3 +84,27 @@ std::ostream &operator<<(std::ostream &stream, const Result &rhs) {
   return stream;
 }
 
+Result &Result::combine(const Result &res) {
+  if(gene != res.gene) {
+    throw(std::logic_error("Wrong gene in result combine."));
+  }
+  if(transcript != res.transcript) {
+    throw(std::logic_error("Wrong transcript in result combine."));
+  }
+
+  successes += res.successes;
+  mid_successes += res.mid_successes;
+  permutations += res.permutations;
+
+  // Update empirical p and empirical midp
+  // TODO Include randomized permutations
+  empirical_p = (1. + successes) / (1. + permutations);
+  empirical_midp = (1. + mid_successes) / (1. + permutations);
+
+  // Extend permuted values
+  permuted.reserve(permuted.size() + res.permuted.size());
+  permuted.insert(permuted.end(), res.permuted.begin(), res.permuted.end());
+
+  return *this;
+}
+

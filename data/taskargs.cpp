@@ -212,8 +212,12 @@ void TaskArgs::calc_multitranscript_pvalues() {
 
 	assert(m == get_max_permutations()); // Sanity check - All equal
 
+	// Append original
 	results[ts].permuted.push_back(results[ts].original);
 	arma::vec permuted = arma::conv_to<arma::vec>::from(results[ts].permuted);
+
+	// Remove original
+	results[ts].permuted.pop_back();
 
 	arma::vec pvals;
 	if (method_.str() == "SKATO") {

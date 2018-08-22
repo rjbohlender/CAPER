@@ -11,109 +11,129 @@
 #include <vector>
 
 namespace RJBUtil {
-	/**
-	 * @class Splitter split.hpp "src/util/split.hpp"
-	 * @brief A utility for quickly splitting strings into readable substring segments.
-	 *
-	 * @remark  Removed string_view, as string_views can't be built from iterators.
-	 */
-	template<typename _String_t>
-	class Splitter
-	{
-	public:
-			/** Aliases */
-			using string_type = _String_t;
-			using const_iter = typename string_type::const_iterator;
-			using size_type = typename _String_t::size_type;
+/**
+ * @class Splitter split.hpp "src/util/split.hpp"
+ * @brief A utility for quickly splitting strings into readable substring segments.
+ *
+ * @remark  Removed string_view, as string_views can't be built from iterators.
+ */
+template<typename _String_t>
+class Splitter {
+public:
+  /** Aliases */
+  using string_type = _String_t;
+  using const_iter = typename string_type::const_iterator;
+  using size_type = typename _String_t::size_type;
 
-			/** Constructors */
-			Splitter(const string_type &str, const string_type &delim)
-							: __data(str), delim(delim) {
-				split();
-			}
+  /** Constructors */
+  Splitter() = default;
+  Splitter(const string_type &str, const string_type &delim)
+	  : data_(str), delim_(delim) {
+	split();
+  }
 
-			Splitter(const string_type &&str, const string_type &&delim)
-							: __data(str), delim(delim) {
-				split();
-			}
+  Splitter(const string_type &&str, const string_type &&delim)
+	  : data_(str), delim_(delim) {
+	split();
+  }
 
-			Splitter(const string_type &str, const string_type &&delim)
-							: __data(str), delim(delim) {
-				split();
-			}
+  Splitter(const string_type &str, const string_type &&delim)
+	  : data_(str), delim_(delim) {
+	split();
+  }
 
-			Splitter(const string_type &&str, const string_type &delim)
-							: __data(str), delim(delim) {
-				split();
-			}
+  Splitter(const string_type &&str, const string_type &delim)
+	  : data_(str), delim_(delim) {
+	split();
+  }
 
-			auto begin() {
-				return __tokens.begin();
-			}
+  Splitter &operator=(const Splitter &rhs) {
+	data_ = rhs.data_;
+	delim_ = rhs.delim_;
+	tokens_ = rhs.tokens_;
 
-			auto cbegin() {
-				return __tokens.cbegin();
-			}
+	return *this;
+  }
 
-			auto end() {
-				return __tokens.end();
-			}
+  Splitter &operator=(Splitter &&rhs) noexcept {
+	data_ = std::move(rhs.data_);
+	delim_ = std::move(rhs.delim_);
+	tokens_ = std::move(rhs.tokens_);
 
-			auto cend() {
-				return __tokens.cend();
-			}
+	return *this;
+  }
 
-			auto size() {
-				return __tokens.size();
-			}
+  auto begin() {
+	return tokens_.begin();
+  }
 
-			template<typename _Integer>
-			auto operator[](_Integer i) {
-				return __tokens[i];
-			}
+  auto cbegin() {
+	return tokens_.cbegin();
+  }
 
-			template<typename _Integer>
-			auto at(_Integer i) {
-				return __tokens.at(i);
-			}
+  auto end() {
+	return tokens_.end();
+  }
 
-	private:
-			/**
-			 * @brief A split member function to simplify multiple constructors should be need them.
-			 */
-			void split() {
-				const_iter cit = __data.cbegin();
-				size_type cur = 0;
-				size_type next = 0;
-				size_type npos = std::string::npos;
-				while ((cit + cur) != __data.cend()) {
-					next = __data.find_first_of(delim, cur);
-					// Skip adjacent.
-					if (next - cur == 0) {
-						cur++;
-						next = cur;
-						continue;
-					}
-					if (next == npos) {
-					  	if(__data.cend() - (cit + cur) > 0) {
-							__tokens.emplace_back(std::string(cit + cur, __data.cend()));
-					  	}
-					  	break;
-					}
+  auto cend() {
+	return tokens_.cend();
+  }
 
-					__tokens.emplace_back(std::string(cit + cur, cit + next));
+  auto size() {
+	return tokens_.size();
+  }
 
-					// Prepare for next loop
-					next++;
-					cur = next;
+  auto empty() {
+	return tokens_.empty();
+  }
 
-				}
-			}
+  template<typename _Integer>
+  auto operator[](_Integer i) {
+	return tokens_[i];
+  }
 
-			/** Private members */
-			const string_type __data;
-			const string_type delim;
-			std::vector<std::string> __tokens;
-	};
+  template<typename _Integer>
+  auto at(_Integer i) {
+	return tokens_.at(i);
+  }
+
+private:
+  /**
+   * @brief A split member function to simplify multiple constructors should be need them.
+   */
+  void split() {
+	const_iter cit = data_.cbegin();
+	size_type cur = 0;
+	size_type next = 0;
+	size_type npos = std::string::npos;
+	while ((cit + cur) != data_.cend()) {
+	  next = data_.find_first_of(delim_, cur);
+	  // Skip adjacent.
+	  if (next - cur == 0) {
+		cur++;
+		next = cur;
+		continue;
+	  }
+	  if (next == npos) {
+		if (data_.cend() - (cit + cur) > 0) {
+		  tokens_.emplace_back(std::string(cit + cur, data_.cend()));
+		}
+		break;
+	  }
+
+	  tokens_.emplace_back(std::string(cit + cur, cit + next));
+
+	  // Prepare for next loop
+	  next++;
+	  cur = next;
+
+	}
+  }
+
+  /** Private members */
+  string_type data_;
+  string_type delim_;
+  std::vector<std::string> tokens_;
+};
 }
 #endif // PGEN_SPLIT_HPP
