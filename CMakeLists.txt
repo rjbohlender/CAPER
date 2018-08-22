@@ -1,0 +1,75 @@
+cmake_minimum_required(VERSION 2.8)
+project(Permute_Associate)
+
+set(CMAKE_CXX_STANDARD 14)
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+
+find_package(Armadillo REQUIRED)
+find_package(Threads REQUIRED)
+find_package(Boost REQUIRED)
+
+if (APPLE)
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native -fopenmp")
+    if (CMAKE_COMPILER_IS_GNUCXX)
+        set(CMAKE_CXX_FLAGS_RELEASE  "${CMAKE_CXX_FLAGS_RELEASE} -fopenmp")
+    endif ()
+endif ()
+
+set(PROJECT_SUPPORT_FILES
+    data/covariates.hpp
+    utility/split.hpp
+    statistics/methods.cpp
+    statistics/methods.hpp
+    data/gene.hpp
+    data/taskargs.hpp
+    data/taskqueue.hpp
+    third_party/stocc/stocc.h
+    third_party/stocc/stoc1.cpp
+    third_party/stocc/stoc2.cpp
+    third_party/stocc/stoc3.cpp
+    third_party/stocc/fnchyppr.cpp
+    third_party/stocc/wnchyppr.cpp
+    third_party/stocc/erfres.cpp
+    third_party/stocc/randomc.h
+    third_party/stocc/mersenne.cpp
+    third_party/stocc/userintf.cpp
+    statistics/logistic_regression.hpp
+    statistics/logistic_regression.cpp
+    data/permutation.cpp
+    data/permutation.hpp
+    data/bed.hpp
+    data/casm.hpp
+    data/result.hpp
+    utility/filesystem.cpp
+    utility/filesystem.hpp
+    third_party/SKAT/qfc.cpp
+    third_party/SKAT/skat.hpp data/gene.cpp data/bed.cpp data/result.cpp data/casm.cpp third_party/SKAT/qfc2.cpp third_party/SKAT/qfc2.hpp data/taskargs.cpp data/taskqueue.cpp)
+
+include_directories("${CMAKE_CURRENT_LIST_DIR}/third_party")
+include_directories(${ARMADILLO_INCLUDE_DIRS})
+message(${ARMADILLO_INCLUDE_DIRS})
+include_directories(${Boost_INCLUDE_DIRS})
+
+add_executable(Permute_Associate
+               main.cpp
+               ${PROJECT_SUPPORT_FILES})
+
+
+# include_directories(Permute_Associate ${R_INCLUDE_DIR} ${Rcpp_INCLUDE_DIR} ${RInside_INCLUDE_DIR})
+# target_link_libraries(Permute_Associate ${R_LIBRARIES})
+target_link_libraries(Permute_Associate ${ARMADILLO_LIBRARIES})
+target_link_libraries(Permute_Associate ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(Permute_Associate ${Boost_LIBRARIES})
+
+target_compile_definitions(Permute_Associate PRIVATE MAXCOLORS=1000000)
+
+add_executable(test
+               test/test.cpp
+               ${PROJECT_SUPPORT_FILES})
+
+target_include_directories(test PRIVATE "${CMAKE_CURRENT_LIST_DIR}/third_party")
+target_include_directories(test PRIVATE ${ARMADILLO_INCLUDE_DIR})
+
+target_link_libraries(test ${ARMADILLO_LIBRARIES})
+target_link_libraries(test ${CMAKE_THREAD_LIBS_INIT})
