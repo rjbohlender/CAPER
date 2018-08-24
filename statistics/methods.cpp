@@ -548,15 +548,13 @@ double Methods::call(const std::string &k, Gene &gene, Covariates &cov, arma::co
 double Methods::call(const std::string &k, Gene &gene, Covariates &cov, bool shuffle) {
   if (method_ == "SKAT") {
 	return SKAT(gene.get_matrix(k), cov, gene.get_weights(k), k, shuffle);
-  } else if (method_ == "SKATO") {
-	return SKATO(gene, cov, gene.get_weights(k), k, shuffle);
   }
   throw (std::runtime_error("Wrong method call. 3"));
 }
 
 double Methods::call(const std::string &k, Gene &gene, Covariates &cov, bool shuffle, bool adjust) {
   if (method_ == "SKATO") {
-	return SKATO(gene, cov, gene.get_weights(k), k, shuffle, adjust);
+	return SKATO(gene, cov, gene.get_weights(k), k, shuffle, 1, 25, adjust);
   }
   throw (std::runtime_error("Wrong method call. 4"));
 }

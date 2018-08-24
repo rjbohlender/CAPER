@@ -30,7 +30,7 @@ public:
   std::unordered_map<std::string, Permute> permute;
   int success_threshold;
   int stop_check_threshold;
-  bool adjust = true;
+  bool adjust;
 
   // Constructors
   TaskArgs(Stage stage,

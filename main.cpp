@@ -560,6 +560,10 @@ int main(int argc, char **argv) {
 	std::cerr << "nthreads: " << options["nthreads"] << "\n";
 	std::cerr << "stage_1_max_perm: " << options["stage_1_max_perm"] << "\n";
 	std::cerr << "stage_2_max_perm: " << options["stage_2_max_perm"] << "\n";
+	if(options["method"] == "SKATO") {
+	  bool adjust = options.get("adjust");
+	  std::cerr << "adjust: " << adjust << " true: " << true << "\n";
+	}
   }
   TaskQueue tq(nthreads - 1, options.get("verbose"));
 
@@ -598,6 +602,7 @@ int main(int argc, char **argv) {
   //if(options["method"] == "SKAT" || options["method"] == "SKATO")
   arma::arma_rng::set_seed_random();
 
+  bool adjust = options.get("adjust");
   initialize_jobs(options["genotypes"],
 				  options["bed_file"],
 				  options["casm_file"],
@@ -611,6 +616,6 @@ int main(int argc, char **argv) {
 				  tq,
 				  options["genes"],
 				  options.is_set_by_user("genes"),
-				  options.get("adjust"));
+				  adjust);
   return 0;
 }
