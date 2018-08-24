@@ -30,6 +30,7 @@ public:
   std::unordered_map<std::string, Permute> permute;
   int success_threshold;
   int stop_check_threshold;
+  bool adjust = true;
 
   // Constructors
   TaskArgs(Stage stage,
@@ -40,7 +41,8 @@ public:
 		   int s2_perm,
 		   const std::string &method,
 		   const std::string &kernel,
-		   std::vector<std::vector<int32_t>> &perm);
+		   std::vector<std::vector<int32_t>> &perm,
+		   bool adjust);
   TaskArgs(const TaskArgs &ta);
   TaskArgs(TaskArgs &&ta) noexcept;
   TaskArgs &operator=(const TaskArgs &rhs);

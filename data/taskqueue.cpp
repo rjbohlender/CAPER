@@ -135,7 +135,11 @@ void TaskQueue::stage_1(TaskArgs &ta) {
 	if (!(ta.get_methods().str() == "SKAT") && !(ta.get_methods().str() == "SKATO")) {
 	  v.second.original = ta.get_methods().call(v.second.transcript, ta.get_gene(), ta.get_cov());
 	} else {
-	  v.second.original = ta.get_methods().call(v.second.transcript, ta.get_gene(), ta.get_cov(), false);
+	  if(ta.get_methods().str() == "SKATO") {
+		v.second.original = ta.get_methods().call(v.second.transcript, ta.get_gene(), ta.get_cov(), false, ta.adjust);
+	  } else {
+		v.second.original = ta.get_methods().call(v.second.transcript, ta.get_gene(), ta.get_cov(), false);
+	  }
 	}
   }
 
@@ -162,9 +166,17 @@ void TaskQueue::stage_1(TaskArgs &ta) {
 		perm_val = ta.get_methods().call(v.second.transcript, ta.get_gene(), ta.get_cov());
 	  } else {
 		if (transcript_no == 0) {
-		  perm_val = ta.get_methods().call(k, ta.get_gene(), ta.get_cov(), true);
+		  if(ta.get_methods().str() == "SKATO") {
+			perm_val = ta.get_methods().call(k, ta.get_gene(), ta.get_cov(), true, ta.adjust);
+		  } else {
+			perm_val = ta.get_methods().call(k, ta.get_gene(), ta.get_cov(), true);
+		  }
 		} else {
-		  perm_val = ta.get_methods().call(k, ta.get_gene(), ta.get_cov(), false);
+		  if(ta.get_methods().str() == "SKATO") {
+			perm_val = ta.get_methods().call(k, ta.get_gene(), ta.get_cov(), false, ta.adjust);
+		  } else {
+			perm_val = ta.get_methods().call(k, ta.get_gene(), ta.get_cov(), false);
+		  }
 		}
 	  }
 
@@ -287,7 +299,11 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 	  if (!(ta.get_methods().str() == "SKAT") && !(ta.get_methods().str() == "SKATO")) {
 		v.second.original = ta.get_methods().call(v.second.transcript, ta.get_gene(), ta.get_cov());
 	  } else {
-		v.second.original = ta.get_methods().call(v.second.transcript, ta.get_gene(), ta.get_cov(), false);
+	    if(ta.get_methods().str() == "SKATO") {
+		  v.second.original = ta.get_methods().call(v.second.transcript, ta.get_gene(), ta.get_cov(), false, ta.adjust);
+	    } else {
+		  v.second.original = ta.get_methods().call(v.second.transcript, ta.get_gene(), ta.get_cov(), false);
+	    }
 	  }
 	}
 	// Minor allele carrier indices
@@ -439,9 +455,17 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 		perm_val = ta.get_methods().call(k, ta.get_gene(), ta.get_cov());
 	  } else {
 		if (transcript_no == 0) {
-		  perm_val = ta.get_methods().call(k, ta.get_gene(), ta.get_cov(), true);
+		  if(ta.get_methods().str() == "SKATO") {
+			perm_val = ta.get_methods().call(k, ta.get_gene(), ta.get_cov(), true, ta.adjust);
+		  } else {
+			perm_val = ta.get_methods().call(k, ta.get_gene(), ta.get_cov(), true);
+		  }
 		} else {
-		  perm_val = ta.get_methods().call(k, ta.get_gene(), ta.get_cov(), false);
+		  if(ta.get_methods().str() == "SKATO") {
+			perm_val = ta.get_methods().call(k, ta.get_gene(), ta.get_cov(), false, ta.adjust);
+		  } else {
+			perm_val = ta.get_methods().call(k, ta.get_gene(), ta.get_cov(), false);
+		  }
 		}
 	  }
 

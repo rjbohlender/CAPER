@@ -28,6 +28,8 @@ public:
   unsigned long get_nvariants(const std::string &k);
   std::vector<std::string> &get_positions(const std::string &k);
 
+  void set_weights(const std::string &k, arma::vec &weights);
+
   void clear();
 
 private:

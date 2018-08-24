@@ -21,8 +21,10 @@ LogisticRegression::LogisticRegression(arma::mat &Xmat, arma::colvec &Yvec)
   calculate_odds(Xmat);
   calculate_mean(Xmat);
 
+
 #ifndef NDEBUG
-  std::cerr << "odds:\n " << odds_ << "\n";
+  std::cerr << "odds: " << odds_.t() << "\n";
+  std::cerr << "mu_: " << mu_.t();
   std::cerr << "mean: " << mean_ << "\n";
 #endif
 }

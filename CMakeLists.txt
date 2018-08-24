@@ -10,10 +10,11 @@ find_package(Threads REQUIRED)
 find_package(Boost REQUIRED)
 
 if (APPLE)
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native -fopenmp")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
     if (CMAKE_COMPILER_IS_GNUCXX)
         set(CMAKE_CXX_FLAGS_RELEASE  "${CMAKE_CXX_FLAGS_RELEASE} -fopenmp")
     endif ()
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -pg")
 endif ()
 
 set(PROJECT_SUPPORT_FILES
@@ -43,8 +44,16 @@ set(PROJECT_SUPPORT_FILES
     data/result.hpp
     utility/filesystem.cpp
     utility/filesystem.hpp
-    third_party/SKAT/qfc.cpp
-    third_party/SKAT/skat.hpp data/gene.cpp data/bed.cpp data/result.cpp data/casm.cpp third_party/SKAT/qfc2.cpp third_party/SKAT/qfc2.hpp data/taskargs.cpp data/taskqueue.cpp)
+    data/gene.cpp
+    data/bed.cpp
+    data/result.cpp
+    data/casm.cpp
+    third_party/SKAT/qfc2.cpp
+    third_party/SKAT/qfc2.hpp
+    data/taskargs.cpp
+    data/taskqueue.cpp
+    statistics/skat.cpp
+    statistics/skat.hpp statistics/skat_adjust.cpp statistics/skat_adjust.hpp)
 
 include_directories("${CMAKE_CURRENT_LIST_DIR}/third_party")
 include_directories(${ARMADILLO_INCLUDE_DIRS})

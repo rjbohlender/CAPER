@@ -11,6 +11,8 @@
 
 #include "../data/gene.hpp"
 #include "../data/covariates.hpp"
+#include "skat.hpp"
+#include "skat_adjust.hpp"
 
 arma::vec rank(arma::vec &v, const char *direction);
 
@@ -21,106 +23,6 @@ enum class Kernel {
   IBS,
   wIBS,
   twoWayX
-};
-
-struct SKATParam {
-  explicit SKATParam(arma::mat &Z1);
-
-  // Fields
-  double MuQ;
-  double VarQ;
-  double KerQ;
-  arma::vec lambda;
-  double VarRemain;
-  double Df;
-  arma::vec tau;
-
-  static constexpr double rho_[8] = {0, 0.01, 0.04, 0.09, 0.16, 0.25, 0.5, 1};;
-};
-
-struct LiuParam {
-  explicit LiuParam(arma::vec &c1);
-  LiuParam(arma::vec &lambda, bool mod_lambda);
-
-  // Fields
-  double muQ;
-  double sigmaQ;
-  double varQ;
-  double s1;
-  double s2;
-  double beta1;
-  double beta2;
-
-  bool type1;
-
-  double muX;
-  double sigmaX;
-
-  double a, d, l;
-};
-
-struct PvalueLambda {
-  PvalueLambda(arma::vec &lambda, double Q);
-
-  double Get_Liu_Pval_MOD_Lambda(double Q, arma::vec &lambda, bool log_p = false);
-  std::string Get_Liu_Pval_MOD_Lambda_Zero(double Q, LiuParam &param);
-
-  // Fields
-  double p_val;
-  double p_val_liu;
-
-  bool is_converged;
-
-  double p_val_log;
-  std::string p_val_zero_msg;
-};
-
-struct SKAT_Davies {
-  SKAT_Davies(double Q, arma::vec &lambda);
-
-  int ifault;
-  double res;
-};
-
-struct SKAT_Optimal_GetQ {
-  SKAT_Optimal_GetQ(arma::mat &Z1, arma::vec &res, arma::vec &rall);
-
-  arma::vec Q_r;
-  arma::vec Q_sim;
-};
-
-struct SKAT_EachQ {
-  SKAT_EachQ(arma::vec &Qall, std::vector<arma::vec> &lambda_all);
-
-  arma::vec pval;
-  arma::vec pmin_q;
-  double pmin;
-};
-
-struct SKAT_Integrate_Davies {
-  SKAT_Integrate_Davies(arma::vec &pmin_q, SKATParam &param_m, arma::vec &rall);
-
-  double operator()(double x);
-
-  // fields
-  const arma::uword nr = 8;
-  arma::vec pmin_q;
-  SKATParam param_m;
-  arma::vec rall;
-
-};
-
-struct SKAT_Integrate_Liu {
-  SKAT_Integrate_Liu(arma::vec &pmin_q, SKATParam &param_m, arma::vec &rall);
-
-  double operator()(double x);
-
-  // fields
-  const arma::uword nr = 8;
-  arma::vec pmin_q;
-  SKATParam param_m;
-  arma::vec rall;
-
 };
 
 class Methods {
@@ -134,6 +36,7 @@ public:
   double call(const std::string &k, Gene &gene, Covariates &cov);
   double call(const std::string &k, Gene &gene, Covariates &cov, arma::colvec &weights);
   double call(const std::string &k, Gene &gene, Covariates &cov, bool shuffle);
+  double call(const std::string &k, Gene &gene, Covariates &cov, bool shuffle, bool adjust);
 
   std::string str();
 
@@ -158,13 +61,14 @@ private:
 			  bool shuffle = false,
 			  int a = 1,
 			  int b = 25);
-  double SKATO(arma::mat &Xmat,
+  double SKATO(Gene &gene,
 			   Covariates &cov,
 			   arma::vec &weights,
 			   const std::string &k,
 			   bool shuffle = false,
 			   int a = 1,
-			   int b = 25);
+			   int b = 25,
+			   bool adjust = true);
   double WSS(arma::mat &Xmat, arma::colvec &Yvec);
   double VAAST(arma::mat &Xmat,
 			   arma::colvec &Yvec,
@@ -189,8 +93,9 @@ private:
   arma::mat kernel_Quadratic(arma::mat &Xmat);
   arma::mat kernel_twoWayX(arma::mat &Xmat, arma::uword n, arma::uword p);
 
-  // SKAT-O support
-  double SKAT_Optimal_Pvalue_Davies(arma::vec &pmin_q, SKATParam &param_m, arma::vec &rall, double pmin);
+  // SKATO Support
+  std::shared_ptr<SKAT_Residuals_Logistic> re2;
+  std::map<std::string, std::shared_ptr<SKAT_Optimal_GetQ>> Q_sim_all;
 };
 
 #endif //PERMUTE_ASSOCIATE_METHODS_HPP

@@ -20,7 +20,7 @@ public:
 private:
   arma::colvec odds_;
   arma::rowvec theta_; // Vector of weights
-  arma::vec mu_; // Probability vector
+  arma::vec mu_; // Probability vector - fitted.values in R
   double mean_;
 
   arma::rowvec h(arma::mat &Xmat);

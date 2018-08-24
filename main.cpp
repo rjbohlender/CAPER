@@ -180,7 +180,8 @@ void initialize_jobs(const std::string &ifile,
 					 Covariates &cov,
 					 TaskQueue &tq,
 					 std::string gene_options,
-					 bool genes) {
+					 bool genes,
+					 bool adjust) {
   std::stringstream current;
   std::string gene;
   std::string transcript;
@@ -271,7 +272,8 @@ void initialize_jobs(const std::string &ifile,
 							  stage_2_perm - total_s2_perm,
 							  method,
 							  kernel,
-							  permutations);
+							  permutations,
+							  adjust);
 
 				  // Limit adding jobs to prevent excessive memory usage
 				  while (!tq.empty()) {
@@ -287,7 +289,8 @@ void initialize_jobs(const std::string &ifile,
 							  stage_2_perm / tq.get_nthreads(),
 							  method,
 							  kernel,
-							  permutations);
+							  permutations,
+							  adjust);
 				  // Add current permutations
 				  total_s1_perm += stage_1_perm / tq.get_nthreads();
 				  total_s2_perm += stage_2_perm / tq.get_nthreads();
@@ -315,7 +318,8 @@ void initialize_jobs(const std::string &ifile,
 						stage_2_perm,
 						method,
 						kernel,
-						permutations);
+						permutations,
+						adjust);
 			// Limit adding jobs to prevent excessive memory usage
 			while (!tq.empty()) {
 			  std::this_thread::sleep_for(0.1s);
@@ -389,7 +393,8 @@ void initialize_jobs(const std::string &ifile,
 						stage_2_perm - total_s2_perm,
 						method,
 						kernel,
-						permutations);
+						permutations,
+						adjust);
 
 			// Limit adding jobs to prevent excessive memory usage
 			while (!tq.empty()) {
@@ -405,7 +410,8 @@ void initialize_jobs(const std::string &ifile,
 						stage_2_perm / tq.get_nthreads(),
 						method,
 						kernel,
-						permutations);
+						permutations,
+						adjust);
 			// Add current permutations
 			total_s1_perm += stage_1_perm / tq.get_nthreads();
 			total_s2_perm += stage_2_perm / tq.get_nthreads();
@@ -426,7 +432,16 @@ void initialize_jobs(const std::string &ifile,
 	// Ensure at least one transcript
 	if (std::any_of(nvariants.cbegin(), nvariants.cend(), [&](const auto &v) { return v.second > 0; })) {
 	  TaskArgs
-		  ta(stage, gene_data, cov, successes, stage_1_perm, stage_2_perm, method, kernel, permutations);
+		  ta(stage,
+			 gene_data,
+			 cov,
+			 successes,
+			 stage_1_perm,
+			 stage_2_perm,
+			 method,
+			 kernel,
+			 permutations,
+			 adjust);
 
 	  // Limit adding jobs to prevent excessive memory usage
 	  while (!tq.empty()) {
@@ -481,7 +496,7 @@ int main(int argc, char **argv) {
 	  .dest("casm_file")
 	  .set_default("")
 	  .help("A file providing weights for VAAST.");
-  parser.add_option("-n", "--nthreads")
+  parser.add_option("-t", "--nthreads")
 	  .dest("nthreads")
 	  .set_default(std::thread::hardware_concurrency() / 2)
 	  .type("size_t")
@@ -500,6 +515,11 @@ int main(int argc, char **argv) {
 	  .set_default("VAAST")
 	  .choices(method_choices.begin(), method_choices.end())
 	  .help("The statistical method to be used.\nOptions: {CALPHA, CMC, SKAT, WSS, VAAST, VT}.\nThe default is VAAST.");
+  parser.add_option("-n", "--no_adjust")
+	  .dest("adjust")
+	  .action("store_false")
+	  .set_default("1")
+	  .help("Disable small sample size adjustment for SKATO.");
   parser.add_option("-q", "--quiet")
 	  .dest("verbose")
 	  .action("store_false")
@@ -590,6 +610,7 @@ int main(int argc, char **argv) {
 				  cov,
 				  tq,
 				  options["genes"],
-				  options.is_set_by_user("genes"));
+				  options.is_set_by_user("genes"),
+				  options.get("adjust"));
   return 0;
 }

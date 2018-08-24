@@ -127,3 +127,11 @@ void Gene::parse(std::stringstream &ss) {
   }
 }
 
+void Gene::set_weights(const std::string &k, arma::vec &weights) {
+	if(weights.n_rows != genotypes_[k].n_cols) {
+	  throw(std::logic_error("Weights do not match number of variants."));
+	}
+
+	weights_[k] = weights;
+}
+

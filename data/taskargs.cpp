@@ -12,7 +12,8 @@ TaskArgs::TaskArgs(Stage stage,
 				   int s2_perm,
 				   const std::string &method,
 				   const std::string &kernel,
-				   std::vector<std::vector<int32_t>> &perm)
+				   std::vector<std::vector<int32_t>> &perm,
+				   bool adjust)
 	: stage_(stage),
 	  gene_(std::move(gene)),
 	  cov_(cov),
@@ -21,7 +22,8 @@ TaskArgs::TaskArgs(Stage stage,
 	  stage_2_permutations_(s2_perm),
 	  permutations(perm),
 	  success_threshold(succ_thresh),
-	  stop_check_threshold(succ_thresh) {
+	  stop_check_threshold(succ_thresh),
+	  adjust(adjust) {
   for (const auto &k : gene_.get_transcripts()) {
 	results[k] = Result(gene_.get_gene(), k);
 	permute[k] = Permute();
@@ -39,7 +41,8 @@ TaskArgs::TaskArgs(const TaskArgs &ta)
 	  stage_2_permutations_(ta.stage_2_permutations_),
 	  permutations(ta.permutations),
 	  success_threshold(ta.success_threshold),
-	  stop_check_threshold(ta.stop_check_threshold) {}
+	  stop_check_threshold(ta.stop_check_threshold),
+	  adjust(ta.adjust) {}
 
 TaskArgs::TaskArgs(TaskArgs &&ta) noexcept
 	: results(std::move(ta.results)),
@@ -52,7 +55,8 @@ TaskArgs::TaskArgs(TaskArgs &&ta) noexcept
 	  stage_2_permutations_(ta.stage_2_permutations_),
 	  permutations(ta.permutations),
 	  success_threshold(ta.success_threshold),
-	  stop_check_threshold(ta.stop_check_threshold) {}
+	  stop_check_threshold(ta.stop_check_threshold),
+	  adjust(ta.adjust) {}
 
 TaskArgs &TaskArgs::operator=(const TaskArgs &rhs) {
   stage_ = rhs.stage_;
@@ -65,6 +69,7 @@ TaskArgs &TaskArgs::operator=(const TaskArgs &rhs) {
   permutations = rhs.permutations;
   success_threshold = rhs.success_threshold;
   stop_check_threshold = rhs.stop_check_threshold;
+  adjust = rhs.adjust;
 
   return *this;
 }
