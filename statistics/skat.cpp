@@ -34,15 +34,15 @@ SKAT_Optimal_GetQ::SKAT_Optimal_GetQ(arma::mat &Z,
 	arma::mat Q2 = r_corr * std::pow(pm, 2) * arma::pow(arma::mean(temp, 1), 2);
 	Q_r(i) = Q1(0, 0) + Q2(0, 0);
   }
-  Q_r /= 2;
+  Q_r = Q_r / 2.;
 
   // For moment adjustment
   if (nResampling > 0) {
 	Q_sim = arma::mat(nResampling, nr);
 
 	for (arma::uword i = 0; i < nResampling; i++) {
-	  if(res_out.size() > 0) {
-	    temp = res_out.col(i).t() * Z;
+	  if (res_out.size() > 0) {
+		temp = res_out.col(i).t() * Z;
 	  } else {
 		temp = arma::shuffle(res).t() * Z;
 	  }
@@ -53,7 +53,7 @@ SKAT_Optimal_GetQ::SKAT_Optimal_GetQ(arma::mat &Z,
 		Q_sim(i, j) = Q1(0, 0) + Q2(0, 0);
 	  }
 	}
-	Q_sim /= 2;
+	Q_sim = Q_sim / 2.;
   }
 }
 
@@ -93,7 +93,7 @@ SKATParam::SKATParam(arma::mat &Z1) {
   lambda = param_lambda;
 
   tau.zeros(nr);
-  for (int i = 0; i < nr; i++) {
+  for (arma::uword i = 0; i < nr; i++) {
 	double r_corr = rho_[i];
 
 	double term1 = std::pow(pm, 2) * r_corr + arma::sum(arma::sum(arma::pow(cof1, 2))) * (1 - r_corr);
@@ -228,7 +228,7 @@ std::string PvalueLambda::Get_Liu_Pval_MOD_Lambda_Zero(double Q, LiuParam &param
   boost::math::non_central_chi_squared chisq(param.l, param.d);
 
   int max = 0;
-  for (int i = 0; i < 10; i++) {
+  for (arma::uword i = 0; i < 10; i++) {
 	double val = boost::math::quantile(chisq, temp[i]);
 	if (val < Q_Norm1) {
 	  max = i;

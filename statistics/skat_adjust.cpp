@@ -41,7 +41,7 @@ void SKAT_Residuals_Logistic::calcX1(arma::mat &cov) {
 
   arma::qr(Q, R, cov);
 
-  if (Q.n_cols <= std::min(cov.n_rows, cov.n_cols)) {
+  if (arma::rank(Q) <= cov.n_cols) {
 	arma::mat U, V;
 	arma::vec s;
 
@@ -145,7 +145,7 @@ SKAT_Optimal_Logistic_VarMatching::SKAT_Optimal_Logistic_VarMatching(SKAT_Residu
   }
 
   arma::mat Z1 = ((Z.each_col() % arma::sqrt(pi_1))
-	  - (X1.each_col() % arma::sqrt(pi_1)) * arma::inv_sympd(X1.t() * (X1.each_col() % pi_1))
+	  - (X1.each_col() % arma::sqrt(pi_1)) * arma::inv(X1.t() * (X1.each_col() % pi_1))
 		  * (X1.t() * (Z.each_col() % pi_1)))
 	  / arma::datum::sqrt2;
 
@@ -525,7 +525,6 @@ SKAT_Optimal_Each_Q_VarMatching::SKAT_Optimal_Each_Q_VarMatching(SKAT_Optimal_Pa
   std::vector<SKAT_Logistic_VarMatching_Param> re_param;
   for (arma::uword i = 0; i < nr; i++) {
 	double Q = Q_all(i);
-	double rcorr = rall(i);
 
 	SKAT_PValue_Logistic_VarMatching out(Q, Z2_all[i], p_all, Q_sim_all.col(i));
 
@@ -538,7 +537,6 @@ SKAT_Optimal_Each_Q_VarMatching::SKAT_Optimal_Each_Q_VarMatching(SKAT_Optimal_Pa
   for (arma::uword i = 0; i < nr; i++) {
 	double r_corr = rall(i);
 	double muQ = re_param[i].muQ;
-	double varQ1 = re_param[i].varQ;
 	double varQ = std::pow(1 - r_corr, 2) * (param_m.param.varQ + param_m.VarRemain) + std::pow(param_m.tau(i), 2) * 2.;
 
 	double vq1 = param_m.param.varQ + param_m.VarRemain;

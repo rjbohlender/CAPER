@@ -67,7 +67,7 @@ TaskArgs::TaskArgs(TaskArgs &&ta) noexcept
 	  permute(std::move(ta.permute)),
 	  stage_(ta.stage_),
 	  gene_(std::move(ta.gene_)),
-	  cov_(std::move(ta.cov_)),
+	  cov_(ta.cov_),
 	  method_(std::move(ta.method_)),
 	  stage_1_permutations_(ta.stage_1_permutations_),
 	  stage_2_permutations_(ta.stage_2_permutations_),
