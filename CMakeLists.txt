@@ -14,8 +14,11 @@ if (APPLE)
     if (CMAKE_COMPILER_IS_GNUCXX)
         set(CMAKE_CXX_FLAGS_RELEASE  "${CMAKE_CXX_FLAGS_RELEASE} -fopenmp")
     endif ()
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -pg")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -pg -fsanitize=address -fsanitize=undefined -Wall")
 endif ()
+
+message(${CMAKE_CXX_FLAGS_DEBUG})
+message(${CMAKE_CXX_FLAGS_RELEASE})
 
 set(PROJECT_SUPPORT_FILES
     data/covariates.hpp
@@ -53,7 +56,9 @@ set(PROJECT_SUPPORT_FILES
     data/taskargs.cpp
     data/taskqueue.cpp
     statistics/skat.cpp
-    statistics/skat.hpp statistics/skat_adjust.cpp statistics/skat_adjust.hpp)
+    statistics/skat.hpp
+    statistics/skat_adjust.cpp
+    statistics/skat_adjust.hpp data/covariates.cpp)
 
 include_directories("${CMAKE_CURRENT_LIST_DIR}/third_party")
 include_directories(${ARMADILLO_INCLUDE_DIRS})
@@ -64,9 +69,6 @@ add_executable(Permute_Associate
                main.cpp
                ${PROJECT_SUPPORT_FILES})
 
-
-# include_directories(Permute_Associate ${R_INCLUDE_DIR} ${Rcpp_INCLUDE_DIR} ${RInside_INCLUDE_DIR})
-# target_link_libraries(Permute_Associate ${R_LIBRARIES})
 target_link_libraries(Permute_Associate ${ARMADILLO_LIBRARIES})
 target_link_libraries(Permute_Associate ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(Permute_Associate ${Boost_LIBRARIES})

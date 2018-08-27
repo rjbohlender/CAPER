@@ -112,6 +112,15 @@ SKAT_Adjust::SKAT_Adjust(Gene &gene,
   p_value = re.pval;
 }
 
+/**
+ * @brief
+ * @param re1 The residuals.
+ * @param re2 The residuals and permuted residuals for moment adjustment.
+ * @param Q_sim_all Q from resamples for moment adjustment.
+ * @param Z Genotype matrix
+ * @param kernel Which kernel to use.
+ * @param weights Optional weight vector.
+ */
 SKAT_Optimal_Logistic_VarMatching::SKAT_Optimal_Logistic_VarMatching(SKAT_Residuals_Logistic &re1,
 																	 SKAT_Residuals_Logistic &re2,
 																	 std::shared_ptr<SKAT_Optimal_GetQ> &Q_sim_all,
@@ -129,8 +138,6 @@ SKAT_Optimal_Logistic_VarMatching::SKAT_Optimal_Logistic_VarMatching(SKAT_Residu
 
   arma::vec &pi_1 = re1.pi_1; // References to shorten calls;
   arma::mat X1 = re1.X1;     // References to shorten calls;
-
-  arma::mat D = arma::diagmat(re1.pi_1);
 
   // TODO Add checks for other kernels and throw error
   if (kernel == "wLinear") {

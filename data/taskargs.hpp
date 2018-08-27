@@ -23,6 +23,40 @@ enum class Stage {
   Done
 };
 
+struct TaskParams {
+  // Permutation paramters
+  int success_threshold;
+
+  int stage_1_permutations;
+  int stage_2_permutations;
+
+  // Method
+  std::string method;
+
+  // General options
+  std::string genotypes_path;
+  std::string covariates_path;
+  std::string bed_path;
+  std::string casm_path;
+
+  bool bed;
+  bool casm;
+
+  bool verbose;
+
+  size_t nthreads;
+
+  // Gene list
+  std::string gene_list;
+  bool genes;
+
+  // SKAT Parameters
+  std::string kernel; // Kernel selection
+  bool adjust; // Sample size adjustment
+  double a; // Beta weight parameters
+  double b; // Beta weight parameters
+};
+
 class TaskArgs {
 public:
   std::unordered_map<std::string, Result> results;
@@ -36,13 +70,16 @@ public:
   TaskArgs(Stage stage,
 		   Gene gene,
 		   Covariates cov,
+		   TaskParams &tp,
 		   int succ_thresh,
 		   int s1_perm,
 		   int s2_perm,
-		   const std::string &method,
-		   const std::string &kernel,
-		   std::vector<std::vector<int32_t>> &perm,
-		   bool adjust);
+		   std::vector<std::vector<int32_t>> &perm);
+  TaskArgs(Stage stage,
+		   Gene gene,
+		   Covariates cov,
+		   TaskParams &tp,
+		   std::vector<std::vector<int32_t>> &perm);
   TaskArgs(const TaskArgs &ta);
   TaskArgs(TaskArgs &&ta) noexcept;
   TaskArgs &operator=(const TaskArgs &rhs);

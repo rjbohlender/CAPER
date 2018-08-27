@@ -16,11 +16,13 @@ public:
   arma::colvec &get_odds();
   double get_mean();
   arma::vec &get_probability();
+  arma::vec &get_eta();
 
 private:
   arma::colvec odds_;
-  arma::rowvec theta_; // Vector of weights
+  arma::rowvec theta_; // Vector of weights - Beta on wikipedia
   arma::vec mu_; // Probability vector - fitted.values in R
+  arma::vec eta_;
   double mean_;
 
   arma::rowvec h(arma::mat &Xmat);
@@ -29,6 +31,7 @@ private:
   void calculate_odds(arma::mat &Xmat);
   void calculate_mean(arma::mat &Xmat);
   void calculate_probability(arma::mat &Xmat);
+  void calculate_eta();
 };
 
 #endif //PERMUTE_ASSOCIATE_LOGISTIC_REGRESSION_HPP

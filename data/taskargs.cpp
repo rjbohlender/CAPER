@@ -7,29 +7,47 @@
 TaskArgs::TaskArgs(Stage stage,
 				   Gene gene,
 				   Covariates cov,
+				   TaskParams &tp,
 				   int succ_thresh,
 				   int s1_perm,
 				   int s2_perm,
-				   const std::string &method,
-				   const std::string &kernel,
-				   std::vector<std::vector<int32_t>> &perm,
-				   bool adjust)
+				   std::vector<std::vector<int32_t>> &perm)
 	: stage_(stage),
 	  gene_(std::move(gene)),
 	  cov_(cov),
-	  method_(method, kernel),
+	  method_(tp.method, tp.kernel),
 	  stage_1_permutations_(s1_perm),
 	  stage_2_permutations_(s2_perm),
 	  permutations(perm),
 	  success_threshold(succ_thresh),
 	  stop_check_threshold(succ_thresh),
-	  adjust(adjust) {
+	  adjust(tp.adjust) {
   for (const auto &k : gene_.get_transcripts()) {
 	results[k] = Result(gene_.get_gene(), k);
 	permute[k] = Permute();
   }
 }
 
+TaskArgs::TaskArgs(Stage stage,
+				   Gene gene,
+				   Covariates cov,
+				   TaskParams &tp,
+				   std::vector<std::vector<int32_t>> &perm)
+	: stage_(stage),
+	  gene_(std::move(gene)),
+	  cov_(cov),
+	  method_(tp.method, tp.kernel),
+	  stage_1_permutations_(tp.stage_1_permutations),
+	  stage_2_permutations_(tp.stage_2_permutations),
+	  permutations(perm),
+	  success_threshold(tp.success_threshold),
+	  stop_check_threshold(tp.success_threshold),
+	  adjust(tp.adjust) {
+  for (const auto &k : gene_.get_transcripts()) {
+	results[k] = Result(gene_.get_gene(), k);
+	permute[k] = Permute();
+  }
+}
 TaskArgs::TaskArgs(const TaskArgs &ta)
 	: results(ta.results),
 	  permute(ta.permute),

@@ -13,18 +13,20 @@ LogisticRegression::LogisticRegression(arma::mat &Xmat, arma::colvec &Yvec)
 #ifndef NDEBUG
   std::cerr << "Cost: " << cost(Xmat, Yvec) << "\n";
   std::cerr << "h: " << h(Xmat) << "\n";
-  std::cerr << "theta: " << theta_ << "\n";
 #endif
 
   train(Xmat, Yvec);
   calculate_probability(Xmat);
   calculate_odds(Xmat);
   calculate_mean(Xmat);
+  calculate_eta();
 
 
 #ifndef NDEBUG
-  std::cerr << "odds: " << odds_.t() << "\n";
+  std::cerr << "odds: " << odds_.t();
   std::cerr << "mu_: " << mu_.t();
+  std::cerr << "eta_: " << eta_.t();
+  std::cerr << "theta_: " << theta_;
   std::cerr << "mean: " << mean_ << "\n";
 #endif
 }
@@ -90,5 +92,13 @@ arma::vec &LogisticRegression::get_probability() {
 
 void LogisticRegression::calculate_probability(arma::mat &Xmat) {
   mu_ = h(Xmat).t();
+}
+
+arma::vec &LogisticRegression::get_eta() {
+  return eta_;
+}
+
+void LogisticRegression::calculate_eta() {
+  eta_ = arma::log(mu_ / (1. - mu_));
 }
 
