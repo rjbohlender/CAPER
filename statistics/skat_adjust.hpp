@@ -6,6 +6,7 @@
 #define PERMUTE_ASSOCIATE_SKAT_ADJUST_HPP
 
 #include <armadillo>
+#include <memory>
 
 #include "skat.hpp"
 #include "../data/gene.hpp"
@@ -36,7 +37,6 @@ struct SKAT_Adjust {
   arma::vec weights;
 
   SKAT_Residuals_Logistic re1;
-  std::shared_ptr<SKAT_Residuals_Logistic> re2;
 
   double p_value = NAN;
 };
@@ -95,7 +95,7 @@ struct SKAT_Optimal_Param_VarMatching {
   SKAT_Optimal_Param_VarMatching() = default;
   SKAT_Optimal_Param_VarMatching(arma::mat &Z1, arma::vec &rall, arma::vec &p_all, arma::vec &res, arma::mat &res_moments);
 
-  SKAT_Optimal_Param_VarMatching(const SKAT_Optimal_Param_VarMatching &other);
+  SKAT_Optimal_Param_VarMatching(const SKAT_Optimal_Param_VarMatching &other) = default;
   SKAT_Optimal_Param_VarMatching &operator=(const SKAT_Optimal_Param_VarMatching &rhs);
 
 

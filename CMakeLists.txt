@@ -7,14 +7,16 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 find_package(Armadillo REQUIRED)
 find_package(Threads REQUIRED)
-find_package(Boost REQUIRED)
+find_package(Boost 1.66.0 REQUIRED)
 
 if (APPLE)
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -pg -fsanitize=address -fsanitize=undefined -Wall -pedantic")
+endif ()
+
+if (CMAKE_COMPILER_IS_GNUCXX)
+    set(CMAKE_CXX_FLAGS_RELEASE  "${CMAKE_CXX_FLAGS_RELEASE} -fno-openmp")
+else()
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
-    if (CMAKE_COMPILER_IS_GNUCXX)
-        set(CMAKE_CXX_FLAGS_RELEASE  "${CMAKE_CXX_FLAGS_RELEASE} -fopenmp")
-    endif ()
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -pg -fsanitize=address -fsanitize=undefined -Wall")
 endif ()
 
 message(${CMAKE_CXX_FLAGS_DEBUG})
@@ -58,7 +60,8 @@ set(PROJECT_SUPPORT_FILES
     statistics/skat.cpp
     statistics/skat.hpp
     statistics/skat_adjust.cpp
-    statistics/skat_adjust.hpp data/covariates.cpp)
+    statistics/skat_adjust.hpp
+    data/covariates.cpp)
 
 include_directories("${CMAKE_CURRENT_LIST_DIR}/third_party")
 include_directories(${ARMADILLO_INCLUDE_DIRS})

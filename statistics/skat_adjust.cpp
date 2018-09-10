@@ -32,7 +32,7 @@ SKAT_Residuals_Logistic::SKAT_Residuals_Logistic(arma::mat &cov, arma::vec &mu, 
     }
   }
 
-  pi_1 = mu % (1 - mu);
+  pi_1 = arma::diagmat(mu) * (1 - mu);
   this->mu = mu;
 }
 
@@ -45,7 +45,7 @@ void SKAT_Residuals_Logistic::calcX1(arma::mat &cov) {
 	arma::mat U, V;
 	arma::vec s;
 
-	svd_econ(U, s, V, cov, "left", "std");
+	svd_econ(U, s, V, cov, "left");
 
 	X1 = U;
   } else {
@@ -68,7 +68,7 @@ SKAT_Residuals_Logistic::SKAT_Residuals_Logistic(Covariates &cov, int nresamplin
   }
 
   mu = cov.get_probability()(cov.get_indices());
-  pi_1 = mu % (1 - mu);
+  pi_1 = arma::diagmat(mu) * (1 - mu);
 }
 
 SKAT_Adjust::SKAT_Adjust(Gene &gene,
@@ -80,9 +80,6 @@ SKAT_Adjust::SKAT_Adjust(Gene &gene,
 						 std::shared_ptr<SKAT_Residuals_Logistic> &re2_,
 						 std::map<std::string, std::shared_ptr<SKAT_Optimal_GetQ>> &Q_sim_all) {
   arma::mat Z = gene.get_matrix(k);
-
-  arma::uword n = Z.n_rows;
-  arma::uword m = Z.n_cols;
 
   if (gene.get_weights(k).n_rows == 0) {
 	weights.reshape(Z.n_cols, 1);
@@ -141,13 +138,21 @@ SKAT_Optimal_Logistic_VarMatching::SKAT_Optimal_Logistic_VarMatching(SKAT_Residu
 
   // TODO Add checks for other kernels and throw error
   if (kernel == "wLinear") {
-	Z = Z.each_row() % weights;
+	Z = arma::diagmat(weights) * Z;
   }
 
+#if 1
+  arma::mat Z1 = (arma::diagmat(arma::sqrt(pi_1)) * Z
+	  - (arma::diagmat(arma::sqrt(pi_1)) * X1) * arma::inv_sympd(X1.t() * (arma::diagmat(pi_1) * X1))
+		  * (X1.t() * (arma::diagmat(pi_1) * Z)))
+	  / arma::datum::sqrt2;
+#else
+  // Schur product is slow -- Roughly 25% speed improvement using diagonal matrices
   arma::mat Z1 = ((Z.each_col() % arma::sqrt(pi_1))
-	  - (X1.each_col() % arma::sqrt(pi_1)) * arma::inv(X1.t() * (X1.each_col() % pi_1))
+	  - (X1.each_col() % arma::sqrt(pi_1)) * arma::inv_sympd(X1.t() * (X1.each_col() % pi_1))
 		  * (X1.t() * (Z.each_col() % pi_1)))
 	  / arma::datum::sqrt2;
+#endif
 
   SKAT_Optimal_GetQ outQ(Z, re1.res, rall, re1.res_out, re1.nResampling); // Normal Q calculation
   if(Q_sim_all == nullptr) {
@@ -320,12 +325,6 @@ SKAT_Optimal_Param_VarMatching::SKAT_Optimal_Param_VarMatching(arma::mat &Z1,
   }
 }
 
-SKAT_Optimal_Param_VarMatching::SKAT_Optimal_Param_VarMatching(const SKAT_Optimal_Param_VarMatching &other)
-	: Q_sim(other.Q_sim),
-	  VarRemain(other.VarRemain),
-	  tau(other.tau),
-	  param(other.param) {}
-
 SKAT_Optimal_Param_VarMatching &SKAT_Optimal_Param_VarMatching::operator=(const SKAT_Optimal_Param_VarMatching &rhs) {
   Q_sim = rhs.Q_sim;
   VarRemain = rhs.VarRemain;
@@ -335,7 +334,12 @@ SKAT_Optimal_Param_VarMatching &SKAT_Optimal_Param_VarMatching::operator=(const 
   return *this;
 }
 
-SKAT_Logistic_VarMatching_Param::SKAT_Logistic_VarMatching_Param(arma::mat &Z1, arma::vec &p_all, arma::vec &Q_sim) {
+SKAT_Logistic_VarMatching_Param::SKAT_Logistic_VarMatching_Param(arma::mat &Z1, arma::vec &p_all, arma::vec &Q_sim)
+: muQ(0),
+  varQ(0),
+  df(0),
+  param_noadj(),
+  nlambda(0) {
   //	re.param<-SKAT_Logistic_VarMatching_GetParam1(Z.item2, p_all, Q.sim, type)
 
   auto lambda_u = Get_Lambda_U_From_Z(Z1);
@@ -393,11 +397,11 @@ double SKAT_Logistic_VarMatching_Param::SKAT_Get_Var_Elements(arma::vec &m4,
 															  arma::vec &p_all,
 															  arma::subview_col<double> Ui,
 															  arma::subview_col<double> Uj) {
-  arma::vec temp1 = arma::pow(Ui, 2) % arma::pow(Uj, 2);
+  arma::vec temp1 = arma::diagmat(arma::pow(Ui, 2)) * arma::pow(Uj, 2);
 
-  double a1 = arma::sum(m4 % temp1);
+  double a1 = arma::sum(arma::sum(arma::diagmat(m4) * temp1));
   double a2 = arma::sum(arma::sum(arma::pow(Ui, 2))) * arma::sum(arma::sum(arma::pow(Uj, 2))) - arma::sum(temp1);
-  double a3 = (std::pow(arma::sum(Ui % Uj), 2) - sum(temp1)) * 2;
+  double a3 = (std::pow(arma::sum(arma::sum(arma::diagmat(Ui) * Uj)), 2) - sum(temp1)) * 2;
 
   return a1 + a2 + a3;
 }
@@ -440,7 +444,8 @@ double SKAT_Logistic_VarMatching_Param::SKAT_Get_Skewness(arma::vec &x) {
  */
 void SKAT_Logistic_VarMatching_Param::calc_param(arma::vec &lambda, arma::mat &U, arma::vec &p_all, arma::vec &Q_sim) {
   arma::uword pm = lambda.size();
-  arma::vec m4 = p_all % (1 - p_all) % (3 * arma::pow(p_all, 2) - 3 * p_all + 1) / arma::pow((p_all % (1 - p_all)), 2);
+  arma::vec p_all_prod = arma::diagmat(p_all) * (1 - p_all);
+  arma::vec m4 = arma::diagmat(p_all_prod) * (3 * arma::pow(p_all, 2) - 3 * p_all + 1) / arma::pow(p_all_prod, 2);
 
   // SKAT_Get_Cov_Param
   zeta = arma::vec(pm, arma::fill::zeros);
@@ -449,16 +454,16 @@ void SKAT_Logistic_VarMatching_Param::calc_param(arma::vec &lambda, arma::mat &U
   for (arma::uword i = 0; i < pm; i++) {
 	double temp_M1 =
 		std::pow(arma::sum(arma::sum(arma::pow(U.col(i), 2))), 2) - arma::sum(arma::sum(arma::pow(U.col(i), 4)));
-	zeta(i) = arma::sum(m4 % arma::pow(U.col(i), 4)) + 3 * temp_M1;
+	zeta(i) = arma::sum(arma::sum(arma::diagmat(m4) * arma::pow(U.col(i), 4))) + 3 * temp_M1;
 	var_i(i) = zeta(i) - 1;
   }
 
   arma::mat cov_mat;
   if (pm == 1) {
 	cov_mat.reshape(1, 1);
-	cov_mat = zeta % arma::pow(lambda, 2);
+	cov_mat = zeta * arma::pow(lambda, 2);
   } else {
-	cov_mat = arma::diagmat(zeta % arma::pow(lambda, 2));
+	cov_mat = arma::diagmat(arma::diagmat(zeta) * arma::pow(lambda, 2));
 	for (arma::uword i = 0; i < pm - 1; i++) {
 	  for (arma::uword j = i + 1; j < pm; j++) {
 		cov_mat(i, j) = SKAT_Get_Var_Elements(m4, p_all, U.col(i), U.col(j));
@@ -472,7 +477,7 @@ void SKAT_Logistic_VarMatching_Param::calc_param(arma::vec &lambda, arma::mat &U
 
   muQ = arma::sum(lambda);
   varQ = arma::sum(arma::sum(cov_mat)) - std::pow(arma::sum(lambda), 2);
-  lambda_new = lambda % arma::sqrt(var_i) / arma::datum::sqrt2;
+  lambda_new = arma::diagmat(lambda) * arma::sqrt(var_i) / arma::datum::sqrt2;
   nlambda = lambda_new.n_rows;
   // End SKAT_Get_Cov_Param
 
@@ -514,7 +519,8 @@ SKAT_Optimal_Each_Q_VarMatching::SKAT_Optimal_Each_Q_VarMatching(SKAT_Optimal_Pa
 																 arma::vec &rall,
 																 std::vector<arma::mat> &Z2_all,
 																 arma::vec &p_all,
-																 arma::mat &Q_sim_all) {
+																 arma::mat &Q_sim_all)
+																 : pmin(0) {
 
   arma::uword nr = rall.size();
   arma::vec c1(4, arma::fill::zeros);

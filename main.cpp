@@ -96,7 +96,10 @@ void calc_mgit_pvalues(std::map<std::string, Result> &results,
   }
 }
 
-void print_results(TaskQueue &tq, int ntranscripts, int ngenes, bool genes) {
+void print_results(TaskQueue &tq, int ntranscripts, int ngenes, TaskParams &tp) {
+  // Holds unfinished genes
+  std::vector<std::string> unfinished;
+
   std::cout << std::setw(20) << "Gene";
   std::cout << std::setw(20) << "Transcript";
   std::cout << std::setw(20) << "Original";
@@ -106,13 +109,18 @@ void print_results(TaskQueue &tq, int ntranscripts, int ngenes, bool genes) {
   std::cout << std::setw(20) << "Permutations";
   std::cout << std::setw(20) << "MGIT";
   std::cout << std::setw(20) << "MGIT_Successes" << std::endl;
-  if (!genes) {
+  if (!tp.genes) {
 	// Print header and formatted results
 	double permutation_mean = 0;
 	double permutation_variance = 0;
 
 	for (auto &v : tq.get_results()) {
-	  std::cout << v.min_empirical_pvalue();
+	  Result &res = v.min_empirical_pvalue();
+	  std::cout << res;
+
+	  if (res.successes < tp.success_threshold) {
+	    unfinished.push_back(res.gene);
+	  }
 
 	  for (const auto &k : v.get_gene().get_transcripts()) {
 		permutation_mean += v.results[k].permutations;
@@ -161,12 +169,57 @@ void print_results(TaskQueue &tq, int ntranscripts, int ngenes, bool genes) {
 		calc_mgit_pvalues(res, transcripts, v.get_methods().str());
 	  }
 	  tq.get_results().erase(tq.get_results().begin());
+
+	  for(const auto &k : transcripts) {
+	    if(res[k].successes < tp.success_threshold) {
+	      unfinished.push_back(res[k].gene);
+	      break;
+	    }
+	  }
 	  // Renew iterators
 	} while (!tq.get_results().empty());
 
 	for (const auto &v : res) {
 	  std::cout << v.second;
 	}
+  }
+
+  if(!unfinished.empty()) {
+	// Print command to run unfinished
+	std::stringstream uf_ss;
+	uf_ss << tp.program_path << " ";
+	uf_ss << "-g " << tp.genotypes_path << " ";
+	uf_ss << "-c " << tp.covariates_path << " ";
+	if(tp.bed) {
+	  uf_ss << "-b " << tp.bed_path << " ";
+	}
+	if(tp.casm) {
+	  uf_ss << "-w " << tp.casm_path << " ";
+	}
+	uf_ss << "-1 0 "; // Skip stage 1
+	uf_ss << "-2 " << tp.total_permutations * 10 << " ";
+	uf_ss << "-m " << tp.method << " ";
+	uf_ss << "-t " << tp.nthreads << " ";
+	if(tp.adjust) {
+	  uf_ss << "-n ";
+	}
+	if(!tp.verbose) {
+	  uf_ss << "-q";
+	}
+	if(tp.a != 1 || tp.b != 25) {
+	  uf_ss << "--beta_weights " << tp.a << "," << tp.b << " ";
+	}
+
+	uf_ss << "-l ";
+	for(int i = 0; i < unfinished.size(); i++) {
+	  if(i == unfinished.size() - 1) {
+	    uf_ss << unfinished[i];
+	  } else {
+	    uf_ss << unfinished[i] << ",";
+	  }
+	}
+	std::cerr << "Some genes did not reach the success threshold. Run the following command to check those genes." << std::endl;
+	std::cerr << uf_ss.str() << std::endl;
   }
 }
 
@@ -276,13 +329,14 @@ void initialize_jobs(TaskParams &tp,
 							  gene_data,
 							  cov,
 							  tp,
-							  tp.success_threshold / tq.get_nthreads(),
-							  tp.stage_1_permutations / tq.get_nthreads(),
-							  tp.stage_2_permutations / tq.get_nthreads(),
+							  tp.success_threshold / static_cast<int>(tq.get_nthreads()),
+							  tp.stage_1_permutations / static_cast<int>(tq.get_nthreads()),
+							  tp.stage_2_permutations / static_cast<int>(tq.get_nthreads()),
 							  permutations);
 				  // Add current permutations
 				  total_s1_perm += tp.stage_1_permutations / tq.get_nthreads();
 				  total_s2_perm += tp.stage_2_permutations / tq.get_nthreads();
+				  total_success += tp.success_threshold / tq.get_nthreads();
 
 				  // Limit adding jobs to prevent excessive memory usage
 				  while (!tq.empty()) {
@@ -367,13 +421,14 @@ void initialize_jobs(TaskParams &tp,
 		// TODO Change logic for multiple jobs
 		int total_s1_perm = 0;
 		int total_s2_perm = 0;
+		int total_success = 0;
 		for (int i = 0; i < tq.get_nthreads(); i++) {
 		  if (i == tq.get_nthreads() - 1) {
 			TaskArgs ta(stage,
 						gene_data,
 						cov,
 						tp,
-						tp.success_threshold,
+						tp.success_threshold - total_success,
 						tp.stage_1_permutations - total_s1_perm,
 						tp.stage_2_permutations - total_s2_perm,
 						permutations);
@@ -388,13 +443,14 @@ void initialize_jobs(TaskParams &tp,
 						gene_data,
 						cov,
 						tp,
-						tp.success_threshold,
-						tp.stage_1_permutations / tq.get_nthreads(),
-						tp.stage_2_permutations / tq.get_nthreads(),
+						tp.success_threshold / static_cast<int>(tq.get_nthreads()),
+						tp.stage_1_permutations / static_cast<int>(tq.get_nthreads()),
+						tp.stage_2_permutations / static_cast<int>(tq.get_nthreads()),
 						permutations);
 			// Add current permutations
 			total_s1_perm += tp.stage_1_permutations / tq.get_nthreads();
 			total_s2_perm += tp.stage_2_permutations / tq.get_nthreads();
+			total_success += tp.success_threshold / tq.get_nthreads();
 
 			// Limit adding jobs to prevent excessive memory usage
 			while (!tq.empty()) {
@@ -428,7 +484,7 @@ void initialize_jobs(TaskParams &tp,
   // Free permutation memory
   permutations.clear();
 
-  print_results(tq, ntranscripts, ngenes, tp.genes);
+  print_results(tq, ntranscripts, ngenes, tp);
 }
 
 int main(int argc, char **argv) {
@@ -529,8 +585,10 @@ int main(int argc, char **argv) {
   tp.success_threshold = options.get("successes");
   tp.stage_1_permutations = options.get("stage_1_max_perm");
   tp.stage_2_permutations = options.get("stage_2_max_perm");
+  tp.total_permutations = std::max(tp.stage_1_permutations, tp.stage_2_permutations);
   tp.method = options["method"];
   // File paths and option status
+  tp.program_path = argv[0];
   tp.genotypes_path = options["genotypes"];
   tp.covariates_path = options["covariates"];
   tp.bed_path = options["bed_file"];

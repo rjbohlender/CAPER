@@ -29,11 +29,13 @@ struct TaskParams {
 
   int stage_1_permutations;
   int stage_2_permutations;
+  int total_permutations;
 
   // Method
   std::string method;
 
   // General options
+  std::string program_path;
   std::string genotypes_path;
   std::string covariates_path;
   std::string bed_path;

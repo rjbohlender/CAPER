@@ -63,4 +63,9 @@ make
 ```
 
 You can combine the above as necessary. Earlier versions of the Armadillo
-library may work, but haven't been tested.
+library may work, but haven't been tested. If you need to change the compiler used
+from the one automatically detected to another, perhaps newer compiler:
+
+```bash
+cmake -DCMAKE_CXX_COMPILER=<path_to_executable> ..
+```

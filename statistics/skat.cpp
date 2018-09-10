@@ -72,6 +72,7 @@ SKATParam::SKATParam(arma::mat &Z1) {
   arma::mat Z_item1 = Z_mean * arma::diagmat(cof1);
   arma::mat Z_item2 = Z1 - Z_item1;
 
+  // Make Z_item2 symmetric
   arma::mat W3_2_t = Z_item2.t() * Z_item2;
 
   arma::vec param_lambda;

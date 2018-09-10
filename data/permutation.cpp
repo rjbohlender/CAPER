@@ -3,13 +3,11 @@
 //
 
 #include <stocc/stocc.h>
+#include <ctime>
 #include "permutation.hpp"
 
 Permute::Permute()
-	: sto_rcc((int32_t) time(nullptr)),
-	  sto_cib((int32_t) time(nullptr)),
-	  sto_perm((int32_t) time(nullptr)),
-	  sto_pmj((int32_t) time(nullptr)) {}
+	: sto((int32_t) time(nullptr)) {}
 
 std::vector<std::vector<int32_t>> Permute::get_permutations(unsigned long nperm, arma::colvec &odds, int ncases) {
   std::vector<double> odds_ = arma::conv_to<std::vector<double>>::from(odds);
@@ -23,7 +21,7 @@ std::vector<std::vector<int32_t>> Permute::get_permutations(unsigned long nperm,
 
   // Generate permutations
   for (int i = 0; i < nperm; i++) {
-	sto_perm.MultiFishersNCHyp(&ret[i][0], &m[0], &odds_[0], ncases, static_cast<int>(odds.n_rows));
+	sto.MultiFishersNCHyp(&ret[i][0], &m[0], &odds_[0], ncases, static_cast<int>(odds.n_rows));
   }
 
   return ret;
@@ -49,7 +47,7 @@ std::vector<std::vector<int32_t>> Permute::cases_in_bins(int nperm,
 
   // Generate permutations
   for (int i = 0; i < nperm; i++) {
-	sto_cib.MultiFishersNCHyp(&ret[i][0], &m[0], &odds_[0], ncases, colors);
+	sto.MultiFishersNCHyp(&ret[i][0], &m[0], &odds_[0], ncases, colors);
   }
 
   return ret;
@@ -75,7 +73,7 @@ std::vector<int32_t> Permute::random_case_count(int nperm,
   double odds_[2] = {bin1_odds, bin2_odds};
 
   for (int i = 0; i < nperm; i++) {
-	sto_rcc.MultiFishersNCHyp(sample, m, odds_, ncases, 2);
+	sto.MultiFishersNCHyp(sample, m, odds_, ncases, 2);
 	// We only return the case counts among minor allele carriers
 	ret[i] = sample[0];
   }
@@ -114,7 +112,7 @@ std::vector<int32_t> Permute::random_case_count(int nperm,
   }
 
   for (int i = 0; i < nperm; i++) {
-	sto_rcc.MultiFishersNCHyp(&sample[0], &m[0], &odds[0], ncases, sample.size());
+	sto.MultiFishersNCHyp(&sample[0], &m[0], &odds[0], ncases, sample.size());
 	// We only return the case counts among minor allele carriers
 	ret[i] = sample[0];
   }
@@ -165,9 +163,18 @@ std::vector<std::vector<int32_t>> Permute::permutations_maj_bin(int nperm,
 
   // Generate permutations
   for (int i = 0; i < nperm; i++) {
-	sto_pmj.MultiFishersNCHyp(&ret[i][0], &m[0], &odds[0], ncases, odds.size());
+	sto.MultiFishersNCHyp(&ret[i][0], &m[0], &odds[0], ncases, odds.size());
   }
 
   return ret;
 }
+
+Permute &Permute::operator=(const Permute &rhs) {
+  sto = rhs.sto;
+
+  return *this;
+}
+
+Permute::Permute(const Permute &other)
+: sto(other.sto) {}
 

@@ -6,6 +6,7 @@
 
 #include <iomanip>
 #include <cmath>
+#include <chrono>
 // Boost Math
 #include <boost/math/special_functions/beta.hpp>
 
@@ -155,17 +156,21 @@ double Methods::CMC(arma::mat &Xmat, arma::vec &Yvec, double maf) {
   }
 
   arma::mat COV = (Dx.t() * Dx + Dy.t() * Dy) / (N - 2);
-  try {
-	arma::mat INV = arma::inv(COV);
+  arma::mat INV;
+  if(!arma::inv_sympd(INV, COV)) {
+    // Inversion failed
+    arma::vec eigvals;
+    arma::mat eigvecs;
+    arma::eig_sym(eigvals, eigvecs, COV);
 
-	arma::mat ret = (Xxmean - Yymean) * INV * (Xxmean - Yymean).t() * nA * nU / N;
-	return ret(0, 0);
-  } catch (const std::runtime_error &e) {
-	arma::mat INV = arma::pinv(COV);
+    eigvals = 1. / eigvals;
+    arma::mat eigvecs_inv = arma::inv(eigvecs);
 
-	arma::mat ret = (Xxmean - Yymean) * INV * (Xxmean - Yymean).t() * nA * nU / N;
-	return ret(0, 0);
+    INV = eigvecs_inv.t() * arma::diagmat(eigvals) * eigvecs_inv;
   }
+
+  arma::mat ret = (Xxmean - Yymean) * INV * (Xxmean - Yymean).t() * nA * nU / N;
+  return ret(0, 0);
 }
 
 double Methods::SKAT(arma::mat &Xmat,
@@ -282,11 +287,18 @@ double Methods::SKATO(Gene &gene,
   arma::mat X1 = cov.get_covariate_matrix().t();
 
   arma::vec pi_1 = cov.get_probability()(cov.get_indices()) % (1 - cov.get_probability()(cov.get_indices()));
+#if 1
+  arma::mat Z1 = (arma::diagmat(arma::sqrt(pi_1)) * Z
+	  - (arma::diagmat(arma::sqrt(pi_1)) * X1) * arma::inv_sympd(X1.t() * (arma::diagmat(pi_1) * X1))
+		  * (X1.t() * (arma::diagmat(pi_1) * Z)))
+	  / arma::datum::sqrt2;
+#else
+  // Schur product is slow -- Roughly 25% speed improvement using diagonal matrices
   arma::mat Z1 = ((Z.each_col() % arma::sqrt(pi_1))
 	  - (X1.each_col() % arma::sqrt(pi_1)) * arma::inv_sympd(X1.t() * (X1.each_col() % pi_1))
 		  * (X1.t() * (Z.each_col() % pi_1)))
 	  / arma::datum::sqrt2;
-
+#endif
   arma::mat temp_res_out;
   SKAT_Optimal_GetQ skat_optimal_getQ(Z, res, rall, temp_res_out, 0);
 
@@ -363,10 +375,16 @@ double Methods::VAAST(arma::mat &Xmat,
   arma::vec case_allele1(Xmat.n_cols);
   arma::vec control_allele1(Xmat.n_cols);
 
+#if 0
   for (arma::uword i = 0; i < Xmat.n_cols; i++) {
 	case_allele1(i) = arma::dot(Yvec, Xmat.col(i));
 	control_allele1(i) = arma::dot(1 - Yvec, Xmat.col(i));
   }
+#else
+  case_allele1 = Xmat.t() * Yvec;
+  control_allele1 = Xmat.t() * (1. - Yvec);
+#endif
+
   arma::vec case_allele0 = 2 * n_case - case_allele1;
   arma::vec control_allele0 = 2 * n_control - control_allele1;
 #if 0
@@ -442,20 +460,25 @@ double Methods::VAAST(arma::mat &Xmat,
 
 double Methods::VT(arma::mat &Xmat, arma::colvec &Yvec) {
   // All variants should be the minor allele
-  arma::vec maf = arma::mean(Xmat, 0).t() / 2.;
+  arma::vec maf = ((1. + arma::sum(Xmat, 0)) / (2. + 2. * Xmat.n_rows)).t();
   arma::vec hmaf = arma::unique(maf);
 
   arma::vec zscores(hmaf.n_rows - 1, arma::fill::zeros);
-  arma::vec Ynew = Yvec - arma::mean(Yvec);
+  arma::vec res = Yvec - arma::mean(Yvec);
 
-  for (int i = 0; i < hmaf.n_rows - 1; i++) {
+  for (arma::uword i = 0; i < hmaf.n_rows - 1; i++) {
 	arma::mat Xmat_subset = Xmat.cols(arma::find(maf < hmaf[i + 1]));
-	double znum = arma::sum(arma::sum(Xmat_subset.each_col() % Ynew, 1));
+	double znum = arma::sum(arma::sum(arma::diagmat(res) * Xmat_subset, 0));
 	double zden = std::sqrt(arma::sum(arma::sum(arma::pow(Xmat.cols(arma::find(maf < hmaf[i + 1])), 2))));
 	zscores(i) = znum / zden;
   }
 
-  return arma::max(zscores);
+  try{
+	return arma::max(zscores);
+  } catch(std::logic_error &e) {
+    // TODO Check for better failure condition in the original paper. What should the value be in the case of a single variant?
+    return 0;
+  }
 }
 
 double Methods::WSS(arma::mat &Xmat, arma::colvec &Yvec) {
@@ -466,7 +489,7 @@ double Methods::WSS(arma::mat &Xmat, arma::colvec &Yvec) {
   arma::vec mU = arma::sum(Xmat.rows(arma::find(Yvec == 0)), 0).t();
   arma::vec q = (mU + 1.) / (2. * nU + 2.);
 
-  arma::mat w = arma::diagmat(1. / arma::sqrt(n * (q % (1. - q))));
+  arma::mat w = arma::diagmat(1. / arma::sqrt(n * (arma::diagmat(q) * (1. - q))));
 
   arma::mat gamma_mat = Xmat * w;
   gamma_mat.replace(arma::datum::nan, 0);
@@ -588,7 +611,11 @@ arma::vec Methods::log_likelihood(arma::vec &freq, arma::vec &allele0, arma::vec
   // Prevent numerical issues
   arma::vec clamped = arma::clamp(freq, 1e-9, 1.0 - 1e-9);
 
+#if 0
   return allele1 % arma::log(clamped) + allele0 % arma::log(1.0 - clamped);
+#else
+  return arma::diagmat(allele1) * arma::log(clamped) + arma::diagmat(allele0) * arma::log(1.0 - clamped);
+#endif
 }
 
 /*

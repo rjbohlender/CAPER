@@ -11,6 +11,8 @@
 
 struct Permute {
   Permute();
+  Permute(const Permute &other);
+  Permute &operator=(const Permute &rhs);
 
   std::vector<std::vector<int32_t>> get_permutations(unsigned long nperm, arma::colvec &odds, int ncases);
   std::vector<std::vector<int32_t>> permutations_maj_bin(int nperm,
@@ -35,9 +37,6 @@ struct Permute {
 										 int ncases,
 										 int n_maj_bins);
 
-  StochasticLib3 sto_rcc;
-  StochasticLib3 sto_cib;
-  StochasticLib3 sto_perm;
-  StochasticLib3 sto_pmj;
+  StochasticLib3 sto;
 };
 #endif //PERMUTE_ASSOCIATE_PERMUTATION_HPP
