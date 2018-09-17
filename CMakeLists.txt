@@ -7,7 +7,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 find_package(Armadillo REQUIRED)
 find_package(Threads REQUIRED)
-find_package(Boost 1.66.0 REQUIRED)
+find_package(Boost 1.66.0 COMPONENTS program_options REQUIRED)
 
 if (APPLE)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -pg -fsanitize=address -fsanitize=undefined -Wall -pedantic")
@@ -61,7 +61,7 @@ set(PROJECT_SUPPORT_FILES
     statistics/skat.hpp
     statistics/skat_adjust.cpp
     statistics/skat_adjust.hpp
-    data/covariates.cpp)
+    data/covariates.cpp utility/main_support.cpp utility/main_support.hpp)
 
 include_directories("${CMAKE_CURRENT_LIST_DIR}/third_party")
 include_directories(${ARMADILLO_INCLUDE_DIRS})
@@ -70,13 +70,13 @@ include_directories(${Boost_INCLUDE_DIRS})
 
 add_executable(Permute_Associate
                main.cpp
-               ${PROJECT_SUPPORT_FILES})
+               ${PROJECT_SUPPORT_FILES} utility/main_support.cpp utility/main_support.hpp)
 
 target_link_libraries(Permute_Associate ${ARMADILLO_LIBRARIES})
 target_link_libraries(Permute_Associate ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(Permute_Associate ${Boost_LIBRARIES})
 
-target_compile_definitions(Permute_Associate PRIVATE MAXCOLORS=1000000)
+target_compile_definitions(Permute_Associate PRIVATE MAXCOLORS=10000000)
 
 add_executable(test
                test/test.cpp
