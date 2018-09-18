@@ -62,6 +62,12 @@ make
 
 ```
 
+The location for boost may need to be specified if it isn't installed in a typical location.
+
+```bash
+cmake -DBOOST_ROOT=<path_to_boost> ..
+```
+
 You can combine the above as necessary. Earlier versions of the Armadillo
 library may work, but haven't been tested. If you need to change the compiler used
 from the one automatically detected to another, perhaps newer compiler:
