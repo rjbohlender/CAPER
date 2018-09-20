@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
 			("nthreads,t",
 			 po::value<size_t>()->default_value(std::thread::hardware_concurrency() / 2),
 			 "The number of threads. The default is half of the cpu count.")
-			("method,m", po::value<std::string>(), "The statistical method to be used.\nOptions: {CALPHA, CMC, SKAT, WSS, VAAST, VT}.\nThe default is VAAST.")
+			("method,m", po::value<std::string>()->default_value("VAAST"), "The statistical method to be used.\nOptions: {CALPHA, CMC, SKAT, WSS, VAAST, VT}.\nThe default is VAAST.")
 			("stage_1_max_perm,1", po::value<int>()->default_value(100000), "The maximum number of permutations to be performed in the first stage. The default is 100,000.")
 			("stage_2_max_perm,2", po::value<int>()->default_value(1000000), "The maximum number of permutations to be performed in the second stage. The default is 1,000,000.")
 			("no_adjust,n", "Disable small sample size adjustment for SKATO.")
@@ -89,11 +89,27 @@ int main(int argc, char **argv) {
 	  "VAAST"
   };
 
+  std::set<std::string> kernel_choices = {
+  	"Linear",
+  	"wLinear",
+  	"IBS",
+  	"wIBS",
+  	"Quadratic",
+  	"twoWayX"
+  };
+
   if(method_choices.count(vm["method"].as<std::string>()) == 0) {
     // Method not among choices
     std::cerr << "Method must be one of {CALPHA, CMC, VT, WSS, SKAT, SKATO, VAAST}.\n";
     std::cerr << desc << "\n";
     return 1;
+  }
+
+  if(kernel_choices.count(vm["kernel"].as<std::string>()) == 0) {
+	// Method not among choices
+	std::cerr << "Kernel must be one of {Linear, wLinear, IBS, wIBS, Quadratic, twoWayX}.\n";
+	std::cerr << desc << "\n";
+	return 1;
   }
 
   // Setup task parameters
