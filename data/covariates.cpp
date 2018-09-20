@@ -4,14 +4,15 @@
 
 #include "covariates.hpp"
 
-Covariates::Covariates(const std::string &ifile)
+Covariates::Covariates(const std::string& ifile, const std::string& pedfile)
 	: nsamples_(0),
 	  ncases_(0) {
 
-  parse(ifile);
+  parse(ifile, pedfile);
   calculate_odds();
 
   indices_ = arma::regspace<arma::uvec>(0, nsamples_ - 1);
+  sorted_ = false;
 }
 
 Covariates::Covariates(std::stringstream &ss)
@@ -88,26 +89,48 @@ void Covariates::clear() {
   odds_.reset();
 }
 
-void Covariates::parse(const std::string &ifile) {
+/**
+ * @brief Parse the PCA_Internal matrix file.
+ * @param ifile
+ */
+void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
   std::ifstream ifs(ifile);
+  std::ifstream pfs(pedfile);
   std::string line;
 
+  std::vector<std::pair<std::string, double>> sample_phen_pair;
   std::vector<double> phenotypes;
   std::vector<std::vector<double>> covariates;
 
+  // Parse the phenotype from the ped file.
+  while (std::getline(pfs, line)) {
+    RJBUtil::Splitter<std::string> splitter(line, "\t");
+
+    std::string sample_id = splitter[1];
+    double phen = std::stod(splitter[5]);
+
+    std::pair<std::string, double> pair {sample_id, (phen == 2) ? 1 : 0};
+
+    sample_phen_pair.emplace_back(pair);
+  }
+
+  // Parse the PCA matrix file
   while (std::getline(ifs, line)) {
 	RJBUtil::Splitter<std::string> splitter(line, "\t");
 
 	unsigned long i = 0;
 	for (const auto &v : splitter) {
 	  if (i == 0) {
-		int phen = std::stoi(v);
+	    //
+	    auto phen = std::find(sample_phen_pair.cbegin(), sample_phen_pair.cend(), [&](std::pair<std::string, double> x){ return v == x.first; });
 
-		if (phen == 1)
+		samples_.push_back(v);
+
+		if (phen->second == 1)
 		  ncases_++;
 		nsamples_++;
 
-		phenotypes.push_back(std::stoi(v));
+		phenotypes.push_back(phen->second);
 	  } else {
 		if (covariates.size() < i) {
 		  covariates.emplace_back(std::vector<double>());
@@ -209,5 +232,36 @@ void Covariates::calculate_odds() {
   odds_ = lr.get_odds();
   prob_ = lr.get_probability();
   eta_ = lr.get_eta();
+}
+
+/**
+ * @brief Uses the header of the matrix to sort the covariates
+ * @param header Header of the matrix file
+ */
+void Covariates::sort_covariates(std::string &header) {
+  RJBUtil::Splitter<std::string> splitter(header, "\t");
+
+  arma::uvec indices(phenotypes_.n_rows, arma::fill::zeros);
+
+  arma::uword i = 0;
+  for(const auto &v : splitter) {
+    if (i >= 3) {
+      arma::uword j = 0;
+      for(const auto &s : samples_) {
+        if(s == v) {
+          indices[i - 3] = j;
+          break;
+        }
+        j++;
+      }
+    }
+    i++;
+  }
+
+  // Sort the phenotypes and covariates according to the order in the matrix file.
+  phenotypes_ = phenotypes_(indices);
+  covariates_ = covariates_.rows(indices);
+
+  sorted_ = true;
 }
 

@@ -17,7 +17,7 @@
 
 class Covariates {
 public:
-  explicit Covariates(const std::string& ifile);
+  explicit Covariates(const std::string& ifile, const std::string& pedfile);
   explicit Covariates(std::stringstream& ss);
 
   Covariates(const Covariates &cov) = default;
@@ -49,7 +49,12 @@ public:
   // Free memory
   void clear();
 
+  // Sort covariates
+  void sort_covariates(std::string &header);
+  bool is_sorted();
+
 private:
+  std::vector<std::string> samples_;
   arma::colvec phenotypes_;
   arma::colvec original_;
   arma::mat covariates_;
@@ -59,10 +64,12 @@ private:
   arma::vec mean_; // Mean of MFNCH
   arma::vec eta_;
 
+  bool sorted_;
+
   unsigned long nsamples_;
   unsigned long ncases_;
 
-  void parse(const std::string& ifile);
+  void parse(const std::string& ifile, const std::string& pedfile);
   void parse(std::stringstream& ss);
 
   void calculate_odds();

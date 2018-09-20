@@ -40,6 +40,7 @@ struct TaskParams {
   std::string covariates_path;
   std::string bed_path;
   std::string casm_path;
+  std::string ped_path;
 
   bool bed;
   bool casm;

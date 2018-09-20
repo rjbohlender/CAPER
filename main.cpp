@@ -41,6 +41,7 @@ int main(int argc, char **argv) {
 			("help,h", "Print this help message.")
 			("genotypes,g", po::value<std::string>()->required(), "Genotype matrix file.")
 			("covariates,c", po::value<std::string>()->required(), "The covariate table file, including phenotypes.\nPhenotypes {0=control, 1=case} should be in the first column.")
+			("ped,p", po::value<std::string>()->required(), "Path to the .ped file.")
 			("bed-file,b", po::value(&bed), "A bed file to be used as a filter. All specified regions will be excluded.")
 			("casm-file,w", po::value(&casm), "A file providing weights for VAAST.")
 			("nthreads,t",
@@ -112,7 +113,9 @@ int main(int argc, char **argv) {
 	return 1;
   }
 
-  // Setup task parameters
+  /**********************
+   * Setup task parameters
+   **********************/
   TaskParams tp{};
 
   RJBUtil::Splitter<std::string> beta_split(vm["beta_weights"].as<std::string>(), ",");
@@ -126,6 +129,7 @@ int main(int argc, char **argv) {
   tp.program_path = argv[0];
   tp.genotypes_path = vm["genotypes"].as<std::string>();
   tp.covariates_path = vm["covariates"].as<std::string>();
+  tp.ped_path = vm["ped"].as<std::string>();
   if(bed) {
 	tp.bed = true;
 	tp.bed_path = *bed;
@@ -198,7 +202,7 @@ int main(int argc, char **argv) {
 	std::exit(1);
   }
 
-  Covariates cov(tp.covariates_path);
+  Covariates cov(tp.covariates_path, tp.ped_path);
   std::vector<std::vector<int32_t>> permutations;
 
   Permute perm;
