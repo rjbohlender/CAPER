@@ -6,7 +6,6 @@
 #include <thread>
 #include <ctime>
 #include <iomanip>
-#include <algorithm>
 #include <set>
 #include <cassert>
 

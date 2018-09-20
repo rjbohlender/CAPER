@@ -4,6 +4,8 @@
 
 #include "covariates.hpp"
 
+#include <algorithm>
+
 Covariates::Covariates(const std::string& ifile, const std::string& pedfile)
 	: nsamples_(0),
 	  ncases_(0) {
