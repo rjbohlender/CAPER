@@ -265,3 +265,7 @@ void Covariates::sort_covariates(std::string &header) {
   sorted_ = true;
 }
 
+bool Covariates::is_sorted() {
+  return sorted_;
+}
+

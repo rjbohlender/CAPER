@@ -246,6 +246,9 @@ void initialize_jobs(TaskParams &tp,
   while (std::getline(ifs, line)) {
 	if (lineno == 0) {
 	  header = line;
+	  if(!cov.is_sorted()) {
+	    cov.sort_covariates(header);
+	  }
 	  lineno++;
 	  continue;
 	}
