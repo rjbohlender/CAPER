@@ -121,8 +121,8 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
 	unsigned long i = 0;
 	for (const auto &v : splitter) {
 	  if (i == 0) {
-	    //
-	    auto phen = std::find(sample_phen_pair.cbegin(), sample_phen_pair.cend(), [&](std::pair<std::string, double> x){ return v == x.first; });
+	    // Get phenotype of current sample
+	    auto phen = std::find_if(sample_phen_pair.begin(), sample_phen_pair.end(), [v](auto &x){ return x.first == v; });
 
 		samples_.push_back(v);
 
