@@ -106,10 +106,13 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
 
   // Parse the phenotype from the ped file.
   while (std::getline(pfs, line)) {
+    if(line[0] == '#') {
+      continue;
+    }
     RJBUtil::Splitter<std::string> splitter(line, "\t");
 
     std::string sample_id = splitter[1];
-    double phen = std::stod(splitter[5]);
+    double phen = std::stoi(splitter[5]);
 
     std::pair<std::string, double> pair {sample_id, (phen == 2) ? 1 : 0};
 
