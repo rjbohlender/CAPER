@@ -11,8 +11,6 @@ Covariates::Covariates(const std::string& ifile, const std::string& pedfile)
 	  ncases_(0) {
 
   parse(ifile, pedfile);
-  calculate_odds();
-
   indices_ = arma::regspace<arma::uvec>(0, nsamples_ - 1);
   sorted_ = false;
 }
@@ -265,7 +263,9 @@ void Covariates::sort_covariates(std::string &header) {
 
   // Sort the phenotypes and covariates according to the order in the matrix file.
   phenotypes_ = phenotypes_(indices);
-  covariates_ = covariates_.rows(indices);
+  covariates_ = covariates_.cols(indices);
+
+  calculate_odds();
 
   sorted_ = true;
 }

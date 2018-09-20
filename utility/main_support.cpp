@@ -249,6 +249,13 @@ void initialize_jobs(TaskParams &tp,
 	  if(!cov.is_sorted()) {
 	    cov.sort_covariates(header);
 	  }
+
+	  // Permute SKAT and SKATO normally
+	  Permute perm;
+	  if (tp.stage_1_permutations > 0 && tp.method != "SKAT" && tp.method != "SKATO") {
+		permutations = perm.get_permutations(tp.stage_1_permutations, cov.get_odds(), cov.get_ncases());
+	  }
+
 	  lineno++;
 	  continue;
 	}

@@ -205,11 +205,6 @@ int main(int argc, char **argv) {
   std::vector<std::vector<int32_t>> permutations;
 
   Permute perm;
-  // Permute SKAT and SKATO normally
-  if (tp.stage_1_permutations > 0 && tp.method != "SKAT" && tp.method != "SKATO") {
-	permutations = perm.get_permutations(tp.stage_1_permutations, cov.get_odds(), cov.get_ncases());
-  }
-
   // Initialize randomization
   arma::arma_rng::set_seed_random();
 

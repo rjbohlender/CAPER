@@ -70,7 +70,7 @@ include_directories(${Boost_INCLUDE_DIRS})
 
 add_executable(Permute_Associate
                main.cpp
-               ${PROJECT_SUPPORT_FILES} utility/main_support.cpp utility/main_support.hpp)
+               ${PROJECT_SUPPORT_FILES})
 
 target_link_libraries(Permute_Associate ${ARMADILLO_LIBRARIES})
 target_link_libraries(Permute_Associate ${CMAKE_THREAD_LIBS_INIT})
@@ -87,5 +87,3 @@ target_include_directories(test PRIVATE ${ARMADILLO_INCLUDE_DIR})
 
 target_link_libraries(test ${ARMADILLO_LIBRARIES})
 target_link_libraries(test ${CMAKE_THREAD_LIBS_INIT})
-
-add_executable(matrix2hdf5 matrix2hdf5.cpp)
