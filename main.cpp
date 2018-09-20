@@ -7,7 +7,7 @@
 #include <ctime>
 #include <iomanip>
 #include <algorithm>
-#include <list>
+#include <set>
 #include <cassert>
 
 #include <boost/program_options.hpp>
@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
 	return 1;
   }
 
-  std::list<std::string> method_choices = {
+  std::set<std::string> method_choices = {
 	  "CALPHA",
 	  "CMC",
 	  "VT",
@@ -88,6 +88,13 @@ int main(int argc, char **argv) {
 	  "SKATO",
 	  "VAAST"
   };
+
+  if(method_choices.count(vm["method"].as<std::string>()) == 0) {
+    // Method not among choices
+    std::cerr << "Method must be one of {CALPHA, CMC, VT, WSS, SKAT, SKATO, VAAST}.\n";
+    std::cerr << desc << "\n";
+    return 1;
+  }
 
   // Setup task parameters
   TaskParams tp{};

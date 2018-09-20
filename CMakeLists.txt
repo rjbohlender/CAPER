@@ -87,3 +87,5 @@ target_include_directories(test PRIVATE ${ARMADILLO_INCLUDE_DIR})
 
 target_link_libraries(test ${ARMADILLO_LIBRARIES})
 target_link_libraries(test ${CMAKE_THREAD_LIBS_INIT})
+
+add_executable(matrix2hdf5 matrix2hdf5.cpp)
