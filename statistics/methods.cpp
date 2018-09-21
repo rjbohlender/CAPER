@@ -363,19 +363,23 @@ double Methods::SKATO(Gene &gene,
   return pval;
 }
 
-double Methods::VAAST(arma::mat &Xmat,
-					  arma::colvec &Yvec,
+double Methods::VAAST(Gene &gene,
+					  Covariates &cov,
+					  const std::string &k,
 					  arma::colvec &log_casm,
 					  bool score_only_minor,
 					  bool score_only_alternative,
 					  double site_penalty) {
+  arma::mat Xmat = gene.get_matrix(k);
+  arma::vec Yvec = cov.get_phenotype_vector();
+
   double n_case = arma::sum(Yvec);
   double n_control = Yvec.n_rows - n_case;
 
   arma::vec case_allele1(Xmat.n_cols);
   arma::vec control_allele1(Xmat.n_cols);
 
-#if 0
+#if 1
   for (arma::uword i = 0; i < Xmat.n_cols; i++) {
 	case_allele1(i) = arma::dot(Yvec, Xmat.col(i));
 	control_allele1(i) = arma::dot(1 - Yvec, Xmat.col(i));
@@ -387,12 +391,6 @@ double Methods::VAAST(arma::mat &Xmat,
 
   arma::vec case_allele0 = 2 * n_case - case_allele1;
   arma::vec control_allele0 = 2 * n_control - control_allele1;
-#if 0
-  std::cerr << "case_allele0:\n" << case_allele0.t();
-  std::cerr << "control_allele0:\n" << control_allele0.t();
-  std::cerr << "case_allele1:\n" << case_allele1.t();
-  std::cerr << "control_allele1:\n" << control_allele1.t();
-#endif
 
   // Get ln likelihood  of each variant
   arma::vec log_lh = LRT(case_allele1, control_allele1, case_allele0, control_allele0);
@@ -435,10 +433,10 @@ double Methods::VAAST(arma::mat &Xmat,
 	}
 	if (score_only_minor) {
 	  // If both scenarios are false, append to mask
-	  bool scenario1 = !(control_allele1(i) <= control_allele0(i)
-		  & (case_allele1(i) * control_allele0(i) >= case_allele0(i) * control_allele1(i)));
-	  bool scenario2 = !(control_allele1(i) >= control_allele0(i)
-		  & (case_allele1(i) * control_allele0(i) <= case_allele0(i) * control_allele1(i)));
+	  bool scenario1 = !((control_allele1(i) <= control_allele0(i))
+		  & ((case_allele1(i) * control_allele0(i) >= case_allele0(i) * control_allele1(i))));
+	  bool scenario2 = !((control_allele1(i) >= control_allele0(i))
+		  & ((case_allele1(i) * control_allele0(i) <= case_allele0(i) * control_allele1(i))));
 
 	  if (score_only_alternative) {
 		if (scenario1)
@@ -452,9 +450,27 @@ double Methods::VAAST(arma::mat &Xmat,
   mask = arma::conv_to<arma::uvec>::from(scenario);
 
   vaast_site_scores(mask).zeros();
+
 #if 0
-  std::cerr << "VAAST site scores:\n" << vaast_site_scores.t();
+  std::cerr << std::setw(50) << std::right << "Positions";
+  std::cerr << std::setw(25) << std::right << "VAAST site scores";
+  std::cerr << std::setw(15) << std::right << "Case 0";
+  std::cerr << std::setw(15) << std::right << "Control 0";
+  std::cerr << std::setw(15) << std::right << "Case 1";
+  std::cerr << std::setw(15) << std::right << "Control 1" << "\n";
+  for(int i = 0; i < vaast_site_scores.n_rows; i++) {
+    std::string pos = gene.get_positions(k)[i];
+    double score = vaast_site_scores[i];
+	std::cerr << std::setw(50) << pos;
+	std::cerr << std::setw(25) << score;
+	std::cerr << std::setw(15) << case_allele0(i);
+	std::cerr << std::setw(15) << control_allele0(i);
+	std::cerr << std::setw(15) << case_allele1(i);
+	std::cerr << std::setw(15) << control_allele1(i) << "\n";
+  }
+  std::cerr << "\n";
 #endif
+
   return arma::sum(vaast_site_scores);
 }
 
@@ -501,36 +517,6 @@ double Methods::WSS(arma::mat &Xmat, arma::colvec &Yvec) {
   return arma::sum(ranks(arma::find(Yvec > 0)));
 }
 
-double Methods::call(arma::mat &Xmat, arma::vec &Yvec) {
-  if (method_ == "WSS") {
-	return WSS(Xmat, Yvec);
-  } else if (method_ == "CALPHA") {
-	return CALPHA(Xmat, Yvec);
-  } else if (method_ == "VT") {
-	return VT(Xmat, Yvec);
-  } else if (method_ == "CMC") {
-	return CMC(Xmat, Yvec);
-  } else if (method_ == "VAAST") {
-	arma::vec log_casm;
-	return VAAST(Xmat, Yvec, log_casm, false, false, 0);
-  }
-  return 0;
-}
-
-double Methods::call(arma::mat &Xmat, arma::vec &Yvec, arma::vec &weights) {
-  if (method_ == "VAAST") {
-	return VAAST(Xmat, Yvec, weights, false, false, 0);
-  }
-  return 0;
-}
-
-double Methods::call(arma::mat &Xmat, arma::vec &Yvec, arma::vec &weights, bool score_only_minor, double site_penalty) {
-  if (method_ == "VAAST") {
-	return VAAST(Xmat, Yvec, weights, score_only_minor, false, site_penalty);
-  }
-  throw std::logic_error("Incorrect arguments to Methods::call for method set.");
-}
-
 double Methods::call(const std::string &k, Gene &gene, Covariates &cov) {
   if (method_ == "WSS") {
 	return WSS(gene.get_matrix(k), cov.get_phenotype_vector());
@@ -541,31 +527,11 @@ double Methods::call(const std::string &k, Gene &gene, Covariates &cov) {
   } else if (method_ == "CMC") {
 	return CMC(gene.get_matrix(k), cov.get_phenotype_vector(), 0);
   } else if (method_ == "VAAST") {
-#if 0
-	for(const auto &v : gene.get_positions(k)) {
-	  std::cerr << v << "\t";
-	}
-	std::cerr << "\n";
+#if 1
 #endif
-	return VAAST(gene.get_matrix(k), cov.get_phenotype_vector(), gene.get_weights(k), true, true, 2);
+	return VAAST(gene, cov, k, gene.get_weights(k), true, true, 2);
   }
   throw (std::runtime_error("Wrong method call. 1"));
-}
-
-double Methods::call(const std::string &k, Gene &gene, Covariates &cov, arma::colvec &weights) {
-  if (method_ == "WSS") {
-	return WSS(gene.get_matrix(k), cov.get_phenotype_vector());
-  } else if (method_ == "CALPHA") {
-	return CALPHA(gene.get_matrix(k), cov.get_phenotype_vector());
-  } else if (method_ == "VT") {
-	return VT(gene.get_matrix(k), cov.get_phenotype_vector());
-  } else if (method_ == "CMC") {
-	return CMC(gene.get_matrix(k), cov.get_phenotype_vector(), 0);
-  } else if (method_ == "VAAST") {
-	arma::vec log_casm;
-	return VAAST(gene.get_matrix(k), cov.get_phenotype_vector(), log_casm, true, true, 2);
-  }
-  throw (std::runtime_error("Wrong method call. 2"));
 }
 
 double Methods::call(const std::string &k, Gene &gene, Covariates &cov, bool shuffle) {
@@ -611,7 +577,7 @@ arma::vec Methods::log_likelihood(arma::vec &freq, arma::vec &allele0, arma::vec
   // Prevent numerical issues
   arma::vec clamped = arma::clamp(freq, 1e-9, 1.0 - 1e-9);
 
-#if 0
+#if 1
   return allele1 % arma::log(clamped) + allele0 % arma::log(1.0 - clamped);
 #else
   return arma::diagmat(allele1) * arma::log(clamped) + arma::diagmat(allele0) * arma::log(1.0 - clamped);

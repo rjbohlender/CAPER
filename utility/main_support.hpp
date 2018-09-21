@@ -21,7 +21,7 @@ void print_results(TaskQueue &tq, int ntranscripts, int ngenes, TaskParams &tp);
 
 void initialize_jobs(TaskParams &tp,
 					 std::vector<std::vector<int32_t>> &permutations,
-					 Covariates &cov,
+					 Covariates *cov,
 					 TaskQueue &tq);
 
 #endif //PERMUTE_ASSOCIATE_MAIN_SUPPORT_HPP

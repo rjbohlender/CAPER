@@ -137,7 +137,6 @@ std::vector<std::vector<int32_t>> Permute::permutations_maj_bin(int nperm,
 																int ncases,
 																arma::uvec &mac_indices,
 																arma::uvec &maj_indices) {
-  StochasticLib3 sto((int32_t) time(nullptr));
   std::vector<std::vector<int32_t>> ret(nperm);
   for (int i = 0; i < nperm; i++) {
 	ret[i] = std::vector<int32_t>(prob.n_rows);

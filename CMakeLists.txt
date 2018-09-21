@@ -10,7 +10,8 @@ find_package(Threads REQUIRED)
 find_package(Boost 1.66.0 COMPONENTS program_options REQUIRED)
 
 if (APPLE)
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -pg -fsanitize=address -fsanitize=undefined -Wall -pedantic")
+    # -fsanitize=address -fsanitize=undefined -Wall -pedantic
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -pg")
 endif ()
 
 if (CMAKE_COMPILER_IS_GNUCXX)
@@ -70,7 +71,7 @@ include_directories(${Boost_INCLUDE_DIRS})
 
 add_executable(Permute_Associate
                main.cpp
-               ${PROJECT_SUPPORT_FILES})
+               ${PROJECT_SUPPORT_FILES} data/calccasm.cpp data/calccasm.hpp)
 
 target_link_libraries(Permute_Associate ${ARMADILLO_LIBRARIES})
 target_link_libraries(Permute_Associate ${CMAKE_THREAD_LIBS_INIT})

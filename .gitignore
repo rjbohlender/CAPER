@@ -47,3 +47,6 @@ vaast.py
 
 # macOS
 .DS_Store
+
+/db/
+matrix2hdf5.cpp

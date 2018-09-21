@@ -214,7 +214,7 @@ void print_results(TaskQueue &tq, int ntranscripts, int ngenes, TaskParams &tp) 
 
 void initialize_jobs(TaskParams &tp,
 					 std::vector<std::vector<int32_t>> &permutations,
-					 Covariates &cov,
+					 Covariates *cov,
 					 TaskQueue &tq) {
   std::stringstream current;
   std::string gene;
@@ -246,14 +246,14 @@ void initialize_jobs(TaskParams &tp,
   while (std::getline(ifs, line)) {
 	if (lineno == 0) {
 	  header = line;
-	  if(!cov.is_sorted()) {
-	    cov.sort_covariates(header);
+	  if(!(*cov).is_sorted()) {
+	    cov->sort_covariates(header);
 	  }
 
 	  // Permute SKAT and SKATO normally
 	  Permute perm;
 	  if (tp.stage_1_permutations > 0 && tp.method != "SKAT" && tp.method != "SKATO") {
-		permutations = perm.get_permutations(tp.stage_1_permutations, cov.get_odds(), cov.get_ncases());
+		permutations = perm.get_permutations(tp.stage_1_permutations, cov->get_odds(), cov->get_ncases());
 	  }
 
 	  lineno++;
@@ -287,7 +287,7 @@ void initialize_jobs(TaskParams &tp,
 	  }
 	} else {
 	  if (!gene.empty()) {
-		Gene gene_data(current, cov.get_nsamples(), nvariants, casm);
+		Gene gene_data(current, cov->get_nsamples(), nvariants, casm);
 		Stage stage;
 
 		// Choose starting stage
@@ -303,7 +303,6 @@ void initialize_jobs(TaskParams &tp,
 		  if (std::find(gene_list.cbegin(), gene_list.cend(), gene_data.get_gene()) != gene_list.cend()) {
 			// Ensure we have at least one variant for a submitted gene
 			if (std::any_of(nvariants.cbegin(), nvariants.cend(), [&](const auto &v) { return v.second > 0; })) {
-			  // TODO Change logic for multiple jobs
 			  int total_s1_perm = 0;
 			  int total_s2_perm = 0;
 			  int total_success = 0;
@@ -311,7 +310,7 @@ void initialize_jobs(TaskParams &tp,
 				if (i == tq.get_nthreads() - 1) {
 				  TaskArgs ta(stage,
 							  gene_data,
-							  cov,
+							  *cov,
 							  tp,
 							  tp.success_threshold - total_success,
 							  tp.stage_1_permutations - total_s1_perm,
@@ -326,7 +325,7 @@ void initialize_jobs(TaskParams &tp,
 				} else {
 				  TaskArgs ta(stage,
 							  gene_data,
-							  cov,
+							  *cov,
 							  tp,
 							  tp.success_threshold / static_cast<int>(tq.get_nthreads()),
 							  tp.stage_1_permutations / static_cast<int>(tq.get_nthreads()),
@@ -354,7 +353,7 @@ void initialize_jobs(TaskParams &tp,
 		  if (std::any_of(nvariants.cbegin(), nvariants.cend(), [&](const auto &v) { return v.second > 0; })) {
 			TaskArgs ta(stage,
 						gene_data,
-						cov,
+						*cov,
 						tp,
 						permutations);
 			// Limit adding jobs to prevent excessive memory usage
@@ -402,7 +401,7 @@ void initialize_jobs(TaskParams &tp,
   }
 
   // Submit final gene
-  Gene gene_data(current, cov.get_nsamples(), nvariants, casm);
+  Gene gene_data(current, cov->get_nsamples(), nvariants, casm);
   Stage stage;
 
   // Choose starting stage
@@ -425,7 +424,7 @@ void initialize_jobs(TaskParams &tp,
 		  if (i == tq.get_nthreads() - 1) {
 			TaskArgs ta(stage,
 						gene_data,
-						cov,
+						*cov,
 						tp,
 						tp.success_threshold - total_success,
 						tp.stage_1_permutations - total_s1_perm,
@@ -440,7 +439,7 @@ void initialize_jobs(TaskParams &tp,
 		  } else {
 			TaskArgs ta(stage,
 						gene_data,
-						cov,
+						*cov,
 						tp,
 						tp.success_threshold / static_cast<int>(tq.get_nthreads()),
 						tp.stage_1_permutations / static_cast<int>(tq.get_nthreads()),
@@ -466,7 +465,7 @@ void initialize_jobs(TaskParams &tp,
   } else {
 	// Ensure at least one transcript
 	if (std::any_of(nvariants.cbegin(), nvariants.cend(), [&](const auto &v) { return v.second > 0; })) {
-	  TaskArgs ta(stage, gene_data, cov, tp, permutations);
+	  TaskArgs ta(stage, gene_data, *cov, tp, permutations);
 
 	  // Limit adding jobs to prevent excessive memory usage
 	  while (!tq.empty()) {

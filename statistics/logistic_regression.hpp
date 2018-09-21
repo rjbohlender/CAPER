@@ -28,6 +28,9 @@ private:
   arma::rowvec h(arma::mat &Xmat);
   double cost(arma::mat &Xmat, arma::colvec &Yvec);
   void train(arma::mat &Xmat, arma::colvec &Yvec);
+
+  void IRLS_SVDNEWTON(arma::mat &Xmat, arma::colvec &Yvec);
+
   void calculate_odds(arma::mat &Xmat);
   void calculate_mean(arma::mat &Xmat);
   void calculate_probability(arma::mat &Xmat);

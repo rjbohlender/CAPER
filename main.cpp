@@ -208,6 +208,6 @@ int main(int argc, char **argv) {
   // Initialize randomization
   arma::arma_rng::set_seed_random();
 
-  initialize_jobs(tp, permutations, cov, tq);
+  initialize_jobs(tp, permutations, &cov, tq);
   return 0;
 }

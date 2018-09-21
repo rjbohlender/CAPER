@@ -23,7 +23,7 @@ struct SKATParam {
   double Df;
   arma::vec tau;
 
-  static constexpr double rho_[8] = {0, 0.01, 0.04, 0.09, 0.16, 0.25, 0.5, 1};;
+  static constexpr double rho_[8] = {0, 0.01, 0.04, 0.09, 0.16, 0.25, 0.5, 1};
 };
 
 struct LiuParam {

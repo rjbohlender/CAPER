@@ -30,11 +30,7 @@ public:
   explicit Methods(std::string method);
   Methods(std::string method, std::string kernel);
 
-  double call(arma::mat &Xmat, arma::vec &Yvec);
-  double call(arma::mat &Xmat, arma::vec &Yvec, arma::vec &weights);
-  double call(arma::mat &Xmat, arma::vec &Yvec, arma::vec &weights, bool score_only_minor, double site_penalty);
   double call(const std::string &k, Gene &gene, Covariates &cov);
-  double call(const std::string &k, Gene &gene, Covariates &cov, arma::colvec &weights);
   double call(const std::string &k, Gene &gene, Covariates &cov, bool shuffle);
   double call(const std::string &k, Gene &gene, Covariates &cov, bool shuffle, bool adjust);
 
@@ -70,8 +66,9 @@ private:
 			   int b = 25,
 			   bool adjust = true);
   double WSS(arma::mat &Xmat, arma::colvec &Yvec);
-  double VAAST(arma::mat &Xmat,
-			   arma::colvec &Yvec,
+  double VAAST(Gene &gene,
+			   Covariates &cov,
+			   const std::string &k,
 			   arma::colvec &log_casm,
 			   bool score_only_minor = true,
 			   bool score_only_alternative = true,
