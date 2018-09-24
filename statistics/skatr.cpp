@@ -23,10 +23,16 @@ SKATR_Null::SKATR_Null(Covariates &cov) {
 
 void SKATR_Null::shuffle() {
   indices = arma::shuffle(indices);
+
+  arma::mat U, V;
+  arma::vec S;
+  arma::svd_econ(U, S, V, arma::diagmat(Yh(indices)) * X.t());
+
+  Ux = arma::diagmat(Yh) * U;
 }
 
 arma::vec SKATR_Null::get_U0() {
-  return U0;
+  return U0(indices);
 }
 
 arma::vec SKATR_Null::get_pi0() {

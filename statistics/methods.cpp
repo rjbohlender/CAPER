@@ -89,7 +89,7 @@ Methods::Methods(std::string method, std::string kernel, Covariates &cov)
 	kernel_ = Kernel::twoWayX;
   }
 
-  if (method_ == "SKAT" || method_ == "SKATO") {
+  if (method_ == "SKAT" || method_ == "SKATO" || method_ == "BURDEN") {
 	obj_ = std::make_shared<SKATR_Null>(cov);
   }
 }
@@ -560,7 +560,7 @@ double Methods::call(const std::string &k, Gene &gene, Covariates &cov, bool shu
   } else if(method_ == "SKATO") {
 	return SKATRO(gene, *obj_, k, shuffle, a, b);
   } else if(method_ == "BURDEN") {
-    return BURDEN(gene, *obj_, k, false, a, b);
+    return BURDEN(gene, *obj_, k, shuffle, a, b);
   }
   throw (std::runtime_error("Wrong method call. 4"));
 }

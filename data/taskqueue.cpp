@@ -132,7 +132,7 @@ void TaskQueue::thread_handler() {
 void TaskQueue::stage_1(TaskArgs &ta) {
   // Set original value
   for (auto &v : ta.results) {
-	if (!(ta.get_methods().str() == "SKAT") && !(ta.get_methods().str() == "SKATO")) {
+	if (!(ta.get_methods().str() == "SKAT") && !(ta.get_methods().str() == "SKATO") && !(ta.get_methods().str() == "BURDEN")) {
 	  v.second.original = ta.get_methods().call(v.second.transcript, ta.get_gene(), ta.get_cov());
 	} else {
 	  v.second.original = ta.get_methods().call(v.second.transcript, ta.get_gene(), ta.get_cov(), false, ta.get_a(), ta.get_b());
@@ -148,7 +148,7 @@ void TaskQueue::stage_1(TaskArgs &ta) {
 
   int iter = 0;
   while (iter < ta.get_npermutations()) {
-	if (!(ta.get_methods().str() == "SKAT") && !(ta.get_methods().str() == "SKATO")) {
+	if (!(ta.get_methods().str() == "SKAT") && !(ta.get_methods().str() == "SKATO") && !(ta.get_methods().str() == "BURDEN")) {
 	  ta.get_cov().set_phenotype_vector(ta.get_permutations()[iter]);
 	}
 	int transcript_no = -1;
@@ -158,7 +158,7 @@ void TaskQueue::stage_1(TaskArgs &ta) {
 	  const std::string &k = v.second.transcript;
 	  double perm_val;
 
-	  if (!(ta.get_methods().str() == "SKAT") && !(ta.get_methods().str() == "SKATO")) {
+	  if (!(ta.get_methods().str() == "SKAT") && !(ta.get_methods().str() == "SKATO") && !(ta.get_methods().str() == "BURDEN")) {
 		perm_val = ta.get_methods().call(v.second.transcript, ta.get_gene(), ta.get_cov());
 	  } else {
 		if (transcript_no == 0) {
@@ -226,7 +226,7 @@ void TaskQueue::check_perm(const std::string &method,
 						   int success_threshold,
 						   std::pair<const std::string, Result> &v) {
   // SKATO returns a pvalue so we need to reverse the successes
-  if (method == "SKATO") {
+  if (method == "SKATO" || method == "SKAT") {
 	if (perm_val <= v.second.original) {
 	  if (v.second.successes < success_threshold) {
 		v.second.successes++;
@@ -284,7 +284,7 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 	const std::string &k = v.second.transcript;
 
 	if (std::isnan(v.second.original)) {
-	  if (!(ta.get_methods().str() == "SKAT") && !(ta.get_methods().str() == "SKATO")) {
+	  if (!(ta.get_methods().str() == "SKAT") && !(ta.get_methods().str() == "SKATO") && !(ta.get_methods().str() == "BURDEN")) {
 		v.second.original = ta.get_methods().call(v.second.transcript, ta.get_gene(), ta.get_cov());
 	  } else {
 	    v.second.original = ta.get_methods().call(v.second.transcript, ta.get_gene(), ta.get_cov(), false, ta.get_a(), ta.get_b());
@@ -334,7 +334,7 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 	  transcript_no++;
 
 	  // SKAT corrects for covariates so we don't use this permutation approach
-	  if (!(ta.get_methods().str() == "SKAT") && !(ta.get_methods().str() == "SKATO")) {
+	  if (!(ta.get_methods().str() == "SKAT") && !(ta.get_methods().str() == "SKATO") && !(ta.get_methods().str() == "BURDEN")) {
 		// Permute minor allele carriers
 		// arma::vec temp_odds(mac_odds[k].n_rows + 1, arma::fill::zeros);
 		// temp_odds(arma::span(0, mac_odds[k].n_rows - 1)) = mac_odds[k];
