@@ -4,6 +4,33 @@
 
 #include "qfc2.hpp"
 
+/*  distribution function of a linear combination of non-central
+   chi-squared random variables :
+
+input:
+   lb[j]            coefficient of j-th chi-squared variable
+   nc[j]            non-centrality parameter
+   n[j]             degrees of freedom
+   j = 0, 2 ... r-1
+   sigma            coefficient of standard normal variable
+   c                point at which df is to be evaluated
+   lim              maximum number of terms in integration
+   acc              maximum error
+
+output:
+   ifault = 1       required accuracy NOT achieved
+            2       round-off error possibly significant
+            3       invalid parameters
+            4       unable to locate integration parameters
+            5       out of memory
+
+   trace[0]         absolute sum
+   trace[1]         total number of integration terms
+   trace[2]         number of integrations
+   trace[3]         integration interval in final integration
+   trace[4]         truncation point in initial integration
+   trace[5]         s.d. of initial convergence factor
+   trace[6]         cycles to locate integration parameters     */
 QFC::QFC(std::vector<double> &lb1,
 		 std::vector<double> &nc1,
 		 std::vector<int> &n1,
@@ -433,6 +460,10 @@ void QFC::counter() {
 
 double QFC::get_res() {
   return res;
+}
+
+int QFC::get_fault() {
+  return ifault;
 }
 
 

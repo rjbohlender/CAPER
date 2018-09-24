@@ -8,11 +8,13 @@
 #include <map>
 #include <string>
 #include <armadillo>
+#include <memory>
 
 #include "../data/gene.hpp"
 #include "../data/covariates.hpp"
 #include "skat.hpp"
 #include "skat_adjust.hpp"
+#include "skatr.hpp"
 
 arma::vec rank(arma::vec &v, const char *direction);
 
@@ -28,11 +30,10 @@ enum class Kernel {
 class Methods {
 public:
   explicit Methods(std::string method);
-  Methods(std::string method, std::string kernel);
+  Methods(std::string method, std::string kernel, Covariates &cov);
 
   double call(const std::string &k, Gene &gene, Covariates &cov);
-  double call(const std::string &k, Gene &gene, Covariates &cov, bool shuffle);
-  double call(const std::string &k, Gene &gene, Covariates &cov, bool shuffle, bool adjust);
+  double call(const std::string &k, Gene &gene, Covariates &cov, bool shuffle, int a, int b);
 
   std::string str();
 
@@ -47,9 +48,11 @@ private:
   // Weights for SKAT-O
   static constexpr double rho_[8] = {0, 0.01, 0.04, 0.09, 0.16, 0.25, 0.5, 1};
 
-  double BURDEN(arma::mat &Xmat, Covariates &cov, arma::vec &weights);
+  // Wu, Guan, and Pankow 2016
+  double BURDEN(Gene &gene, SKATR_Null &obj, const std::string &k, bool shuffle, int a, int b);
   double CALPHA(arma::mat &Xmat, arma::vec &Yvec);
   double CMC(arma::mat &Xmat, arma::vec &Yvec, double maf = 0.05);
+  // Wu et al. 2011
   double SKAT(arma::mat &Xmat,
 			  Covariates &cov,
 			  arma::vec &weights,
@@ -57,6 +60,9 @@ private:
 			  bool shuffle = false,
 			  int a = 1,
 			  int b = 25);
+  // Wu, Guan, and Pankow 2016
+  double SKATR(Gene &gene, SKATR_Null &obj, const std::string &k, bool shuffle, int a, int b);
+  // Lee et al. 2012
   double SKATO(Gene &gene,
 			   Covariates &cov,
 			   arma::vec &weights,
@@ -65,14 +71,15 @@ private:
 			   int a = 1,
 			   int b = 25,
 			   bool adjust = true);
+  // Wu, Guan, and Pankow 2016
+  double SKATRO(Gene &gene, SKATR_Null &obj, const std::string &k, bool shuffle, int a=1, int b=25);
   double WSS(arma::mat &Xmat, arma::colvec &Yvec);
   double VAAST(Gene &gene,
-			   Covariates &cov,
-			   const std::string &k,
-			   arma::colvec &log_casm,
-			   bool score_only_minor = true,
-			   bool score_only_alternative = true,
-			   double site_penalty = 2.0);
+				 Covariates &cov,
+				 const std::string &k,
+				 bool score_only_minor = true,
+				 bool score_only_alternative = true,
+				 double site_penalty = 2.0);
   double VT(arma::mat &Xmat, arma::colvec &Yvec);
 
   // VAAST support member functions
@@ -81,6 +88,9 @@ private:
 				arma::vec &case_allele0,
 				arma::vec &control_allele0);
   arma::vec log_likelihood(arma::vec &freq, arma::vec &allele0, arma::vec &allele1);
+
+  // Check weighting
+  void check_weights(Gene &gene, const std::string &k, int a=1, int b=25);
 
   // Kernel member functions
   arma::mat kernel_Linear(arma::mat &Xmat);
@@ -93,6 +103,20 @@ private:
   // SKATO Support
   std::shared_ptr<SKAT_Residuals_Logistic> re2;
   std::map<std::string, std::shared_ptr<SKAT_Optimal_GetQ>> Q_sim_all;
+
+  // SKATR Null Model
+  std::shared_ptr<SKATR_Null> obj_;
+
+  // Davies method
+  double SKAT_pval(double Q, arma::vec lambda);
+
+  // Liu Method
+  double Liu_qval_mod(double pval, arma::vec lambda);
+  double Liu_pval(double Q, arma::vec lambda);
+  double Saddlepoint(double Q, arma::vec lambda);
+
+  template<class T>
+  int sgn(T x);
 };
 
 #endif //PERMUTE_ASSOCIATE_METHODS_HPP

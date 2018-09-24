@@ -235,6 +235,7 @@ void Covariates::calculate_odds() {
   odds_ = lr.get_odds();
   prob_ = lr.get_probability();
   eta_ = lr.get_eta();
+  coef_ = lr.get_theta();
 }
 
 /**
@@ -272,5 +273,9 @@ void Covariates::sort_covariates(std::string &header) {
 
 bool Covariates::is_sorted() {
   return sorted_;
+}
+
+arma::rowvec &Covariates::get_coef() {
+  return coef_;
 }
 

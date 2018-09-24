@@ -13,6 +13,7 @@ public:
   QFC(std::vector<double> &lb1, std::vector<double> &nc1, std::vector<int> &n1, double sigma, double c1, int lim1, double acc);
 
   double get_res();
+  int get_fault();
 
 private:
   // Field definitions

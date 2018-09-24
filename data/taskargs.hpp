@@ -39,11 +39,11 @@ struct TaskParams {
   std::string genotypes_path;
   std::string covariates_path;
   std::string bed_path;
-  std::string casm_path;
+  std::string weight_path;
   std::string ped_path;
 
   bool bed;
-  bool casm;
+  bool weight;
 
   bool verbose;
 
@@ -114,11 +114,15 @@ public:
 
   Permute &get_permute(const std::string &k);
 
+  int get_a();
+  int get_b();
+
 private:
   Stage stage_;
   Gene gene_;
   Covariates cov_;
   Methods method_;
+  TaskParams tp_;
 
   int stage_1_permutations_;
   int stage_2_permutations_;

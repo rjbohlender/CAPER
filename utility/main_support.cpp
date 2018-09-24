@@ -10,7 +10,7 @@
 #include <iostream>
 
 #include "../data/bed.hpp"
-#include "../data/casm.hpp"
+#include "../data/weight.hpp"
 
 using namespace std::chrono_literals;
 
@@ -54,7 +54,7 @@ void calc_mgit_pvalues(std::map<std::string, Result> &results,
 	arma::vec permuted = arma::conv_to<arma::vec>::from(results[ts].permuted);
 
 	arma::vec pvals;
-	if (method == "SKATO") {
+	if (method == "SKATO" || method == "SKAT") {
 	  // SKATO Returns pvalues so reverse success criteria
 	  pvals = rank(permuted, "ascend");
 	} else {
@@ -182,8 +182,8 @@ void print_results(TaskQueue &tq, int ntranscripts, int ngenes, TaskParams &tp) 
 	if(tp.bed) {
 	  uf_ss << "-b " << tp.bed_path << " ";
 	}
-	if(tp.casm) {
-	  uf_ss << "-w " << tp.casm_path << " ";
+	if(tp.weight) {
+	  uf_ss << "-w " << tp.weight_path << " ";
 	}
 	uf_ss << "-1 0 "; // Skip stage 1
 	uf_ss << "-2 " << tp.total_permutations * 10 << " ";
@@ -239,9 +239,9 @@ void initialize_jobs(TaskParams &tp,
 	bed = Bed(tp.bed_path);
   bool have_bed = !bed.empty();
 
-  CASM casm;
-  if (tp.casm)
-	casm = CASM(tp.casm_path);
+  Weight casm;
+  if (tp.weight)
+	casm = Weight(tp.weight_path);
 
   while (std::getline(ifs, line)) {
 	if (lineno == 0) {

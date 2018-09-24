@@ -42,6 +42,7 @@ public:
   arma::vec &get_probability();
   arma::uvec &get_indices();
   arma::vec &get_mean();
+  arma::rowvec &get_coef();
 
   // Permute
   void shuffle();
@@ -63,6 +64,7 @@ private:
   arma::uvec indices_;
   arma::vec mean_; // Mean of MFNCH
   arma::vec eta_;
+  arma::rowvec coef_;
 
   bool sorted_;
 

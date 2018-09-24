@@ -46,14 +46,14 @@ set(PROJECT_SUPPORT_FILES
     data/permutation.cpp
     data/permutation.hpp
     data/bed.hpp
-    data/casm.hpp
+    data/weight.hpp
     data/result.hpp
     utility/filesystem.cpp
     utility/filesystem.hpp
     data/gene.cpp
     data/bed.cpp
     data/result.cpp
-    data/casm.cpp
+    data/weight.cpp
     third_party/SKAT/qfc2.cpp
     third_party/SKAT/qfc2.hpp
     data/taskargs.cpp
@@ -71,7 +71,7 @@ include_directories(${Boost_INCLUDE_DIRS})
 
 add_executable(Permute_Associate
                main.cpp
-               ${PROJECT_SUPPORT_FILES} data/calccasm.cpp data/calccasm.hpp)
+               ${PROJECT_SUPPORT_FILES} data/calccasm.cpp data/calccasm.hpp statistics/skatr.cpp statistics/skatr.hpp)
 
 target_link_libraries(Permute_Associate ${ARMADILLO_LIBRARIES})
 target_link_libraries(Permute_Associate ${CMAKE_THREAD_LIBS_INIT})

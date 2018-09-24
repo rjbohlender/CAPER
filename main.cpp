@@ -32,54 +32,68 @@ int main(int argc, char **argv) {
   bool verbose = true;
   bool adjust = true;
   boost::optional<std::string> bed;
-  boost::optional<std::string> casm;
+  boost::optional<std::string> weight;
   boost::optional<std::string> genes;
 
   try {
 	desc.add_options()
 			("help,h", "Print this help message.")
 			("genotypes,g", po::value<std::string>()->required(), "Genotype matrix file.")
-			("covariates,c", po::value<std::string>()->required(), "The covariate table file, including phenotypes.\nPhenotypes {0=control, 1=case} should be in the first column.")
+			("covariates,c",
+			 po::value<std::string>()->required(),
+			 "The covariate table file, including phenotypes.\nPhenotypes {0=control, 1=case} should be in the first column.")
 			("ped,p", po::value<std::string>()->required(), "Path to the .ped file.")
-			("bed-file,b", po::value(&bed), "A bed file to be used as a filter. All specified regions will be excluded.")
-			("casm-file,w", po::value(&casm), "A file providing weights for VAAST.")
+			("bed-file,b",
+			 po::value(&bed),
+			 "A bed file to be used as a filter. All specified regions will be excluded.")
+			("weight-file,w", po::value(&weight), "A file providing weights.")
 			("nthreads,t",
-			 po::value<size_t>()->default_value(std::thread::hardware_concurrency() / 2),
-			 "The number of threads. The default is half of the cpu count.")
-			("method,m", po::value<std::string>()->default_value("VAAST"), "The statistical method to be used.\nOptions: {CALPHA, CMC, SKAT, WSS, VAAST, VT}.\nThe default is VAAST.")
-			("stage_1_max_perm,1", po::value<int>()->default_value(100000), "The maximum number of permutations to be performed in the first stage. The default is 100,000.")
-			("stage_2_max_perm,2", po::value<int>()->default_value(1000000), "The maximum number of permutations to be performed in the second stage. The default is 1,000,000.")
+			 po::value<size_t>()->default_value(std::thread::hardware_concurrency() / 2 + 1),
+			 "The number of threads. The default is half of the cpu count + 1.")
+			("method,m",
+			 po::value<std::string>()->default_value("VAAST"),
+			 "The statistical method to be used.\nOptions: {CALPHA, CMC, SKAT, WSS, VAAST, VT}.\nThe default is VAAST.")
+			("stage_1_max_perm,1",
+			 po::value<int>()->default_value(100000),
+			 "The maximum number of permutations to be performed in the first stage. The default is 100,000.")
+			("stage_2_max_perm,2",
+			 po::value<int>()->default_value(1000000),
+			 "The maximum number of permutations to be performed in the second stage. The default is 1,000,000.")
 			("no_adjust,n", "Disable small sample size adjustment for SKATO.")
-			("kernel,k", po::value<std::string>()->default_value("wLinear"), "Kernel for use with SKAT.\nOne of: {Linear, wLinear, IBS, wIBS, Quadratic, twoWayX}. Default is wLinear.")
-			("beta_weights", po::value<std::string>()->default_value("1,25"), "Parameters for the beta distribution. Two values, comma separated corresponding to a,b. Default is 1,25.")
+			("kernel,k",
+			 po::value<std::string>()->default_value("wLinear"),
+			 "Kernel for use with SKAT.\nOne of: {Linear, wLinear, IBS, wIBS, Quadratic, twoWayX}. Default is wLinear.")
+			("beta_weights",
+			 po::value<std::string>()->default_value("1,25"),
+			 "Parameters for the beta distribution. Two values, comma separated corresponding to a,b. Default is 1,25.")
 			("successes,s", po::value<int>()->default_value(200), "Number of successes for early termination.")
 			("genes,l", po::value(&genes), "A comma-separated list of genes to analyze.")
-			("quiet,q", "Don't print status messages.")
-		;
+			("quiet,q", "Don't print status messages.");
 	po::store(po::parse_command_line(argc, argv, desc), vm);
-	if(vm.count("help")) {
+	if (vm.count("help")) {
 	  std::cerr << desc << "\n";
 	  return 1;
 	}
 
 	po::notify(vm);
 
-	if(vm.count("quiet")) {
+	if (vm.count("quiet")) {
 	  verbose = false;
 	}
-	if(vm.count("no_adjust")) {
+	if (vm.count("no_adjust")) {
 	  adjust = false;
 	}
-  } catch(po::required_option &e) {
-    std::cerr << "Missing required option:\n" << e.what() << "\n";
-    std::cerr << desc << "\n";
-    return 1;
-  } catch(std::exception &e) {
+  } catch (po::required_option &e) {
+	std::cerr << "Missing required option:\n" << e.what() << "\n";
+	std::cerr << desc << "\n";
+	return 1;
+  } catch (std::exception &e) {
 	std::cerr << "Error: " << e.what() << "\n";
 	return 1;
   }
 
   std::set<std::string> method_choices = {
+	  "BURDEN",
 	  "CALPHA",
 	  "CMC",
 	  "VT",
@@ -90,22 +104,22 @@ int main(int argc, char **argv) {
   };
 
   std::set<std::string> kernel_choices = {
-  	"Linear",
-  	"wLinear",
-  	"IBS",
-  	"wIBS",
-  	"Quadratic",
-  	"twoWayX"
+	  "Linear",
+	  "wLinear",
+	  "IBS",
+	  "wIBS",
+	  "Quadratic",
+	  "twoWayX"
   };
 
-  if(method_choices.count(vm["method"].as<std::string>()) == 0) {
-    // Method not among choices
-    std::cerr << "Method must be one of {CALPHA, CMC, VT, WSS, SKAT, SKATO, VAAST}.\n";
-    std::cerr << desc << "\n";
-    return 1;
+  if (method_choices.count(vm["method"].as<std::string>()) == 0) {
+	// Method not among choices
+	std::cerr << "Method must be one of {BURDEN, CALPHA, CMC, VT, WSS, SKAT, SKATO, VAAST}.\n";
+	std::cerr << desc << "\n";
+	return 1;
   }
 
-  if(kernel_choices.count(vm["kernel"].as<std::string>()) == 0) {
+  if (kernel_choices.count(vm["kernel"].as<std::string>()) == 0) {
 	// Method not among choices
 	std::cerr << "Kernel must be one of {Linear, wLinear, IBS, wIBS, Quadratic, twoWayX}.\n";
 	std::cerr << desc << "\n";
@@ -129,30 +143,30 @@ int main(int argc, char **argv) {
   tp.genotypes_path = vm["genotypes"].as<std::string>();
   tp.covariates_path = vm["covariates"].as<std::string>();
   tp.ped_path = vm["ped"].as<std::string>();
-  if(bed) {
+  if (bed) {
 	tp.bed = true;
 	tp.bed_path = *bed;
   } else {
-    tp.bed = false;
-    tp.bed_path = "";
+	tp.bed = false;
+	tp.bed_path = "";
   }
-  if(casm) {
-    tp.casm = true;
-    tp.casm_path = *casm;
+  if (weight) {
+	tp.weight = true;
+	tp.weight_path = *weight;
   } else {
-    tp.casm = false;
-    tp.casm_path = "";
+	tp.weight = false;
+	tp.weight_path = "";
   }
   // Threading
   tp.nthreads = vm["nthreads"].as<size_t>();
   // Options
   tp.verbose = verbose;
-  if(genes) {
+  if (genes) {
 	tp.genes = true;
 	tp.gene_list = *genes;
   } else {
-    tp.genes = false;
-    tp.gene_list = "";
+	tp.genes = false;
+	tp.gene_list = "";
   }
   // SKAT Options
   tp.kernel = vm["kernel"].as<std::string>();
@@ -167,7 +181,7 @@ int main(int argc, char **argv) {
 	std::cerr << "genotypes: " << tp.genotypes_path << "\n";
 	std::cerr << "covariates: " << tp.covariates_path << "\n";
 	std::cerr << "bed_file: " << tp.bed_path << "\n";
-	std::cerr << "casm_file: " << tp.casm_path << "\n";
+	std::cerr << "weight_file: " << tp.weight_path << "\n";
 	std::cerr << "success threshold: " << tp.success_threshold << "\n";
 	std::cerr << "nthreads: " << tp.nthreads << "\n";
 	std::cerr << "stage_1_max_perm: " << tp.stage_1_permutations << "\n";
@@ -195,8 +209,8 @@ int main(int argc, char **argv) {
 	std::cerr << desc << "\n";
 	std::exit(1);
   }
-  if (tp.casm && !check_file_exists(tp.casm_path)) {
-	std::cerr << "Incorrect file path for casm_file." << std::endl;
+  if (tp.weight && !check_file_exists(tp.weight_path)) {
+	std::cerr << "Incorrect file path for weight_file." << std::endl;
 	std::cerr << desc << "\n";
 	std::exit(1);
   }

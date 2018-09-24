@@ -15,13 +15,14 @@ TaskArgs::TaskArgs(Stage stage,
 	: stage_(stage),
 	  gene_(std::move(gene)),
 	  cov_(cov),
-	  method_(tp.method, tp.kernel),
+	  method_(tp.method, tp.kernel, cov),
 	  stage_1_permutations_(s1_perm),
 	  stage_2_permutations_(s2_perm),
 	  permutations(perm),
 	  success_threshold(succ_thresh),
 	  stop_check_threshold(succ_thresh),
-	  adjust(tp.adjust) {
+	  adjust(tp.adjust),
+	  tp_(tp) {
   for (const auto &k : gene_.get_transcripts()) {
 	results[k] = Result(gene_.get_gene(), k);
 	permute[k] = Permute();
@@ -36,13 +37,14 @@ TaskArgs::TaskArgs(Stage stage,
 	: stage_(stage),
 	  gene_(std::move(gene)),
 	  cov_(cov),
-	  method_(tp.method, tp.kernel),
+	  method_(tp.method, tp.kernel, cov),
 	  stage_1_permutations_(tp.stage_1_permutations),
 	  stage_2_permutations_(tp.stage_2_permutations),
 	  permutations(perm),
 	  success_threshold(tp.success_threshold),
 	  stop_check_threshold(tp.success_threshold),
-	  adjust(tp.adjust) {
+	  adjust(tp.adjust),
+	  tp_(tp) {
   for (const auto &k : gene_.get_transcripts()) {
 	results[k] = Result(gene_.get_gene(), k);
 	permute[k] = Permute();
@@ -60,7 +62,8 @@ TaskArgs::TaskArgs(const TaskArgs &ta)
 	  permutations(ta.permutations),
 	  success_threshold(ta.success_threshold),
 	  stop_check_threshold(ta.stop_check_threshold),
-	  adjust(ta.adjust) {}
+	  adjust(ta.adjust),
+	  tp_(ta.tp_) {}
 
 TaskArgs::TaskArgs(TaskArgs &&ta) noexcept
 	: results(std::move(ta.results)),
@@ -74,7 +77,8 @@ TaskArgs::TaskArgs(TaskArgs &&ta) noexcept
 	  permutations(ta.permutations),
 	  success_threshold(ta.success_threshold),
 	  stop_check_threshold(ta.stop_check_threshold),
-	  adjust(ta.adjust) {}
+	  adjust(ta.adjust),
+	  tp_(ta.tp_) {}
 
 TaskArgs &TaskArgs::operator=(const TaskArgs &rhs) {
   stage_ = rhs.stage_;
@@ -88,6 +92,7 @@ TaskArgs &TaskArgs::operator=(const TaskArgs &rhs) {
   success_threshold = rhs.success_threshold;
   stop_check_threshold = rhs.stop_check_threshold;
   adjust = rhs.adjust;
+  tp_ = rhs.tp_;
 
   return *this;
 }
@@ -243,7 +248,7 @@ void TaskArgs::calc_multitranscript_pvalues() {
 	results[ts].permuted.pop_back();
 
 	arma::vec pvals;
-	if (method_.str() == "SKATO") {
+	if (method_.str() == "SKATO" || method_.str() == "SKAT") {
 	  // SKATO Returns pvalues so reverse success criteria
 	  pvals = rank(permuted, "ascend");
 	} else {
@@ -280,4 +285,12 @@ bool TaskArgs::has_multiple_transcripts() {
 
 Permute &TaskArgs::get_permute(const std::string &k) {
   return permute[k];
+}
+
+int TaskArgs::get_a() {
+  return tp_.a;
+}
+
+int TaskArgs::get_b() {
+  return tp_.b;
 }

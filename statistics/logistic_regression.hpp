@@ -17,6 +17,7 @@ public:
   double get_mean();
   arma::vec &get_probability();
   arma::vec &get_eta();
+  arma::rowvec &get_theta();
 
 private:
   arma::colvec odds_;

@@ -9,19 +9,24 @@
 Gene::Gene(std::stringstream &ss,
 		   unsigned long nsamples,
 		   std::map<std::string, unsigned long> &nvariants,
-		   const CASM &casm)
+		   const Weight &weight)
 	: nsamples_(nsamples),
 	  nvariants_(nvariants) {
   parse(ss);
-  if (!casm.empty()) {
+  if (!weight.empty()) {
 	for (const auto &k : transcripts_) {
 	  weights_[k].reshape(nvariants_[k], 1);
 	  arma::uword i = 0;
 	  for (const auto &v : positions_[k]) {
-		weights_[k](i) = casm.get(v);
+		weights_[k](i) = weight.get(v);
 		i++;
 	  }
+	  weights_set_[k] = true;
 	}
+  } else {
+    for (const auto &k : transcripts_) {
+      weights_set_[k] = false;
+    }
   }
 }
 
@@ -133,5 +138,11 @@ void Gene::set_weights(const std::string &k, arma::vec &weights) {
 	}
 
 	weights_[k] = weights;
+
+	weights_set_[k] = true;
+}
+
+bool Gene::is_weighted(const std::string &k) {
+  return weights_set_[k];
 }
 

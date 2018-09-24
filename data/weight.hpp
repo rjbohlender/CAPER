@@ -14,11 +14,10 @@
 
 #include "../utility/split.hpp"
 
-class CASM {
+class Weight {
 public:
-  CASM() = default;
-  explicit CASM(const std::string &ifile);
-  explicit CASM(std::stringstream &iss, bool log_vals); // For testing
+  Weight() = default;
+  explicit Weight(const std::string &ifile);
 
   double get(const std::string &k) const;
   double get(const std::string &k);

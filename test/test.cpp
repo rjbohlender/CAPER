@@ -47,7 +47,7 @@ TEST_CASE( "Data Construction & Methods" ) {
 
   Covariates cov(test_cov);
   // Don't log values
-  CASM casm(test_casm, false);
+  Weight casm(test_casm, false);
 
   // Variant Counts
   std::map<std::string, unsigned long> nvariants { {"test_transcript1", 4},
@@ -175,7 +175,7 @@ TEST_CASE( "Data Construction & Methods" ) {
                   {1, 0},
                   {1, 1},
                   {1, 0} };
-    test_vaast = methods.call(test_geno, test_pheno, log_casm, false, 0);
+    test_vaast = methods.call(test_geno, test_pheno, log_casm, false, 0, 0);
     REQUIRE(test_vaast == Approx(0.10263280741763481));
     log_casm.reset();
 
@@ -185,7 +185,7 @@ TEST_CASE( "Data Construction & Methods" ) {
                   {1, 1},
                   {1, 1} };
     log_casm = { 3.0, 5.0 };
-    test_vaast = methods.call(test_geno, test_pheno, log_casm, false, 0);
+    test_vaast = methods.call(test_geno, test_pheno, log_casm, false, 0, 0);
     REQUIRE(test_vaast == Approx(16.0));
   }
 

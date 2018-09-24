@@ -192,3 +192,7 @@ void LogisticRegression::IRLS_SVDNEWTON(arma::mat &Xmat, arma::colvec &Yvec) {
   theta_ = (V * (arma::diagmat(1. / S) * (U.t() * t))).t();
 }
 
+arma::rowvec &LogisticRegression::get_theta() {
+  return theta_;
+}
+

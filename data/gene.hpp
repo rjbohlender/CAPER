@@ -12,27 +12,31 @@
 #include <iterator>
 
 #include "../utility/split.hpp"
-#include "casm.hpp"
+#include "weight.hpp"
 
 class Gene {
 public:
-  Gene(std::stringstream &ss, unsigned long nsamples, std::map<std::string, unsigned long> &nvariants, const CASM &casm);
+  Gene(std::stringstream &ss, unsigned long nsamples, std::map<std::string, unsigned long> &nvariants, const Weight &weight);
 
   void print();
 
   // Getters
-  arma::mat &get_matrix(const std::string &k);
   std::string &get_gene();
+  arma::mat &get_matrix(const std::string &k);
   std::vector<std::string> &get_transcripts();
-  arma::vec &get_weights(const std::string &k);
   unsigned long get_nvariants(const std::string &k);
   std::vector<std::string> &get_positions(const std::string &k);
 
+  arma::vec &get_weights(const std::string &k);
   void set_weights(const std::string &k, arma::vec &weights);
+
+  bool is_weighted(const std::string &k);
 
   void clear();
 
 private:
+  std::map<std::string, bool> weights_set_;
+
   unsigned long nsamples_;
   std::map<std::string, unsigned long> nvariants_;
   std::string gene_;
@@ -42,7 +46,6 @@ private:
   std::map<std::string, arma::mat> genotypes_;
   std::map<std::string, arma::vec> weights_;
 
-  // TODO Strip out header
   std::string header_;
 
   void parse(std::stringstream &ss);
