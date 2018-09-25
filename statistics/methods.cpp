@@ -774,10 +774,10 @@ double Methods::SKATRO(Gene &gene, SKATR_Null &obj, const std::string &k, bool s
   arma::mat U, V;
   arma::svd(U, s, V, R);
 
-  int K = 8; // Length of rho_
+  arma::uword K = 8; // Length of rho_
 
-  double Qs = arma::sum(arma::sum(arma::pow(Z, 2)));
-  double Qb = std::pow(arma::sum(arma::sum(Z)), 2);
+  double Qs = arma::accu(arma::pow(Z, 2));
+  double Qb = std::pow(arma::accu(Z), 2);
   arma::vec Qw{0, 0, 0, 0, 0, 0, 0, 0};
 
   for (arma::uword i = 0; i < K; i++) {
@@ -787,7 +787,7 @@ double Methods::SKATRO(Gene &gene, SKATR_Null &obj, const std::string &k, bool s
   arma::vec pval = {0, 0, 0, 0, 0, 0, 0, 0};
 
   arma::vec Rs = arma::sum(R, 1);
-  double R1 = arma::sum(Rs);
+  double R1 = arma::accu(Rs);
   double R2 = arma::accu(arma::pow(Rs, 2));
   double R3 = arma::accu(Rs % arma::sum(R.each_col() % Rs).t());
 
