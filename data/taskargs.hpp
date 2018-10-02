@@ -47,6 +47,19 @@ struct TaskParams {
 
   bool verbose;
 
+  // Detailed VAAST output
+  std::string full_command;
+  bool detail;
+  std::string detail_path;
+
+  // VAAST
+  arma::uword group_size;
+  bool score_only_minor;
+  bool score_only_alternative;
+
+  // CMC
+  double maf;
+
   size_t nthreads;
 
   // Gene list
@@ -97,6 +110,7 @@ public:
   Methods &get_methods();
   int get_max_permutations();
   int get_npermutations();
+  bool get_detail();
   std::vector<std::vector<int32_t>> &get_permutations();
   Result &max_original_statistic();
   Result &min_empirical_pvalue();
@@ -105,6 +119,7 @@ public:
   Result &min_transcript_successes();
   double get_mgit_pvalue(const std::string &k);
   int get_remaining();
+  TaskParams &get_tp();
 
   // Setter
   void set_stage(Stage stage);

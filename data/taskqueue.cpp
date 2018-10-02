@@ -132,11 +132,7 @@ void TaskQueue::thread_handler() {
 void TaskQueue::stage_1(TaskArgs &ta) {
   // Set original value
   for (auto &v : ta.results) {
-	if (!(ta.get_methods().str() == "SKAT") && !(ta.get_methods().str() == "SKATO") && !(ta.get_methods().str() == "BURDEN")) {
-	  v.second.original = ta.get_methods().call(v.second.transcript, ta.get_gene(), ta.get_cov());
-	} else {
-	  v.second.original = ta.get_methods().call(v.second.transcript, ta.get_gene(), ta.get_cov(), false, ta.get_a(), ta.get_b());
-	}
+	v.second.original = call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), v.second.transcript, ta.get_tp(), false, ta.get_detail());
   }
 
   if (verbose_) {
@@ -159,12 +155,12 @@ void TaskQueue::stage_1(TaskArgs &ta) {
 	  double perm_val;
 
 	  if (!(ta.get_methods().str() == "SKAT") && !(ta.get_methods().str() == "SKATO") && !(ta.get_methods().str() == "BURDEN")) {
-		perm_val = ta.get_methods().call(v.second.transcript, ta.get_gene(), ta.get_cov());
+		perm_val = call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), v.second.transcript, ta.get_tp(), false, false);
 	  } else {
 		if (transcript_no == 0) {
-		  perm_val = ta.get_methods().call(k, ta.get_gene(), ta.get_cov(), true, ta.get_a(), ta.get_b());
+		  perm_val = call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), v.second.transcript, ta.get_tp(), true, false);
 		} else {
-		  perm_val = ta.get_methods().call(k, ta.get_gene(), ta.get_cov(), false, ta.get_a(), ta.get_b());
+		  perm_val = call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), v.second.transcript, ta.get_tp(), false, false);
 		}
 	  }
 
@@ -221,52 +217,6 @@ void TaskQueue::stage_1(TaskArgs &ta) {
   dispatch(ta);
 }
 
-void TaskQueue::check_perm(const std::string &method,
-						   double perm_val,
-						   int success_threshold,
-						   std::pair<const std::string, Result> &v) {
-  // SKATO returns a pvalue so we need to reverse the successes
-  if (method == "SKATO" || method == "SKAT") {
-	if (perm_val <= v.second.original) {
-	  if (v.second.successes < success_threshold) {
-		v.second.successes++;
-		if (perm_val == v.second.original) {
-		  v.second.mid_successes += 0.5;
-		} else {
-		  v.second.mid_successes++;
-		}
-	  } else {
-		v.second.successes++;
-		if (perm_val == v.second.original) {
-		  v.second.mid_successes += 0.5;
-		} else {
-		  v.second.mid_successes++;
-		}
-		v.second.done = true;
-	  }
-	}
-  } else {
-	if (perm_val >= v.second.original) {
-	  if (v.second.successes < success_threshold) {
-		v.second.successes++;
-		if (perm_val == v.second.original) {
-		  v.second.mid_successes += 0.5;
-		} else {
-		  v.second.mid_successes++;
-		}
-	  } else {
-		v.second.successes++;
-		if (perm_val == v.second.original) {
-		  v.second.mid_successes += 0.5;
-		} else {
-		  v.second.mid_successes++;
-		}
-		v.second.done = true;
-	  }
-	}
-  }
-}
-
 void TaskQueue::stage_2(TaskArgs &ta) {
   // Declare maps
   std::map<std::string, std::vector<int32_t>> mac_case_count;
@@ -284,11 +234,7 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 	const std::string &k = v.second.transcript;
 
 	if (std::isnan(v.second.original)) {
-	  if (!(ta.get_methods().str() == "SKAT") && !(ta.get_methods().str() == "SKATO") && !(ta.get_methods().str() == "BURDEN")) {
-		v.second.original = ta.get_methods().call(v.second.transcript, ta.get_gene(), ta.get_cov());
-	  } else {
-	    v.second.original = ta.get_methods().call(v.second.transcript, ta.get_gene(), ta.get_cov(), false, ta.get_a(), ta.get_b());
-	  }
+	  v.second.original = call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), k, ta.get_tp(), false, ta.get_detail());
 	}
 	// Minor allele carrier indices
 	mac_indices[k] = arma::find(arma::sum(ta.get_gene().get_matrix(k), 1) > 0);
@@ -436,12 +382,12 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 #endif
 		ta.get_cov().set_phenotype_vector(phenotypes);
 
-		perm_val = ta.get_methods().call(k, ta.get_gene(), ta.get_cov());
+		perm_val = call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), k, ta.get_tp(), false, false);
 	  } else {
 		if (transcript_no == 0) {
-		  perm_val = ta.get_methods().call(k, ta.get_gene(), ta.get_cov(), true, ta.get_a(), ta.get_b());
+		  perm_val = call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), k, ta.get_tp(), true, false);
 		} else {
-		  perm_val = ta.get_methods().call(k, ta.get_gene(), ta.get_cov(), false, ta.get_a(), ta.get_b());
+		  perm_val = call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), k, ta.get_tp(), false, false);
 		}
 	  }
 
@@ -501,5 +447,79 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 
 size_t TaskQueue::get_nthreads() {
   return nthreads_;
+}
+
+void TaskQueue::duplicate() {
+  results_detail_ = results_;
+}
+
+std::vector<TaskArgs> &TaskQueue::get_results_duplicate() {
+  return results_detail_;
+}
+
+void TaskQueue::check_perm(const std::string &method,
+						   double perm_val,
+						   int success_threshold,
+						   std::pair<const std::string, Result> &v) {
+  // SKATO returns a pvalue so we need to reverse the successes
+  if (method == "SKATO" || method == "SKAT") {
+	if (perm_val <= v.second.original) {
+	  if (v.second.successes < success_threshold) {
+		v.second.successes++;
+		if (perm_val == v.second.original) {
+		  v.second.mid_successes += 0.5;
+		} else {
+		  v.second.mid_successes++;
+		}
+	  } else {
+		v.second.successes++;
+		if (perm_val == v.second.original) {
+		  v.second.mid_successes += 0.5;
+		} else {
+		  v.second.mid_successes++;
+		}
+		v.second.done = true;
+	  }
+	}
+  } else {
+	if (perm_val >= v.second.original) {
+	  if (v.second.successes < success_threshold) {
+		v.second.successes++;
+		if (perm_val == v.second.original) {
+		  v.second.mid_successes += 0.5;
+		} else {
+		  v.second.mid_successes++;
+		}
+	  } else {
+		v.second.successes++;
+		if (perm_val == v.second.original) {
+		  v.second.mid_successes += 0.5;
+		} else {
+		  v.second.mid_successes++;
+		}
+		v.second.done = true;
+	  }
+	}
+  }
+}
+
+double TaskQueue::call_method(Methods &method, Gene &gene, Covariates &cov, const std::string &k, TaskParams &tp, bool shuffle, bool detail) {
+  if(tp.method == "BURDEN") {
+    return method.BURDEN(gene, k, shuffle, tp.a, tp.b);
+  } else if(tp.method == "CALPHA") {
+    return method.CALPHA(gene, cov, k);
+  } else if(tp.method == "CMC") {
+    return method.CMC(gene, cov, k, tp.maf);
+  } else if(tp.method == "SKAT") {
+    return method.SKATR(gene, k, shuffle, tp.a, tp.b, detail);
+  } else if(tp.method == "SKATO") {
+    return method.SKATRO(gene, k, shuffle, tp.a, tp.b, detail);
+  } else if(tp.method == "VAAST") {
+    return method.VAAST(gene, cov, k, tp.score_only_minor, tp.score_only_alternative, 2.0, tp.group_size, detail);
+  } else if(tp.method == "VT") {
+    return method.VT(gene, cov, k);
+  } else if(tp.method == "WSS") {
+    return method.WSS(gene, cov, k);
+  }
 }
 

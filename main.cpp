@@ -31,14 +31,17 @@ int main(int argc, char **argv) {
 
   bool verbose = true;
   bool adjust = true;
+  bool score_only_minor = false;
+  bool score_only_alternative = false;
   boost::optional<std::string> bed;
   boost::optional<std::string> weight;
   boost::optional<std::string> genes;
+  boost::optional<std::string> detail;
 
   try {
 	desc.add_options()
 			("help,h", "Print this help message.")
-			("genotypes,g", po::value<std::string>()->required(), "Genotype matrix file.")
+			("input,i", po::value<std::string>()->required(), "Genotype matrix file path.")
 			("covariates,c",
 			 po::value<std::string>()->required(),
 			 "The covariate table file, including phenotypes.\nPhenotypes {0=control, 1=case} should be in the first column.")
@@ -47,6 +50,9 @@ int main(int argc, char **argv) {
 			 po::value(&bed),
 			 "A bed file to be used as a filter. All specified regions will be excluded.")
 			("weight-file,w", po::value(&weight), "A file providing weights.")
+			("group_size,g",
+			 po::value<arma::uword>()->default_value(4),
+			 "Group size. VAAST can collapse variants into groups of variants with adjacent weights. Default = 4.")
 			("nthreads,t",
 			 po::value<size_t>()->default_value(std::thread::hardware_concurrency() / 2 + 1),
 			 "The number of threads. The default is half of the cpu count + 1.")
@@ -68,6 +74,10 @@ int main(int argc, char **argv) {
 			 "Parameters for the beta distribution. Two values, comma separated corresponding to a,b. Default is 1,25.")
 			("successes,s", po::value<int>()->default_value(200), "Number of successes for early termination.")
 			("genes,l", po::value(&genes), "A comma-separated list of genes to analyze.")
+			("detail,d", po::value(&detail), "Detailed VAAST output.")
+			("score_only_minor", po::bool_switch(&score_only_minor), "Score only minor alleles in VAAST.")
+			("score_only_alternative", po::bool_switch(&score_only_alternative), "Score only alternative alleles in VAAST.")
+			("maf", po::value<double>()->default_value(0.005), "Minor allele frequency cutoff for CMC collapsing.")
 			("quiet,q", "Don't print status messages.");
 	po::store(po::parse_command_line(argc, argv, desc), vm);
 	if (vm.count("help")) {
@@ -133,6 +143,17 @@ int main(int argc, char **argv) {
 
   RJBUtil::Splitter<std::string> beta_split(vm["beta_weights"].as<std::string>(), ",");
 
+  // Store full command
+  std::stringstream cmd_ss;
+  for (int i = 0; i < argc; i++) {
+	if (i == argc - 1) {
+	  cmd_ss << argv[i];
+	} else {
+	  cmd_ss << argv[i] << " ";
+	}
+  }
+  tp.full_command = cmd_ss.str();
+
   tp.success_threshold = vm["successes"].as<int>();
   tp.stage_1_permutations = vm["stage_1_max_perm"].as<int>();
   tp.stage_2_permutations = vm["stage_2_max_perm"].as<int>();
@@ -140,9 +161,13 @@ int main(int argc, char **argv) {
   tp.method = vm["method"].as<std::string>();
   // File paths and option status
   tp.program_path = argv[0];
-  tp.genotypes_path = vm["genotypes"].as<std::string>();
+  tp.genotypes_path = vm["input"].as<std::string>();
   tp.covariates_path = vm["covariates"].as<std::string>();
   tp.ped_path = vm["ped"].as<std::string>();
+  tp.maf = vm["maf"].as<double>();
+  tp.group_size = vm["group_size"].as<arma::uword>();
+  tp.score_only_minor = score_only_minor;
+  tp.score_only_alternative = score_only_alternative;
   if (bed) {
 	tp.bed = true;
 	tp.bed_path = *bed;
@@ -156,6 +181,13 @@ int main(int argc, char **argv) {
   } else {
 	tp.weight = false;
 	tp.weight_path = "";
+  }
+  if (detail) {
+	tp.detail = true;
+	tp.detail_path = *detail;
+  } else {
+	tp.detail = false;
+	tp.detail_path = "";
   }
   // Threading
   tp.nthreads = vm["nthreads"].as<size_t>();

@@ -33,7 +33,11 @@ public:
   // Status
   bool empty();
 
+  // Detail output
+  void duplicate();
+
   std::vector<TaskArgs> &get_results();
+  std::vector<TaskArgs> &get_results_duplicate();
   size_t get_nthreads();
 
 private:
@@ -57,6 +61,7 @@ private:
 
   // Result storage
   std::vector<TaskArgs> results_;
+  std::vector<TaskArgs> results_detail_;
 
   void thread_handler();
 
@@ -65,6 +70,8 @@ private:
 				  double perm_val,
 				  int success_threshold,
 				  std::pair<const std::string, Result> &v);
+
+  double call_method(Methods &method, Gene &gene, Covariates &cov, const std::string &k, TaskParams &tp, bool shuffle, bool detail);
 
   void stage_1(TaskArgs &ta);
   void stage_2(TaskArgs &ta);

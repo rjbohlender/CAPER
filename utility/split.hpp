@@ -87,6 +87,14 @@ public:
 	return tokens_.empty();
   }
 
+  auto erase(std::vector<std::string>::iterator &pos) {
+    tokens_.erase(pos);
+  }
+
+  auto erase(std::vector<std::string>::const_iterator &pos) {
+	tokens_.erase(pos);
+  }
+
   template<typename _Integer>
   auto operator[](_Integer i) {
 	return tokens_[i];
