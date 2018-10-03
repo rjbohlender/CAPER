@@ -23,7 +23,12 @@ Weight::Weight(const std::string &ifile) {
 }
 
 double Weight::get(const std::string &k) const {
-  return scores_.at(k);
+  try{
+	return scores_.at(k);
+  } catch(std::exception &e) {
+    std::cerr << "Failed to find weight: " << k << std::endl;
+    return 1;
+  }
 }
 
 double Weight::get(const std::string &k) {

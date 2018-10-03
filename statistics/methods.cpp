@@ -25,6 +25,7 @@
 #include "../data/covariates.hpp"
 #include "skat_adjust.hpp"
 #include "../third_party/SKAT/qfc2.hpp"
+#include "vaast.hpp"
 
 constexpr double Methods::rho_[];
 
@@ -387,7 +388,7 @@ double Methods::SKATO(Gene &gene,
 }
 #endif
 
-double Methods::VAAST(Gene &gene,
+double Methods::Vaast(Gene &gene,
 					  Covariates &cov,
 					  const std::string &k,
 					  bool score_only_minor,
@@ -395,6 +396,10 @@ double Methods::VAAST(Gene &gene,
 					  double site_penalty,
 					  arma::uword group_threshold,
 					  bool detail) {
+#if 1
+  VAAST vaast(gene, cov, k, score_only_minor, score_only_alternative, site_penalty, group_threshold, detail);
+  return vaast.get_score();
+#else
   arma::mat Xmat = gene.get_matrix(k);
   arma::vec Yvec = cov.get_phenotype_vector();
 
@@ -467,17 +472,17 @@ double Methods::VAAST(Gene &gene,
 		arma::vec cont_count0 = 2 * n_control - cont_count1;
 
 		arma::uvec altmask = variant_bitmask(vaast_site_scores,
-									case_allele1,
-									control_allele1,
-									case_allele0,
-									control_allele0,
-									score_only_minor,
-									score_only_alternative);
+											 case_count1,
+											 cont_count1,
+											 case_count0,
+											 cont_count0,
+											 score_only_minor,
+											 score_only_alternative);
 
 		arma::vec new_group_loglh = LRT(case_count1, cont_count1, case_count0, cont_count0);
 		arma::vec new_score = 2.0 * (new_group_loglh + arma::log(altW)) - site_penalty;
 
-		new_score(mask).zeros();
+		new_score(altmask).zeros();
 
 		expanded_scores(i) = (total_score - arma::accu(new_score) < 0) ? 0 : total_score - arma::accu(new_score);
 	  }
@@ -493,6 +498,7 @@ double Methods::VAAST(Gene &gene,
   }
 
   return total_score;
+#endif
 }
 
 double Methods::VT(Gene &gene, Covariates &cov, const std::string &k) {
@@ -573,11 +579,7 @@ arma::vec Methods::log_likelihood(arma::vec &freq, arma::vec &allele0, arma::vec
   // Prevent numerical issues
   arma::vec clamped = arma::clamp(freq, 1e-9, 1.0 - 1e-9);
 
-#if 1
   return allele1 % arma::log(clamped) + allele0 % arma::log(1.0 - clamped);
-#else
-  return arma::diagmat(allele1) * arma::log(clamped) + arma::diagmat(allele0) * arma::log(1.0 - clamped);
-#endif
 }
 
 arma::uvec Methods::variant_bitmask(arma::vec vaast_site_scores,
@@ -633,8 +635,7 @@ arma::uvec Methods::variant_bitmask(arma::vec vaast_site_scores,
 	  }
 	}
   }
-  mask = arma::conv_to<arma::uvec>::from(scenario);
-  return arma::uvec();
+  return arma::conv_to<arma::uvec>::from(scenario);
 }
 
 std::tuple<arma::mat, arma::vec, std::vector<arma::uvec>, arma::uvec>

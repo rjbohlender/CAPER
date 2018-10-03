@@ -46,7 +46,7 @@ public:
   double SKATR(Gene &gene, const std::string &k, bool shuffle, int a, int b, bool detail = false);
   // Wu, Guan, and Pankow 2016
   double SKATRO(Gene &gene, const std::string &k, bool shuffle, int a, int b, bool detail = false);
-  double VAAST(Gene &gene,
+  double Vaast(Gene &gene,
 			   Covariates &cov,
 			   const std::string &k,
 			   bool score_only_minor = true,

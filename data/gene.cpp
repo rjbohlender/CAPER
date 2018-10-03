@@ -105,7 +105,14 @@ void Gene::parse(std::stringstream &ss) {
 	positions_[transcripts_.back()].push_back(splitter[2]);
 
 	for (arma::uword j = 3; j < splitter.size(); j++) {
-	  double val = std::stod(splitter[j]);
+	  double val;
+	  try{
+		val = std::stod(splitter[j]);
+	  } catch(std::exception &e) {
+	    std::cerr << "Failed to convert data to double: " << splitter[j] << std::endl;
+	    std::cerr << "Line: " << line << std::endl;
+	    std::cerr << "j: " << j << std::endl;
+	  }
 	  // Handle missing data
 	  if (val > 2 || val < 0)
 		val = 0;

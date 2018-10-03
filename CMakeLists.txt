@@ -62,7 +62,7 @@ set(PROJECT_SUPPORT_FILES
     statistics/skat.hpp
     statistics/skat_adjust.cpp
     statistics/skat_adjust.hpp
-    data/covariates.cpp utility/main_support.cpp utility/main_support.hpp)
+    data/covariates.cpp utility/main_support.cpp utility/main_support.hpp statistics/vaast.cpp statistics/vaast.hpp)
 
 include_directories("${CMAKE_CURRENT_LIST_DIR}/third_party")
 include_directories(${ARMADILLO_INCLUDE_DIRS})

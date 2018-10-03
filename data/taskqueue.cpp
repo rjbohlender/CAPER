@@ -515,7 +515,7 @@ double TaskQueue::call_method(Methods &method, Gene &gene, Covariates &cov, cons
   } else if(tp.method == "SKATO") {
     return method.SKATRO(gene, k, shuffle, tp.a, tp.b, detail);
   } else if(tp.method == "VAAST") {
-    return method.VAAST(gene, cov, k, tp.score_only_minor, tp.score_only_alternative, 2.0, tp.group_size, detail);
+    return method.Vaast(gene, cov, k, tp.score_only_minor, tp.score_only_alternative, 2.0, tp.group_size, detail);
   } else if(tp.method == "VT") {
     return method.VT(gene, cov, k);
   } else if(tp.method == "WSS") {
