@@ -4,27 +4,72 @@
 
 #include <stocc/stocc.h>
 #include <ctime>
+#include <thread>
 #include "permutation.hpp"
 
 Permute::Permute()
 	: sto((int32_t) time(nullptr)) {}
 
-std::vector<std::vector<int32_t>> Permute::get_permutations(unsigned long nperm, arma::colvec &odds, int ncases) {
+void Permute::get_permutations(std::vector<std::vector<int32_t>> *permutations,
+							   arma::colvec &odds,
+							   int ncases,
+							   unsigned long nperm,
+							   unsigned long nthreads) {
   std::vector<double> odds_ = arma::conv_to<std::vector<double>>::from(odds);
   std::vector<int32_t> m(odds.n_rows, 1);
-  std::vector<std::vector<int32_t>> ret(nperm);
 
   // Initialize permutations
+  (*permutations).resize(nperm);
   for (int i = 0; i < nperm; i++) {
-	ret[i] = std::vector<int32_t>(odds.n_rows);
+	(*permutations)[i].resize(odds.n_rows);
   }
 
+  int step = nperm / nthreads;
+  int remaining = nperm;
+  std::vector<std::thread> threads;
+  for (int i = 0; i < nthreads; i++) {
+	int seed = sto.IRandom(0, std::numeric_limits<int>::max());
+	int offset = i * step;
+	if (remaining < 0) {
+	  std::cerr << "Failed during permutation.\n";
+	  std::exit(-1);
+	}
+	if (i == nthreads - 1) {
+	  threads.push_back(std::thread(&Permute::permute_thread,
+									this,
+									permutations,
+									&m[0],
+									&odds_[0],
+									ncases,
+									static_cast<int>(odds.n_rows),
+									offset,
+									remaining,
+									seed));
+	} else {
+	  threads.push_back(std::thread(&Permute::permute_thread,
+									this,
+									permutations,
+									&m[0],
+									&odds_[0],
+									ncases,
+									static_cast<int>(odds.n_rows),
+									offset,
+									step,
+									seed));
+	}
+	remaining -= step;
+  }
+
+  for (auto &t : threads) {
+	t.join();
+  }
+
+#if 0
   // Generate permutations
   for (int i = 0; i < nperm; i++) {
-	sto.MultiFishersNCHyp(&ret[i][0], &m[0], &odds_[0], ncases, static_cast<int>(odds.n_rows));
+	sto.MultiFishersNCHyp(&(*permutations)[i][0], &m[0], &odds_[0], ncases, static_cast<int>(odds.n_rows));
   }
-
-  return ret;
+#endif
 }
 
 std::vector<std::vector<int32_t>> Permute::cases_in_bins(int nperm,
@@ -175,5 +220,21 @@ Permute &Permute::operator=(const Permute &rhs) {
 }
 
 Permute::Permute(const Permute &other)
-: sto(other.sto) {}
+	: sto(other.sto) {}
+
+void Permute::permute_thread(std::vector<std::vector<int32_t>> *p,
+							 int32_t *m,
+							 double *odds,
+							 int ncases,
+							 int ngroups,
+							 int offset,
+							 int nperm,
+							 int seed) {
+  StochasticLib3 rng(seed);
+
+  for (int i = 0; i < nperm; i++) {
+	rng.MultiFishersNCHyp(&(*p)[offset + i][0], m, odds, ncases, ngroups);
+  }
+
+}
 

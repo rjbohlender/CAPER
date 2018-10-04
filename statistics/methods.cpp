@@ -42,6 +42,10 @@ arma::vec rank(arma::vec &v, const char *direction) {
 	  std::cerr << "NANs among ranked values. Replacing with 1.\n";
 	  v.replace(arma::datum::nan, 1);
 	} else {
+#ifndef NDEBUG
+	  std::cerr << v.t();
+	  std::cerr << e.what();
+#endif
 	  std::cerr << "NANs among ranked values. Replacing with 0.\n";
 	  v.replace(arma::datum::nan, 0);
 	}

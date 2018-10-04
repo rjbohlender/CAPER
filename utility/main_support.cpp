@@ -21,17 +21,17 @@ void calc_mgit_pvalues(std::map<std::string, Result> &results,
   if (transcripts.size() == 1) {
 	for (const auto &tr : transcripts) {
 	  auto &v = results[tr];
-	  v.mgit_p         = v.empirical_p;
+	  v.mgit_p = v.empirical_p;
 	  v.mgit_successes = v.successes;
 	}
 	return;
   }
 
   // Shorthand
-  unsigned long n        = transcripts.size();
-  int           max_perm = 0;
-  int           i, j, k;
-  double        successes;
+  unsigned long n = transcripts.size();
+  int max_perm = 0;
+  int i, j, k;
+  double successes;
 
   // Get max_perm
   for (const auto &tr : transcripts) {
@@ -46,7 +46,7 @@ void calc_mgit_pvalues(std::map<std::string, Result> &results,
   for (i = 0; i < n; i++) {
 	// For each statistic
 	const std::string &ts = transcripts[i];
-	int               m   = static_cast<int>(results[ts].permuted.size());  // Total permutations
+	int m = static_cast<int>(results[ts].permuted.size());  // Total permutations
 
 	assert(m == max_perm); // Sanity check - All equal
 
@@ -75,12 +75,12 @@ void calc_mgit_pvalues(std::map<std::string, Result> &results,
 
   for (i = 0; i < n; i++) {
 	const std::string &ts = transcripts[i];
-	unsigned long     m   = mgit_pval_dist_.n_rows;  // Total permutations
+	unsigned long m = mgit_pval_dist_.n_rows;  // Total permutations
 
 	successes = arma::find(mgit_pval_dist_ <= results[ts].empirical_p).eval().n_rows;
 
 	// Store multi-transcript p-value
-	results[ts].mgit_p         = (1.0 + successes) / (1.0 + m);
+	results[ts].mgit_p = (1.0 + successes) / (1.0 + m);
 	results[ts].mgit_successes = static_cast<int>(successes);
   }
 }
@@ -100,17 +100,18 @@ void print_results(TaskQueue &tq, int ntranscripts, int ngenes, TaskParams &tp) 
   std::cout << std::setw(20) << "MGIT_Successes" << std::endl;
   if (!tp.genes) {
 	// Print header and formatted results
-	double permutation_mean     = 0;
+	double permutation_mean = 0;
 	double permutation_variance = 0;
 
+	std::vector<Result> all_results;
 	for (auto &v : tq.get_results()) {
 	  // Result &res = v.min_empirical_pvalue();
-	  bool      unfin = false;
+	  bool unfin = false;
 	  for (auto &u : v.results) {
-		std::cout << u.second;
+		all_results.emplace_back(std::move(u.second));
 
 		if (u.second.successes < tp.success_threshold && !unfin) {
-		  unfinished.push_back(u.second.gene);
+		  unfinished.push_back(all_results.back().gene);
 		  unfin = true;
 		}
 	  }
@@ -125,6 +126,15 @@ void print_results(TaskQueue &tq, int ntranscripts, int ngenes, TaskParams &tp) 
 		permutation_variance += std::pow(v.results[k].permutations - permutation_mean, 2) / ntranscripts;
 	  }
 	}
+	// Sort by midp and output
+	std::sort(all_results.begin(),
+			  all_results.end(),
+			  [](Result &a, Result &b) { return a.empirical_midp < b.empirical_midp; });
+	// Report results
+	for(const auto &v : all_results)
+	  std::cout << v;
+
+
 	std::cerr << "Permutation mean: " << permutation_mean << std::endl;
 	std::cerr << "Permutation sd: " << std::sqrt(permutation_variance) << std::endl;
 	std::cerr << "Genes submitted: " << ngenes << std::endl;
@@ -144,7 +154,7 @@ void print_results(TaskQueue &tq, int ntranscripts, int ngenes, TaskParams &tp) 
 	  // Check for additional results
 	  if (tq.get_results().size() > 1) {
 		std::vector<int> to_pop;
-		for (int         i   = 1; i < tq.get_results().size(); i++) {
+		for (int i = 1; i < tq.get_results().size(); i++) {
 		  auto &cur_transcripts = tq.get_results()[i].get_gene().get_transcripts();
 		  if (std::equal(cur_transcripts.cbegin(), cur_transcripts.cend(), transcripts.cbegin())) {
 			// Mark for removal
@@ -156,7 +166,7 @@ void print_results(TaskQueue &tq, int ntranscripts, int ngenes, TaskParams &tp) 
 		  }
 		}
 		// Remove remaining
-		for (auto        rit = to_pop.rbegin(); rit != to_pop.rend(); rit++) {
+		for (auto rit = to_pop.rbegin(); rit != to_pop.rend(); rit++) {
 		  tq.get_results().erase(tq.get_results().begin() + *rit);
 		}
 		calc_mgit_pvalues(res, transcripts, v.get_methods().str());
@@ -172,9 +182,18 @@ void print_results(TaskQueue &tq, int ntranscripts, int ngenes, TaskParams &tp) 
 	  // Renew iterators
 	} while (!tq.get_results().empty());
 
+	// Get results
+	std::vector<Result> all_results;
 	for (const auto &v : res) {
-	  std::cout << v.second;
+	  all_results.emplace_back(std::move(v.second));
 	}
+	// Sort results by midp
+	std::sort(all_results.begin(),
+			  all_results.end(),
+			  [](Result &a, Result &b) { return a.empirical_midp < b.empirical_midp; });
+	// Output
+	for (const auto &v : all_results)
+	  std::cout << v;
   }
 
   if (!unfinished.empty()) {
@@ -225,17 +244,17 @@ void write_detail(TaskQueue &tq, TaskParams &tp) {
   std::ofstream detail(tp.detail_path);
 
   std::string header =
-				  "#Gene\tTranscripts\tVariant\tScore\tAF\tcase_ref\tcase_alt\tcontrol_ref\tcontrol_alt\tcase_list\tcontrol_list";
+	  "#Gene\tTranscripts\tVariant\tScore\tAF\tcase_ref\tcase_alt\tcontrol_ref\tcontrol_alt\tcase_list\tcontrol_list";
   detail << header << std::endl;
 
   if (!tp.genes) {
-	int       i = 0; // For each gene
+	int i = 0; // For each gene
 	for (auto &v : tq.get_results()) {
 	  detail << v.get_gene().get_detail();
 	  // Print sample / index map at the end
 	  if (i == tq.get_results().size() - 1) {
 		detail << "## Sample Index Map" << std::endl;
-		int       j = 0;
+		int j = 0;
 		for (auto &s : v.get_gene().get_samples()) {
 		  detail << "#\t" << s << "\t" << j << std::endl;
 		  j++;
@@ -254,7 +273,7 @@ void write_detail(TaskQueue &tq, TaskParams &tp) {
 	  // Check for additional results
 	  if (tq.get_results_duplicate().size() > 1) {
 		std::vector<int> to_pop;
-		for (int  i   = 1; i < tq.get_results_duplicate().size(); i++) {
+		for (int i = 1; i < tq.get_results_duplicate().size(); i++) {
 		  auto &cur_transcripts = tq.get_results_duplicate()[i].get_gene().get_transcripts();
 		  if (std::equal(cur_transcripts.cbegin(), cur_transcripts.cend(), transcripts.cbegin())) {
 			// Mark for removal
@@ -269,7 +288,7 @@ void write_detail(TaskQueue &tq, TaskParams &tp) {
 	  // Print before erasing
 	  if (tq.get_results_duplicate().size() == 1) {
 		detail << "## Sample Index Map" << std::endl;
-		int       j = 0;
+		int j = 0;
 		for (auto &s : v.get_gene().get_samples()) {
 		  detail << "#\t" << s << "\t" << j << std::endl;
 		  j++;
@@ -285,17 +304,17 @@ void initialize_jobs(TaskParams &tp,
 					 std::vector<std::vector<int32_t>> &permutations,
 					 Covariates *cov,
 					 TaskQueue &tq) {
-  std::stringstream                    current;
-  std::string                          gene;
-  std::string                          transcript;
-  std::string                          header;
+  std::stringstream current;
+  std::string gene;
+  std::string transcript;
+  std::string header;
   std::map<std::string, unsigned long> nvariants;
-  int                                  lineno       = 0;
-  int                                  ngenes       = 0;
-  int                                  ntranscripts = 0;
+  int lineno = 0;
+  int ngenes = 0;
+  int ntranscripts = 0;
 
   std::ifstream ifs(tp.genotypes_path);
-  std::string   line;
+  std::string line;
 
   RJBUtil::Splitter<std::string> gene_list;
   // Parse gene list
@@ -319,10 +338,14 @@ void initialize_jobs(TaskParams &tp,
 		cov->sort_covariates(header);
 	  }
 
-	  // Permute SKAT and SKATO normally
+	  // Permute SKAT, SKATO, and BURDEN normally
 	  Permute perm;
-	  if (tp.stage_1_permutations > 0 && tp.method != "SKAT" && tp.method != "SKATO") {
-		permutations = perm.get_permutations(tp.stage_1_permutations, cov->get_odds(), cov->get_ncases());
+	  if (tp.stage_1_permutations > 0 && tp.method != "SKAT" && tp.method != "SKATO" && tp.method != "BURDEN") {
+		perm.get_permutations(&permutations,
+							  cov->get_odds(),
+							  cov->get_ncases(),
+							  tp.stage_1_permutations,
+							  tp.nthreads - 1);
 	  }
 
 	  lineno++;
@@ -356,7 +379,7 @@ void initialize_jobs(TaskParams &tp,
 	  }
 	} else {
 	  if (!gene.empty()) {
-		Gene  gene_data(current, cov->get_nsamples(), nvariants, casm);
+		Gene gene_data(current, cov->get_nsamples(), nvariants, casm);
 		Stage stage;
 
 		// Choose starting stage
@@ -378,10 +401,10 @@ void initialize_jobs(TaskParams &tp,
 			gene_list.erase(fit);
 			// Ensure we have at least one variant for a submitted gene
 			if (std::any_of(nvariants.cbegin(), nvariants.cend(), [&](const auto &v) { return v.second > 0; })) {
-			  int      total_s1_perm = 0;
-			  int      total_s2_perm = 0;
-			  int      total_success = 0;
-			  for (int i             = 0; i < tq.get_nthreads(); i++) {
+			  int total_s1_perm = 0;
+			  int total_s2_perm = 0;
+			  int total_success = 0;
+			  for (int i = 0; i < tq.get_nthreads(); i++) {
 				if (i == tq.get_nthreads() - 1) {
 				  TaskArgs ta(stage,
 							  gene_data,
@@ -444,7 +467,7 @@ void initialize_jobs(TaskParams &tp,
 		// Check if we add the line;
 		RJBUtil::Splitter<std::string> var_split(splitter[2], "-");
 
-		gene       = splitter[0];
+		gene = splitter[0];
 		transcript = splitter[1];
 
 		// Reset current
@@ -463,7 +486,7 @@ void initialize_jobs(TaskParams &tp,
 		  nvariants[transcript] = 0;
 		}
 	  } else {
-		gene       = splitter[0];
+		gene = splitter[0];
 		transcript = splitter[1];
 		nvariants[transcript] = 1;
 		ntranscripts++;
@@ -476,7 +499,7 @@ void initialize_jobs(TaskParams &tp,
   }
 
   // Submit final gene
-  Gene  gene_data(current, cov->get_nsamples(), nvariants, casm);
+  Gene gene_data(current, cov->get_nsamples(), nvariants, casm);
   Stage stage;
 
   // Choose starting stage
@@ -562,7 +585,7 @@ void initialize_jobs(TaskParams &tp,
 	tq.duplicate();
 	print_results(tq, ntranscripts, ngenes, tp);
 	write_detail(tq, tp);
-  } else if(tp.detail && !tp.genes) {
+  } else if (tp.detail && !tp.genes) {
 	print_results(tq, ntranscripts, ngenes, tp);
 	write_detail(tq, tp);
   } else {

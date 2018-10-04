@@ -214,6 +214,7 @@ int main(int argc, char **argv) {
 	std::cerr << "covariates: " << tp.covariates_path << "\n";
 	std::cerr << "bed_file: " << tp.bed_path << "\n";
 	std::cerr << "weight_file: " << tp.weight_path << "\n";
+	std::cerr << "method: " << tp.method << "\n";
 	std::cerr << "success threshold: " << tp.success_threshold << "\n";
 	std::cerr << "nthreads: " << tp.nthreads << "\n";
 	std::cerr << "stage_1_max_perm: " << tp.stage_1_permutations << "\n";
@@ -248,6 +249,7 @@ int main(int argc, char **argv) {
   }
 
   Covariates cov(tp.covariates_path, tp.ped_path);
+  // TODO: Multithread Stage 1 permutation by dividing up the workload via pointers?
   std::vector<std::vector<int32_t>> permutations;
 
   Permute perm;

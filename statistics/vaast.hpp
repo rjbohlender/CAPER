@@ -16,7 +16,9 @@ public:
   arma::mat X;
   arma::vec Y;
   arma::vec weight;
-  double site_penalty;
+  const double site_penalty;
+  const bool som;
+  const bool soa;
 
   arma::vec case_allele1;
   arma::vec control_allele1;
@@ -27,13 +29,21 @@ public:
   arma::uword n_control;
 
   arma::vec variant_scores;
-  double score = 0;
+  arma::uvec mask;
 
-  VariantGroup(arma::mat X, arma::vec Y, arma::vec weights, arma::uword group_threshold, double site_penalty);
+  double score;
 
-  void mask();
+  VariantGroup(arma::mat X,
+				 arma::vec Y,
+				 arma::vec weights,
+				 arma::uword group_threshold,
+				 double site_penalty,
+				 bool score_only_minor,
+				 bool score_only_alternative);
 
 private:
+  void variant_mask();
+
   double Score();
   arma::vec LRT();
   arma::vec log_likelihood(arma::vec &freq, arma::vec &allele0, arma::vec &allele1);

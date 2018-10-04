@@ -6,8 +6,14 @@
 
 #include <algorithm>
 
-VariantGroup::VariantGroup(arma::mat X, arma::vec Y, arma::vec weights, arma::uword group_threshold, double site_penalty)
-: X(X), Y(Y), site_penalty(site_penalty) {
+VariantGroup::VariantGroup(arma::mat X,
+						   arma::vec Y,
+						   arma::vec weights,
+						   arma::uword group_threshold,
+						   double site_penalty,
+						   bool score_only_minor,
+						   bool score_only_alternative)
+: X(X), Y(Y), site_penalty(site_penalty), som(score_only_minor), soa(score_only_alternative) {
   double n_case = arma::sum(Y);
   double n_control = arma::sum(1 - Y);
 
@@ -19,8 +25,8 @@ VariantGroup::VariantGroup(arma::mat X, arma::vec Y, arma::vec weights, arma::uw
   case_allele0 = 2 * n_case - case_allele1;
   control_allele0 = 2 * n_control - control_allele1;
 
+  nvariants = X.n_cols; // Establish baseline number of variants
   score = Score();
-
 
   // Do grouping
   arma::uvec rare = arma::find(arma::sum(X) <= group_threshold);
@@ -74,6 +80,7 @@ VariantGroup::VariantGroup(arma::mat X, arma::vec Y, arma::vec weights, arma::uw
 		control_allele0 = 2 * n_control - control_allele1;
 	    break;
 	  }
+	  nvariants = Xcollapse.n_cols; // Final number of variants
 	  score = new_score > score ? new_score : score;
     }
   } else {
@@ -83,13 +90,65 @@ VariantGroup::VariantGroup(arma::mat X, arma::vec Y, arma::vec weights, arma::uw
 
 }
 
-void VariantGroup::mask() {
-  score = 0;
+void VariantGroup::variant_mask() {
+  arma::uvec tmpmask = arma::find(variant_scores <= 0);
+  std::vector<arma::uword> scenario;
+  // mask sites where major allele is more common in cases
+  /*
+	# scenario 1: 1 is minor allele and it's more frequent in case
+		scenario1= (    (control_allele1 <= control_allele0 )
+			&   (case_allele1 * control_allele0 >= case_allele0 *
+				control_allele1)
+		)
+	# scenario 2: 0 is minor allele and it's more frequent in case
+		scenario2= (    (control_allele1 >= control_allele0 )
+			&   (case_allele1 * control_allele0 <= case_allele0 *
+				control_allele1)
+		)
+    */
+  case_allele1 = X.t() * Y;
+  control_allele1 = X.t() * (1 - Y);
+  case_allele0 = 2. * n_case - case_allele1;
+  control_allele0 = 2. * n_control - control_allele1;
+
+  for (arma::uword i = 0; i < case_allele1.n_elem; i++) {
+	bool in_mask = false;
+	for (arma::uword j = 0; j < tmpmask.size(); j++) {
+	  if (i == tmpmask(j)) {
+		in_mask = true;
+		break;
+	  }
+	}
+	// Merge
+	if (in_mask) {
+	  scenario.push_back(i);
+	  continue;
+	}
+	if (som) {
+	  // If both scenarios are false, append to mask
+	  bool scenario1 = !((control_allele1(i) <= control_allele0(i))
+		  & ((case_allele1(i) * control_allele0(i) >= case_allele0(i) * control_allele1(i))));
+	  bool scenario2 = !((control_allele1(i) >= control_allele0(i))
+		  & ((case_allele1(i) * control_allele0(i) <= case_allele0(i) * control_allele1(i))));
+
+	  if (soa) {
+		if (scenario1)
+		  scenario.push_back(i);
+	  } else {
+		if (scenario1 & scenario2)
+		  scenario.push_back(i);
+	  }
+	}
+  }
+  mask = arma::conv_to<arma::uvec>::from(scenario);
 }
 
 double VariantGroup::Score() {
   arma::vec log_lh = LRT();
   variant_scores = 2.0 * (log_lh + arma::log(weight)) - site_penalty;
+  variant_mask();
+  variant_scores(mask).zeros();
+
   double val = arma::accu(variant_scores);
   return (val >= 0) ? val : 0; // Mask all negative values
 }
@@ -176,34 +235,39 @@ VAAST::VAAST(Gene &gene,
   score = Score(X, Y, weights);
 
   if(detail) {
-	expanded_scores.reshape(X.n_cols, 1);
-	for(arma::uword i = 0; i < X.n_cols; i++) {
-	  arma::mat Xnew = X;
-	  arma::vec Wnew = weights;
+	  expanded_scores.reshape(X.n_cols, 1);
+	if (X.n_cols > 1) {
+	  for(arma::uword i = 0; i < X.n_cols; i++) {
+		arma::mat Xnew = X;
+		arma::vec Wnew = weights;
 
-	  Xnew.shed_col(i);
-	  Wnew.shed_row(i);
+		Xnew.shed_col(i);
+		Wnew.shed_row(i);
 
-	  variant_grouping(Xnew, Y, Wnew); // Redo grouping
-	  double new_score = Score(Xnew, Y, Wnew);
-	  expanded_scores(i) = (score - new_score >= 0) ? score - new_score : 0; // Calculate score
-	}
-	gene.set_scores(k, expanded_scores);
+		variant_grouping(Xnew, Y, Wnew); // Redo grouping
+		double new_score = Score(Xnew, Y, Wnew);
+		expanded_scores(i) = (score - new_score >= 0) ? score - new_score : 0; // Calculate score
+	  }
+	  gene.set_scores(k, expanded_scores);
+    } else {
+	  expanded_scores(0) = vaast_site_scores(0);
+	  gene.set_scores(k, expanded_scores);
+    }
   }
 }
 
 double VAAST::Score(const arma::mat &X, const arma::vec &Y, const arma::vec &w) {
   arma::uword i = 0;
-  vaast_site_scores.reshape(groups.size(), 1);
-  for(auto &v : groups) {
-	vaast_site_scores(i) = v.score;
-	i++;
+  // Get number of variants
+  arma::uword nvariants = 0;
+  for(const auto &g : groups) {
+    nvariants += g.nvariants;
   }
-  variant_bitmask(X, Y, w); // Update mask
-  for(auto &i : mask) {
-	groups[i].mask();
+  vaast_site_scores.zeros(nvariants, 1);
+  for(const auto &g : groups) {
+    vaast_site_scores = arma::join_vert(vaast_site_scores, g.variant_scores);
   }
-  return arma::sum(vaast_site_scores);
+  return arma::accu(vaast_site_scores);
 }
 
 arma::vec VAAST::LRT() {
@@ -240,111 +304,68 @@ void VAAST::check_weights(Gene &gene) {
 
 void VAAST::variant_grouping(const arma::mat &X, const arma::vec &Y, const arma::vec &w) {
   groups.clear();
+  if(X.n_cols == 1) {
+	groups.push_back(VariantGroup(X, Y, w, 0, site_penalty, false, false));
+	return;
+  }
   // Identify rare variants <= group_threshold
   // More common in cases than controls
   // All other variants are singletons
   arma::uvec indices = arma::regspace<arma::uvec>(0, X.n_cols - 1);
 
-  arma::uvec rare = arma::find(arma::sum(X) <= group_threshold);
-  arma::uvec common = arma::find(arma::sum(X) > group_threshold);
+  arma::uvec rare = arma::find(arma::sum(X, 0) <= group_threshold);
+  arma::uvec common = arma::find(arma::sum(X, 0) > group_threshold);
+
+  // Nothing to group; finish early
+  if(rare.n_elem == 0) {
+	groups.push_back(VariantGroup(X, Y, w, 0, site_penalty, false, false));
+	return;
+  }
 
   arma::vec case_count1 = X.cols(rare).t() * Y;
   arma::vec cont_count1 = X.cols(rare).t() * (1 - Y);
 
+  // Variants more common in cases than in remaining.
   arma::uvec case_frequent = arma::find(case_count1 > cont_count1);
 
   arma::uvec target = arma::intersect(rare, case_frequent);
   arma::uvec remaining = setdiff(indices, target);
+
+  if(target.n_elem == 0) {
+    groups.push_back(VariantGroup(X, Y, w, 0, site_penalty, false, false));
+    return;
+  }
 
   arma::mat Xcollapsible = X.cols(target);
   arma::vec Wcollapsible = w(target);
 
   arma::uvec weight_sort = arma::sort_index(Wcollapsible);
 
-  for(arma::uword i = 0; i < weight_sort.n_rows / 5; i++) {
-    if(i == weight_sort.n_rows / 5 - 1 || i * 5 + 4 >= weight_sort.n_rows) {
-      arma::span cur_span(i * 5, weight_sort.n_rows - 1);
-      arma::mat Xmat = Xcollapsible.cols(weight_sort(cur_span));
-      arma::vec weight_spanned = Wcollapsible(weight_sort(cur_span));
-      groups.push_back(VariantGroup(Xmat, Y, weight_spanned, group_threshold, site_penalty));
-    } else {
+  arma::uword ngroups = weight_sort.n_elem / 5;
+  for(arma::uword i = 0; i < ngroups; i++) {
+#if 0
+	if(i == ngroups - 1 || i * 5 + 4 >= weight_sort.n_elem) {
+	  arma::span cur_span(i * 5, weight_sort.n_elem - 1);
+	  arma::mat Xmat = Xcollapsible.cols(weight_sort(cur_span));
+	  arma::vec weight_spanned = Wcollapsible(weight_sort(cur_span));
+	  groups.push_back(VariantGroup(Xmat, Y, weight_spanned, group_threshold, site_penalty, false, false));
+	} else {
 	  arma::span cur_span(i * 5, i * 5 + 4);
 	  arma::mat Xmat = Xcollapsible.cols(weight_sort(cur_span));
 	  arma::vec weight_spanned = Wcollapsible(weight_sort(cur_span));
-	  groups.push_back(VariantGroup(Xmat, Y, weight_spanned, group_threshold, site_penalty));
-    }
+	  groups.push_back(VariantGroup(Xmat, Y, weight_spanned, group_threshold, site_penalty, false, false));
+	}
+#else
+	arma::span cur_span(i * 5, std::min(i * 5 + 4, weight_sort.n_elem - 1));
+	arma::mat Xmat = Xcollapsible.cols(weight_sort(cur_span));
+	arma::vec weight_spanned = Wcollapsible(weight_sort(cur_span));
+	groups.push_back(VariantGroup(Xmat, Y, weight_spanned, group_threshold, site_penalty, false, false));
+#endif
   }
   // Don't group the remaining variants.
-  if(remaining.n_rows > 0) {
-	groups.push_back(VariantGroup(X.cols(remaining), Y, w.rows(remaining), 0, site_penalty));
+  if(remaining.n_elem > 0) {
+	groups.push_back(VariantGroup(X.cols(remaining), Y, w.rows(remaining), 0, site_penalty, false, false));
   }
-}
-
-void VAAST::variant_bitmask(const arma::mat &X, const arma::vec &Y, const arma::vec &w) {
-  // mask variants with score < 1
-  arma::uvec tmpmask = arma::find(vaast_site_scores <= 0);
-  std::vector<arma::uword> scenario;
-  /*
-   * Collect group variants.
-   */
-  arma::mat Xmat;
-
-  for(auto it = groups.begin(); it != groups.end(); it++) {
-    if(it == groups.begin()) {
-      Xmat = (*it).X;
-    } else {
-	  Xmat = join_horiz(X, (*it).X);
-    }
-  }
-
-  // mask sites where major allele is more common in cases
-  /*
-	# scenario 1: 1 is minor allele and it's more frequent in case
-		scenario1= (    (control_allele1 <= control_allele0 )
-			&   (case_allele1 * control_allele0 >= case_allele0 *
-				control_allele1)
-		)
-	# scenario 2: 0 is minor allele and it's more frequent in case
-		scenario2= (    (control_allele1 >= control_allele0 )
-			&   (case_allele1 * control_allele0 <= case_allele0 *
-				control_allele1)
-		)
-    */
-  case_allele1 = Xmat.t() * Y;
-  control_allele1 = Xmat.t() * (1 - Y);
-  case_allele0 = 2. * n_case - case_allele1;
-  control_allele0 = 2. * n_control - control_allele1;
-
-  for (arma::uword i = 0; i < case_allele1.n_rows; i++) {
-	bool in_mask = false;
-	for (arma::uword j = 0; j < tmpmask.size(); j++) {
-	  if (i == tmpmask(j)) {
-		in_mask = true;
-		break;
-	  }
-	}
-	// Merge
-	if (in_mask) {
-	  scenario.push_back(i);
-	  continue;
-	}
-	if (som) {
-	  // If both scenarios are false, append to mask
-	  bool scenario1 = !((control_allele1(i) <= control_allele0(i))
-		  & ((case_allele1(i) * control_allele0(i) >= case_allele0(i) * control_allele1(i))));
-	  bool scenario2 = !((control_allele1(i) >= control_allele0(i))
-		  & ((case_allele1(i) * control_allele0(i) <= case_allele0(i) * control_allele1(i))));
-
-	  if (soa) {
-		if (scenario1)
-		  scenario.push_back(i);
-	  } else {
-		if (scenario1 & scenario2)
-		  scenario.push_back(i);
-	  }
-	}
-  }
-  mask = arma::conv_to<arma::uvec>::from(scenario);
 }
 
 //! \brief Getter for the VAAST score
