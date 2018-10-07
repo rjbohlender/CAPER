@@ -49,8 +49,7 @@ struct TaskParams {
 
   // Detailed VAAST output
   std::string full_command;
-  bool detail;
-  std::string detail_path;
+  std::string output_path;
 
   // VAAST
   arma::uword group_size;
@@ -110,7 +109,6 @@ public:
   Methods &get_methods();
   int get_max_permutations();
   int get_npermutations();
-  bool get_detail();
   std::vector<std::vector<int32_t>> &get_permutations();
   Result &max_original_statistic();
   Result &min_empirical_pvalue();

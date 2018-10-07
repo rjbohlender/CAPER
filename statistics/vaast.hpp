@@ -13,7 +13,7 @@
 class VariantGroup {
 public:
   arma::uword nvariants;
-  arma::mat X;
+  arma::mat Xcollapse;
   arma::vec Y;
   arma::vec weight;
   const double site_penalty;
@@ -44,7 +44,7 @@ public:
 private:
   void variant_mask();
 
-  double Score();
+  double Score(const arma::mat &X, const arma::vec &Y, const arma::vec &w);
   arma::vec LRT();
   arma::vec log_likelihood(arma::vec &freq, arma::vec &allele0, arma::vec &allele1);
 };
@@ -90,10 +90,14 @@ public:
   double get_score();
 private:
   void check_weights(Gene &gene);
+  double Score();
   double Score(const arma::mat &X, const arma::vec &Y, const arma::vec &w);
   arma::vec LRT();
   arma::vec log_likelihood(arma::vec &freq, arma::vec &allele0, arma::vec &allele1);
-  void variant_grouping(const arma::mat &X, const arma::vec &Y, const arma::vec &w);
+  void variant_grouping(const arma::mat &X,
+						  const arma::vec &Y,
+						  const arma::vec &w,
+						  std::vector<std::string> &positions);
   void variant_bitmask(const arma::mat &X, const arma::vec &Y, const arma::vec &w);
 
   arma::uvec setdiff(arma::uvec x, arma::uvec y);

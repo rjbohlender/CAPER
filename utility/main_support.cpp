@@ -85,19 +85,30 @@ void calc_mgit_pvalues(std::map<std::string, Result> &results,
   }
 }
 
-void print_results(TaskQueue &tq, int ntranscripts, int ngenes, TaskParams &tp) {
+void write_simple(TaskQueue &tq, int ntranscripts, int ngenes, TaskParams &tp) {
+  // Build output_path
+  std::stringstream simple_path_ss;
+  simple_path_ss << tp.output_path << "/" << tp.method << ".simple";
+  std::ofstream simple_ofs(simple_path_ss.str());
+
   // Holds unfinished genes
   std::vector<std::string> unfinished;
 
-  std::cout << std::setw(20) << "Gene";
-  std::cout << std::setw(20) << "Transcript";
-  std::cout << std::setw(20) << "Original";
-  std::cout << std::setw(20) << "Empirical_P";
-  std::cout << std::setw(20) << "Empirical_MidP";
-  std::cout << std::setw(20) << "Successes";
-  std::cout << std::setw(20) << "Permutations";
-  std::cout << std::setw(20) << "MGIT";
-  std::cout << std::setw(20) << "MGIT_Successes" << std::endl;
+  arma::uword ncases = tq.get_results()[0].get_cov().get_ncases();
+  arma::uword nconts = tq.get_results()[0].get_cov().get_nsamples() - ncases;
+
+  simple_ofs << "##\ttotal_control\t" << nconts << std::endl;
+  simple_ofs << "##\ttotal_seq_aff\t" << ncases << std::endl;
+  simple_ofs << std::setw(20) << std::left << "Rank";
+  simple_ofs << std::setw(20) << "Gene";
+  simple_ofs << std::setw(20) << "Transcript";
+  simple_ofs << std::setw(20) << "Original";
+  simple_ofs << std::setw(20) << "Empirical_P";
+  simple_ofs << std::setw(20) << "Empirical_MidP";
+  simple_ofs << std::setw(20) << "Successes";
+  simple_ofs << std::setw(20) << "Permutations";
+  simple_ofs << std::setw(20) << "MGIT";
+  simple_ofs << std::setw(20) << "MGIT_Successes" << std::endl;
   if (!tp.genes) {
 	// Print header and formatted results
 	double permutation_mean = 0;
@@ -131,8 +142,12 @@ void print_results(TaskQueue &tq, int ntranscripts, int ngenes, TaskParams &tp) 
 			  all_results.end(),
 			  [](Result &a, Result &b) { return a.empirical_midp < b.empirical_midp; });
 	// Report results
-	for(const auto &v : all_results)
-	  std::cout << v;
+	int rank = 1;
+	for(auto &v : all_results) {
+	  v.set_rank(rank);
+	  simple_ofs << v;
+	  rank++;
+	}
 
 
 	std::cerr << "Permutation mean: " << permutation_mean << std::endl;
@@ -192,9 +207,15 @@ void print_results(TaskQueue &tq, int ntranscripts, int ngenes, TaskParams &tp) 
 			  all_results.end(),
 			  [](Result &a, Result &b) { return a.empirical_midp < b.empirical_midp; });
 	// Output
-	for (const auto &v : all_results)
-	  std::cout << v;
+	int rank = 1;
+	for (auto &v : all_results) {
+	  v.set_rank(rank);
+	  simple_ofs << v;
+	  rank++;
+	}
   }
+  simple_ofs.flush();
+  simple_ofs.close();
 
   if (!unfinished.empty()) {
 	// Print command to run unfinished
@@ -237,11 +258,10 @@ void print_results(TaskQueue &tq, int ntranscripts, int ngenes, TaskParams &tp) 
 }
 
 void write_detail(TaskQueue &tq, TaskParams &tp) {
-  if (!tp.detail) {
-	return;
-  }
+  std::stringstream detail_path_ss;
+  detail_path_ss << tp.output_path << "/" << tp.method << ".detail";
 
-  std::ofstream detail(tp.detail_path);
+  std::ofstream detail(detail_path_ss.str());
 
   std::string header =
 	  "#Gene\tTranscripts\tVariant\tScore\tAF\tcase_ref\tcase_alt\tcontrol_ref\tcontrol_alt\tcase_list\tcontrol_list";
@@ -581,15 +601,13 @@ void initialize_jobs(TaskParams &tp,
   // Free permutation memory
   permutations.clear();
 
-  if (tp.detail && tp.genes) {
+  if (tp.genes) {
 	tq.duplicate();
-	print_results(tq, ntranscripts, ngenes, tp);
-	write_detail(tq, tp);
-  } else if (tp.detail && !tp.genes) {
-	print_results(tq, ntranscripts, ngenes, tp);
+	write_simple(tq, ntranscripts, ngenes, tp);
 	write_detail(tq, tp);
   } else {
-	print_results(tq, ntranscripts, ngenes, tp);
+	write_simple(tq, ntranscripts, ngenes, tp);
+	write_detail(tq, tp);
   }
 }
 

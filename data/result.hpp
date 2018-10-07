@@ -26,6 +26,7 @@ struct Result {
   friend std::ostream &operator<<(std::ostream &stream, const Result &rhs);
 
   Result &combine(const Result& res);
+  void set_rank(int rank);
 
   std::string gene;
   std::string transcript;
@@ -40,6 +41,7 @@ struct Result {
   int mgit_successes;
   bool done;
   std::vector<double> permuted;
+  int rank;
   // std::map<double, double> permuted;
 };
 

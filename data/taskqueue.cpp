@@ -132,7 +132,7 @@ void TaskQueue::thread_handler() {
 void TaskQueue::stage_1(TaskArgs &ta) {
   // Set original value
   for (auto &v : ta.results) {
-	v.second.original = call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), v.second.transcript, ta.get_tp(), false, ta.get_detail());
+	v.second.original = call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), v.second.transcript, ta.get_tp(), false, true);
   }
 
   if (verbose_) {
@@ -234,7 +234,7 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 	const std::string &k = v.second.transcript;
 
 	if (std::isnan(v.second.original)) {
-	  v.second.original = call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), k, ta.get_tp(), false, ta.get_detail());
+	  v.second.original = call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), k, ta.get_tp(), false, true);
 	}
 	// Minor allele carrier indices
 	mac_indices[k] = arma::find(arma::sum(ta.get_gene().get_matrix(k), 1) > 0);

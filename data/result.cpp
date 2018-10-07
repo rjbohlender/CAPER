@@ -72,6 +72,7 @@ Result &Result::operator=(Result &&rhs) noexcept {
 }
 
 std::ostream &operator<<(std::ostream &stream, const Result &rhs) {
+  stream << std::setw(20) << std::left << rhs.rank;
   stream << std::setw(20) << rhs.gene;
   stream << std::setw(20) << rhs.transcript;
   stream << std::setw(20) << std::setprecision(10) << rhs.original;
@@ -106,5 +107,9 @@ Result &Result::combine(const Result &res) {
   permuted.insert(permuted.end(), res.permuted.begin(), res.permuted.end());
 
   return *this;
+}
+
+void Result::set_rank(int rank) {
+  this->rank = rank;
 }
 

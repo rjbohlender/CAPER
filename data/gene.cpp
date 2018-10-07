@@ -60,10 +60,8 @@ std::vector<std::string> &Gene::get_positions(const std::string &k) {
   return positions_[k];
 }
 
-void Gene::clear(bool detail, Covariates &cov, std::unordered_map<std::string, Result> &results) {
-  if(detail) {
-    generate_detail(cov, results);
-  }
+void Gene::clear(Covariates &cov, std::unordered_map<std::string, Result> &results) {
+  generate_detail(cov, results);
   // Set matrix size to 0x0 to free space.
   for (auto &v : genotypes_) {
 	v.second.reset();
@@ -247,7 +245,7 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
     detail << gene_ << "\t";
     print_comma_sep(v.second, detail);
     detail << "\t";
-    detail << boost::format("%1$s\t%2$f\t%3$d\t%4$d\t%5$d\t%6$d\t%7$d\t")
+    detail << boost::format("%1$s\t%2$.2f\t%3$d\t%4$d\t%5$d\t%6$d\t%7$d\t")
     	% v.first
     	% pos_score_map[v.first]
     	% pos_freq_map[v.first]
@@ -282,6 +280,10 @@ void print_comma_sep(arma::uvec &x, std::ostream &os) {
 }
 
 void print_comma_sep(std::vector<std::string> &x, std::ostream &os) {
+  if(x.size() == 0) {
+	os << "-";
+	return;
+  }
   for(arma::uword i = 0; i < x.size(); i++) {
 	if(i == x.size() - 1) {
 	  os << x.at(i);
@@ -292,6 +294,10 @@ void print_comma_sep(std::vector<std::string> &x, std::ostream &os) {
 }
 
 void print_comma_sep(const std::vector<std::string> &x, std::ostream &os) {
+  if(x.size() == 0) {
+    os << "-";
+    return;
+  }
   for(arma::uword i = 0; i < x.size(); i++) {
 	if(i == x.size() - 1) {
 	  os << x.at(i);
@@ -301,6 +307,10 @@ void print_comma_sep(const std::vector<std::string> &x, std::ostream &os) {
   }
 }
 void print_semicolon_sep(arma::uvec &x, std::ostream &os) {
+  if(x.size() == 0) {
+	os << "-";
+	return;
+  }
   for(arma::uword i = 0; i < x.size(); i++) {
 	if(i == x.size() - 1) {
 	  os << x(i);

@@ -98,7 +98,7 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
   std::ifstream pfs(pedfile);
   std::string line;
 
-  std::vector<std::pair<std::string, double>> sample_phen_pair;
+  std::map<std::string, double> sample_phen_map;
   std::vector<double> phenotypes;
   std::vector<std::vector<double>> covariates;
 
@@ -112,9 +112,7 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
     std::string sample_id = splitter[1];
     double phen = std::stoi(splitter[5]);
 
-    std::pair<std::string, double> pair {sample_id, (phen == 2) ? 1 : 0};
-
-    sample_phen_pair.emplace_back(pair);
+    sample_phen_map[sample_id] = (phen == 2) ? 1 : 0;
   }
 
   // Parse the PCA matrix file
@@ -125,15 +123,15 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
 	for (const auto &v : splitter) {
 	  if (i == 0) {
 	    // Get phenotype of current sample
-	    auto phen = std::find_if(sample_phen_pair.begin(), sample_phen_pair.end(), [v](auto &x){ return x.first == v; });
+	    auto phen = sample_phen_map[v];
 
 		samples_.push_back(v);
 
-		if (phen->second == 1)
+		if (phen == 1)
 		  ncases_++;
 		nsamples_++;
 
-		phenotypes.push_back(phen->second);
+		phenotypes.push_back(phen);
 	  } else {
 		if (covariates.size() < i) {
 		  covariates.emplace_back(std::vector<double>());

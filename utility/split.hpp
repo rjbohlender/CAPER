@@ -95,6 +95,14 @@ public:
 	tokens_.erase(pos);
   }
 
+  auto front() {
+    return tokens_.front();
+  }
+
+  auto back() {
+    return tokens_.back();
+  }
+
   template<typename _Integer>
   auto operator[](_Integer i) {
 	return tokens_[i];

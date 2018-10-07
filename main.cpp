@@ -36,7 +36,6 @@ int main(int argc, char **argv) {
   boost::optional<std::string> bed;
   boost::optional<std::string> weight;
   boost::optional<std::string> genes;
-  boost::optional<std::string> detail;
 
   try {
 	desc.add_options()
@@ -49,9 +48,12 @@ int main(int argc, char **argv) {
 			("bed-file,b",
 			 po::value(&bed),
 			 "A bed file to be used as a filter. All specified regions will be excluded.")
+			("output,o",
+			 po::value<std::string>()->required(),
+			 "Path to output directory. Two files will be output: a simple transcript level results file, and a detailed variant level result file.")
 			("weight-file,w", po::value(&weight), "A file providing weights.")
 			("group_size,g",
-			 po::value<arma::uword>()->default_value(4),
+			 po::value<arma::uword>()->default_value(0),
 			 "Group size. VAAST can collapse variants into groups of variants with adjacent weights. Default = 4.")
 			("nthreads,t",
 			 po::value<size_t>()->default_value(std::thread::hardware_concurrency() / 2 + 1),
@@ -74,9 +76,10 @@ int main(int argc, char **argv) {
 			 "Parameters for the beta distribution. Two values, comma separated corresponding to a,b. Default is 1,25.")
 			("successes,s", po::value<int>()->default_value(200), "Number of successes for early termination.")
 			("genes,l", po::value(&genes), "A comma-separated list of genes to analyze.")
-			("detail,d", po::value(&detail), "Detailed VAAST output.")
 			("score_only_minor", po::bool_switch(&score_only_minor), "Score only minor alleles in VAAST.")
-			("score_only_alternative", po::bool_switch(&score_only_alternative), "Score only alternative alleles in VAAST.")
+			("score_only_alternative",
+			 po::bool_switch(&score_only_alternative),
+			 "Score only alternative alleles in VAAST.")
 			("maf", po::value<double>()->default_value(0.005), "Minor allele frequency cutoff for CMC collapsing.")
 			("quiet,q", "Don't print status messages.");
 	po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -164,6 +167,7 @@ int main(int argc, char **argv) {
   tp.genotypes_path = vm["input"].as<std::string>();
   tp.covariates_path = vm["covariates"].as<std::string>();
   tp.ped_path = vm["ped"].as<std::string>();
+  tp.output_path = vm["output"].as<std::string>();
   tp.maf = vm["maf"].as<double>();
   tp.group_size = vm["group_size"].as<arma::uword>();
   tp.score_only_minor = score_only_minor;
@@ -181,13 +185,6 @@ int main(int argc, char **argv) {
   } else {
 	tp.weight = false;
 	tp.weight_path = "";
-  }
-  if (detail) {
-	tp.detail = true;
-	tp.detail_path = *detail;
-  } else {
-	tp.detail = false;
-	tp.detail_path = "";
   }
   // Threading
   tp.nthreads = vm["nthreads"].as<size_t>();

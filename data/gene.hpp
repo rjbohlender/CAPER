@@ -50,7 +50,7 @@ public:
 
   void generate_detail(Covariates &cov, std::unordered_map<std::string, Result> &results);
 
-  void clear(bool detail, Covariates &cov, std::unordered_map<std::string, Result> &results);
+  void clear(Covariates &cov, std::unordered_map<std::string, Result> &results);
 
 private:
   std::map<std::string, bool> weights_set_;
