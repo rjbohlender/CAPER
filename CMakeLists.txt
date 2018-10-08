@@ -14,6 +14,11 @@ if (APPLE)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -pg")
 endif ()
 
+if (UNIX)
+    find_package(LAPACK REQUIRED)
+    find_package(BLAS REQUIRED)
+endif()
+
 if (CMAKE_COMPILER_IS_GNUCXX)
     set(CMAKE_CXX_FLAGS_RELEASE  "${CMAKE_CXX_FLAGS_RELEASE} -fno-openmp")
 else()
@@ -66,12 +71,14 @@ set(PROJECT_SUPPORT_FILES
     utility/main_support.cpp
     utility/main_support.hpp
     statistics/vaast.cpp
-    statistics/vaast.hpp)
+    statistics/vaast.hpp utility/jobdispatcher.cpp utility/jobdispatcher.hpp)
 
 include_directories("${CMAKE_CURRENT_LIST_DIR}/third_party")
 include_directories(${ARMADILLO_INCLUDE_DIRS})
 message(${ARMADILLO_INCLUDE_DIRS})
 include_directories(${Boost_INCLUDE_DIRS})
+include_directories(${LAPACK_INCLUDE_DIRS})
+include_directories(${BLAS_INCLUDE_DIRS})
 
 add_executable(Permute_Associate
                main.cpp
@@ -80,6 +87,8 @@ add_executable(Permute_Associate
 target_link_libraries(Permute_Associate ${ARMADILLO_LIBRARIES})
 target_link_libraries(Permute_Associate ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(Permute_Associate ${Boost_LIBRARIES})
+target_link_libraries(Permute_Associate ${LAPACK_LIBRARIES})
+target_link_libraries(Permute_Associate ${BLAS_LIBRARIES})
 
 target_compile_definitions(Permute_Associate PRIVATE MAXCOLORS=10000000)
 

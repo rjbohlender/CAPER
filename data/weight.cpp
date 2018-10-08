@@ -3,8 +3,14 @@
 //
 
 #include "weight.hpp"
+#include "../utility/filesystem.hpp"
 
+// TODO: Add check for lines in the wrong format.
 Weight::Weight(const std::string &ifile) {
+  if (!check_file_exists(ifile)) {
+    std::cerr << "No weights provided." << std::endl;
+    return;
+  }
   std::ifstream ifs(ifile);
   std::string line;
 

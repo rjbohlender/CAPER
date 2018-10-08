@@ -10,7 +10,8 @@ df <- read.table(matrix_file, header=T)
 covars <- read.table(covar_file, header=F)
 
 run_analysis <- function(df, covars, nperm) {
-  obj <- SKAT_Null_Model(formula("V1 ~ 1 + V2 + V3"), data=covars, out_type = "D", n.Resampling = nperm, type.Resampling = "permutation", Adjustment = T)
+  null_formula <- paste(c("V1 ~ 1", colnames(covars)[2:ncol(covars)]), collapse=" + ")
+  obj <- SKAT_Null_Model(formula(null_formula), data=covars, out_type = "D", n.Resampling = nperm, type.Resampling = "permutation", Adjustment = T)
   
   for(gene in levels(df$Gene)) {
     s = df[df$Gene == gene,]

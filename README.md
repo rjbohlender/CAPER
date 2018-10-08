@@ -13,6 +13,7 @@ VAAST.
 - CALPHA
 - CMC
 - SKAT
+- SKATO
 - VAAST
 - VT
 - WSS
@@ -43,8 +44,8 @@ make
 ```
 
 If cmake fails to detect armadillo, but you're sure it is available, you may 
-need to direct cmake to the library, e.g., when compiling on a cluster. In that
-case the following should work:
+need to direct cmake to the library, e.g., when compiling on a cluster, with 
+packages in non-standard locations. In that case the following should work:
 
 ```bash
 mkdir pabuild && cd pabuild

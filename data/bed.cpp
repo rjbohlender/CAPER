@@ -2,7 +2,10 @@
 // Created by Bohlender,Ryan James on 8/21/18.
 //
 
+#include <iostream>
+
 #include "bed.hpp"
+#include "../utility/filesystem.hpp"
 
 BedRange::BedRange(std::pair<int, int> &range) : range(range) {}
 
@@ -16,6 +19,10 @@ bool BedRange::operator>=(int rhs) const { return range.second >= rhs; }
 int BedRange::operator-(int rhs) const { return range.second - rhs; }
 
 Bed::Bed(const std::string &ifile) {
+  if(!check_file_exists(ifile)) {
+    std::cerr << "No mask file provided or incorrect path."  << std::endl;
+    return;
+  }
   std::ifstream ifs(ifile);
   std::string line;
 

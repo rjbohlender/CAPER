@@ -107,6 +107,7 @@ void Gene::parse(std::stringstream &ss) {
 	  try{
 		val = std::stod(splitter[j]);
 	  } catch(std::exception &e) {
+	    std::cerr << "Full buffer: " << ss.str() << std::endl;
 	    std::cerr << "Failed to convert data to double: " << splitter[j] << std::endl;
 	    std::cerr << "Line: " << line << std::endl;
 	    std::cerr << "j: " << j << std::endl;
@@ -190,9 +191,12 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
   for(const auto &ts : transcripts_) {
     arma::uword i = 0;
 
+    arma::uvec cases = arma::find(Y == 1);
+    arma::uvec controls = arma::find(Y == 0);
+
     arma::mat X = genotypes_[ts];
-    arma::mat Xcase = X.rows(arma::find(Y == 1));
-    arma::mat Xcont = X.rows(arma::find(Y == 0));
+    arma::mat Xcase = X.rows(cases);
+    arma::mat Xcont = X.rows(controls);
     arma::rowvec maf = arma::mean(X, 0) / 2.;
     // Ref/Alt Counts
     arma::rowvec case_alt = arma::sum(Xcase, 0);
@@ -231,11 +235,12 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
 		pos_contalt_map[pos] = cont_alt(i);
 	  }
 	  // Get indices
+	  arma::uvec carriers = arma::find(X.col(i) > 0);
 	  if(pos_caseidx_map.find(pos) == pos_caseidx_map.end()) {
-	    pos_caseidx_map[pos] = arma::find(Xcase.col(i) > 0);
+	    pos_caseidx_map[pos] = arma::intersect(cases, carriers);
 	  }
 	  if(pos_contidx_map.find(pos) == pos_contidx_map.end()) {
-		pos_contidx_map[pos] = arma::find(Xcont.col(i) > 0);
+		pos_contidx_map[pos] = arma::intersect(controls, carriers);
 	  }
       i++;
     }

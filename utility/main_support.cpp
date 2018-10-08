@@ -345,7 +345,6 @@ void initialize_jobs(TaskParams &tp,
   Bed bed;
   if (tp.bed)
 	bed = Bed(tp.bed_path);
-  bool have_bed = !bed.empty();
 
   Weight casm;
   if (tp.weight)
@@ -360,12 +359,29 @@ void initialize_jobs(TaskParams &tp,
 
 	  // Permute SKAT, SKATO, and BURDEN normally
 	  Permute perm;
+	  std::shared_ptr<std::vector<std::vector<int32_t>>> tmp_ptr(&permutations);
 	  if (tp.stage_1_permutations > 0 && tp.method != "SKAT" && tp.method != "SKATO" && tp.method != "BURDEN") {
-		perm.get_permutations(&permutations,
+		perm.get_permutations(tmp_ptr,
 							  cov->get_odds(),
 							  cov->get_ncases(),
 							  tp.stage_1_permutations,
 							  tp.nthreads - 1);
+	  }
+
+	  // Permutation set output
+	  if(tp.permute_set) {
+		std::ofstream pset_ofs(tp.permute_set_path);
+		std::ofstream lr_ofs(tp.permute_set_path + ".lr");
+		for(const auto &p : permutations) {
+		  for(const auto &v : p) {
+		    pset_ofs << v << "\t";
+		  }
+		  pset_ofs << "\n";
+		}
+		pset_ofs.close();
+
+		cov->get_probability().t().print(lr_ofs);
+		lr_ofs.close();
 	  }
 
 	  lineno++;
@@ -376,7 +392,7 @@ void initialize_jobs(TaskParams &tp,
 	if (splitter[0] == gene) {
 	  // Add to current
 	  RJBUtil::Splitter<std::string> var_split(splitter[2], "-");
-	  if (have_bed) {
+	  if (tp.bed) {
 		if (!bed.check_variant(var_split[0], var_split[1])) {
 		  current << line << "\n";
 		  if (splitter[1] == transcript) {
@@ -398,7 +414,11 @@ void initialize_jobs(TaskParams &tp,
 		}
 	  }
 	} else {
-	  if (!gene.empty()) {
+	  // Don't always create the gene
+	  auto fit = std::find(gene_list.cbegin(), gene_list.cend(), gene);
+	  bool skip_gene = (fit == gene_list.cend()) && tp.genes;
+	  if (!gene.empty() && !skip_gene) {
+
 		Gene gene_data(current, cov->get_nsamples(), nvariants, casm);
 		Stage stage;
 
@@ -416,7 +436,6 @@ void initialize_jobs(TaskParams &tp,
 			break;
 		  }
 		  // Found gene
-		  auto fit = std::find(gene_list.cbegin(), gene_list.cend(), gene_data.get_gene());
 		  if (fit != gene_list.cend()) {
 			gene_list.erase(fit);
 			// Ensure we have at least one variant for a submitted gene
@@ -468,7 +487,7 @@ void initialize_jobs(TaskParams &tp,
 		  }
 		} else {
 		  // Ensure we have at least one variant for a submitted gene
-		  if (std::any_of(nvariants.cbegin(), nvariants.cend(), [&](const auto &v) { return v.second > 0; })) {
+		  if (std::any_of(nvariants.cbegin(), nvariants.cend(), [](const auto &v) { return v.second > 0; })) {
 			TaskArgs ta(stage,
 						gene_data,
 						*cov,
@@ -483,7 +502,7 @@ void initialize_jobs(TaskParams &tp,
 		  }
 		}
 	  }
-	  if (have_bed) {
+	  if (tp.bed) {
 		// Check if we add the line;
 		RJBUtil::Splitter<std::string> var_split(splitter[2], "-");
 
@@ -491,6 +510,7 @@ void initialize_jobs(TaskParams &tp,
 		transcript = splitter[1];
 
 		// Reset current
+		current.str("");
 		current.clear();
 		nvariants.clear();
 		// Add header
@@ -511,12 +531,15 @@ void initialize_jobs(TaskParams &tp,
 		nvariants[transcript] = 1;
 		ntranscripts++;
 
+		current.str("");
 		current.clear();
 		current << header << "\n";
 		current << line << "\n";
 	  }
 	}
   }
+  auto fit = std::find(gene_list.cbegin(), gene_list.cend(), gene);
+  bool skip_gene = (fit == gene_list.cend()) && tp.genes;
 
   // Submit final gene
   Gene gene_data(current, cov->get_nsamples(), nvariants, casm);
@@ -531,7 +554,7 @@ void initialize_jobs(TaskParams &tp,
   // If we're looking at specific genes;
   if (tp.genes) {
 	// Found gene
-	if (std::find(gene_list.cbegin(), gene_list.cend(), gene_data.get_gene()) != gene_list.cend()) {
+	if (std::find(gene_list.cbegin(), gene_list.cend(), gene) != gene_list.cend()) {
 	  // Ensure we have at least one variant for a submitted gene
 	  if (std::any_of(nvariants.cbegin(), nvariants.cend(), [&](const auto &v) { return v.second > 0; })) {
 		// TODO Change logic for multiple jobs

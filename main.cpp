@@ -36,6 +36,7 @@ int main(int argc, char **argv) {
   boost::optional<std::string> bed;
   boost::optional<std::string> weight;
   boost::optional<std::string> genes;
+  boost::optional<std::string> permute_set;
 
   try {
 	desc.add_options()
@@ -81,6 +82,7 @@ int main(int argc, char **argv) {
 			 po::bool_switch(&score_only_alternative),
 			 "Score only alternative alleles in VAAST.")
 			("maf", po::value<double>()->default_value(0.005), "Minor allele frequency cutoff for CMC collapsing.")
+			("permute_out", po::value(&permute_set), "Output permutations to the given file.")
 			("quiet,q", "Don't print status messages.");
 	po::store(po::parse_command_line(argc, argv, desc), vm);
 	if (vm.count("help")) {
@@ -186,6 +188,13 @@ int main(int argc, char **argv) {
 	tp.weight = false;
 	tp.weight_path = "";
   }
+  if (permute_set) {
+    tp.permute_set = true;
+    tp.permute_set_path = *permute_set;
+  } else {
+    tp.permute_set = false;
+    tp.permute_set_path = "";
+  }
   // Threading
   tp.nthreads = vm["nthreads"].as<size_t>();
   // Options
@@ -204,7 +213,17 @@ int main(int argc, char **argv) {
   tp.a = std::stod(beta_split[0]);
   tp.b = std::stod(beta_split[1]);
 
+  if(tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN") {
+    tp.alternate_permutation = true;
+  } else {
+    tp.alternate_permutation = false;
+  }
+
   assert(tp.nthreads > 1);
+  if(tp.permute_set && tp.nthreads) {
+    std::cerr << "Restricting to a single worker thread. Permute set output is not threadsafe." << std::endl;
+    tp.nthreads = 2;
+  }
 
   if (tp.verbose) {
 	std::cerr << "genotypes: " << tp.genotypes_path << "\n";
@@ -246,10 +265,8 @@ int main(int argc, char **argv) {
   }
 
   Covariates cov(tp.covariates_path, tp.ped_path);
-  // TODO: Multithread Stage 1 permutation by dividing up the workload via pointers?
   std::vector<std::vector<int32_t>> permutations;
 
-  Permute perm;
   // Initialize randomization
   arma::arma_rng::set_seed_random();
 

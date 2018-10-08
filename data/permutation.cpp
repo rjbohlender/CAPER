@@ -10,7 +10,7 @@
 Permute::Permute()
 	: sto((int32_t) time(nullptr)) {}
 
-void Permute::get_permutations(std::vector<std::vector<int32_t>> *permutations,
+void Permute::get_permutations(std::shared_ptr<std::vector<std::vector<int32_t>>> permutations,
 							   arma::colvec &odds,
 							   int ncases,
 							   unsigned long nperm,
@@ -178,36 +178,35 @@ arma::vec Permute::calculate_fisher_mean(int32_t n, arma::vec &odds) {
 }
 
 std::vector<std::vector<int32_t>> Permute::permutations_maj_bin(int nperm,
-																arma::vec &prob,
+																arma::vec &odds,
 																int ncases,
 																arma::uvec &mac_indices,
 																arma::uvec &maj_indices) {
   std::vector<std::vector<int32_t>> ret(nperm);
   for (int i = 0; i < nperm; i++) {
-	ret[i] = std::vector<int32_t>(prob.n_rows);
+	ret[i] = std::vector<int32_t>(odds.n_rows);
   }
 
-  std::vector<double> odds = arma::conv_to<std::vector<double>>::from(prob(mac_indices) / (1 - prob(mac_indices)));
-  arma::vec maj_prob = arma::sort(prob(maj_indices));
+  std::vector<double> odds_ = arma::conv_to<std::vector<double>>::from(odds(mac_indices));
+  arma::uvec odds_sort = arma::sort_index(odds(maj_indices));
+
 
   // Create bins
-  double nbins = 1.;
-  std::vector<int32_t> m(odds.size(), 1);
-  for (double i = 0; i < nbins; i++) {
-	arma::uvec cur = arma::find(maj_prob >= i / nbins && maj_prob < (i + 1.) / nbins);
+  double nbins = 1;
+  arma::uword stride = maj_indices.n_elem / nbins;
+  std::vector<int32_t> m(odds_.size(), 1);
+  for (arma::uword i = 0; i < nbins; i++) {
+    arma::span cur(i * stride, std::min(i * stride + stride - 1, maj_indices.n_elem));
+    arma::vec odds_spanned = odds(odds_sort(cur));
 	// Set number in group
-	m.push_back(cur.size());
+	m.push_back(odds_spanned.n_elem);
 	// Set odds for group
-	if (cur.size() == 0) {
-	  odds.push_back(0);
-	} else {
-	  odds.push_back(arma::mean(maj_prob(cur) / (1 - maj_prob(cur))));
-	}
+	odds_.push_back(arma::mean(odds_spanned));
   }
 
   // Generate permutations
   for (int i = 0; i < nperm; i++) {
-	sto.MultiFishersNCHyp(&ret[i][0], &m[0], &odds[0], ncases, odds.size());
+	sto.MultiFishersNCHyp(&ret[i][0], &m[0], &odds_[0], ncases, odds_.size());
   }
 
   return ret;

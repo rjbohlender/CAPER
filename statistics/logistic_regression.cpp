@@ -82,7 +82,7 @@ void LogisticRegression::calculate_odds(arma::mat &Xmat) {
   if(arma::any(mu_ <= 0)) {
     std::cerr << "mu_ contains zeros\n";
   }
-  odds_ = mu_ / (1 - mu_);
+  odds_ = mu_ / (1. - mu_);
 }
 
 arma::colvec &LogisticRegression::get_odds() {

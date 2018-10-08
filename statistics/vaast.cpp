@@ -260,10 +260,6 @@ VAAST::VAAST(Gene &gene,
 		  arma::vec Wnew = weights;
 		  std::vector<std::string> positions = gene.get_positions(k);
 
-		  if(positions[i] == "chr12-56120020-56120023-deletion"){
-		    std::cerr << "Found position.\n";
-		  }
-
 		  positions.erase(positions.begin() + i);
 		  Xnew.shed_col(i);
 		  Wnew.shed_row(i);

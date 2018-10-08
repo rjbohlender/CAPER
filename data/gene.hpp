@@ -26,7 +26,10 @@ void print_semicolon_sep(arma::uvec &x, std::ostream &os);
 
 class Gene {
 public:
-  Gene(std::stringstream &ss, unsigned long nsamples, std::map<std::string, unsigned long> &nvariants, const Weight &weight);
+  Gene(std::stringstream &ss,
+		 unsigned long nsamples,
+		 std::map<std::string, unsigned long> &nvariants,
+		 const Weight &weight);
 
   void print();
 

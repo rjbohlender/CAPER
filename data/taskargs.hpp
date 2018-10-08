@@ -30,6 +30,9 @@ struct TaskParams {
   int stage_1_permutations;
   int stage_2_permutations;
   int total_permutations;
+  
+  // For SKATO, SKAT, BURDEN
+  bool alternate_permutation;
 
   // Method
   std::string method;
@@ -46,6 +49,10 @@ struct TaskParams {
   bool weight;
 
   bool verbose;
+
+  // Output permutations
+  bool permute_set;
+  std::string permute_set_path;
 
   // Detailed VAAST output
   std::string full_command;

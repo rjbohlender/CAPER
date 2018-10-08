@@ -228,6 +228,9 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 
   double perm_val;
   int transcript_no;
+  // For permutation set output
+  std::ofstream pset_ofs;
+
 
   // Setup
   for (auto &v : ta.results) {
@@ -270,6 +273,10 @@ void TaskQueue::stage_2(TaskArgs &ta) {
   int iter = 0;
   arma::vec phenotypes = ta.get_cov().get_phenotype_vector();
 
+  if(ta.get_tp().permute_set) {
+	pset_ofs.open(ta.get_tp().permute_set_path, std::ios_base::app);
+  }
+
   while (iter < ta.get_npermutations()) {
 	// For each transcript in the gene
 	transcript_no = -1;
@@ -293,19 +300,28 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 		// permutations[0].shrink_to_fit();
 
 		permutations = ta.get_permute(k).permutations_maj_bin(1,
-															  ta.get_cov().get_probability(),
+															  ta.get_cov().get_odds(),
 															  ta.get_cov().get_ncases(),
 															  mac_indices[k],
 															  maj_indices[k]);
-
 		arma::uword total_cases = 0;
-		for (int i = 0; i < mac_indices[k].size(); i++) {
+		for (int i = 0; i < mac_indices[k].n_elem; i++) {
 		  phenotypes(mac_indices[k](i)) = permutations[0][i];
 		  if (permutations[0][i] == 1)
 			total_cases++; // Count cases in mac
 		}
 
-		arma::vec temp(maj_indices[k].size(), arma::fill::zeros);
+		if(ta.get_tp().permute_set && transcript_no == 0) {
+		  for(const auto &v : phenotypes) {
+		    if(v > 1 || v < 0) {
+		      throw(std::logic_error("phenotypes should be either 0 or 1"));
+		    }
+		    pset_ofs << v << "\t";
+		  }
+		  pset_ofs << "\n";
+		}
+
+		arma::vec temp(maj_indices[k].n_elem, arma::fill::zeros);
 		arma::uword remaining_cases = ta.get_cov().get_ncases() - total_cases;
 		temp(arma::span(0, remaining_cases - 1)) =
 			arma::vec(ta.get_cov().get_ncases() - total_cases, arma::fill::ones);
@@ -414,6 +430,10 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 	  std::cerr << "Stage 2: " << ta.get_gene().get_gene() << "\t" << v.second.transcript << "\t";
 	  std::cerr << v.second.original << std::endl;
 	}
+  }
+  if (ta.get_tp().permute_set) {
+    pset_ofs.close();
+    std::exit(0);
   }
 
   for (auto &v : ta.results) {

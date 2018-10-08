@@ -14,7 +14,7 @@ struct Permute {
   Permute(const Permute &other);
   Permute &operator=(const Permute &rhs);
 
-  void get_permutations(std::vector<std::vector<int32_t>> *permutations,
+  void get_permutations(std::shared_ptr<std::vector<std::vector<int32_t>>> permutations,
 						  arma::colvec &odds,
 						  int ncases,
 						  unsigned long nperm,
@@ -29,7 +29,7 @@ struct Permute {
 						int nperm,
 						int seed);
   std::vector<std::vector<int32_t>> permutations_maj_bin(int nperm,
-														 arma::vec &prob,
+														 arma::vec &odds,
 														 int ncases,
 														 arma::uvec &mac_indices,
 														 arma::uvec &maj_indices);
