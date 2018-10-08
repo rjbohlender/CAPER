@@ -27,11 +27,11 @@ enum class Stage {
 
 struct TaskParams {
   // Permutation paramters
-  int success_threshold;
+  arma::uword success_threshold;
 
-  int stage_1_permutations;
-  int stage_2_permutations;
-  int total_permutations;
+  arma::uword stage_1_permutations;
+  arma::uword stage_2_permutations;
+  arma::uword total_permutations;
 
   // For SKATO, SKAT, BURDEN
   bool alternate_permutation;

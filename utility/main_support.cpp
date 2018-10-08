@@ -137,10 +137,16 @@ void write_simple(TaskQueue &tq, arma::uword ntranscripts, arma::uword ngenes, T
 		permutation_variance += std::pow(v.results[k].permutations - permutation_mean, 2) / ntranscripts;
 	  }
 	}
-	// Sort by midp and output
+	// Sort by midp and score, then output
 	std::sort(all_results.begin(),
 			  all_results.end(),
-			  [](Result &a, Result &b) { return a.empirical_midp < b.empirical_midp; });
+			  [](Result &a, Result &b) {
+	  if(a.empirical_midp != b.empirical_midp) {
+		return a.empirical_midp < b.empirical_midp;
+	  } else {
+	    return b.original < a.original;
+	  }
+	});
 	// Report results
 	int rank = 1;
 	for(auto &v : all_results) {
@@ -237,7 +243,7 @@ void write_simple(TaskQueue &tq, arma::uword ntranscripts, arma::uword ngenes, T
 	  uf_ss << "-n ";
 	}
 	if (!tp.verbose) {
-	  uf_ss << "-q";
+	  uf_ss << "-q ";
 	}
 	if (tp.a != 1 || tp.b != 25) {
 	  uf_ss << "--beta_weights " << tp.a << "," << tp.b << " ";
