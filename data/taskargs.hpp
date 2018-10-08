@@ -11,6 +11,8 @@
 #include <cassert>
 #include <armadillo>
 
+#include <boost/optional.hpp>
+
 #include "gene.hpp"
 #include "covariates.hpp"
 #include "../statistics/methods.hpp"
@@ -30,7 +32,7 @@ struct TaskParams {
   int stage_1_permutations;
   int stage_2_permutations;
   int total_permutations;
-  
+
   // For SKATO, SKAT, BURDEN
   bool alternate_permutation;
 
@@ -41,18 +43,15 @@ struct TaskParams {
   std::string program_path;
   std::string genotypes_path;
   std::string covariates_path;
-  std::string bed_path;
-  std::string weight_path;
   std::string ped_path;
 
-  bool bed;
-  bool weight;
+  boost::optional<std::string> bed;
+  boost::optional<std::string> weight;
 
   bool verbose;
 
   // Output permutations
-  bool permute_set;
-  std::string permute_set_path;
+  boost::optional<std::string> permute_set;
 
   // Detailed VAAST output
   std::string full_command;
@@ -69,8 +68,7 @@ struct TaskParams {
   size_t nthreads;
 
   // Gene list
-  std::string gene_list;
-  bool genes;
+  boost::optional<std::string> gene_list;
 
   // SKAT Parameters
   std::string kernel; // Kernel selection

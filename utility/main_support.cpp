@@ -109,7 +109,7 @@ void write_simple(TaskQueue &tq, int ntranscripts, int ngenes, TaskParams &tp) {
   simple_ofs << std::setw(20) << "Permutations";
   simple_ofs << std::setw(20) << "MGIT";
   simple_ofs << std::setw(20) << "MGIT_Successes" << std::endl;
-  if (!tp.genes) {
+  if (!tp.gene_list) {
 	// Print header and formatted results
 	double permutation_mean = 0;
 	double permutation_variance = 0;
@@ -224,10 +224,10 @@ void write_simple(TaskQueue &tq, int ntranscripts, int ngenes, TaskParams &tp) {
 	uf_ss << "-g " << tp.genotypes_path << " ";
 	uf_ss << "-c " << tp.covariates_path << " ";
 	if (tp.bed) {
-	  uf_ss << "-b " << tp.bed_path << " ";
+	  uf_ss << "-b " << *tp.bed << " ";
 	}
 	if (tp.weight) {
-	  uf_ss << "-w " << tp.weight_path << " ";
+	  uf_ss << "-w " << *tp.weight << " ";
 	}
 	uf_ss << "-1 0 "; // Skip stage 1
 	uf_ss << "-2 " << tp.total_permutations * 10 << " ";
@@ -267,7 +267,7 @@ void write_detail(TaskQueue &tq, TaskParams &tp) {
 	  "#Gene\tTranscripts\tVariant\tScore\tAF\tcase_ref\tcase_alt\tcontrol_ref\tcontrol_alt\tcase_list\tcontrol_list";
   detail << header << std::endl;
 
-  if (!tp.genes) {
+  if (!tp.gene_list) {
 	int i = 0; // For each gene
 	for (auto &v : tq.get_results()) {
 	  detail << v.get_gene().get_detail();
@@ -328,7 +328,7 @@ void initialize_jobs(TaskParams &tp,
   std::string gene;
   std::string transcript;
   std::string header;
-  std::map<std::string, unsigned long> nvariants;
+  std::map<std::string, arma::uword> nvariants;
   int lineno = 0;
   int ngenes = 0;
   int ntranscripts = 0;
@@ -338,17 +338,17 @@ void initialize_jobs(TaskParams &tp,
 
   RJBUtil::Splitter<std::string> gene_list;
   // Parse gene list
-  if (tp.genes) {
-	gene_list = RJBUtil::Splitter<std::string>(tp.gene_list, ",");
+  if (tp.gene_list) {
+	gene_list = RJBUtil::Splitter<std::string>(*tp.gene_list, ",");
   }
 
   Bed bed;
   if (tp.bed)
-	bed = Bed(tp.bed_path);
+	bed = Bed(*tp.bed);
 
   Weight casm;
   if (tp.weight)
-	casm = Weight(tp.weight_path);
+	casm = Weight(*tp.weight);
 
   while (std::getline(ifs, line)) {
 	if (lineno == 0) {
@@ -370,8 +370,8 @@ void initialize_jobs(TaskParams &tp,
 
 	  // Permutation set output
 	  if(tp.permute_set) {
-		std::ofstream pset_ofs(tp.permute_set_path);
-		std::ofstream lr_ofs(tp.permute_set_path + ".lr");
+		std::ofstream pset_ofs(*tp.permute_set);
+		std::ofstream lr_ofs(*tp.permute_set + ".lr");
 		for(const auto &p : permutations) {
 		  for(const auto &v : p) {
 		    pset_ofs << v << "\t";
@@ -382,6 +382,10 @@ void initialize_jobs(TaskParams &tp,
 
 		cov->get_probability().t().print(lr_ofs);
 		lr_ofs.close();
+		// Finish if there are no stage 2 permutations
+		if(tp.stage_2_permutations == 0) {
+		  std::exit(0);
+		}
 	  }
 
 	  lineno++;
@@ -416,7 +420,7 @@ void initialize_jobs(TaskParams &tp,
 	} else {
 	  // Don't always create the gene
 	  auto fit = std::find(gene_list.cbegin(), gene_list.cend(), gene);
-	  bool skip_gene = (fit == gene_list.cend()) && tp.genes;
+	  bool skip_gene = (fit == gene_list.cend()) && tp.gene_list;
 	  if (!gene.empty() && !skip_gene) {
 
 		Gene gene_data(current, cov->get_nsamples(), nvariants, casm);
@@ -430,7 +434,7 @@ void initialize_jobs(TaskParams &tp,
 		}
 
 		// If we're looking at specific genes;
-		if (tp.genes) {
+		if (tp.gene_list) {
 		  if (gene_list.empty()) {
 			// Gene list exhausted
 			break;
@@ -539,7 +543,7 @@ void initialize_jobs(TaskParams &tp,
 	}
   }
   auto fit = std::find(gene_list.cbegin(), gene_list.cend(), gene);
-  bool skip_gene = (fit == gene_list.cend()) && tp.genes;
+  bool skip_gene = (fit == gene_list.cend()) && tp.gene_list;
 
   // Submit final gene
   Gene gene_data(current, cov->get_nsamples(), nvariants, casm);
@@ -552,7 +556,7 @@ void initialize_jobs(TaskParams &tp,
 	stage = Stage::Stage2;
   }
   // If we're looking at specific genes;
-  if (tp.genes) {
+  if (tp.gene_list) {
 	// Found gene
 	if (std::find(gene_list.cbegin(), gene_list.cend(), gene) != gene_list.cend()) {
 	  // Ensure we have at least one variant for a submitted gene
@@ -624,7 +628,7 @@ void initialize_jobs(TaskParams &tp,
   // Free permutation memory
   permutations.clear();
 
-  if (tp.genes) {
+  if (tp.gene_list) {
 	tq.duplicate();
 	write_simple(tq, ntranscripts, ngenes, tp);
 	write_detail(tq, tp);

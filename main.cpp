@@ -18,6 +18,7 @@
 #include "data/permutation.hpp"
 #include "utility/filesystem.hpp"
 #include "utility/main_support.hpp"
+#include "utility/jobdispatcher.hpp"
 
 namespace po = boost::program_options;
 
@@ -35,7 +36,7 @@ int main(int argc, char **argv) {
   bool score_only_alternative = false;
   boost::optional<std::string> bed;
   boost::optional<std::string> weight;
-  boost::optional<std::string> genes;
+  boost::optional<std::string> gene_list;
   boost::optional<std::string> permute_set;
 
   try {
@@ -76,7 +77,7 @@ int main(int argc, char **argv) {
 			 po::value<std::string>()->default_value("1,25"),
 			 "Parameters for the beta distribution. Two values, comma separated corresponding to a,b. Default is 1,25.")
 			("successes,s", po::value<int>()->default_value(200), "Number of successes for early termination.")
-			("genes,l", po::value(&genes), "A comma-separated list of genes to analyze.")
+			("genes,l", po::value(&gene_list), "A comma-separated list of genes to analyze.")
 			("score_only_minor", po::bool_switch(&score_only_minor), "Score only minor alleles in VAAST.")
 			("score_only_alternative",
 			 po::bool_switch(&score_only_alternative),
@@ -174,38 +175,14 @@ int main(int argc, char **argv) {
   tp.group_size = vm["group_size"].as<arma::uword>();
   tp.score_only_minor = score_only_minor;
   tp.score_only_alternative = score_only_alternative;
-  if (bed) {
-	tp.bed = true;
-	tp.bed_path = *bed;
-  } else {
-	tp.bed = false;
-	tp.bed_path = "";
-  }
-  if (weight) {
-	tp.weight = true;
-	tp.weight_path = *weight;
-  } else {
-	tp.weight = false;
-	tp.weight_path = "";
-  }
-  if (permute_set) {
-    tp.permute_set = true;
-    tp.permute_set_path = *permute_set;
-  } else {
-    tp.permute_set = false;
-    tp.permute_set_path = "";
-  }
+  tp.bed = bed;
+  tp.weight = weight;
+  tp.permute_set = permute_set;
   // Threading
   tp.nthreads = vm["nthreads"].as<size_t>();
   // Options
   tp.verbose = verbose;
-  if (genes) {
-	tp.genes = true;
-	tp.gene_list = *genes;
-  } else {
-	tp.genes = false;
-	tp.gene_list = "";
-  }
+  tp.gene_list = gene_list;
   // SKAT Options
   tp.kernel = vm["kernel"].as<std::string>();
   tp.adjust = adjust;
@@ -228,8 +205,8 @@ int main(int argc, char **argv) {
   if (tp.verbose) {
 	std::cerr << "genotypes: " << tp.genotypes_path << "\n";
 	std::cerr << "covariates: " << tp.covariates_path << "\n";
-	std::cerr << "bed_file: " << tp.bed_path << "\n";
-	std::cerr << "weight_file: " << tp.weight_path << "\n";
+	std::cerr << "bed_file: " << *tp.bed << "\n";
+	std::cerr << "weight_file: " << *tp.weight << "\n";
 	std::cerr << "method: " << tp.method << "\n";
 	std::cerr << "success threshold: " << tp.success_threshold << "\n";
 	std::cerr << "nthreads: " << tp.nthreads << "\n";
@@ -253,23 +230,21 @@ int main(int argc, char **argv) {
 	std::cerr << desc << "\n";
 	std::exit(1);
   }
-  if (tp.bed && !check_file_exists(tp.bed_path)) {
+  if (tp.bed && !check_file_exists(*tp.bed)) {
 	std::cerr << "Incorrect file path for bed_file." << std::endl;
 	std::cerr << desc << "\n";
 	std::exit(1);
   }
-  if (tp.weight && !check_file_exists(tp.weight_path)) {
+  if (tp.weight && !check_file_exists(*tp.weight)) {
 	std::cerr << "Incorrect file path for weight_file." << std::endl;
 	std::cerr << desc << "\n";
 	std::exit(1);
   }
 
-  Covariates cov(tp.covariates_path, tp.ped_path);
-  std::vector<std::vector<int32_t>> permutations;
-
   // Initialize randomization
   arma::arma_rng::set_seed_random();
 
-  initialize_jobs(tp, permutations, &cov, tq);
+  JobDispatcher jd(tp);
+
   return 0;
 }

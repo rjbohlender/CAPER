@@ -28,7 +28,7 @@ class Gene {
 public:
   Gene(std::stringstream &ss,
 		 unsigned long nsamples,
-		 std::map<std::string, unsigned long> &nvariants,
+		 std::map<std::string, arma::uword> &nvariants,
 		 const Weight &weight);
 
   void print();
@@ -37,7 +37,7 @@ public:
   std::string &get_gene();
   arma::mat &get_matrix(const std::string &k);
   std::vector<std::string> &get_transcripts();
-  unsigned long get_nvariants(const std::string &k);
+  arma::uword get_nvariants(const std::string &k);
   std::vector<std::string> &get_positions(const std::string &k);
   std::vector<std::string> &get_samples();
 
@@ -59,7 +59,7 @@ private:
   std::map<std::string, bool> weights_set_;
 
   unsigned long nsamples_;
-  std::map<std::string, unsigned long> nvariants_;
+  std::map<std::string, arma::uword> nvariants_;
   std::string gene_;
   std::vector<std::string> transcripts_;
   std::map<std::string, std::vector<std::string>> positions_;

@@ -274,7 +274,7 @@ void TaskQueue::stage_2(TaskArgs &ta) {
   arma::vec phenotypes = ta.get_cov().get_phenotype_vector();
 
   if(ta.get_tp().permute_set) {
-	pset_ofs.open(ta.get_tp().permute_set_path, std::ios_base::app);
+	pset_ofs.open(*ta.get_tp().permute_set, std::ios_base::app);
   }
 
   while (iter < ta.get_npermutations()) {

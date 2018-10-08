@@ -9,7 +9,7 @@
 
 Gene::Gene(std::stringstream &ss,
 		   unsigned long nsamples,
-		   std::map<std::string, unsigned long> &nvariants,
+		   std::map<std::string, arma::uword> &nvariants,
 		   const Weight &weight)
 	: nsamples_(nsamples),
 	  nvariants_(nvariants) {
@@ -52,7 +52,7 @@ arma::vec &Gene::get_weights(const std::string &k) {
   return weights_[k];
 }
 
-unsigned long Gene::get_nvariants(const std::string &k) {
+arma::uword Gene::get_nvariants(const std::string &k) {
   return nvariants_[k];
 }
 

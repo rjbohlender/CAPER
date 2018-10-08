@@ -221,7 +221,7 @@ Permute &Permute::operator=(const Permute &rhs) {
 Permute::Permute(const Permute &other)
 	: sto(other.sto) {}
 
-void Permute::permute_thread(std::vector<std::vector<int32_t>> *p,
+void Permute::permute_thread(std::shared_ptr<std::vector<std::vector<int32_t>>> p,
 							 int32_t *m,
 							 double *odds,
 							 int ncases,
