@@ -6,6 +6,8 @@
 
 #include "jobdispatcher.hpp"
 
+#include "main_support.hpp"
+
 using namespace std::chrono_literals;
 
 JobDispatcher::JobDispatcher(TaskParams &tp)
@@ -65,16 +67,25 @@ JobDispatcher::JobDispatcher(TaskParams &tp)
 	gene_list_dispatcher();
   }
 
+  // Close open files
+  gt_ifs_.close();
+
   // Wait for queue to finish processing
   tq_.join();
 
-  // Free permutation memory
-  if(permutation_ptr_.unique()) {
+  // TODO: Free permutation memory
+  if (permutation_ptr_.unique()) {
 	permutation_ptr_.reset();
   }
 
-  // Close open files
-  gt_ifs_.close();
+  if (tp_.gene_list) {
+	tq_.duplicate();
+	write_simple(tq_, ntranscripts_, ngenes_, tp_);
+	write_detail(tq_, tp_);
+  } else {
+	write_simple(tq_, ntranscripts_, ngenes_, tp_);
+	write_detail(tq_, tp_);
+  }
 }
 
 void JobDispatcher::all_gene_dispatcher() {
@@ -132,7 +143,6 @@ void JobDispatcher::gene_list_dispatcher() {
   std::string line;
   std::stringstream current;
 
-
   while (std::getline(gt_ifs_, line)) {
 	RJBUtil::Splitter<std::string> split(line, "\t");
 	RJBUtil::Splitter<std::string> vsplit(split[2], "-");
@@ -150,17 +160,17 @@ void JobDispatcher::gene_list_dispatcher() {
 		  multiple_dispatch(gene_data);
 
 		  auto fit = find_gene(split[0]);
-		  if(fit != gene_list_.cend()) {
-		    // Next gene is in list
-		    gene_list_.erase(fit);
-		    new_gene(current, line, split, vsplit);
+		  if (fit != gene_list_.cend()) {
+			// Next gene is in list
+			gene_list_.erase(fit);
+			new_gene(current, line, split, vsplit);
 		  } else {
 			// Check if we're done
-		    if(gene_list_.empty()) {
-		      return;
-		    }
-		    // Reset to initial state to find next gene
-		    reset_gene(current);
+			if (gene_list_.empty()) {
+			  return;
+			}
+			// Reset to initial state to find next gene
+			reset_gene(current);
 		  }
 		}
 	  } else {
@@ -178,8 +188,8 @@ void JobDispatcher::gene_list_dispatcher() {
   }
   // Check if we're finished.
   auto fit = find_gene(gene_);
-  if(fit == gene_list_.cend()) {
-    return;
+  if (fit == gene_list_.cend()) {
+	return;
   }
   Gene gene_data(current, cov_.get_nsamples(), nvariants_, weight_);
 

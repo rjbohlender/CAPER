@@ -12,9 +12,9 @@ Permute::Permute()
 
 void Permute::get_permutations(std::shared_ptr<std::vector<std::vector<int32_t>>> permutations,
 							   arma::colvec &odds,
-							   int ncases,
-							   unsigned long nperm,
-							   unsigned long nthreads) {
+							   arma::uword ncases,
+							   arma::uword nperm,
+							   arma::uword nthreads) {
   std::vector<double> odds_ = arma::conv_to<std::vector<double>>::from(odds);
   std::vector<int32_t> m(odds.n_rows, 1);
 

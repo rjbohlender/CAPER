@@ -17,7 +17,7 @@ void calc_mgit_pvalues(std::map<std::string, Result> &results,
 					   std::vector<std::string> &transcripts,
 					   const std::string &method);
 
-void write_simple(TaskQueue &tq, int ntranscripts, int ngenes, TaskParams &tp);
+void write_simple(TaskQueue &tq, arma::uword ntranscripts, arma::uword ngenes, TaskParams &tp);
 
 void write_detail(TaskQueue &tq, TaskParams &tp);
 

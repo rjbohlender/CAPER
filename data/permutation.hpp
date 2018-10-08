@@ -15,10 +15,10 @@ struct Permute {
   Permute &operator=(const Permute &rhs);
 
   void get_permutations(std::shared_ptr<std::vector<std::vector<int32_t>>> permutations,
-						  arma::colvec &odds,
-						  int ncases,
-						  unsigned long nperm,
-						  unsigned long nthreads);
+						arma::colvec &odds,
+						arma::uword ncases,
+						arma::uword nperm,
+						arma::uword nthreads);
 
   void permute_thread(std::shared_ptr<std::vector<std::vector<int32_t>>> p,
 						int32_t *m,

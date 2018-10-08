@@ -85,7 +85,7 @@ void calc_mgit_pvalues(std::map<std::string, Result> &results,
   }
 }
 
-void write_simple(TaskQueue &tq, int ntranscripts, int ngenes, TaskParams &tp) {
+void write_simple(TaskQueue &tq, arma::uword ntranscripts, arma::uword ngenes, TaskParams &tp) {
   // Build output_path
   std::stringstream simple_path_ss;
   simple_path_ss << tp.output_path << "/" << tp.method << ".simple";
