@@ -72,7 +72,7 @@ auto LogisticRegression::calculate_odds(arma::mat &Xmat) -> void {
   odds_ = mu_ / (1. - mu_);
 }
 
-auto LogisticRegression::get_odds() -> arma::vec {
+auto LogisticRegression::get_odds() -> arma::vec& {
   return odds_;
 }
 
@@ -184,7 +184,7 @@ auto LogisticRegression::hessian(arma::mat &X) -> arma::mat {
   return X * arma::diagmat(v) * X.t();
 }
 
-auto &LogisticRegression::get_theta() -> arma::rowvec {
+auto LogisticRegression::get_theta() -> arma::rowvec& {
   return theta_;
 }
 
