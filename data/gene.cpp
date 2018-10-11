@@ -25,9 +25,9 @@ Gene::Gene(std::stringstream &ss,
 	  weights_set_[k] = true;
 	}
   } else {
-    for (const auto &k : transcripts_) {
-      weights_set_[k] = false;
-    }
+	for (const auto &k : transcripts_) {
+	  weights_set_[k] = false;
+	}
   }
 }
 
@@ -76,8 +76,8 @@ void Gene::parse(std::stringstream &ss) {
 	if (i == 0) {
 	  header_ = line;
 	  RJBUtil::Splitter<std::string> splitter(line, "\t");
-	  for(arma::uword j = 3; j < splitter.size(); j++) {
-	    samples_.push_back(splitter[j]);
+	  for (arma::uword j = 3; j < splitter.size(); j++) {
+		samples_.push_back(splitter[j]);
 	  }
 	  i++;
 	  continue;
@@ -104,14 +104,14 @@ void Gene::parse(std::stringstream &ss) {
 
 	for (arma::uword j = 3; j < splitter.size(); j++) {
 	  auto val = -1.;
-	  try{
+	  try {
 		val = std::stod(splitter[j]);
-	  } catch(std::exception &e) {
-	    std::cerr << "Full buffer: " << ss.str() << std::endl;
-	    std::cerr << "Failed to convert data to double: " << splitter[j] << std::endl;
-	    std::cerr << "Line: " << line << std::endl;
-	    std::cerr << "j: " << j << std::endl;
-	    std::exit(-1);
+	  } catch (std::exception &e) {
+		std::cerr << "Full buffer: " << ss.str() << std::endl;
+		std::cerr << "Failed to convert data to double: " << splitter[j] << std::endl;
+		std::cerr << "Line: " << line << std::endl;
+		std::cerr << "j: " << j << std::endl;
+		std::exit(-1);
 	  }
 	  // Handle missing data
 	  if (val > 2 || val < 0)
@@ -148,13 +148,13 @@ void Gene::parse(std::stringstream &ss) {
 }
 
 void Gene::set_weights(const std::string &k, arma::vec &weights) {
-	if(weights.n_rows != genotypes_[k].n_cols) {
-	  throw(std::logic_error("Weights do not match number of variants."));
-	}
+  if (weights.n_rows != genotypes_[k].n_cols) {
+	throw (std::logic_error("Weights do not match number of variants."));
+  }
 
-	weights_[k] = weights;
+  weights_[k] = weights;
 
-	weights_set_[k] = true;
+  weights_set_[k] = true;
 }
 
 bool Gene::is_weighted(const std::string &k) {
@@ -189,79 +189,79 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
   std::map<std::string, arma::uvec> pos_contidx_map;
 
   // Collect all positions across transcripts and associated scores
-  for(const auto &ts : transcripts_) {
-    arma::uword i = 0;
+  for (const auto &ts : transcripts_) {
+	arma::uword i = 0;
 
-    arma::uvec cases = arma::find(Y == 1);
-    arma::uvec controls = arma::find(Y == 0);
+	arma::uvec cases = arma::find(Y == 1);
+	arma::uvec controls = arma::find(Y == 0);
 
-    arma::mat X = genotypes_[ts];
-    arma::mat Xcase = X.rows(cases);
-    arma::mat Xcont = X.rows(controls);
-    arma::rowvec maf = arma::mean(X, 0) / 2.;
-    // Ref/Alt Counts
-    arma::rowvec case_alt = arma::sum(Xcase, 0);
+	arma::mat X = genotypes_[ts];
+	arma::mat Xcase = X.rows(cases);
+	arma::mat Xcont = X.rows(controls);
+	arma::rowvec maf = arma::mean(X, 0) / 2.;
+	// Ref/Alt Counts
+	arma::rowvec case_alt = arma::sum(Xcase, 0);
 	arma::rowvec case_ref = 2 * Xcase.n_rows - case_alt;
 	arma::rowvec cont_alt = arma::sum(Xcont, 0);
 	arma::rowvec cont_ref = 2 * Xcont.n_rows - cont_alt;
 
-    for(const auto &pos : positions_[ts]) {
-      // Get transcripts
-      if(pos_ts_map.find(pos) == pos_ts_map.end()) {
-        pos_ts_map[pos] = {ts};
-      } else {
-        pos_ts_map[pos].push_back(ts);
-      }
-      // Get scores
-      if(pos_score_map.find(pos) == pos_score_map.end()) {
-        if(variant_scores_[ts].empty())
-          variant_scores_[ts].zeros(positions_[ts].size());
-        pos_score_map[pos] = variant_scores_[ts](i);
-        results[ts].testable = arma::find(variant_scores_[ts] > 0).eval().n_elem >= 4;
-      }
-      // Get frequency
-      if(pos_freq_map.find(pos) == pos_freq_map.end()) {
-        pos_freq_map[pos] = maf(i);
-      }
-      // Get counts
-	  if(pos_caseref_map.find(pos) == pos_caseref_map.end()) {
+	for (const auto &pos : positions_[ts]) {
+	  // Get transcripts
+	  if (pos_ts_map.find(pos) == pos_ts_map.end()) {
+		pos_ts_map[pos] = {ts};
+	  } else {
+		pos_ts_map[pos].push_back(ts);
+	  }
+	  // Get scores
+	  if (pos_score_map.find(pos) == pos_score_map.end()) {
+		if (variant_scores_[ts].empty())
+		  variant_scores_[ts].zeros(positions_[ts].size());
+		pos_score_map[pos] = variant_scores_[ts](i);
+		results[ts].testable = arma::find(variant_scores_[ts] > 0).eval().n_elem >= 4;
+	  }
+	  // Get frequency
+	  if (pos_freq_map.find(pos) == pos_freq_map.end()) {
+		pos_freq_map[pos] = maf(i);
+	  }
+	  // Get counts
+	  if (pos_caseref_map.find(pos) == pos_caseref_map.end()) {
 		pos_caseref_map[pos] = case_ref(i);
 	  }
-	  if(pos_casealt_map.find(pos) == pos_casealt_map.end()) {
+	  if (pos_casealt_map.find(pos) == pos_casealt_map.end()) {
 		pos_casealt_map[pos] = case_alt(i);
 	  }
-	  if(pos_contref_map.find(pos) == pos_contref_map.end()) {
+	  if (pos_contref_map.find(pos) == pos_contref_map.end()) {
 		pos_contref_map[pos] = cont_ref(i);
 	  }
-	  if(pos_contalt_map.find(pos) == pos_contalt_map.end()) {
+	  if (pos_contalt_map.find(pos) == pos_contalt_map.end()) {
 		pos_contalt_map[pos] = cont_alt(i);
 	  }
 	  // Get indices
 	  arma::uvec carriers = arma::find(X.col(i) > 0);
-	  if(pos_caseidx_map.find(pos) == pos_caseidx_map.end()) {
-	    pos_caseidx_map[pos] = arma::intersect(cases, carriers);
+	  if (pos_caseidx_map.find(pos) == pos_caseidx_map.end()) {
+		pos_caseidx_map[pos] = arma::intersect(cases, carriers);
 	  }
-	  if(pos_contidx_map.find(pos) == pos_contidx_map.end()) {
+	  if (pos_contidx_map.find(pos) == pos_contidx_map.end()) {
 		pos_contidx_map[pos] = arma::intersect(controls, carriers);
 	  }
-      i++;
-    }
+	  i++;
+	}
   }
 
-  for(const auto &v : pos_ts_map) {
-    detail << gene_ << "\t";
-    print_comma_sep(v.second, detail);
-    detail << "\t";
-    detail << boost::format("%1$s\t%2$.2f\t%3$d\t%4$d\t%5$d\t%6$d\t%7$d\t")
-    	% v.first
-    	% pos_score_map[v.first]
-    	% pos_freq_map[v.first]
-    	% pos_caseref_map[v.first]
-    	% pos_casealt_map[v.first]
-    	% pos_contref_map[v.first]
-    	% pos_contalt_map[v.first];
-    print_semicolon_sep(pos_caseidx_map[v.first], detail);
-    detail << "\t";
+  for (const auto &v : pos_ts_map) {
+	detail << gene_ << "\t";
+	print_comma_sep(v.second, detail);
+	detail << "\t";
+	detail << boost::format("%1$s\t%2$.2f\t%3$d\t%4$d\t%5$d\t%6$d\t%7$d\t")
+		% v.first
+		% pos_score_map[v.first]
+		% pos_freq_map[v.first]
+		% pos_caseref_map[v.first]
+		% pos_casealt_map[v.first]
+		% pos_contref_map[v.first]
+		% pos_contalt_map[v.first];
+	print_semicolon_sep(pos_caseidx_map[v.first], detail);
+	detail << "\t";
 	print_semicolon_sep(pos_contidx_map[v.first], detail);
 	detail << std::endl;
   }
@@ -277,8 +277,8 @@ std::vector<std::string> &Gene::get_samples() {
 }
 
 void print_comma_sep(arma::uvec &x, std::ostream &os) {
-  for(arma::uword i = 0; i < x.size(); i++) {
-	if(i == x.size() - 1) {
+  for (arma::uword i = 0; i < x.size(); i++) {
+	if (i == x.size() - 1) {
 	  os << x(i);
 	} else {
 	  os << x(i) << ",";
@@ -287,12 +287,12 @@ void print_comma_sep(arma::uvec &x, std::ostream &os) {
 }
 
 void print_comma_sep(std::vector<std::string> &x, std::ostream &os) {
-  if(x.size() == 0) {
+  if (x.size() == 0) {
 	os << "-";
 	return;
   }
-  for(arma::uword i = 0; i < x.size(); i++) {
-	if(i == x.size() - 1) {
+  for (arma::uword i = 0; i < x.size(); i++) {
+	if (i == x.size() - 1) {
 	  os << x.at(i);
 	} else {
 	  os << x.at(i) << ",";
@@ -301,12 +301,12 @@ void print_comma_sep(std::vector<std::string> &x, std::ostream &os) {
 }
 
 void print_comma_sep(const std::vector<std::string> &x, std::ostream &os) {
-  if(x.size() == 0) {
-    os << "-";
-    return;
+  if (x.size() == 0) {
+	os << "-";
+	return;
   }
-  for(arma::uword i = 0; i < x.size(); i++) {
-	if(i == x.size() - 1) {
+  for (arma::uword i = 0; i < x.size(); i++) {
+	if (i == x.size() - 1) {
 	  os << x.at(i);
 	} else {
 	  os << x.at(i) << ",";
@@ -314,12 +314,12 @@ void print_comma_sep(const std::vector<std::string> &x, std::ostream &os) {
   }
 }
 void print_semicolon_sep(arma::uvec &x, std::ostream &os) {
-  if(x.size() == 0) {
+  if (x.size() == 0) {
 	os << "-";
 	return;
   }
-  for(arma::uword i = 0; i < x.size(); i++) {
-	if(i == x.size() - 1) {
+  for (arma::uword i = 0; i < x.size(); i++) {
+	if (i == x.size() - 1) {
 	  os << x(i);
 	} else {
 	  os << x(i) << ";";
