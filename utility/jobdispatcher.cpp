@@ -11,9 +11,10 @@
 using namespace std::chrono_literals;
 
 JobDispatcher::JobDispatcher(TaskParams &tp)
-	: tp_(tp), tq_(tp_.nthreads - 1, tp.verbose), cov_(tp.covariates_path, tp.ped_path),
-	  gene_list_(*tp.gene_list, ",") {
+	: tp_(tp), tq_(tp_.nthreads - 1, tp.verbose), cov_(tp.covariates_path, tp.ped_path) {
   // Initialize bed and weights
+  if(tp.gene_list)
+    gene_list_ = RJBUtil::Splitter<std::string>(*tp.gene_list, ",");
   if (tp.bed)
 	bed_ = Bed(*tp.bed);
   if (tp.weight)
@@ -30,6 +31,7 @@ JobDispatcher::JobDispatcher(TaskParams &tp)
   // Sort covariates
   cov_.sort_covariates(header_);
 
+  permutation_ptr_ = std::make_shared<std::vector<std::vector<int32_t>>>();
   // Generate permutations for stage 1
   if (tp.stage_1_permutations > 0 && !tp.alternate_permutation) {
 	permute_.get_permutations(permutation_ptr_,

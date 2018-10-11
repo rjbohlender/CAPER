@@ -16,7 +16,8 @@ Result::Result()
 	  empirical_p(NAN),
 	  empirical_midp(NAN),
 	  mgit_p(NAN),
-	  done(false) {
+	  done(false),
+	  testable(true) {
   permuted = std::vector<double>();
   // permuted = std::map<double, double>();
 }
@@ -33,7 +34,8 @@ Result::Result(const std::string &gene, const std::string &transcript)
 	  empirical_midp(NAN),
 	  mgit_p(NAN),
 	  done(false),
-	  mgit_successes(0) {
+	  mgit_successes(0),
+	  testable(true) {
   permuted = std::vector<double>();
   // permuted = std::map<double, double>();
 }
@@ -51,7 +53,8 @@ Result::Result(Result &&res) noexcept
 	  mgit_p(res.mgit_p),
 	  done(res.done),
 	  permuted(std::move(res.permuted)),
-	  mgit_successes(res.mgit_successes) {}
+	  mgit_successes(res.mgit_successes),
+	  testable(res.testable) {}
 
 Result &Result::operator=(Result &&rhs) noexcept {
   gene = std::move(rhs.gene);
@@ -67,6 +70,7 @@ Result &Result::operator=(Result &&rhs) noexcept {
   done = rhs.done;
   permuted = std::move(rhs.permuted);
   mgit_successes = rhs.mgit_successes;
+  testable = rhs.testable;
 
   return *this;
 }

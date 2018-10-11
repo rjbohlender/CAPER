@@ -50,5 +50,7 @@ vaast.py
 
 /db/
 matrix2hdf5.cpp
-/test_results/test.vaast
-/test_results/
+/test_s1/test.vaast
+/test_s1/
+/test_s2/
+/test_ACC/

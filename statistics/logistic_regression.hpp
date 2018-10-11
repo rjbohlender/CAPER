@@ -19,6 +19,8 @@ public:
   arma::vec &get_eta();
   arma::rowvec &get_theta();
 
+  arma::vec Wald(arma::mat &X);
+
 private:
   arma::colvec odds_;
   arma::rowvec theta_; // Vector of weights - Beta on wikipedia
@@ -26,11 +28,13 @@ private:
   arma::vec eta_;
   double mean_;
 
-  arma::rowvec h(arma::mat &Xmat);
-  double cost(arma::mat &Xmat, arma::colvec &Yvec);
+  arma::rowvec h(arma::mat &Xmat, arma::rowvec &t);
+  double cost(arma::mat &Xmat, arma::colvec &Yvec, arma::rowvec &t);
   void train(arma::mat &Xmat, arma::colvec &Yvec);
 
-  void IRLS_SVDNEWTON(arma::mat &Xmat, arma::colvec &Yvec);
+  arma::rowvec IRLS_SVDNEWTON(arma::mat &Xmat, arma::colvec &Yvec);
+
+  arma::mat hess(arma::mat &X);
 
   void calculate_odds(arma::mat &Xmat);
   void calculate_mean(arma::mat &Xmat);

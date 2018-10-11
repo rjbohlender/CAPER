@@ -103,7 +103,7 @@ void Gene::parse(std::stringstream &ss) {
 	positions_[transcripts_.back()].push_back(splitter[2]);
 
 	for (arma::uword j = 3; j < splitter.size(); j++) {
-	  double val;
+	  auto val = -1.;
 	  try{
 		val = std::stod(splitter[j]);
 	  } catch(std::exception &e) {
@@ -111,6 +111,7 @@ void Gene::parse(std::stringstream &ss) {
 	    std::cerr << "Failed to convert data to double: " << splitter[j] << std::endl;
 	    std::cerr << "Line: " << line << std::endl;
 	    std::cerr << "j: " << j << std::endl;
+	    std::exit(-1);
 	  }
 	  // Handle missing data
 	  if (val > 2 || val < 0)
@@ -216,6 +217,7 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
         if(variant_scores_[ts].empty())
           variant_scores_[ts].zeros(positions_[ts].size());
         pos_score_map[pos] = variant_scores_[ts](i);
+        results[ts].testable = arma::find(variant_scores_[ts] > 0).eval().n_elem >= 4;
       }
       // Get frequency
       if(pos_freq_map.find(pos) == pos_freq_map.end()) {

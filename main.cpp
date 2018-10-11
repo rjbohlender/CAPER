@@ -34,6 +34,7 @@ int main(int argc, char **argv) {
   bool adjust = true;
   bool score_only_minor = false;
   bool score_only_alternative = false;
+  bool testable = false;
   boost::optional<std::string> bed;
   boost::optional<std::string> weight;
   boost::optional<std::string> gene_list;
@@ -84,6 +85,7 @@ int main(int argc, char **argv) {
 			 "Score only alternative alleles in VAAST.")
 			("maf", po::value<double>()->default_value(0.005), "Minor allele frequency cutoff for CMC collapsing.")
 			("permute_out", po::value(&permute_set), "Output permutations to the given file.")
+			("testable", po::bool_switch(&testable), "Return scores only for genes with at least scoreable variants in VAAST. VAAST only option.")
 			("quiet,q", "Don't print status messages.");
 	po::store(po::parse_command_line(argc, argv, desc), vm);
 	if (vm.count("help")) {
@@ -189,6 +191,8 @@ int main(int argc, char **argv) {
   // Beta weights
   tp.a = std::stod(beta_split[0]);
   tp.b = std::stod(beta_split[1]);
+  // Testability
+  tp.testable = testable;
 
   if(tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN") {
     tp.alternate_permutation = true;
@@ -205,8 +209,10 @@ int main(int argc, char **argv) {
   if (tp.verbose) {
 	std::cerr << "genotypes: " << tp.genotypes_path << "\n";
 	std::cerr << "covariates: " << tp.covariates_path << "\n";
-	std::cerr << "bed_file: " << *tp.bed << "\n";
-	std::cerr << "weight_file: " << *tp.weight << "\n";
+	if(tp.bed)
+	  std::cerr << "bed_file: " << *tp.bed << "\n";
+	if(tp.weight)
+	  std::cerr << "weight_file: " << *tp.weight << "\n";
 	std::cerr << "method: " << tp.method << "\n";
 	std::cerr << "success threshold: " << tp.success_threshold << "\n";
 	std::cerr << "nthreads: " << tp.nthreads << "\n";

@@ -15,6 +15,9 @@ Weight::Weight(const std::string &ifile) {
   std::string line;
 
   while (std::getline(ifs, line)) {
+    if(line.empty() || line[0] == '#') {
+      continue;
+    }
 	RJBUtil::Splitter<std::string> splitter(line, "\t");
 
 	std::stringstream ss;

@@ -19,7 +19,7 @@ void Permute::get_permutations(std::shared_ptr<std::vector<std::vector<int32_t>>
   std::vector<int32_t> m(odds.n_rows, 1);
 
   // Initialize permutations
-  (*permutations).resize(nperm);
+  permutations->resize(nperm);
   for (int i = 0; i < nperm; i++) {
 	(*permutations)[i].resize(odds.n_rows);
   }

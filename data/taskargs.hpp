@@ -61,6 +61,7 @@ struct TaskParams {
   arma::uword group_size;
   bool score_only_minor;
   bool score_only_alternative;
+  bool testable;
 
   // CMC
   double maf;
