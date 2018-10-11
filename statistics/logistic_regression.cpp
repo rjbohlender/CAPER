@@ -2,8 +2,6 @@
 // Created by Bohlender,Ryan James on 8/2/18.
 //
 
-#define IRLS 0
-
 #include <cassert>
 #include <iostream>
 #include "logistic_regression.hpp"
@@ -12,41 +10,31 @@
 /// Armadillo stores matrices in column major format. Iteration proceeds along columns.
 
 LogisticRegression::LogisticRegression(arma::mat &Xmat, arma::colvec &Yvec)
-: theta_(arma::rowvec(Xmat.n_rows, arma::fill::ones)){
-#ifndef NDEBUG
-  std::cerr << "Cost: " << cost(Xmat, Yvec, theta_) << "\n";
-  std::cerr << "h: " << h(Xmat, theta_) << "\n";
-#endif
-
-  // train(Xmat, Yvec);
-
-#if IRLS
-  theta_ = IRLS_SVDNEWTON(Xmat, Yvec);
-#else
-  train(Xmat, Yvec);
-#endif
+: theta_(arma::rowvec(Xmat.n_rows, arma::fill::ones)) {
+  // Switch to gradient descent for large samples
+  try{
+    theta_ = irls_svdnewton(Xmat, Yvec);
+  } catch(std::exception &e) {
+    std::cerr << "IRLS failed; Using gradient descent." << std::endl;
+    theta_ = gradient_descent(Xmat, Yvec);
+  }
 
   calculate_probability(Xmat);
   calculate_odds(Xmat);
   calculate_mean(Xmat);
   calculate_eta();
-
-  std::cerr << "Wald: " << Wald(Xmat).t();
-
-#ifndef NDEBUG
-  std::cerr << "odds: " << odds_.t();
-  std::cerr << "mu_: " << mu_.t();
-  std::cerr << "eta_: " << eta_.t();
-  std::cerr << "theta_: " << theta_;
-  std::cerr << "mean: " << mean_ << "\n";
-#endif
 }
 
-arma::rowvec LogisticRegression::h(arma::mat &Xmat, arma::rowvec &t) {
+auto LogisticRegression::h(arma::mat &Xmat, arma::rowvec &t) -> arma::rowvec {
   return 1. / (1. + arma::exp(-(t * Xmat)));
 }
 
-double LogisticRegression::cost(arma::mat &Xmat, arma::colvec &Yvec, arma::rowvec &t) {
+//! \brief The log likelihood function.
+//! \param Xmat Fixed effects, or combined fixed and random effects
+//! \param Yvec Response vector
+//! \param t Effect of each variable
+//! \return
+auto LogisticRegression::cost(arma::mat &Xmat, arma::colvec &Yvec, arma::rowvec &t) -> double {
   double m = Yvec.n_rows;
 
   arma::mat ret = -1. / m * (arma::log(h(Xmat, t)) * Yvec + arma::log(1 - h(Xmat, t)) * (1 - Yvec));
@@ -57,76 +45,69 @@ double LogisticRegression::cost(arma::mat &Xmat, arma::colvec &Yvec, arma::rowve
   return arma::as_scalar(ret);
 }
 
-void LogisticRegression::train(arma::mat &Xmat, arma::colvec &Yvec) {
+auto LogisticRegression::gradient_descent(arma::mat &Xmat, arma::colvec &Yvec) -> arma::rowvec {
   std::cerr << "Running gradient descent.\n";
-  int iterations = 0;
-  int max_iter = 1000000;
-  double alpha = 0.005; // Learning rate
-  double tol = 1e-10;
-  double m = Xmat.n_cols;
-  arma::rowvec grad;
+  auto iterations = 0ull;
+  auto max_iter = 1000000ull;
+  auto alpha = 0.005; // Learning rate
+  auto tol = 1e-10;
+  auto m = static_cast<double>(Xmat.n_cols);
+  auto t = arma::rowvec(Xmat.n_rows, arma::fill::zeros);
+  auto grad = t;
   do {
-
     // Vectorized update
     grad = alpha * (Xmat * (h(Xmat, theta_).t() - Yvec)).t() / m;
-    theta_ -= grad;
+    t -= grad;
 
-#if 0
-    std::cerr << "iteration: " << iterations << " theta: " << theta_;
-    std::cerr << "cost: " << cost(Xmat, Yvec) << "\n";
-#endif
 
     iterations++;
   } while(iterations < max_iter && arma::any(grad > tol));
-#ifndef NDEBUG
-  std::cerr << "Logistic regression iterations: " << iterations << "\n";
-#endif
+  return t;
 }
 
-void LogisticRegression::calculate_odds(arma::mat &Xmat) {
+auto LogisticRegression::calculate_odds(arma::mat &Xmat) -> void {
   if(arma::any(mu_ <= 0)) {
     std::cerr << "mu_ contains zeros\n";
   }
   odds_ = mu_ / (1. - mu_);
 }
 
-arma::colvec &LogisticRegression::get_odds() {
+auto LogisticRegression::get_odds() -> arma::vec {
   return odds_;
 }
 
-void LogisticRegression::calculate_mean(arma::mat &Xmat) {
+auto LogisticRegression::calculate_mean(arma::mat &Xmat) -> void {
   mean_  = arma::mean(mu_);
 }
 
-double LogisticRegression::get_mean() {
+auto LogisticRegression::get_mean() -> double {
   return mean_;
 }
 
-arma::vec &LogisticRegression::get_probability() {
+auto LogisticRegression::get_probability() -> arma::vec& {
   return mu_;
 }
 
-void LogisticRegression::calculate_probability(arma::mat &Xmat) {
+auto LogisticRegression::calculate_probability(arma::mat &Xmat) -> void {
   // Prevent numerical issues
   mu_ = arma::clamp(h(Xmat, theta_).t(), 0.00001, 0.99999);
 }
 
-arma::vec &LogisticRegression::get_eta() {
+auto LogisticRegression::get_eta() -> arma::vec& {
   return eta_;
 }
 
-void LogisticRegression::calculate_eta() {
+auto LogisticRegression::calculate_eta() -> void {
   eta_ = arma::log(mu_ / (1. - mu_));
 }
 
-/**
- * @brief Performs Iteratively Reweighted Least Squares
- * @param Xmat Features
- * @param Yvec Response vector
- *
- * Algorithm from: https://bwlewis.github.io/GLM/#svdnewton
- */
-arma::rowvec LogisticRegression::IRLS_SVDNEWTON(arma::mat &Xmat, arma::colvec &Yvec) {
+//! \brief Performs Iteratively Reweighted Least Squares
+//! \param Xmat Features
+//! \param Yvec Response vector
+//!
+//! Algorithm from: https://bwlewis.github.io/GLM/#svdnewton
+//!
+auto LogisticRegression::irls_svdnewton(arma::mat &Xmat, arma::colvec &Yvec) -> arma::rowvec {
   // Iteration params
   std::cerr << "Running IRLS.\n";
   const auto tol = 1e-8;
@@ -198,17 +179,17 @@ arma::rowvec LogisticRegression::IRLS_SVDNEWTON(arma::mat &Xmat, arma::colvec &Y
   return (V * (arma::diagmat(1. / S) * (U.t() * t))).t();
 }
 
-arma::mat LogisticRegression::hess(arma::mat &X) {
+auto LogisticRegression::hessian(arma::mat &X) -> arma::mat {
   arma::rowvec v = h(X, theta_) % (1. - h(X, theta_)); // Variance function
   return X * arma::diagmat(v) * X.t();
 }
 
-arma::rowvec &LogisticRegression::get_theta() {
+auto &LogisticRegression::get_theta() -> arma::rowvec {
   return theta_;
 }
 
-arma::vec LogisticRegression::Wald(arma::mat &X) {
-  arma::vec v = arma::inv_sympd(hess(X)).eval().diag();
+auto LogisticRegression::Wald(arma::mat &X) -> arma::vec {
+  arma::vec v = arma::inv_sympd(hessian(X)).eval().diag();
   arma::vec p(theta_.n_elem, arma::fill::zeros);
 
   boost::math::chi_squared chisq(1);

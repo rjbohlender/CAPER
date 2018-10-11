@@ -71,7 +71,9 @@ set(PROJECT_SUPPORT_FILES
     utility/main_support.cpp
     utility/main_support.hpp
     statistics/vaast.cpp
-    statistics/vaast.hpp utility/jobdispatcher.cpp utility/jobdispatcher.hpp)
+    statistics/vaast.hpp
+    utility/jobdispatcher.cpp
+    utility/jobdispatcher.hpp)
 
 include_directories("${CMAKE_CURRENT_LIST_DIR}/third_party")
 include_directories(${ARMADILLO_INCLUDE_DIRS})
@@ -92,12 +94,12 @@ target_link_libraries(Permute_Associate ${BLAS_LIBRARIES})
 
 target_compile_definitions(Permute_Associate PRIVATE MAXCOLORS=10000000)
 
-add_executable(test
-               test/test.cpp
+add_executable(catch_test
+               catch_test/test.cpp
                ${PROJECT_SUPPORT_FILES})
 
-target_include_directories(test PRIVATE "${CMAKE_CURRENT_LIST_DIR}/third_party")
-target_include_directories(test PRIVATE ${ARMADILLO_INCLUDE_DIR})
+target_include_directories(catch_test PRIVATE "${CMAKE_CURRENT_LIST_DIR}/third_party")
+target_include_directories(catch_test PRIVATE ${ARMADILLO_INCLUDE_DIR})
 
-target_link_libraries(test ${ARMADILLO_LIBRARIES})
-target_link_libraries(test ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(catch_test ${ARMADILLO_LIBRARIES})
+target_link_libraries(catch_test ${CMAKE_THREAD_LIBS_INIT})

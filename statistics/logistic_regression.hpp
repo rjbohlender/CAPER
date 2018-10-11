@@ -13,13 +13,13 @@ class LogisticRegression {
 public:
   LogisticRegression(arma::mat &Xmat, arma::colvec &Yvec);
 
-  arma::colvec &get_odds();
-  double get_mean();
-  arma::vec &get_probability();
-  arma::vec &get_eta();
-  arma::rowvec &get_theta();
+  auto get_odds() -> arma::vec&;
+  auto get_mean() -> double;
+  auto get_probability() -> arma::vec&;
+  auto get_eta() -> arma::vec&;
+  auto get_theta() -> arma::rowvec&;
 
-  arma::vec Wald(arma::mat &X);
+  auto Wald(arma::mat &X) -> arma::vec;
 
 private:
   arma::colvec odds_;
@@ -28,18 +28,19 @@ private:
   arma::vec eta_;
   double mean_;
 
-  arma::rowvec h(arma::mat &Xmat, arma::rowvec &t);
-  double cost(arma::mat &Xmat, arma::colvec &Yvec, arma::rowvec &t);
-  void train(arma::mat &Xmat, arma::colvec &Yvec);
+  auto h(arma::mat &Xmat, arma::rowvec &t) -> arma::rowvec;
+  auto cost(arma::mat &Xmat, arma::colvec &Yvec, arma::rowvec &t) -> double;
 
-  arma::rowvec IRLS_SVDNEWTON(arma::mat &Xmat, arma::colvec &Yvec);
+  // Algorithms for finding the optimum
+  auto gradient_descent(arma::mat &Xmat, arma::colvec &Yvec) -> arma::rowvec;
+  auto irls_svdnewton(arma::mat &Xmat, arma::colvec &Yvec) -> arma::rowvec;
 
-  arma::mat hess(arma::mat &X);
+  auto hessian(arma::mat &X) -> arma::mat;
 
-  void calculate_odds(arma::mat &Xmat);
-  void calculate_mean(arma::mat &Xmat);
-  void calculate_probability(arma::mat &Xmat);
-  void calculate_eta();
+  auto calculate_odds(arma::mat &Xmat) -> void;
+  auto calculate_mean(arma::mat &Xmat) -> void;
+  auto calculate_probability(arma::mat &Xmat) -> void;
+  auto calculate_eta() -> void;
 };
 
 #endif //PERMUTE_ASSOCIATE_LOGISTIC_REGRESSION_HPP
