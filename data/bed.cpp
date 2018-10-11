@@ -89,7 +89,7 @@ bool Bed::check_variant(const std::string &chr, const std::string &pos) {
   int ipos = std::stoi(pos);
 
   if (ranges_.find(chr) == ranges_.end()) {
-	throw std::out_of_range("Chromosome not in bed file.");
+    return false;
   }
 
   auto it = std::lower_bound(ranges_[chr].begin(), ranges_[chr].end(), ipos);

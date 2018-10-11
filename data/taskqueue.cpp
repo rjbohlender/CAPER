@@ -11,8 +11,8 @@ TaskQueue::TaskQueue(size_t thread_cnt)
 	  gen_(rd_()),
 	  verbose_(false),
 	  nthreads_(thread_cnt) {
-  for (auto &t : threads_) {
-	t = std::thread(
+  for (size_t i = 0; i < threads_.size(); i++) {
+	threads_[i] = std::thread(
 		std::bind(&TaskQueue::thread_handler, this));
   }
 }
@@ -24,8 +24,8 @@ TaskQueue::TaskQueue(size_t thread_cnt, bool verbose)
 	  gen_(rd_()),
 	  verbose_(verbose),
 	  nthreads_(thread_cnt) {
-  for (auto &t : threads_) {
-	t = std::thread(
+  for (size_t i = 0; i < threads_.size(); i++) {
+	threads_[i] = std::thread(
 		std::bind(&TaskQueue::thread_handler, this));
   }
 }
@@ -35,8 +35,10 @@ TaskQueue::~TaskQueue() {
   cv_.notify_all();
 
   // Wait for threads to finish
-  for (auto &t : threads_) {
-	t.join();
+  for (size_t i = 0; i < threads_.size(); i++) {
+	if (threads_[i].joinable()) {
+	  threads_[i].join();
+	}
   }
 }
 
@@ -50,8 +52,10 @@ void TaskQueue::join() {
   quit_ = true;
   cv_.notify_all();
 
-  for (auto &t : threads_) {
-	t.join();
+  for (size_t i = 0; i < threads_.size(); i++) {
+	if (threads_[i].joinable()) {
+	  threads_[i].join();
+	}
   }
 }
 
@@ -128,8 +132,7 @@ void TaskQueue::thread_handler() {
 void TaskQueue::stage_1(TaskArgs &ta) {
   // Set original value
   for (auto &v : ta.results) {
-	v.second.original =
-		call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), v.second.transcript, ta.get_tp(), false, true);
+	v.second.original = call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), v.second.transcript, ta.get_tp(), false, true);
   }
 
   if (verbose_) {
@@ -141,8 +144,7 @@ void TaskQueue::stage_1(TaskArgs &ta) {
 
   int iter = 0;
   while (iter < ta.get_npermutations()) {
-	if (!(ta.get_methods().str() == "SKAT") && !(ta.get_methods().str() == "SKATO")
-		&& !(ta.get_methods().str() == "BURDEN")) {
+	if (!(ta.get_methods().str() == "SKAT") && !(ta.get_methods().str() == "SKATO") && !(ta.get_methods().str() == "BURDEN")) {
 	  ta.get_cov().set_phenotype_vector(ta.get_permutations()[iter]);
 	}
 	int transcript_no = -1;
@@ -152,22 +154,13 @@ void TaskQueue::stage_1(TaskArgs &ta) {
 	  const std::string &k = v.second.transcript;
 	  double perm_val;
 
-	  if (!(ta.get_methods().str() == "SKAT") && !(ta.get_methods().str() == "SKATO")
-		  && !(ta.get_methods().str() == "BURDEN")) {
-		perm_val =
-			call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), v.second.transcript, ta.get_tp(), false, false);
+	  if (!(ta.get_methods().str() == "SKAT") && !(ta.get_methods().str() == "SKATO") && !(ta.get_methods().str() == "BURDEN")) {
+		perm_val = call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), v.second.transcript, ta.get_tp(), false, false);
 	  } else {
 		if (transcript_no == 0) {
-		  perm_val =
-			  call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), v.second.transcript, ta.get_tp(), true, false);
+		  perm_val = call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), v.second.transcript, ta.get_tp(), true, false);
 		} else {
-		  perm_val = call_method(ta.get_methods(),
-								 ta.get_gene(),
-								 ta.get_cov(),
-								 v.second.transcript,
-								 ta.get_tp(),
-								 false,
-								 false);
+		  perm_val = call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), v.second.transcript, ta.get_tp(), false, false);
 		}
 	  }
 
@@ -280,7 +273,7 @@ void TaskQueue::stage_2(TaskArgs &ta) {
   int iter = 0;
   arma::vec phenotypes = ta.get_cov().get_phenotype_vector();
 
-  if (ta.get_tp().permute_set) {
+  if(ta.get_tp().permute_set) {
 	pset_ofs.open(*ta.get_tp().permute_set, std::ios_base::app);
   }
 
@@ -294,8 +287,7 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 	  transcript_no++;
 
 	  // SKAT corrects for covariates so we don't use this permutation approach
-	  if (!(ta.get_methods().str() == "SKAT") && !(ta.get_methods().str() == "SKATO")
-		  && !(ta.get_methods().str() == "BURDEN")) {
+	  if (!(ta.get_methods().str() == "SKAT") && !(ta.get_methods().str() == "SKATO") && !(ta.get_methods().str() == "BURDEN")) {
 		// Permute minor allele carriers
 		// arma::vec temp_odds(mac_odds[k].n_rows + 1, arma::fill::zeros);
 		// temp_odds(arma::span(0, mac_odds[k].n_rows - 1)) = mac_odds[k];
@@ -319,12 +311,12 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 			total_cases++; // Count cases in mac
 		}
 
-		if (ta.get_tp().permute_set && transcript_no == 0) {
-		  for (const auto &v : phenotypes) {
-			if (v > 1 || v < 0) {
-			  throw (std::logic_error("phenotypes should be either 0 or 1"));
-			}
-			pset_ofs << v << "\t";
+		if(ta.get_tp().permute_set && transcript_no == 0) {
+		  for(const auto &v : phenotypes) {
+		    if(v > 1 || v < 0) {
+		      throw(std::logic_error("phenotypes should be either 0 or 1"));
+		    }
+		    pset_ofs << v << "\t";
 		  }
 		  pset_ofs << "\n";
 		}
@@ -440,8 +432,8 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 	}
   }
   if (ta.get_tp().permute_set) {
-	pset_ofs.close();
-	std::exit(0);
+    pset_ofs.close();
+    std::exit(0);
   }
 
   for (auto &v : ta.results) {
@@ -531,29 +523,23 @@ void TaskQueue::check_perm(const std::string &method,
   }
 }
 
-double TaskQueue::call_method(Methods &method,
-							  Gene &gene,
-							  Covariates &cov,
-							  const std::string &k,
-							  TaskParams &tp,
-							  bool shuffle,
-							  bool detail) {
-  if (tp.method == "BURDEN") {
-	return method.BURDEN(gene, k, shuffle, tp.a, tp.b);
-  } else if (tp.method == "CALPHA") {
-	return method.CALPHA(gene, cov, k);
-  } else if (tp.method == "CMC") {
-	return method.CMC(gene, cov, k, tp.maf);
-  } else if (tp.method == "SKAT") {
-	return method.SKATR(gene, k, shuffle, tp.a, tp.b, detail);
-  } else if (tp.method == "SKATO") {
-	return method.SKATRO(gene, k, shuffle, tp.a, tp.b, detail);
-  } else if (tp.method == "VAAST") {
-	return method.Vaast(gene, cov, k, tp.score_only_minor, tp.score_only_alternative, 2.0, tp.group_size, detail);
-  } else if (tp.method == "VT") {
-	return method.VT(gene, cov, k);
-  } else if (tp.method == "WSS") {
-	return method.WSS(gene, cov, k);
+double TaskQueue::call_method(Methods &method, Gene &gene, Covariates &cov, const std::string &k, TaskParams &tp, bool shuffle, bool detail) {
+  if(tp.method == "BURDEN") {
+    return method.BURDEN(gene, k, shuffle, tp.a, tp.b);
+  } else if(tp.method == "CALPHA") {
+    return method.CALPHA(gene, cov, k);
+  } else if(tp.method == "CMC") {
+    return method.CMC(gene, cov, k, tp.maf);
+  } else if(tp.method == "SKAT") {
+    return method.SKATR(gene, k, shuffle, tp.a, tp.b, detail);
+  } else if(tp.method == "SKATO") {
+    return method.SKATRO(gene, k, shuffle, tp.a, tp.b, detail);
+  } else if(tp.method == "VAAST") {
+    return method.Vaast(gene, cov, k, tp.score_only_minor, tp.score_only_alternative, 2.0, tp.group_size, detail);
+  } else if(tp.method == "VT") {
+    return method.VT(gene, cov, k);
+  } else if(tp.method == "WSS") {
+    return method.WSS(gene, cov, k);
   }
 }
 

@@ -5,8 +5,8 @@
 #include "result.hpp"
 
 Result::Result()
-	: gene(""),
-	  transcript(""),
+	: gene(),
+	  transcript(),
 	  successes(0),
 	  mid_successes(0),
 	  mgit_successes(0),
@@ -17,9 +17,8 @@ Result::Result()
 	  empirical_midp(NAN),
 	  mgit_p(NAN),
 	  done(false),
+	  permuted(),
 	  testable(true) {
-  permuted = std::vector<double>();
-  // permuted = std::map<double, double>();
 }
 
 Result::Result(const std::string &gene, const std::string &transcript)
@@ -34,10 +33,9 @@ Result::Result(const std::string &gene, const std::string &transcript)
 	  empirical_midp(NAN),
 	  mgit_p(NAN),
 	  done(false),
+	  permuted(),
 	  mgit_successes(0),
 	  testable(true) {
-  permuted = std::vector<double>();
-  // permuted = std::map<double, double>();
 }
 
 Result::Result(Result &&res) noexcept

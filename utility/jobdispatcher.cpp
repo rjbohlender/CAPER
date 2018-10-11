@@ -7,6 +7,7 @@
 #include "jobdispatcher.hpp"
 
 #include "main_support.hpp"
+#include "reporter.hpp"
 
 using namespace std::chrono_literals;
 
@@ -80,14 +81,7 @@ JobDispatcher::JobDispatcher(TaskParams &tp)
 	permutation_ptr_.reset();
   }
 
-  if (tp_.gene_list) {
-	tq_.duplicate();
-	write_simple(tq_, ntranscripts_, ngenes_, tp_);
-	write_detail(tq_, tp_);
-  } else {
-	write_simple(tq_, ntranscripts_, ngenes_, tp_);
-	write_detail(tq_, tp_);
-  }
+  Reporter(tq_, tp_);
 }
 
 void JobDispatcher::all_gene_dispatcher() {
