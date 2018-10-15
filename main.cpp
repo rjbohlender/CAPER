@@ -66,10 +66,10 @@ int main(int argc, char **argv) {
 			 po::value<std::string>()->default_value("VAAST"),
 			 "The statistical method to be used.\nOptions: {CALPHA, CMC, SKAT, WSS, VAAST, VT}.\nThe default is VAAST.")
 			("stage_1_max_perm,1",
-			 po::value<int>()->default_value(100000),
+			 po::value<arma::uword>()->default_value(100000),
 			 "The maximum number of permutations to be performed in the first stage. The default is 100,000.")
 			("stage_2_max_perm,2",
-			 po::value<int>()->default_value(1000000),
+			 po::value<arma::uword>()->default_value(1000000),
 			 "The maximum number of permutations to be performed in the second stage. The default is 1,000,000.")
 			("no_adjust,n", "Disable small sample size adjustment for SKATO.")
 			("kernel,k",
@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
 			("beta_weights",
 			 po::value<std::string>()->default_value("1,25"),
 			 "Parameters for the beta distribution. Two values, comma separated corresponding to a,b. Default is 1,25.")
-			("successes,s", po::value<int>()->default_value(200), "Number of successes for early termination.")
+			("successes,s", po::value<arma::uword>()->default_value(200), "Number of successes for early termination.")
 			("genes,l", po::value(&gene_list), "A comma-separated list of genes to analyze.")
 			("score_only_minor", po::bool_switch(&score_only_minor), "Score only minor alleles in VAAST.")
 			("score_only_alternative",
@@ -163,9 +163,9 @@ int main(int argc, char **argv) {
   }
   tp.full_command = cmd_ss.str();
 
-  tp.success_threshold = vm["successes"].as<int>();
-  tp.stage_1_permutations = vm["stage_1_max_perm"].as<int>();
-  tp.stage_2_permutations = vm["stage_2_max_perm"].as<int>();
+  tp.success_threshold = vm["successes"].as<arma::uword>();
+  tp.stage_1_permutations = vm["stage_1_max_perm"].as<arma::uword>();
+  tp.stage_2_permutations = vm["stage_2_max_perm"].as<arma::uword>();
   tp.total_permutations = std::max(tp.stage_1_permutations, tp.stage_2_permutations);
   tp.method = vm["method"].as<std::string>();
   // File paths and option status
