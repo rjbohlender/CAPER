@@ -6,7 +6,7 @@
 
 #include <algorithm>
 
-VariantGroup::VariantGroup(arma::mat X,
+VariantGroup::VariantGroup(arma::sp_mat X,
 						   arma::vec Y,
 						   arma::vec weights,
 						   arma::uword group_threshold,
@@ -22,74 +22,25 @@ VariantGroup::VariantGroup(arma::mat X,
 
   score = Score(X, Y, weights);
 
+  arma::uvec score_sort = arma::stable_sort_index(variant_scores);
+  arma::sp_mat Xmat(X.n_rows, X.n_cols);
+  // X = X.cols(score_sort);
+  arma::uword i = 0;
+  for(const auto &v : score_sort) {
+	Xmat(arma::span::all, i) = X.col(v);
+	i++;
+  }
+
   // arma::mat Xcollapse;
   if (group_threshold > 0) {
-	arma::uvec score_sort = arma::stable_sort_index(variant_scores);
-	X = X.cols(score_sort);
 	weights = weights(score_sort);
 
-#if 0
-	// Do grouping
-	arma::uvec rare = arma::find(arma::sum(X) <= group_threshold);
-	arma::uvec common = arma::find(arma::sum(X) > group_threshold);
-
-	for (arma::uword i = 1; i < rare.n_rows; i++) {
-	  arma::span tail(rare.n_rows - 1 - i, rare.n_rows - 1);
-	  arma::span head(0, rare.n_rows - 1 - i);
-
-	  arma::uvec singles = arma::join_vert(common, rare(head));
-	  arma::uvec collapsed = rare(tail);
-
-	  if (i == rare.n_rows - 1) {
-		Xcollapse = arma::sum(X.cols(collapsed), 1);
-		weight = arma::prod(weights(collapsed), 0);
-	  } else {
-		Xcollapse = arma::join_horiz(X.cols(singles), arma::sum(X.cols(collapsed), 1));
-		weight = arma::join_vert(weights(singles), arma::prod(weights(collapsed), 0));
-	  }
-
-	  case_allele1 = Xcollapse.t() * Y;
-	  control_allele1 = Xcollapse.t() * (1 - Y);
-	  case_allele0 = 2 * n_case - case_allele1;
-	  control_allele0 = 2 * n_control - control_allele1;
-
-	  double new_score = Score();
-	  if (new_score > score) {
-		score = new_score;
-	  } else {
-		// Reset to best group
-		i--;
-		tail = arma::span(rare.n_rows - 1 - i, rare.n_rows - 1);
-		head = arma::span(0, rare.n_rows - 1 - i);
-
-		singles = arma::join_vert(common, rare(head));
-		collapsed = rare(tail);
-
-		if (i == rare.n_rows - 1) {
-		  Xcollapse = arma::sum(X.cols(collapsed), 1);
-		  weight = arma::prod(weights(collapsed), 0);
-		} else {
-		  Xcollapse = arma::join_horiz(X.cols(singles), arma::sum(X.cols(collapsed), 1));
-		  weight = arma::join_vert(weights(singles), arma::prod(weights(collapsed), 0));
-		}
-
-		case_allele1 = Xcollapse.t() * Y;
-		control_allele1 = Xcollapse.t() * (1 - Y);
-		case_allele0 = 2 * n_case - case_allele1;
-		control_allele0 = 2 * n_control - control_allele1;
-
-		break;
-	  }
-	  nvariants = Xcollapse.n_cols; // Final number of variants
-	  score = new_score > score ? new_score : score;
-	}
-#endif
 	double last_score = -1;
-	arma::sword i = X.n_cols - 1;
+	arma::sword j = X.n_cols - 1;
 	arma::span merged;
-	for (; i >= 0; i--) {
-	  merged = arma::span(i, X.n_cols - 1);
-	  arma::mat Xnew = arma::sum(X.cols(merged), 1);
+	for (; j >= 0; j--) {
+	  merged = arma::span(j, X.n_cols - 1);
+	  arma::sp_mat Xnew = arma::sum(Xmat.cols(j, X.n_cols - 1), 1);
 	  arma::vec Wnew = arma::prod(weights(merged), 0);
 
 	  double new_score = Score(Xnew, Y, Wnew);
@@ -101,18 +52,18 @@ VariantGroup::VariantGroup(arma::mat X,
 	  }
 	}
 	// Finish grouping
-	if (i == -1) {
+	if (j == -1) {
 	  // All variants merged
-	  Xcollapse = arma::sum(X, 1);
+	  Xcollapse = arma::sum(Xmat, 1);
 	  weight = arma::prod(weights, 0);
 
 	  score = Score(Xcollapse, Y, weight);
 
 	} else {
-	  merged = arma::span(i + 1, X.n_cols - 1);
-	  arma::span unmerged(0, i);
+	  merged = arma::span(j + 1, X.n_cols - 1);
+	  arma::span unmerged(0, j);
 
-	  Xcollapse = arma::join_horiz(X.cols(unmerged), arma::sum(X.cols(merged), 1));
+	  Xcollapse = arma::join_horiz(Xmat.cols(0, j), arma::sum(X.cols(j + 1, X.n_cols - 1), 1));
 	  weight = arma::join_vert(weights(unmerged), arma::prod(weights, 0));
 
 	  score = Score(Xcollapse, Y, weight);
@@ -184,7 +135,7 @@ void VariantGroup::variant_mask() {
 #endif
 }
 
-double VariantGroup::Score(const arma::mat &X, const arma::vec &Y, const arma::vec &w) {
+double VariantGroup::Score(const arma::sp_mat &X, const arma::vec &Y, const arma::vec &w) {
   case_allele1 = X.t() * Y;
   control_allele1 = X.t() * (1 - Y);
   case_allele0 = 2 * n_case - case_allele1;
@@ -255,14 +206,19 @@ VAAST::VAAST(Gene &gene,
 	} else {
 	  expanded_scores.reshape(X.n_cols, 1);
 	  if (X.n_cols > 1) {
+		arma::sp_mat Xnew(X);
+		arma::vec Wnew(weights);
+		std::vector<std::string> positions = gene.get_positions(k);
 		for (arma::uword i = 0; i < X.n_cols; i++) {
-		  arma::mat Xnew = X;
-		  arma::vec Wnew = weights;
-		  std::vector<std::string> positions = gene.get_positions(k);
-
-		  positions.erase(positions.begin() + i);
-		  Xnew.shed_col(i);
-		  Wnew.shed_row(i);
+		  if(i == 0) {
+			positions.erase(positions.begin());
+			Xnew.shed_col(i);
+			Wnew.shed_row(i);
+		  } else {
+			positions[i - 1] = gene.get_positions(k)[i - 1];
+			Xnew.col(i - 1) = X.col(i - 1);
+			Wnew(i - 1) = weights(i - 1);
+		  }
 
 		  Score(Xnew, Y, Wnew); // Do normal individual variant scoring
 		  variant_grouping(Xnew, Y, Wnew, positions); // Redo grouping
@@ -278,6 +234,79 @@ VAAST::VAAST(Gene &gene,
   }
 }
 
+VAAST::VAAST(arma::sp_mat Xmat,
+			 Covariates &cov,
+			 arma::vec &weights,
+			 std::vector<std::string> &positions_,
+			 const std::string &k,
+			 bool score_only_minor,
+			 bool score_only_alternative,
+			 double site_penalty,
+			 arma::uword group_threshold)
+	: som(score_only_minor), soa(score_only_alternative), detail(true), k(k), group_threshold(group_threshold),
+	  site_penalty(site_penalty),
+	  X(std::move(Xmat)), Y(cov.get_phenotype_vector()) {
+
+  if (group_threshold == 0 || X.n_cols == 1) {
+	score = Score(X, Y, weights);
+  } else {
+	score = Score(X, Y, weights);
+	variant_grouping(X, Y, weights, positions_);
+	score = Score();
+
+  }
+
+  if(group_threshold > 0) {
+	expanded_scores.reshape(X.n_cols, 1);
+	if (X.n_cols > 1) {
+	  arma::sp_mat Xnew(X);
+	  arma::vec Wnew(weights);
+	  std::vector<std::string> positions = positions_;
+	  for (arma::uword i = 0; i < X.n_cols; i++) {
+	    if(i == 0) {
+		  positions.erase(positions.begin());
+		  Xnew.shed_col(i);
+		  Wnew.shed_row(i);
+	    } else {
+	      positions[i - 1] = positions_[i - 1];
+	      Xnew.col(i - 1) = X.col(i - 1);
+	      Wnew(i - 1) = weights(i - 1);
+	    }
+#if 0
+		for(auto it = X.begin(); it != X.end(); it++) {
+		  if(it.col() == i) {
+		    continue;
+		  } else if(it.col() < i && *it > 0) {
+		    Xnew(it.row(), it.col()) = *it;
+		  } else if(it.col() > i && *it > 0) {
+		    Xnew(it.row(), it.col() - 1) = *it;
+		  }
+		}
+		for(auto it = weights.begin(); it != weights.end(); it++) {
+		  auto j = std::distance(weights.begin(), it);
+		  if(i == j) {
+		    continue;
+		  } else if(j < i) {
+		    Wnew(j) = *it;
+		  } else if(j > i) {
+		    Wnew(j - 1) = *it;
+		  }
+		}
+#endif
+
+		Score(Xnew, Y, Wnew); // Do normal individual variant scoring
+		variant_grouping(Xnew, Y, Wnew, positions); // Redo grouping
+		double new_score = Score();
+		expanded_scores(i) = (score - new_score >= 0) ? score - new_score : 0; // Calculate score
+	  }
+	} else {
+	  expanded_scores(0) = vaast_site_scores(0);
+	}
+  } else {
+    expanded_scores = vaast_site_scores;
+  }
+}
+
 double VAAST::Score() {
   double val = 0;
   for (const auto &g : groups) {
@@ -286,7 +315,7 @@ double VAAST::Score() {
   return val;
 }
 
-double VAAST::Score(const arma::mat &X, const arma::vec &Y, const arma::vec &w) {
+double VAAST::Score(const arma::sp_mat &X, const arma::vec &Y, const arma::vec &w) {
   // Get sample sizes
   n_case = static_cast<arma::uword>(arma::sum(Y));
   n_control = static_cast<arma::uword>(arma::sum(1 - Y));
@@ -338,13 +367,13 @@ void VAAST::check_weights(Gene &gene) {
   gene.set_weights(k, weights);
 }
 
-void VAAST::variant_grouping(const arma::mat &X,
+void VAAST::variant_grouping(const arma::sp_mat &X,
 							 const arma::vec &Y,
 							 const arma::vec &w,
 							 std::vector<std::string> &positions) {
   groups.clear();
   if (group_threshold == 0) {
-	groups.push_back(VariantGroup(X, Y, w, 0, site_penalty, som, soa));
+	groups.emplace_back(VariantGroup(X, Y, w, 0, site_penalty, som, soa));
 	return;
   }
   // Initially group into indels vs. snvs
@@ -382,7 +411,14 @@ void VAAST::variant_grouping(const arma::mat &X,
 	if (idx.n_elem == 0) {
 	  continue;
 	}
-	arma::mat Xnew = X.cols(idx);
+	// arma::sp_mat Xnew = X.cols(idx);
+
+	arma::sp_mat Xnew(X.n_rows, idx.n_elem);
+	i = 0;
+	for(const auto &v : idx) {
+	  Xnew.col(i) = X.col(v);
+	  i++;
+	}
 	arma::vec Wvec = w(idx);
 	arma::uvec indices = arma::regspace<arma::uvec>(0, Xnew.n_cols - 1);
 
@@ -399,11 +435,16 @@ void VAAST::variant_grouping(const arma::mat &X,
 
 	// Nothing to group; finish early
 	if (target.n_elem == 0) {
-	  groups.push_back(VariantGroup(Xnew, Y, Wvec, 0, site_penalty, som, soa));
+	  groups.emplace_back(VariantGroup(Xnew, Y, Wvec, 0, site_penalty, som, soa));
 	  continue;
 	}
 
-	arma::mat Xcollapsible = Xnew.cols(target);
+	arma::sp_mat Xcollapsible(Xnew.n_rows, target.n_elem);
+	i = 0;
+	for(const auto &v : target) {
+	  Xcollapsible.col(i) = Xnew.col(v);
+	  i++;
+	}
 	arma::vec Wcollapsible = Wvec(target);
 	arma::vec score_set = vaast_site_scores(idx).eval()(target);
 	arma::uvec score_sort = arma::sort_index(score_set);
@@ -412,34 +453,45 @@ void VAAST::variant_grouping(const arma::mat &X,
 
 	arma::uword ngroups;
 	if (type.first == "SNV") {
-	  groups.push_back(VariantGroup(Xcollapsible.cols(score_sort), Y, Wcollapsible(score_sort), group_threshold, site_penalty, som, soa));
+	  groups.emplace_back(VariantGroup(Xcollapsible, Y, Wcollapsible(score_sort), group_threshold, site_penalty, som, soa));
 	  if (remaining.n_elem > 0) {
-		groups.push_back(VariantGroup(Xnew.cols(remaining), Y, Wvec(remaining), 0, site_penalty, som, soa));
+	    arma::sp_mat Xremain(Xnew.n_rows, remaining.n_elem);
+	    i = 0;
+	    for(const auto &v : remaining) {
+	      Xremain.col(i) = Xnew.col(v);
+		  i++;
+	    }
+		groups.emplace_back(VariantGroup(Xremain, Y, Wvec(remaining), 0, site_penalty, som, soa));
 	  }
 	} else {
 	  ngroups = static_cast<arma::uword>(std::ceil(weight_sort.n_elem / 5.));
-	  for (arma::uword i = 0; i < ngroups; i++) {
+	  for (i = 0; i < ngroups; i++) {
 	    // Sort on weight for grouping
 		arma::span cur_span(i * 5, std::min(i * 5 + 4, weight_sort.n_elem - 1));
-		arma::mat Xmat = Xcollapsible.cols(weight_sort(cur_span));
+		arma::sp_mat Xmat(Xcollapsible.n_rows, cur_span.b - cur_span.a + 1);
+		arma::uword j = 0;
+		for(const auto &v : weight_sort(cur_span)) {
+		  Xmat.col(j) = Xcollapsible.col(v);
+		  j++;
+		}
 		arma::vec weight_spanned = Wcollapsible(weight_sort(cur_span));
 		// Resort by score for merging
 		arma::vec score_spanned = score_set(weight_sort(cur_span));
 		score_sort = arma::sort_index(score_spanned);
-		groups.push_back(VariantGroup(Xmat.cols(score_sort), Y, weight_spanned(score_sort), group_threshold, site_penalty, som, soa));
+		groups.emplace_back(VariantGroup(Xmat, Y, weight_spanned(score_sort), group_threshold, site_penalty, som, soa));
 	  }
 	  // Don't group the remaining variants.
 	  if (remaining.n_elem > 0) {
-		groups.push_back(VariantGroup(Xnew.cols(remaining), Y, Wvec(remaining), 0, site_penalty, som, soa));
+		arma::sp_mat Xremain(Xnew.n_rows, remaining.n_elem);
+		i = 0;
+		for(const auto &v : remaining) {
+		  Xremain.col(i) = Xnew.col(v);
+		  i++;
+		}
+		groups.emplace_back(VariantGroup(Xremain, Y, Wvec(remaining), 0, site_penalty, som, soa));
 	  }
 	}
   }
-}
-
-//! \brief Getter for the VAAST score
-//! \return double containing the VAAST score
-double VAAST::get_score() {
-  return score;
 }
 
 //! \brief Calculate the set difference between two uvec
@@ -457,7 +509,7 @@ arma::uvec VAAST::setdiff(arma::uvec x, arma::uvec y) {
   return x;
 }
 
-void VAAST::variant_bitmask(const arma::mat &X, const arma::vec &Y, const arma::vec &w) {
+void VAAST::variant_bitmask(const arma::sp_mat &X, const arma::vec &Y, const arma::vec &w) {
   // mask sites where major allele is more common in cases
   // We can simplify because the 1 is always the minor allele
   // arma::uvec tmpmask = vaast_site_scores <= 0;

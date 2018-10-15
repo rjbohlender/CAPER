@@ -32,3 +32,7 @@ sqrt(mean((s1pset_prob[cd63idx] - prob[cd63idx])^2))
 
 sqrt(mean((s2pset_prob[repIdx] - prob[repIdx])^2))
 sqrt(mean((s1pset_prob[repIdx] - prob[repIdx])^2))
+
+# Compare P-Value distributions
+s1 <- read.table('test_s1/VAAST.simple', header=T)
+s2 <- read.table('test_s2/VAAST.simple', header=T)

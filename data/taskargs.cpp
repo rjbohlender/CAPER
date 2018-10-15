@@ -141,7 +141,7 @@ std::vector<std::vector<int32_t>> &TaskArgs::get_permutations() {
 }
 
 void TaskArgs::cleanup() {
-  gene_.clear(cov_, results);
+  gene_.clear(cov_, results, tp_);
   cov_.clear();
   method_.clear(gene_.get_transcripts());
 }

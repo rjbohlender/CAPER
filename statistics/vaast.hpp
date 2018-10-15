@@ -13,7 +13,7 @@
 class VariantGroup {
 public:
   arma::uword nvariants;
-  arma::mat Xcollapse;
+  arma::sp_mat Xcollapse;
   arma::vec Y;
   arma::vec weight;
   const double site_penalty;
@@ -33,7 +33,7 @@ public:
 
   double score;
 
-  VariantGroup(arma::mat X,
+  VariantGroup(arma::sp_mat X,
 				 arma::vec Y,
 				 arma::vec weights,
 				 arma::uword group_threshold,
@@ -44,12 +44,12 @@ public:
 private:
   void variant_mask();
 
-  double Score(const arma::mat &X, const arma::vec &Y, const arma::vec &w);
+  double Score(const arma::sp_mat &X, const arma::vec &Y, const arma::vec &w);
   arma::vec LRT();
   arma::vec log_likelihood(arma::vec &freq, arma::vec &allele0, arma::vec &allele1);
 };
 
-class VAAST {
+struct VAAST {
   const bool som;      // score_only_minor
   const bool soa;      // score_only_alternative
   const bool detail;   // Add detailed output
@@ -57,7 +57,7 @@ class VAAST {
   const arma::uword group_threshold;
   const double site_penalty;
 
-  const arma::mat X;
+  arma::sp_mat X;
   const arma::vec Y;
 
   arma::vec weights;
@@ -77,7 +77,8 @@ class VAAST {
   arma::vec expanded_scores;
 
   double score;
-public:
+
+  // Constructors
   VAAST(Gene &gene,
 		Covariates &cov,
 		const std::string &k,
@@ -86,19 +87,26 @@ public:
 		double site_penalty,
 		arma::uword group_threshold,
 		bool detail);
+  VAAST(arma::sp_mat X,
+		Covariates &cov,
+		arma::vec &weights,
+		std::vector<std::string> &positions_,
+		const std::string &k,
+		bool score_only_minor,
+		bool score_only_alternative,
+		double site_penalty,
+		arma::uword group_threshold);
 
-  double get_score();
-private:
   void check_weights(Gene &gene);
   double Score();
-  double Score(const arma::mat &X, const arma::vec &Y, const arma::vec &w);
+  double Score(const arma::sp_mat &X, const arma::vec &Y, const arma::vec &w);
   arma::vec LRT();
   arma::vec log_likelihood(arma::vec &freq, arma::vec &allele0, arma::vec &allele1);
-  void variant_grouping(const arma::mat &X,
+  void variant_grouping(const arma::sp_mat &X,
 						  const arma::vec &Y,
 						  const arma::vec &w,
 						  std::vector<std::string> &positions);
-  void variant_bitmask(const arma::mat &X, const arma::vec &Y, const arma::vec &w);
+  void variant_bitmask(const arma::sp_mat &X, const arma::vec &Y, const arma::vec &w);
 
   arma::uvec setdiff(arma::uvec x, arma::uvec y);
 };

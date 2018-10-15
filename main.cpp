@@ -19,6 +19,7 @@
 #include "utility/filesystem.hpp"
 #include "utility/main_support.hpp"
 #include "utility/jobdispatcher.hpp"
+#include "data/taskparams.hpp"
 
 namespace po = boost::program_options;
 
@@ -250,7 +251,12 @@ int main(int argc, char **argv) {
   // Initialize randomization
   arma::arma_rng::set_seed_random();
 
+  arma::wall_clock timer;
+  timer.tic();
+
   JobDispatcher jd(tp);
 
+  double n = timer.toc();
+  std::cerr << "Elapsed time in JobDispatcher: " << n << std::endl;
   return 0;
 }

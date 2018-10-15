@@ -118,38 +118,47 @@ double Methods::BURDEN(Gene &gene, const std::string &k, bool shuffle, int a, in
 	obj_->shuffle();
   }
 
-  arma::mat G = gene.get_matrix(k);
-  arma::uword N = G.n_cols; // Variant count
+  arma::sp_mat G(gene.get_matrix(k));
 
   check_weights(gene, k, a, b);
 
   arma::mat W = arma::diagmat(gene.get_weights(k));
 
-  arma::rowvec Zs = arma::sum(arma::diagmat(obj_->get_U0()) * G);
-
-  arma::mat Z = Zs * W;
-
-  return std::pow(arma::accu(Z), 2);
+  return std::pow(arma::accu(arma::sum(arma::diagmat(obj_->get_U0()) * G) * W), 2);
 }
 
 double Methods::CALPHA(Gene &gene, Covariates &cov, const std::string &k) {
-  arma::mat X = gene.get_matrix(k);
-  arma::vec Y = cov.get_phenotype_vector();
+  arma::sp_mat X(gene.get_matrix(k));
+  arma::vec Y(cov.get_phenotype_vector());
 
   double nA = arma::sum(Y); // Case count
   double nU = Y.n_rows - nA; // Control count
 
   double p0 = nA / (nA + nU);
 
-  arma::vec n = arma::conv_to<arma::colvec>::from(arma::sum(X > 0, 0));
-  arma::vec g = arma::conv_to<arma::colvec>::from(arma::sum(X.rows(arma::find(Y == 1)) > 0, 0));
+  arma::vec n(X.n_cols, arma::fill::zeros);
+  for(arma::uword i = 0; i < X.n_cols; i++) {
+    for(const auto &v: X.col(i)) {
+      if(v > 0)
+        n(i)++;
+    }
+  }
+
+  arma::vec g(X.n_cols, arma::fill::zeros);
+  arma::uvec case_idx = arma::find(Y == 1);
+  for(auto it = X.begin(); it != X.end(); it++) {
+    if(arma::find(case_idx == it.row()).eval().n_elem > 0) {
+      g(it.col())++;
+    }
+  }
+  // arma::vec g = arma::sum(X.rows(arma::find(Y == 1)) > 0, 0).t();
 
   // Test statistic
   return arma::sum(arma::pow(g - (n * p0), 2) - (n * p0 * (1 - p0)));
 }
 
 double Methods::CMC(Gene &gene, Covariates &cov, const std::string &k, double maf) {
-  arma::mat X = gene.get_matrix(k);
+  arma::mat X(gene.get_matrix(k));
   arma::vec Y = cov.get_phenotype_vector();
 
   double N = Y.n_rows;
@@ -182,7 +191,7 @@ double Methods::CMC(Gene &gene, Covariates &cov, const std::string &k, double ma
   arma::rowvec Xxmean = arma::mean(Xx);
   arma::rowvec Yymean = arma::mean(Yy);
 
-  arma::mat COV = ((nA - 1.) * arma::cov(Xx) + (nU - 1) * arma::cov(Yy)) / (N - 2);
+  arma::mat COV = ((nA - 1.) * arma::cov(Xx) + (nU - 1.) * arma::cov(Yy)) / (N - 2.);
   arma::mat INV;
   if (!arma::inv_sympd(INV, COV)) {
 	// Inversion failed
@@ -195,9 +204,8 @@ double Methods::CMC(Gene &gene, Covariates &cov, const std::string &k, double ma
 
 	INV = eigvecs * arma::diagmat(eigvals) * eigvecs_inv;
   }
-
   arma::mat ret = (Xxmean - Yymean) * INV * (Xxmean - Yymean).t() * nA * nU / N;
-  return ret(0, 0);
+  return arma::as_scalar(ret);
 }
 
 #if 0
@@ -402,7 +410,7 @@ double Methods::Vaast(Gene &gene,
 					  bool detail) {
 #if 1
   VAAST vaast(gene, cov, k, score_only_minor, score_only_alternative, site_penalty, group_threshold, detail);
-  return vaast.get_score();
+  return vaast.score;
 #else
   arma::mat Xmat = gene.get_matrix(k);
   arma::vec Yvec = cov.get_phenotype_vector();
@@ -506,7 +514,7 @@ double Methods::Vaast(Gene &gene,
 }
 
 double Methods::VT(Gene &gene, Covariates &cov, const std::string &k) {
-  arma::mat X = gene.get_matrix(k);
+  arma::mat X(gene.get_matrix(k));
   arma::vec Y = cov.get_phenotype_vector();
 
   // All variants should be the minor allele
@@ -532,7 +540,7 @@ double Methods::VT(Gene &gene, Covariates &cov, const std::string &k) {
 }
 
 double Methods::WSS(Gene &gene, Covariates &cov, const std::string &k) {
-  arma::mat X = gene.get_matrix(k);
+  arma::mat X(gene.get_matrix(k));
   arma::vec Y = cov.get_phenotype_vector();
 
   double nA = arma::sum(Y); // Case count
@@ -556,160 +564,6 @@ double Methods::WSS(Gene &gene, Covariates &cov, const std::string &k) {
 
 std::string Methods::str() {
   return method_;
-}
-
-/*
- * VAAST Support Member Functions
- */
-arma::vec Methods::LRT(arma::vec &case_allele1,
-					   arma::vec &control_allele1,
-					   arma::vec &case_allele0,
-					   arma::vec &control_allele0) {
-  arma::vec alt_control_freq = control_allele1 / (control_allele0 + control_allele1);
-  arma::vec alt_case_freq = case_allele1 / (case_allele0 + case_allele1);
-
-  arma::vec
-	  null_freq = (case_allele1 + control_allele1) / (case_allele0 + case_allele1 + control_allele0 + control_allele1);
-
-  arma::vec alt_log_lh = log_likelihood(alt_control_freq, control_allele0, control_allele1)
-	  + log_likelihood(alt_case_freq, case_allele0, case_allele1);
-  arma::vec null_log_lh = log_likelihood(null_freq, control_allele0, control_allele1)
-	  + log_likelihood(null_freq, case_allele0, case_allele1);
-
-  return alt_log_lh - null_log_lh;
-}
-
-arma::vec Methods::log_likelihood(arma::vec &freq, arma::vec &allele0, arma::vec &allele1) {
-  // Prevent numerical issues
-  arma::vec clamped = arma::clamp(freq, 1e-9, 1.0 - 1e-9);
-
-  return allele1 % arma::log(clamped) + allele0 % arma::log(1.0 - clamped);
-}
-
-arma::uvec Methods::variant_bitmask(arma::vec vaast_site_scores,
-									const arma::vec &case_allele1,
-									const arma::vec &control_allele1,
-									const arma::vec &case_allele0,
-									const arma::vec &control_allele0,
-									bool score_only_minor,
-									bool score_only_alternative) {
-  // mask variants with score < 1
-  arma::uvec tmpmask = arma::find(vaast_site_scores <= 0);
-  arma::uvec mask;
-  std::vector<arma::uword> scenario;
-  // mask sites where major allele is more common in cases
-  /*
-	# scenario 1: 1 is minor allele and it's more frequent in case
-		scenario1= (    (control_allele1 <= control_allele0 )
-			&   (case_allele1 * control_allele0 >= case_allele0 *
-				control_allele1)
-		)
-	# scenario 2: 0 is minor allele and it's more frequent in case
-		scenario2= (    (control_allele1 >= control_allele0 )
-			&   (case_allele1 * control_allele0 <= case_allele0 *
-				control_allele1)
-		)
-    */
-  for (arma::uword i = 0; i < case_allele1.n_rows; i++) {
-	bool in_mask = false;
-	for (arma::uword j = 0; j < tmpmask.size(); j++) {
-	  if (i == tmpmask(j)) {
-		in_mask = true;
-		break;
-	  }
-	}
-	// Merge
-	if (in_mask) {
-	  scenario.push_back(i);
-	  continue;
-	}
-	if (score_only_minor) {
-	  // If both scenarios are false, append to mask
-	  bool scenario1 = !((control_allele1(i) <= control_allele0(i))
-		  & ((case_allele1(i) * control_allele0(i) >= case_allele0(i) * control_allele1(i))));
-	  bool scenario2 = !((control_allele1(i) >= control_allele0(i))
-		  & ((case_allele1(i) * control_allele0(i) <= case_allele0(i) * control_allele1(i))));
-
-	  if (score_only_alternative) {
-		if (scenario1)
-		  scenario.push_back(i);
-	  } else {
-		if (scenario1 & scenario2)
-		  scenario.push_back(i);
-	  }
-	}
-  }
-  return arma::conv_to<arma::uvec>::from(scenario);
-}
-
-std::tuple<arma::mat, arma::vec, std::vector<arma::uvec>, arma::uvec>
-Methods::variant_grouping(const arma::mat &X, const arma::vec &Y, const arma::vec &w, arma::uword group_threshold) {
-  arma::mat Xnew;
-  arma::vec Wnew;
-  std::vector<arma::uvec> groups;
-  arma::uvec ungrouped;
-
-  double ncase = arma::sum(Y);
-  double ncont = arma::sum(1 - Y);
-
-  arma::vec case_count1 = X.t() * Y;
-  arma::vec cont_count1 = X.t() * (1. - Y);
-  arma::vec case_count0 = 2 * ncase - case_count1;
-  arma::vec cont_count0 = 2 * ncont - cont_count1;
-
-  arma::vec log_lh = LRT(case_count1, cont_count1, case_count0, cont_count0);
-  arma::vec ind_scores = 2.0 * (log_lh + arma::log(w)) - 2.0; // Individual scores
-
-  if (group_threshold == 0) {
-	return std::tuple<arma::mat, arma::vec, std::vector<arma::uvec>, arma::uvec>(X,
-																				 w,
-																				 groups,
-																				 arma::find(arma::sum(X) >= 0));
-  } else {
-	arma::uvec sort_idx = arma::sort_index(w);
-
-	std::vector<std::vector<arma::uword>> collapse_groups;
-	arma::uword i, j;
-	arma::uword in_group = 0;
-	for (i = j = 0; i < X.n_cols; i++) {
-	  // Get variant score
-	  case_count1 = X.col(i).t() * Y;
-	  cont_count1 = X.col(i).t() * (1. - Y);
-	  case_count0 = 2 * ncase - case_count1;
-	  cont_count0 = 2 * ncont - cont_count1;
-
-	  double score = arma::as_scalar(LRT(case_count1, cont_count1, case_count0, cont_count0));
-
-	  // Failure condition
-	  if (score < 0 || arma::as_scalar(case_count1) > group_threshold) {
-		arma::uvec colid{i};
-		ungrouped.insert_rows(ungrouped.n_rows, colid);
-	  } else {
-		if (j >= collapse_groups.size()) {
-		  collapse_groups.push_back({});
-		}
-		collapse_groups.back().push_back(sort_idx(i));
-		in_group++;
-		if (in_group > 5) {
-		  j++;
-		  in_group = 0;
-		}
-	  }
-	}
-	for (auto &v : collapse_groups) {
-	  groups.push_back(arma::conv_to<arma::uvec>::from(v));
-	}
-
-	for (auto &v : groups) {
-	  Xnew.insert_cols(Xnew.n_cols, arma::sum(X.cols(v), 1));
-	  arma::mat weight{arma::prod(w(v))};
-	  Wnew.insert_rows(Wnew.n_rows, weight);
-	}
-	Xnew.insert_cols(Xnew.n_cols, X.cols(ungrouped));
-	Wnew.insert_rows(Wnew.n_rows, w(ungrouped));
-  }
-
-  return std::tuple<arma::mat, arma::vec, std::vector<arma::uvec>, arma::uvec>(Xnew, Wnew, groups, ungrouped);
 }
 
 /*
@@ -832,7 +686,7 @@ arma::mat Methods::kernel_twoWayX(arma::mat &Xmat, arma::uword n, arma::uword p)
  * @return
  */
 double Methods::SKATR(Gene &gene, const std::string &k, bool shuffle, int a, int b, bool detail) {
-  arma::mat G = gene.get_matrix(k);
+  arma::mat G(gene.get_matrix(k));
 
   if (shuffle) {
 	obj_->shuffle();
@@ -870,7 +724,7 @@ double Methods::SKATRO(Gene &gene, const std::string &k, bool shuffle, int a, in
 	obj_->shuffle();
   }
 
-  arma::mat G = gene.get_matrix(k);
+  arma::mat G(gene.get_matrix(k));
   arma::uword N = G.n_cols; // Variant count
 
   check_weights(gene, k);
@@ -1177,7 +1031,7 @@ void Methods::check_weights(Gene &gene, const std::string &k, int a, int b, bool
 	gene.set_weights(k, weights);
 	return;
   }
-  arma::mat &G = gene.get_matrix(k);
+  arma::mat G(gene.get_matrix(k));
   arma::vec weights(G.n_cols, arma::fill::ones);
 
   if (kernel_ == Kernel::wLinear) {

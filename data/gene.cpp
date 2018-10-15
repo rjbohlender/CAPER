@@ -3,9 +3,12 @@
 //
 
 #include <string>
+#include <unordered_map>
+
+#include <boost/format.hpp>
 
 #include "gene.hpp"
-#include <boost/format.hpp>
+#include "../statistics/vaast.hpp"
 
 Gene::Gene(std::stringstream &ss,
 		   unsigned long nsamples,
@@ -36,7 +39,7 @@ void Gene::print() {
 	std::cout << v.second;
 }
 
-arma::mat &Gene::get_matrix(const std::string &k) {
+arma::sp_mat &Gene::get_matrix(const std::string &k) {
   return genotypes_[k];
 }
 
@@ -60,8 +63,9 @@ std::vector<std::string> &Gene::get_positions(const std::string &k) {
   return positions_[k];
 }
 
-void Gene::clear(Covariates &cov, std::unordered_map<std::string, Result> &results) {
-  generate_detail(cov, results);
+void Gene::clear(Covariates &cov, std::unordered_map<std::string, Result> &results, TaskParams &tp) {
+  generate_detail(cov, results, tp);
+
   // Set matrix size to 0x0 to free space.
   for (auto &v : genotypes_) {
 	v.second.reset();
@@ -92,7 +96,7 @@ void Gene::parse(std::stringstream &ss) {
 	  // Transcript not found -- add
 	  transcripts_.push_back(splitter[1]);
 	  // Start with matrix transposed
-	  genotypes_[transcripts_.back()] = arma::mat(nsamples_, nvariants_[transcripts_.back()]);
+	  genotypes_[transcripts_.back()] = arma::sp_mat(nsamples_, nvariants_[transcripts_.back()]);
 	  weights_[transcripts_.back()] = arma::vec(nvariants_[transcripts_.back()], arma::fill::zeros);
 	  // Reset counter on new transcript
 	  i = 1;
@@ -116,7 +120,8 @@ void Gene::parse(std::stringstream &ss) {
 	  // Handle missing data
 	  if (val > 2 || val < 0)
 		val = 0;
-	  genotypes_[transcripts_.back()](j - 3, i - 1) = val;
+	  if(val != 0)
+		genotypes_[transcripts_.back()](j - 3, i - 1) = val;
 	}
 	i++;
   }
@@ -125,7 +130,7 @@ void Gene::parse(std::stringstream &ss) {
 	// For each variant
 	for (i = 0; i < v.second.n_cols; i++) {
 	  // Check allele frequency
-	  if (arma::mean(v.second.col(i)) / 2 > 0.5) {
+	  if (arma::mean(arma::vec(v.second.col(i))) / 2 > 0.5) {
 		for (arma::uword j = 0; j < v.second.n_rows; j++) {
 		  switch ((int) v.second(j, i)) {
 		  case 0: {
@@ -169,24 +174,24 @@ void Gene::set_scores(const std::string &k, arma::vec &scores) {
   variant_scores_[k] = scores;
 }
 
-void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Result> &results) {
+void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Result> &results, TaskParams &tp) {
   std::stringstream detail;
 
   arma::vec Y = cov.get_original_phenotypes();
 
-  std::map<std::string, std::vector<std::string>> pos_ts_map;
-  std::map<std::string, double> pos_score_map;
-  std::map<std::string, double> pos_freq_map;
+  std::unordered_map<std::string, std::vector<std::string>> pos_ts_map;
+  std::unordered_map<std::string, double> pos_score_map;
+  std::unordered_map<std::string, double> pos_freq_map;
 
   // Case/Control Ref and Alt counts
-  std::map<std::string, double> pos_caseref_map;
-  std::map<std::string, double> pos_casealt_map;
-  std::map<std::string, double> pos_contref_map;
-  std::map<std::string, double> pos_contalt_map;
+  std::unordered_map<std::string, double> pos_caseref_map;
+  std::unordered_map<std::string, double> pos_casealt_map;
+  std::unordered_map<std::string, double> pos_contref_map;
+  std::unordered_map<std::string, double> pos_contalt_map;
 
   // Alt carriers
-  std::map<std::string, arma::uvec> pos_caseidx_map;
-  std::map<std::string, arma::uvec> pos_contidx_map;
+  std::unordered_map<std::string, arma::uvec> pos_caseidx_map;
+  std::unordered_map<std::string, arma::uvec> pos_contidx_map;
 
   // Collect all positions across transcripts and associated scores
   for (const auto &ts : transcripts_) {
@@ -195,16 +200,27 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
 	arma::uvec cases = arma::find(Y == 1);
 	arma::uvec controls = arma::find(Y == 0);
 
-	arma::mat X = genotypes_[ts];
-	arma::mat Xcase = X.rows(cases);
-	arma::mat Xcont = X.rows(controls);
-	arma::rowvec maf = arma::mean(X, 0) / 2.;
-	// Ref/Alt Counts
-	arma::rowvec case_alt = arma::sum(Xcase, 0);
-	arma::rowvec case_ref = 2 * Xcase.n_rows - case_alt;
-	arma::rowvec cont_alt = arma::sum(Xcont, 0);
-	arma::rowvec cont_ref = 2 * Xcont.n_rows - cont_alt;
+	arma::sp_mat X(genotypes_[ts].t());
+	arma::sp_mat Xcase(X.n_rows, cases.n_elem);
+	arma::sp_mat Xcont(X.n_rows, controls.n_elem);
 
+	arma::uword j = 0;
+	for(const auto &k : cases) {
+	  Xcase.col(j) = X.col(k);
+	  j++;
+	}
+	j = 0;
+	for(const auto &k : controls) {
+	  Xcont.col(j) = X.col(k);
+	  j++;
+	}
+
+	arma::sp_rowvec maf = arma::mean(X, 0) / 2.;
+	// Ref/Alt Counts
+	arma::vec case_alt = arma::vec(arma::sum(Xcase, 1));
+	arma::vec case_ref = arma::vec(2 * Xcase.n_rows - case_alt);
+	arma::vec cont_alt = arma::vec(arma::sum(Xcont, 1));
+	arma::vec cont_ref = arma::vec(2 * Xcont.n_rows - cont_alt);
 	for (const auto &pos : positions_[ts]) {
 	  // Get transcripts
 	  if (pos_ts_map.find(pos) == pos_ts_map.end()) {
@@ -217,7 +233,6 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
 		if (variant_scores_[ts].empty())
 		  variant_scores_[ts].zeros(positions_[ts].size());
 		pos_score_map[pos] = variant_scores_[ts](i);
-		results[ts].testable = arma::find(variant_scores_[ts] > 0).eval().n_elem >= 4;
 	  }
 	  // Get frequency
 	  if (pos_freq_map.find(pos) == pos_freq_map.end()) {
@@ -237,7 +252,7 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
 		pos_contalt_map[pos] = cont_alt(i);
 	  }
 	  // Get indices
-	  arma::uvec carriers = arma::find(X.col(i) > 0);
+	  arma::uvec carriers = arma::find(arma::vec(X.col(i)) > 0);
 	  if (pos_caseidx_map.find(pos) == pos_caseidx_map.end()) {
 		pos_caseidx_map[pos] = arma::intersect(cases, carriers);
 	  }
@@ -246,6 +261,7 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
 	  }
 	  i++;
 	}
+	results[ts].testable = testable(ts, cov, tp);
   }
 
   for (const auto &v : pos_ts_map) {
@@ -276,6 +292,35 @@ std::vector<std::string> &Gene::get_samples() {
   return samples_;
 }
 
+auto Gene::testable(const std::string &k, Covariates &cov, TaskParams &tp) -> bool {
+  arma::vec Yvec = cov.get_original_phenotypes();
+  arma::sp_mat Xmat(genotypes_[k]);
+
+  auto ncase = static_cast<arma::uword>(arma::accu(Yvec));
+
+  // Most Extreme Phenotype Distribution
+  arma::uvec mac_carriers = arma::vec(arma::sum(Xmat, 1)) > 0;
+  arma::uvec maj_carriers = 1 - mac_carriers;
+
+  arma::uword nmac = std::min(ncase, arma::accu(mac_carriers));
+  arma::uword nmaj = (ncase - nmac >= 0) ? ncase - nmac : 0;
+
+  mac_carriers = arma::find(arma::vec(arma::sum(Xmat, 1)) > 0);
+  maj_carriers = arma::find(arma::vec(arma::sum(Xmat, 1)) == 0);
+
+  arma::vec extreme_phen(Yvec.n_elem, arma::fill::zeros);
+  extreme_phen(mac_carriers(arma::span(0, nmac - 1))).ones();
+  if(nmaj > 0) {
+    // There are more cases to distribute than minor allele carriers
+    extreme_phen(maj_carriers(arma::span(0, nmaj - 1))).ones();
+  }
+  assert(arma::accu(extreme_phen) == ncase);
+
+  VAAST vaast(genotypes_[k], cov, weights_[k], positions_[k], k, tp.score_only_minor, tp.score_only_alternative, 2., tp.group_size);
+
+  return arma::accu(vaast.expanded_scores > 0) >= 4;
+}
+
 void print_comma_sep(arma::uvec &x, std::ostream &os) {
   for (arma::uword i = 0; i < x.size(); i++) {
 	if (i == x.size() - 1) {
@@ -287,7 +332,7 @@ void print_comma_sep(arma::uvec &x, std::ostream &os) {
 }
 
 void print_comma_sep(std::vector<std::string> &x, std::ostream &os) {
-  if (x.size() == 0) {
+  if (x.empty()) {
 	os << "-";
 	return;
   }
@@ -301,7 +346,7 @@ void print_comma_sep(std::vector<std::string> &x, std::ostream &os) {
 }
 
 void print_comma_sep(const std::vector<std::string> &x, std::ostream &os) {
-  if (x.size() == 0) {
+  if (x.empty()) {
 	os << "-";
 	return;
   }
@@ -314,7 +359,7 @@ void print_comma_sep(const std::vector<std::string> &x, std::ostream &os) {
   }
 }
 void print_semicolon_sep(arma::uvec &x, std::ostream &os) {
-  if (x.size() == 0) {
+  if (x.empty()) {
 	os << "-";
 	return;
   }

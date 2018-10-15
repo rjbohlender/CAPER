@@ -21,6 +21,7 @@ private:
   const bool gene_list_;
   const bool testable_;
   std::vector<Result> results_;
+  std::vector<std::string> details_;
 
   static const std::set<std::string> pvalue_methods_;
 

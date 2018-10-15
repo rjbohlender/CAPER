@@ -240,8 +240,8 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 	  v.second.original = call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), k, ta.get_tp(), false, true);
 	}
 	// Minor allele carrier indices
-	mac_indices[k] = arma::find(arma::sum(ta.get_gene().get_matrix(k), 1) > 0);
-	maj_indices[k] = arma::find(arma::sum(ta.get_gene().get_matrix(k), 1) == 0);
+	mac_indices[k] = arma::find(arma::sum(arma::mat(ta.get_gene().get_matrix(k)), 1) > 0);
+	maj_indices[k] = arma::find(arma::sum(arma::mat(ta.get_gene().get_matrix(k)), 1) == 0);
 
 #if 0
 	int bin_count = 1;
@@ -428,7 +428,7 @@ void TaskQueue::stage_2(TaskArgs &ta) {
   if (verbose_) {
 	for (const auto &v : ta.results) {
 	  std::cerr << "Stage 2: " << ta.get_gene().get_gene() << "\t" << v.second.transcript << "\t";
-	  std::cerr << v.second.original << std::endl;
+	  std::cerr << std::fixed << std::setprecision(2) << v.second.original << std::endl;
 	}
   }
   if (ta.get_tp().permute_set) {

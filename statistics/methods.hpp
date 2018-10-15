@@ -88,26 +88,6 @@ private:
 			   bool adjust = true);
 #endif
 
-  // VAAST support member functions
-  arma::vec LRT(arma::vec &case_allele1,
-				arma::vec &control_allele1,
-				arma::vec &case_allele0,
-				arma::vec &control_allele0);
-  arma::vec log_likelihood(arma::vec &freq, arma::vec &allele0, arma::vec &allele1);
-
-  std::tuple<arma::mat, arma::vec, std::vector<arma::uvec>, arma::uvec> variant_grouping(const arma::mat &X,
-																						 const arma::vec &Y,
-																						 const arma::vec &w,
-																						 arma::uword group_threshold);
-
-  arma::uvec variant_bitmask(arma::vec vaast_site_scores,
-							 const arma::vec &case_allele1,
-							 const arma::vec &control_allele1,
-							 const arma::vec &case_allele0,
-							 const arma::vec &control_allele0,
-							 bool score_only_minor,
-							 bool score_only_alternative);
-
   // Check weighting
   void check_weights(Gene &gene, const std::string &k, int a = 1, int b = 25, bool no_weight = true);
 

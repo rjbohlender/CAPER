@@ -79,7 +79,7 @@ SKAT_Adjust::SKAT_Adjust(Gene &gene,
 						 int b,
 						 std::shared_ptr<SKAT_Residuals_Logistic> &re2_,
 						 std::map<std::string, std::shared_ptr<SKAT_Optimal_GetQ>> &Q_sim_all) {
-  arma::mat Z = gene.get_matrix(k);
+  arma::mat Z(gene.get_matrix(k));
 
   if (gene.get_weights(k).n_rows == 0) {
 	weights.reshape(Z.n_cols, 1);

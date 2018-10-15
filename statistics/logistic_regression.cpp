@@ -189,7 +189,13 @@ auto LogisticRegression::get_theta() -> arma::rowvec& {
 }
 
 auto LogisticRegression::Wald(arma::mat &X) -> arma::vec {
-  arma::vec v = arma::inv_sympd(hessian(X)).eval().diag();
+  arma::vec v;
+  try{
+    v = arma::inv_sympd(hessian(X)).eval().diag();
+  } catch(std::exception &e) {
+    // If hessian is badly conditioned.
+    v = arma::pinv(hessian(X)).eval().diag();
+  }
   arma::vec p(theta_.n_elem, arma::fill::zeros);
 
   boost::math::chi_squared chisq(1);

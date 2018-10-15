@@ -4,6 +4,8 @@
 
 #include "reporter.hpp"
 
+#include <boost/format.hpp>
+
 const std::set<std::string> Reporter::pvalue_methods_ {
   "SKAT",
   "SKATO"
@@ -33,6 +35,7 @@ auto Reporter::extract_results(std::vector<TaskArgs> &tq_results) -> void {
           }
         } else {
           results[r.second.gene][r.second.transcript] = r.second;
+		  details_.push_back(v.get_gene().get_detail());
         }
       }
     }
@@ -48,6 +51,7 @@ auto Reporter::extract_results(std::vector<TaskArgs> &tq_results) -> void {
     for(auto &v : tq_results) {
       for(auto &r : v.results) {
         results_.emplace_back(std::move(r.second));
+        details_.push_back(v.get_gene().get_detail());
       }
     }
   }
@@ -103,6 +107,7 @@ auto Reporter::recalculate_mgit(std::map<std::string, std::map<std::string, Resu
     for(auto &tr : g.second) {
       int m = tr.second.permuted.size();
 
+      tr.second.permuted.push_back(tr.second.original);
       arma::vec permuted = arma::conv_to<arma::vec>::from(tr.second.permuted);
       arma::vec pvals;
 
@@ -139,7 +144,12 @@ auto Reporter::recalculate_mgit(std::map<std::string, std::map<std::string, Resu
 
 auto Reporter::report_simple(TaskParams &tp) -> void {
   std::stringstream simple_path_ss;
-  simple_path_ss << tp.output_path << "/" << tp.method << ".simple";
+  simple_path_ss << tp.output_path << "/" << tp.method;
+  if(tp.group_size > 0)
+    simple_path_ss << boost::format(".g%1$d") % tp.group_size;
+  if(tp.testable)
+    simple_path_ss << ".testable";
+  simple_path_ss << ".simple";
   std::ofstream simple_ofs(simple_path_ss.str());
 
   // Holds unfinished genes
@@ -211,6 +221,9 @@ auto Reporter::report_simple(TaskParams &tp) -> void {
     if (tp.a != 1 || tp.b != 25) {
       uf_ss << "--beta_weights " << tp.a << "," << tp.b << " ";
     }
+    if (tp.group_size > 0) {
+      uf_ss << " -g " << tp.group_size;
+    }
 
     uf_ss << "-l ";
     for (int i = 0; i < unfinished.size(); i++) {
@@ -228,7 +241,12 @@ auto Reporter::report_simple(TaskParams &tp) -> void {
 
 auto Reporter::report_detail(TaskQueue &tq, TaskParams &tp) -> void {
   std::stringstream detail_path_ss;
-  detail_path_ss << tp.output_path << "/" << tp.method << ".detail";
+  detail_path_ss << tp.output_path << "/" << tp.method;
+  if(tp.group_size > 0)
+    detail_path_ss << boost::format(".g%1$d") % tp.group_size;
+  if(tp.testable)
+    detail_path_ss << ".testable";
+  detail_path_ss << ".detail";
 
   std::ofstream detail(detail_path_ss.str());
 
@@ -237,13 +255,13 @@ auto Reporter::report_detail(TaskQueue &tq, TaskParams &tp) -> void {
   detail << header << std::endl;
 
   int i = 0; // For each gene
-  for (auto &v : tq.get_results()) {
-	detail << v.get_gene().get_detail();
+  for (auto &v : details_) {
+	detail << v;
 	// Print sample / index map at the end
 	if (i == tq.get_results().size() - 1) {
 	  detail << "## Sample Index Map" << std::endl;
 	  int j = 0;
-	  for (auto &s : v.get_gene().get_samples()) {
+	  for (auto &s : tq.get_results()[0].get_gene().get_samples()) {
 		detail << "#\t" << s << "\t" << j << std::endl;
 		j++;
 	  }

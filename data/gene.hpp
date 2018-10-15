@@ -17,6 +17,8 @@
 #include "weight.hpp"
 #include "covariates.hpp"
 #include "result.hpp"
+#include "taskparams.hpp"
+
 
 arma::uvec setdiff(arma::uvec x, arma::uvec y);
 void print_comma_sep(arma::uvec &x, std::ostream &os);
@@ -35,7 +37,7 @@ public:
 
   // Getters
   std::string &get_gene();
-  arma::mat &get_matrix(const std::string &k);
+  arma::sp_mat &get_matrix(const std::string &k);
   std::vector<std::string> &get_transcripts();
   arma::uword get_nvariants(const std::string &k);
   std::vector<std::string> &get_positions(const std::string &k);
@@ -51,9 +53,9 @@ public:
 
   bool is_weighted(const std::string &k);
 
-  void generate_detail(Covariates &cov, std::unordered_map<std::string, Result> &results);
+  void generate_detail(Covariates &cov, std::unordered_map<std::string, Result> &results, TaskParams &tp);
 
-  void clear(Covariates &cov, std::unordered_map<std::string, Result> &results);
+  void clear(Covariates &cov, std::unordered_map<std::string, Result> &results, TaskParams &tp);
 
 private:
   std::map<std::string, bool> weights_set_;
@@ -64,7 +66,7 @@ private:
   std::vector<std::string> transcripts_;
   std::map<std::string, std::vector<std::string>> positions_;
 
-  std::map<std::string, arma::mat> genotypes_;
+  std::map<std::string, arma::sp_mat> genotypes_;
   std::map<std::string, arma::vec> weights_;
   std::vector<std::string> samples_;
 
@@ -74,6 +76,7 @@ private:
   std::string detail_;
 
   void parse(std::stringstream &ss);
+  auto testable(const std::string &k, Covariates &cov, TaskParams &tp) -> bool;
 };
 
 #endif //PERMUTE_ASSOCIATE_GENE_HPP
