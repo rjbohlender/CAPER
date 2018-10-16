@@ -39,9 +39,9 @@ public:
 		   Gene gene,
 		   Covariates cov,
 		   TaskParams &tp,
-		   int succ_thresh,
-		   int s1_perm,
-		   int s2_perm,
+		   arma::uword succ_thresh,
+		   arma::uword s1_perm,
+		   arma::uword s2_perm,
 		   std::vector<std::vector<int32_t>> &perm);
   TaskArgs(Stage stage,
 		   Gene gene,
