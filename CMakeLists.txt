@@ -73,7 +73,16 @@ set(PROJECT_SUPPORT_FILES
     statistics/vaast.cpp
     statistics/vaast.hpp
     utility/jobdispatcher.cpp
-    utility/jobdispatcher.hpp utility/reporter.cpp utility/reporter.hpp data/taskparams.hpp)
+    utility/jobdispatcher.hpp
+    utility/reporter.cpp
+    utility/reporter.hpp
+    data/taskparams.hpp
+    link/gaussian.cpp
+    link/gaussian.hpp
+    link/link.cpp
+    link/link.hpp
+    link/binomial.cpp
+    link/binomial.hpp)
 
 include_directories("${CMAKE_CURRENT_LIST_DIR}/third_party")
 include_directories(${ARMADILLO_INCLUDE_DIRS})

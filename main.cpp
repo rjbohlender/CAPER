@@ -195,11 +195,7 @@ int main(int argc, char **argv) {
   // Testability
   tp.testable = testable;
 
-  if(tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN") {
-    tp.alternate_permutation = true;
-  } else {
-    tp.alternate_permutation = false;
-  }
+  tp.alternate_permutation = tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN";
 
   assert(tp.nthreads > 1);
   if(tp.permute_set && tp.nthreads) {
