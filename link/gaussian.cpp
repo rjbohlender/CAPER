@@ -24,6 +24,19 @@ arma::vec Gaussian::link(arma::mat &X, arma::vec &beta) noexcept {
   }
 }
 
+arma::vec Gaussian::link(arma::vec &mu) noexcept {
+  switch(linkid) {
+  case Gaussian::LinkID::Identity:
+    return mu;
+  case Gaussian::LinkID::Inverse:
+    return 1. / (mu);
+  case Gaussian::LinkID::Log:
+    return arma::log(1. / (mu));
+  default:
+    return arma::vec();
+  }
+}
+
 arma::vec Gaussian::linkinv(arma::mat &X, arma::vec &beta) noexcept {
   switch(linkid) {
   case Gaussian::LinkID::Identity:
@@ -32,6 +45,19 @@ arma::vec Gaussian::linkinv(arma::mat &X, arma::vec &beta) noexcept {
     return 1. / (X * beta);
   case Gaussian::LinkID::Log:
     return arma::exp(X * beta);
+  default:
+    return arma::vec();
+  }
+}
+
+arma::vec Gaussian::linkinv(arma::vec &eta) noexcept {
+  switch(linkid) {
+  case Gaussian::LinkID::Identity:
+    return eta;
+  case Gaussian::LinkID::Inverse:
+    return 1. / (eta);
+  case Gaussian::LinkID::Log:
+    return arma::exp(eta);
   default:
     return arma::vec();
   }
@@ -47,7 +73,7 @@ arma::vec Gaussian::variance(arma::vec &mu) noexcept {
   case Gaussian::LinkID::Log:
     return arma::vec(arma::size(mu), arma::fill::ones);
   default:
-    return arma::vec;
+    return arma::vec();
   }
 }
 
@@ -65,7 +91,7 @@ arma::vec Gaussian::mueta(arma::vec &eta) noexcept {
 }
 
 Gaussian::LinkID Gaussian::check_linkid(const std::string &link) {
-  auto ok = std::find_if(links.cbegin(), links.cend(), linkid);
+  auto ok = std::find(links.cbegin(), links.cend(), link);
   if(ok == links.cend())
     throw(std::logic_error("Wrong link argument to Gaussian."));
 

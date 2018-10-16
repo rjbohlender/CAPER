@@ -2,9 +2,15 @@
 // Created by Bohlender,Ryan James on 8/27/18.
 //
 
+#include <algorithm>
+
 #include "covariates.hpp"
 
-#include <algorithm>
+#include "../link/binomial.hpp"
+#include "../link/gaussian.hpp"
+#include "../statistics/glm.hpp"
+
+
 
 Covariates::Covariates(const std::string& ifile, const std::string& pedfile)
 	: nsamples_(0),
@@ -229,11 +235,20 @@ void Covariates::parse(std::stringstream &ss) {
 }
 
 void Covariates::calculate_odds() {
+#if 0
   LogisticRegression lr(covariates_, phenotypes_);
   odds_ = lr.get_odds();
   prob_ = lr.get_probability();
   eta_ = lr.get_eta();
   coef_ = lr.get_theta();
+#else
+  Binomial link("logit");
+  GLM<Binomial> lr(covariates_, phenotypes_, link);
+  odds_ = lr.mu_ / (1. - lr.mu_);
+  prob_ = lr.mu_;
+  eta_ = lr.eta_;
+  coef_ = lr.beta_.t();
+#endif
 }
 
 /**

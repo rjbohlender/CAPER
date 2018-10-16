@@ -56,7 +56,7 @@ auto LogisticRegression::gradient_descent(arma::mat &Xmat, arma::colvec &Yvec) -
   auto grad = t;
   do {
     // Vectorized update
-    grad = alpha * (Xmat * (h(Xmat, theta_).t() - Yvec)).t() / m;
+    grad = alpha * (Xmat * (h(Xmat, t).t() - Yvec)).t() / m;
     t -= grad;
 
 

@@ -82,7 +82,8 @@ set(PROJECT_SUPPORT_FILES
     link/link.cpp
     link/link.hpp
     link/binomial.cpp
-    link/binomial.hpp)
+    link/binomial.hpp
+    statistics/glm.hpp)
 
 include_directories("${CMAKE_CURRENT_LIST_DIR}/third_party")
 include_directories(${ARMADILLO_INCLUDE_DIRS})

@@ -45,6 +45,37 @@ arma::vec Binomial::link(arma::mat &X, arma::vec &beta) noexcept {
   }
 }
 
+arma::vec Binomial::link(arma::vec &mu) noexcept {
+  switch(linkid) {
+  case Binomial::LinkID::Logit:
+	return arma::log(mu / (1. - mu));
+  case Binomial::LinkID::Probit: {
+	arma::vec ret(mu.n_elem);
+	auto vit = ret.begin();
+	boost::math::normal dist(0.0, 1.0);
+	for (auto &v : arma::vec(mu)) {
+	  *vit = boost::math::quantile(dist, v);
+	  vit++;
+	}
+	return ret;
+  }
+  case Binomial::LinkID::cloglog:
+	return arma::log(-arma::log((1. - mu)));
+  case Binomial::LinkID::Cauchit: {
+	arma::vec ret(mu.n_elem);
+	auto vit = ret.begin();
+	boost::math::cauchy dist(0.0, 1.0);
+	for (auto &v : arma::vec(mu)) {
+	  *vit = boost::math::quantile(dist, v);
+	  vit++;
+	}
+	return ret;
+  }
+  case Binomial::LinkID::Log:
+	return arma::log(mu);
+  }
+}
+
 arma::vec Binomial::linkinv(arma::mat &X, arma::vec &beta) noexcept {
   switch(linkid) {
   case Binomial::LinkID::Logit:
@@ -73,6 +104,37 @@ arma::vec Binomial::linkinv(arma::mat &X, arma::vec &beta) noexcept {
   }
   case Binomial::LinkID::Log:
     return arma::exp(X * beta);
+  }
+}
+
+arma::vec Binomial::linkinv(arma::vec &eta) noexcept {
+  switch(linkid) {
+  case Binomial::LinkID::Logit:
+	return 1. / (1. + arma::exp(-eta));
+  case Binomial::LinkID::Probit:
+	return arma::normcdf(eta);
+  case Binomial::LinkID::cloglog: {
+	arma::vec ret(eta.n_elem);
+	auto vit = ret.begin();
+	for (auto &v : arma::vec(eta)) {
+	  *vit = -std::expm1(-std::exp(v));
+	  vit++;
+	}
+	ret = arma::clamp(ret, std::numeric_limits<double>::min(), 1. - std::numeric_limits<double>::min());
+	return ret;
+  }
+  case Binomial::LinkID::Cauchit: {
+	arma::vec ret(eta.n_elem);
+	auto vit = ret.begin();
+	boost::math::cauchy dist(0.0, 1.0);
+	for (auto &v : arma::vec(eta)) {
+	  *vit = boost::math::cdf(dist, v);
+	  vit++;
+	}
+	return ret;
+  }
+  case Binomial::LinkID::Log:
+	return arma::exp(eta);
   }
 }
 
@@ -107,7 +169,7 @@ arma::vec Binomial::mueta(arma::vec &eta) noexcept {
 }
 
 Binomial::LinkID Binomial::check_linkid(const std::string &link) {
-  auto ok = std::find_if(links.cbegin(), links.cend(), linkid);
+  auto ok = std::find(links.cbegin(), links.cend(), link);
   if(ok == links.cend())
     throw(std::logic_error("Wrong link argument to Binomial."));
 

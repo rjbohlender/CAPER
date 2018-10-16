@@ -118,6 +118,7 @@ private:
    * @brief A split member function to simplify multiple constructors should be need them.
    */
   void split() {
+#if 0
 	const_iter cit = data_.cbegin();
 	size_type cur = 0;
 	size_type next = 0;
@@ -144,6 +145,15 @@ private:
 	  cur = next;
 
 	}
+#else
+	// Faster version described at: https://www.bfilipek.com/2018/07/string-view-perf-followup.html
+	for(auto first = data_.data(), second = data_.data(), last = first + data_.size(); second != last && first != last; first = second + 1) {
+	  second = std::find_first_of(first, last, std::cbegin(delim_), std::cend(delim_));
+
+	  if(first != second)
+	    tokens_.emplace_back(first, second-first);
+	}
+#endif
   }
 
   /** Private members */

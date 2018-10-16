@@ -20,7 +20,9 @@ struct Gaussian : Link {
   explicit Gaussian(const std::string &link="identity");
 
   arma::vec link(arma::mat &X, arma::vec &beta) noexcept override;
+  arma::vec link(arma::vec &mu) noexcept override;
   arma::vec linkinv(arma::mat &X, arma::vec &beta) noexcept override;
+  arma::vec linkinv(arma::vec &eta) noexcept override;
   arma::vec variance(arma::vec &mu) noexcept override;
   arma::vec mueta(arma::vec &eta) noexcept override;
 
