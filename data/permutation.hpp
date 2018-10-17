@@ -8,6 +8,8 @@
 #include <armadillo>
 #include <stocc/randomc.h>
 #include <stocc/stocc.h>
+#include <memory>
+
 
 struct Permute {
   Permute();
