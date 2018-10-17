@@ -27,6 +27,8 @@ struct GLM {
     arma::mat A = X.t();
     mu_ = link.linkinv(A, beta_);
     eta_ = link.link(A, beta_);
+
+    std::cerr << "mu_: " << mu_.t();
   }
 
   // Algorithms for finding the optimum
