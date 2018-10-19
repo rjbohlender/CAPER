@@ -9,7 +9,7 @@
 
 class SKATR_Null {
 public:
-  SKATR_Null(Covariates &cov);
+  explicit SKATR_Null(Covariates &cov);
 
   // Handle permutation
   void shuffle();

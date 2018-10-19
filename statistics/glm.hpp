@@ -27,8 +27,6 @@ struct GLM {
     arma::mat A = X.t();
     mu_ = link.linkinv(A, beta_);
     eta_ = link.link(A, beta_);
-
-    std::cerr << "mu_: " << mu_.t();
   }
 
   // Algorithms for finding the optimum
@@ -40,12 +38,12 @@ template<typename LinkT>
 auto GLM<LinkT>::gradient_descent(arma::mat &X, arma::colvec &Y) -> arma::vec {
   std::cerr << "Running gradient descent.\n";
   auto iterations = 0ull;
-  auto max_iter = 1000000ull;
+  const auto max_iter = 1000000ull;
   auto alpha = 0.005; // Learning rate
   auto tol = 1e-10;
   auto m = static_cast<double>(X.n_cols);
   arma::mat A = X.t();
-  auto b = arma::vec(A.n_cols, arma::fill::zeros);
+  auto b = arma::vec(A.n_cols, arma::fill::randn);
   auto grad = b;
   do {
     // Vectorized update
@@ -54,7 +52,7 @@ auto GLM<LinkT>::gradient_descent(arma::mat &X, arma::colvec &Y) -> arma::vec {
 
 
     iterations++;
-  } while(iterations < max_iter && arma::any(grad > tol));
+  } while(iterations < max_iter && arma::norm(grad) > tol);
   return b;
 }
 
@@ -80,8 +78,8 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
   arma::svd_econ(U, S, V, A);
 
   // Matrices and Vectors
-  arma::vec t(m, arma::fill::zeros);
-  arma::vec s(n, arma::fill::zeros);
+  arma::vec t(m, arma::fill::randn);
+  arma::vec s(n, arma::fill::randn);
   arma::vec s_old;
   arma::vec weights(m, arma::fill::ones);
 
