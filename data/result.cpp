@@ -18,7 +18,8 @@ Result::Result()
 	  mgit_p(NAN),
 	  done(false),
 	  permuted(),
-	  testable(true) {
+	  testable(true),
+	  odds(NAN) {
 }
 
 Result::Result(const std::string &gene, const std::string &transcript)
@@ -35,7 +36,8 @@ Result::Result(const std::string &gene, const std::string &transcript)
 	  done(false),
 	  permuted(),
 	  mgit_successes(0),
-	  testable(true) {
+	  testable(true),
+	  odds(NAN) {
 }
 
 Result::Result(Result &&res) noexcept
@@ -52,7 +54,8 @@ Result::Result(Result &&res) noexcept
 	  done(res.done),
 	  permuted(std::move(res.permuted)),
 	  mgit_successes(res.mgit_successes),
-	  testable(res.testable) {}
+	  testable(res.testable),
+	  odds(res.odds) {}
 
 Result &Result::operator=(Result &&rhs) noexcept {
   gene = std::move(rhs.gene);
@@ -69,6 +72,7 @@ Result &Result::operator=(Result &&rhs) noexcept {
   permuted = std::move(rhs.permuted);
   mgit_successes = rhs.mgit_successes;
   testable = rhs.testable;
+  odds = rhs.odds;
 
   return *this;
 }
@@ -83,7 +87,8 @@ std::ostream &operator<<(std::ostream &stream, const Result &rhs) {
   stream << std::setw(20) << rhs.successes;
   stream << std::setw(20) << rhs.permutations;
   stream << std::setw(20) << rhs.mgit_p;
-  stream << std::setw(20) << rhs.mgit_successes << std::endl;
+  stream << std::setw(20) << rhs.mgit_successes;
+  stream << std::setw(20) << rhs.odds << std::endl;
   return stream;
 }
 

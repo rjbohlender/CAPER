@@ -5,9 +5,9 @@
 #ifndef PERMUTE_ASSOCIATE_NORMAL_HPP
 #define PERMUTE_ASSOCIATE_NORMAL_HPP
 
-#include "link.hpp"
+#include "family.hpp"
 
-struct Gaussian : Link {
+struct Gaussian : Family {
   enum class LinkID {
     Identity,
     Log,
@@ -15,7 +15,9 @@ struct Gaussian : Link {
   };
 
   static const std::vector<std::string> links;
+  static const std::string family;
   const LinkID linkid;
+  const std::string linkname;
 
   explicit Gaussian(const std::string &link="identity");
 
@@ -25,6 +27,7 @@ struct Gaussian : Link {
   arma::vec linkinv(arma::vec &eta) noexcept override;
   arma::vec variance(arma::vec &mu) noexcept override;
   arma::vec mueta(arma::vec &eta) noexcept override;
+  arma::vec dev_resids(arma::vec &y, arma::vec &mu, arma::vec &weight) noexcept override;
 
   LinkID check_linkid(const std::string &link);
 };

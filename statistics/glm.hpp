@@ -7,7 +7,7 @@
 
 #include <armadillo>
 
-#include "../link/link.hpp"
+#include "../link/family.hpp"
 
 template <typename LinkT>
 struct GLM {

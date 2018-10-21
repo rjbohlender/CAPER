@@ -43,6 +43,7 @@ struct Result {
   std::vector<double> permuted;
   int rank;
   bool testable;
+  double odds;
   // std::map<double, double> permuted;
 };
 

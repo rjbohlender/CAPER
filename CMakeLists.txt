@@ -79,11 +79,11 @@ set(PROJECT_SUPPORT_FILES
     data/taskparams.hpp
     link/gaussian.cpp
     link/gaussian.hpp
-    link/link.cpp
-    link/link.hpp
+    link/family.cpp
+    link/family.hpp
     link/binomial.cpp
     link/binomial.hpp
-    statistics/glm.hpp)
+    statistics/glm.hpp statistics/bayesianglm.hpp)
 
 include_directories("${CMAKE_CURRENT_LIST_DIR}/third_party")
 include_directories(${ARMADILLO_INCLUDE_DIRS})

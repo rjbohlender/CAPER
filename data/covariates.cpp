@@ -9,6 +9,7 @@
 #include "../link/binomial.hpp"
 #include "../link/gaussian.hpp"
 #include "../statistics/glm.hpp"
+#include "../statistics/bayesianglm.hpp"
 
 
 
@@ -243,7 +244,7 @@ void Covariates::calculate_odds() {
   coef_ = lr.get_theta();
 #else
   Binomial link("logit");
-  GLM<Binomial> lr(covariates_, phenotypes_, link);
+  BayesianGLM<Binomial> lr(covariates_, phenotypes_, link);
   odds_ = lr.mu_ / (1. - lr.mu_);
   prob_ = lr.mu_;
   eta_ = lr.eta_;

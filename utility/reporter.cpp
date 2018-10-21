@@ -164,7 +164,8 @@ auto Reporter::report_simple(TaskParams &tp) -> void {
   simple_ofs << std::setw(20) << "Successes";
   simple_ofs << std::setw(20) << "Permutations";
   simple_ofs << std::setw(20) << "MGIT";
-  simple_ofs << std::setw(20) << "MGIT_Successes" << std::endl;
+  simple_ofs << std::setw(20) << "MGIT_Successes";
+  simple_ofs << std::setw(20) << "OddsRatio" << std::endl;
   // Print header and formatted results
   double permutation_mean = 0;
   double permutation_variance = 0;
@@ -251,7 +252,7 @@ auto Reporter::report_detail(TaskQueue &tq, TaskParams &tp) -> void {
   std::ofstream detail(detail_path_ss.str());
 
   std::string header =
-      "#Gene\tTranscripts\tVariant\tScore\tAF\tcase_ref\tcase_alt\tcontrol_ref\tcontrol_alt\tcase_list\tcontrol_list";
+      "#Gene\tTranscripts\tVariant\tScore\tOR\tOR_P\tAF\tcase_ref\tcase_alt\tcontrol_ref\tcontrol_alt\tcase_list\tcontrol_list";
   detail << header << std::endl;
 
   int i = 0; // For each gene

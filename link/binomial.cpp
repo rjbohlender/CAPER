@@ -11,8 +11,10 @@
 
 const std::vector<std::string> Binomial::links {"logit", "probit", "cloglog", "Cauchit", "Log"};
 
+const std::string Binomial::family {"binomial"};
+
 Binomial::Binomial(const std::string &link)
-: linkid(check_linkid(link)) {}
+: linkid(check_linkid(link)), linkname(link) {}
 
 arma::vec Binomial::link(arma::mat &X, arma::vec &beta) noexcept {
   switch(linkid) {
@@ -184,4 +186,14 @@ Binomial::LinkID Binomial::check_linkid(const std::string &link) {
   } else {
     return Binomial::LinkID::Log;
   }
+}
+
+arma::vec Binomial::dev_resids(arma::vec &y, arma::vec &mu, arma::vec &weight) noexcept {
+  auto y_log_y = [](const arma::vec &y, const arma::vec &mu) {
+    arma::vec ret = y % log(y / mu);
+    ret.replace(arma::datum::nan, 0);
+    return ret;
+  };
+  arma::vec ret = 2. * weight % (y_log_y(y, mu) + y_log_y((1. - y), (1. - mu)));
+  return ret;
 }

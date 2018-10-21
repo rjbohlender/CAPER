@@ -3,6 +3,8 @@
 //
 
 #include "taskargs.hpp"
+#include "../statistics/bayesianglm.hpp"
+#include "../link/binomial.hpp"
 
 TaskArgs::TaskArgs(Stage stage,
 				   Gene gene,
@@ -141,6 +143,13 @@ std::vector<std::vector<int32_t>> &TaskArgs::get_permutations() {
 }
 
 void TaskArgs::cleanup() {
+  Binomial link("logit");
+  for(const auto &ts : gene_.get_transcripts()) {
+    arma::mat X = arma::mat(arma::sum(gene_.get_matrix(ts).t(), 0));
+    arma::mat D = arma::join_vert(cov_.get_covariate_matrix(), X);
+    BayesianGLM<Binomial> fit(D, cov_.get_original_phenotypes(), link);
+    results[ts].odds = std::exp(fit.beta_(fit.beta_.n_elem - 1));
+  }
   gene_.clear(cov_, results, tp_);
   cov_.clear();
   method_.clear(gene_.get_transcripts());

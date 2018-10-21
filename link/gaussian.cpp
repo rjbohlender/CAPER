@@ -8,8 +8,10 @@
 
 const std::vector<std::string> Gaussian::links { "identity", "inverse", "log" };
 
+const std::string Gaussian::family {"gaussian"};
+
 Gaussian::Gaussian(const std::string &link)
-: linkid(check_linkid(link)) {}
+: linkid(check_linkid(link)), linkname(link) {}
 
 arma::vec Gaussian::link(arma::mat &X, arma::vec &beta) noexcept {
   switch(linkid) {
@@ -102,6 +104,11 @@ Gaussian::LinkID Gaussian::check_linkid(const std::string &link) {
   } else {
     return Gaussian::LinkID::Inverse;
   }
+}
+
+// TODO: Implement
+arma::vec Gaussian::dev_resids(arma::vec &y, arma::vec &mu, arma::vec &weight) noexcept {
+  return arma::vec();
 }
 
 

@@ -9,6 +9,8 @@
 
 #include "gene.hpp"
 #include "../statistics/vaast.hpp"
+#include "../link/binomial.hpp"
+#include "../statistics/bayesianglm.hpp"
 
 Gene::Gene(std::stringstream &ss,
 		   unsigned long nsamples,
@@ -182,6 +184,8 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
   std::unordered_map<std::string, std::vector<std::string>> pos_ts_map;
   std::unordered_map<std::string, double> pos_score_map;
   std::unordered_map<std::string, double> pos_freq_map;
+  std::unordered_map<std::string, double> pos_odds_map;
+  std::unordered_map<std::string, double> pos_odds_pval_map;
 
   // Case/Control Ref and Alt counts
   std::unordered_map<std::string, double> pos_caseref_map;
@@ -215,12 +219,16 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
 	  j++;
 	}
 
-	arma::sp_rowvec maf = arma::mean(X, 0) / 2.;
+	arma::vec maf = arma::vec(arma::mean(X, 1) / 2.);
 	// Ref/Alt Counts
-	arma::vec case_alt = arma::vec(arma::sum(Xcase, 1));
-	arma::vec case_ref = arma::vec(2 * Xcase.n_rows - case_alt);
-	arma::vec cont_alt = arma::vec(arma::sum(Xcont, 1));
-	arma::vec cont_ref = arma::vec(2 * Xcont.n_rows - cont_alt);
+	arma::vec case_alt = X * Y;
+	arma::vec case_ref = 2 * cases.n_elem - case_alt;
+	arma::vec cont_alt = X * (1. - Y);
+	arma::vec cont_ref = 2 * controls.n_elem - cont_alt;
+	// Get odds
+	Binomial link("logit");
+	arma::mat D = arma::join_vert(cov.get_covariate_matrix(), arma::mat(X).each_col() - arma::mean(arma::mat(X), 1));
+	BayesianGLM<Binomial> fit(D, Y, link);
 	for (const auto &pos : positions_[ts]) {
 	  // Get transcripts
 	  if (pos_ts_map.find(pos) == pos_ts_map.end()) {
@@ -233,6 +241,8 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
 		if (variant_scores_[ts].empty())
 		  variant_scores_[ts].zeros(positions_[ts].size());
 		pos_score_map[pos] = variant_scores_[ts](i);
+		pos_odds_map[pos] = fit.beta_(cov.get_covariate_matrix().n_rows + i);
+		pos_odds_pval_map[pos] = fit.pval_(cov.get_covariate_matrix().n_rows + i);
 	  }
 	  // Get frequency
 	  if (pos_freq_map.find(pos) == pos_freq_map.end()) {
@@ -252,7 +262,7 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
 		pos_contalt_map[pos] = cont_alt(i);
 	  }
 	  // Get indices
-	  arma::uvec carriers = arma::find(arma::vec(X.col(i)) > 0);
+	  arma::uvec carriers = arma::find(arma::rowvec(X.row(i)) > 0);
 	  if (pos_caseidx_map.find(pos) == pos_caseidx_map.end()) {
 		pos_caseidx_map[pos] = arma::intersect(cases, carriers);
 	  }
@@ -268,14 +278,17 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
 	detail << gene_ << "\t";
 	print_comma_sep(v.second, detail);
 	detail << "\t";
-	detail << boost::format("%1$s\t%2$.2f\t%3$d\t%4$d\t%5$d\t%6$d\t%7$d\t")
+	detail << boost::format("%1$s\t%2$.2f\t%3$.2f\t%4$.4f\t%5$d\t%6$d\t%7$d\t%8$d\t%9$d")
 		% v.first
 		% pos_score_map[v.first]
+		% std::exp(pos_odds_map[v.first])
+		% pos_odds_pval_map[v.first]
 		% pos_freq_map[v.first]
 		% pos_caseref_map[v.first]
 		% pos_casealt_map[v.first]
 		% pos_contref_map[v.first]
 		% pos_contalt_map[v.first];
+	detail << "\t";
 	print_semicolon_sep(pos_caseidx_map[v.first], detail);
 	detail << "\t";
 	print_semicolon_sep(pos_contidx_map[v.first], detail);
