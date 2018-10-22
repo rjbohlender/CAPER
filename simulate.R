@@ -1,12 +1,12 @@
 # Quick and dirty genetic simulation
 
-sink("~/Desktop/test.matrix")
-total <- 1000000
+sink("~/CLionProjects/Permute_Associate/test.sim/test.matrix")
+total <- 50000
 
 # Log odds 
 lodds <- log(10)
 
-ngenes <- 20
+ngenes <- 1000
 nsnps <- rpois(ngenes, 20)
 ncausal <- 10
 
@@ -56,13 +56,13 @@ header <- paste("#Gene\tTranscript\tLocation", paste(labels, collapse = "\t"), s
 
 # Output the matrix header
 
-sink("~/Desktop/header.txt")
+sink("~/CLionProjects/Permute_Associate/test.sim/header.txt")
 cat(header)
 sink()
 
 # Write a ped file
 
-sink("~/Desktop/test_data.ped")
+sink("~/CLionProjects/Permute_Associate/test.sim/test_data.ped")
 cat("#fid\tiid\tpid\tmid\tsex\taff\n")
 for(i in 1:length(labels)) {
   if(case_control[i] == 1) {
@@ -76,7 +76,7 @@ sink()
 
 # Write a covariate matrix
 
-sink("~/Desktop/test_data.cov")
+sink("~/CLionProjects/Permute_Associate/test.sim/test_data.cov")
 for(i in 1:length(labels)) {
   cat(paste(labels[i], paste(rnorm(10), collapse="\t"), "\n", sep="\t"))
 }

@@ -59,8 +59,8 @@ set(PROJECT_SUPPORT_FILES
     data/bed.cpp
     data/result.cpp
     data/weight.cpp
-    third_party/SKAT/qfc2.cpp
-    third_party/SKAT/qfc2.hpp
+    third_party/QFC/qfc2.cpp
+    third_party/QFC/qfc2.hpp
     data/taskargs.cpp
     data/taskqueue.cpp
     statistics/skat.cpp
@@ -83,7 +83,8 @@ set(PROJECT_SUPPORT_FILES
     link/family.hpp
     link/binomial.cpp
     link/binomial.hpp
-    statistics/glm.hpp statistics/bayesianglm.hpp)
+    statistics/glm.hpp
+    statistics/bayesianglm.hpp)
 
 include_directories("${CMAKE_CURRENT_LIST_DIR}/third_party")
 include_directories(${ARMADILLO_INCLUDE_DIRS})
