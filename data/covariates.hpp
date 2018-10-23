@@ -17,7 +17,7 @@
 
 class Covariates {
 public:
-  explicit Covariates(const std::string& ifile, const std::string& pedfile);
+  explicit Covariates(const std::string& ifile, const std::string& pedfile, bool linear=false);
   explicit Covariates(std::stringstream& ss);
 
   Covariates(const Covariates &cov) = default;
@@ -39,8 +39,9 @@ public:
   arma::mat &get_covariate_matrix();
   arma::colvec &get_odds();
   arma::colvec &get_original_phenotypes();
-  arma::vec &get_probability();
+  arma::vec &get_fitted();
   arma::uvec &get_indices();
+  arma::vec get_residuals();
   arma::vec &get_mean();
   arma::rowvec &get_coef();
 
@@ -60,13 +61,14 @@ private:
   arma::colvec original_;
   arma::mat covariates_;
   arma::colvec odds_;
-  arma::vec prob_;
+  arma::vec fitted_;
   arma::uvec indices_;
   arma::vec mean_; // Mean of MFNCH
   arma::vec eta_;
   arma::rowvec coef_;
 
   bool sorted_;
+  bool linear_;
 
   unsigned long nsamples_;
   unsigned long ncases_;
@@ -74,7 +76,7 @@ private:
   void parse(const std::string& ifile, const std::string& pedfile);
   void parse(std::stringstream& ss);
 
-  void calculate_odds();
+  void fit_null();
 };
 
 #endif //PERMUTE_ASSOCIATE_COVARIATES_HPP

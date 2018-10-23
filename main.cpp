@@ -27,6 +27,10 @@ int main(int argc, char **argv) {
   // Only using C++ IO.
   std::ios_base::sync_with_stdio(false);
 
+  // Run timer
+  arma::wall_clock timer;
+  timer.tic();
+
   // BOOST Program Options Implementation
   po::options_description desc("Permutation tool for gene-based rare-variant analysis.\nAllowed options");
   po::variables_map vm;
@@ -36,6 +40,7 @@ int main(int argc, char **argv) {
   bool score_only_minor = false;
   bool score_only_alternative = false;
   bool testable = false;
+  bool linear = false;
   boost::optional<std::string> bed;
   boost::optional<std::string> weight;
   boost::optional<std::string> gene_list;
@@ -75,6 +80,9 @@ int main(int argc, char **argv) {
 			("kernel,k",
 			 po::value<std::string>()->default_value("wLinear"),
 			 "Kernel for use with SKAT.\nOne of: {Linear, wLinear, IBS, wIBS, Quadratic, twoWayX}. Default is wLinear.")
+			("linear",
+			 po::bool_switch(&linear),
+			 "Quantitative trait switch.")
 			("beta_weights",
 			 po::value<std::string>()->default_value("1,25"),
 			 "Parameters for the beta distribution. Two values, comma separated corresponding to a,b. Default is 1,25.")
@@ -189,6 +197,7 @@ int main(int argc, char **argv) {
   // SKAT Options
   tp.kernel = vm["kernel"].as<std::string>();
   tp.adjust = adjust;
+  tp.linear = linear;
   // Beta weights
   tp.a = std::stod(beta_split[0]);
   tp.b = std::stod(beta_split[1]);
@@ -247,12 +256,9 @@ int main(int argc, char **argv) {
   // Initialize randomization
   arma::arma_rng::set_seed_random();
 
-  arma::wall_clock timer;
-  timer.tic();
-
   JobDispatcher jd(tp);
 
   double n = timer.toc();
-  std::cerr << "Elapsed time in JobDispatcher: " << n << std::endl;
+  std::cerr << "Elapsed time: " << n << std::endl;
   return 0;
 }

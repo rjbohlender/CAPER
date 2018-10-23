@@ -12,7 +12,7 @@
 using namespace std::chrono_literals;
 
 JobDispatcher::JobDispatcher(TaskParams &tp)
-	: tp_(tp), tq_(tp_.nthreads - 1, tp.verbose), cov_(tp.covariates_path, tp.ped_path) {
+	: tp_(tp), tq_(tp_.nthreads - 1, tp.verbose), cov_(tp.covariates_path, tp.ped_path, tp.linear) {
   // Initialize bed and weights
   if(tp.gene_list)
     gene_list_ = RJBUtil::Splitter<std::string>(*tp.gene_list, ",");
@@ -54,7 +54,7 @@ JobDispatcher::JobDispatcher(TaskParams &tp)
 	}
 	pset_ofs.close();
 
-	cov_.get_probability().t().print(lr_ofs);
+	cov_.get_fitted().t().print(lr_ofs);
 	lr_ofs.close();
 	// Finish if there are no stage 2 permutations.
 	if (tp.stage_2_permutations == 0) {

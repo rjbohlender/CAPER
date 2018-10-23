@@ -7,7 +7,7 @@
 SKATR_Null::SKATR_Null(Covariates &cov) {
   X = cov.get_covariate_matrix();
   Y = cov.get_phenotype_vector();
-  pi0 = cov.get_probability();
+  pi0 = cov.get_fitted();
   Yv = pi0 % (1 - pi0);
   Yh = arma::sqrt(Yv);
 
@@ -21,7 +21,7 @@ SKATR_Null::SKATR_Null(Covariates &cov) {
   indices = arma::regspace<arma::uvec>(0, Y.n_rows - 1);
 }
 
-void SKATR_Null::shuffle() {
+auto SKATR_Null::shuffle() noexcept -> void{
   indices = arma::shuffle(indices);
 
   arma::mat U, V;
@@ -31,34 +31,76 @@ void SKATR_Null::shuffle() {
   Ux = arma::diagmat(Yh) * U;
 }
 
-arma::vec SKATR_Null::get_U0() {
+auto SKATR_Null::get_U0() noexcept -> arma::vec {
   return U0(indices);
 }
 
-arma::vec SKATR_Null::get_pi0() {
+auto SKATR_Null::get_pi0() noexcept -> arma::vec {
   return pi0(indices);
 }
 
-arma::vec SKATR_Null::get_Yv() {
+auto SKATR_Null::get_Yv() noexcept -> arma::vec {
   return Yv(indices);
 }
 
-arma::vec SKATR_Null::get_Yh() {
+auto SKATR_Null::get_Yh() noexcept -> arma::vec {
   return Yh(indices);
 }
 
-arma::mat SKATR_Null::get_Ux() {
+auto SKATR_Null::get_Ux() noexcept -> const arma::mat & {
   return Ux;
 }
 
-arma::vec SKATR_Null::get_coef() {
+auto SKATR_Null::get_coef() noexcept -> arma::rowvec {
   return coef;
 }
 
-arma::vec SKATR_Null::get_Y() {
+auto SKATR_Null::get_Y() noexcept -> arma::vec {
   return Y(indices);
 }
 
-arma::mat SKATR_Null::get_X() {
+auto SKATR_Null::get_X() noexcept -> const arma::mat & {
+  return X;
+}
+
+SKATR_Linear_Null::SKATR_Linear_Null(Covariates &cov) {
+  X = cov.get_covariate_matrix();
+  Y = cov.get_phenotype_vector();
+
+  arma::mat U, V;
+  arma::vec s;
+  arma::svd_econ(U, s, V, X.t());
+
+  Ux = U;
+  U0 = cov.get_residuals();
+  s2 = arma::accu(arma::pow(U0, 2)) / (Y.n_elem - X.n_rows); // Residual sum of squares over residual df
+
+  indices = arma::regspace<arma::uvec>(0, Y.n_rows - 1);
+}
+
+auto SKATR_Linear_Null::shuffle() noexcept -> void {
+  indices = arma::shuffle(indices);
+}
+
+auto SKATR_Linear_Null::get_U0() noexcept -> arma::vec {
+  return U0(indices);
+}
+
+auto SKATR_Linear_Null::get_s2() noexcept -> double {
+  return s2;
+}
+
+auto SKATR_Linear_Null::get_Ux() noexcept -> const arma::mat & {
+  return Ux;
+}
+
+auto SKATR_Linear_Null::get_coef() noexcept -> const arma::rowvec & {
+  return coef;
+}
+
+auto SKATR_Linear_Null::get_Y() noexcept -> arma::vec {
+  return Y(indices);
+}
+auto SKATR_Linear_Null::get_X() noexcept -> const arma::mat & {
   return X;
 }

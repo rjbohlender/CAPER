@@ -3,7 +3,7 @@
 //
 
 #include "skat.hpp"
-#include "../third_party/SKAT/qfc2.hpp"
+#include "../third_party/QFC/qfc2.hpp"
 
 // Boost Math
 #include <boost/math/distributions/non_central_chi_squared.hpp>

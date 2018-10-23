@@ -56,3 +56,4 @@ matrix2hdf5.cpp
 /test_ACC/
 /test.vaast/
 /test.sim/
+/test.lin.sim/

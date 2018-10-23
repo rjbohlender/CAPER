@@ -20,6 +20,7 @@ struct TaskParams {
 
   // For SKATO, SKAT, BURDEN
   bool alternate_permutation;
+  bool linear;
 
   // Method
   std::string method;
@@ -59,8 +60,8 @@ struct TaskParams {
   // SKAT Parameters
   std::string kernel; // Kernel selection
   bool adjust; // Sample size adjustment
-  double a; // Beta weight parameters
-  double b; // Beta weight parameters
+  int a; // Beta weight parameters
+  int b; // Beta weight parameters
 };
 
 #endif //PERMUTE_ASSOCIATE_TASKPARAMS_HPP

@@ -106,9 +106,8 @@ Gaussian::LinkID Gaussian::check_linkid(const std::string &link) {
   }
 }
 
-// TODO: Implement
 arma::vec Gaussian::dev_resids(arma::vec &y, arma::vec &mu, arma::vec &weight) noexcept {
-  return arma::vec();
+  return weight % arma::pow(y - mu, 2);
 }
 
 

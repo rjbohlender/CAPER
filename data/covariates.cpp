@@ -13,9 +13,10 @@
 
 
 
-Covariates::Covariates(const std::string& ifile, const std::string& pedfile)
+Covariates::Covariates(const std::string& ifile, const std::string& pedfile, bool linear)
 	: nsamples_(0),
-	  ncases_(0) {
+	  ncases_(0),
+	  linear_(linear) {
 
   parse(ifile, pedfile);
   indices_ = arma::regspace<arma::uvec>(0, nsamples_ - 1);
@@ -24,9 +25,10 @@ Covariates::Covariates(const std::string& ifile, const std::string& pedfile)
 
 Covariates::Covariates(std::stringstream &ss)
 	: nsamples_(0),
-	  ncases_(0) {
+	  ncases_(0),
+	  linear_(false) {
   parse(ss);
-  calculate_odds();
+  fit_null();
 
   indices_ = arma::regspace<arma::uvec>(0, nsamples_ - 1);
 }
@@ -73,8 +75,8 @@ arma::colvec &Covariates::get_original_phenotypes() {
   return original_;
 }
 
-arma::vec &Covariates::get_probability() {
-  return prob_;
+arma::vec &Covariates::get_fitted() {
+  return fitted_;
 }
 
 arma::uvec &Covariates::get_indices() {
@@ -117,9 +119,22 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
     RJBUtil::Splitter<std::string> splitter(line, "\t");
 
     std::string sample_id = splitter[1];
-    double phen = std::stoi(splitter[5]);
-
-    sample_phen_map[sample_id] = (phen == 2) ? 1 : 0;
+    if(linear_) {
+      try {
+		sample_phen_map[sample_id] = std::stod(splitter[6]);
+      } catch(std::exception &e) {
+        std::cerr << "Failed to convert quantitative phenotype in .ped file column 7.\n";
+        throw(e);
+      }
+    } else {
+      try {
+		double phen = std::stoi(splitter[5]);
+		sample_phen_map[sample_id] = (phen == 2) ? 1 : 0;
+      } catch(std::exception &e) {
+        std::cerr << "Failed to convert binary phenotype in .ped file column 6.\n";
+        throw(e);
+      }
+    }
   }
 
   // Parse the PCA matrix file
@@ -235,21 +250,21 @@ void Covariates::parse(std::stringstream &ss) {
 #endif
 }
 
-void Covariates::calculate_odds() {
-#if 0
-  LogisticRegression lr(covariates_, phenotypes_);
-  odds_ = lr.get_odds();
-  prob_ = lr.get_probability();
-  eta_ = lr.get_eta();
-  coef_ = lr.get_theta();
-#else
-  Binomial link("logit");
-  BayesianGLM<Binomial> lr(covariates_, phenotypes_, link);
-  odds_ = lr.mu_ / (1. - lr.mu_);
-  prob_ = lr.mu_;
-  eta_ = lr.eta_;
-  coef_ = lr.beta_.t();
-#endif
+void Covariates::fit_null() {
+  if(linear_) {
+    Gaussian link("identity");
+    GLM<Gaussian> fit(covariates_, phenotypes_, link);
+    fitted_ = fit.mu_;
+    eta_ = fit.eta_;
+    coef_ = fit.beta_.t();
+  } else {
+	Binomial link("logit");
+	BayesianGLM<Binomial> fit(covariates_, phenotypes_, link);
+	odds_ = fit.mu_ / (1. - fit.mu_);
+	fitted_ = fit.mu_;
+	eta_ = fit.eta_;
+	coef_ = fit.beta_.t();
+  }
 }
 
 /**
@@ -280,7 +295,7 @@ void Covariates::sort_covariates(std::string &header) {
   phenotypes_ = phenotypes_(indices);
   covariates_ = covariates_.cols(indices);
 
-  calculate_odds();
+  fit_null();
 
   sorted_ = true;
 }
@@ -291,5 +306,9 @@ bool Covariates::is_sorted() {
 
 arma::rowvec &Covariates::get_coef() {
   return coef_;
+}
+
+arma::vec Covariates::get_residuals() {
+  return phenotypes_ - fitted_;
 }
 

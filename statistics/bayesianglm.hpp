@@ -128,7 +128,7 @@ auto BayesianGLM<LinkT>::irls(arma::mat &X, arma::colvec &Y) -> arma::vec {
 
     if(!(link.family == "poisson") && !(link.family == "binomial")) {
       mse_resid = arma::mean(arma::pow(w % (z - A * coef), 2));
-      mse_uncertainty = arma::mean(arma::sum(A.each_col() % (A * V_coef), 1)) * dispersion;
+      mse_uncertainty = arma::mean(arma::sum((A * V_coef) % A, 1)) * dispersion;
       dispersion = arma::as_scalar(mse_resid) + arma::as_scalar(mse_uncertainty);
     }
 

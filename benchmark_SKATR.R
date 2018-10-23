@@ -1,5 +1,6 @@
 #!/usr/bin/env Rscript
-require(SKAT)
+require(SKATR)
+require(CompQuadForm)
 require(data.table)
 
 eprintf <- function(...) {
@@ -43,9 +44,7 @@ for(i in 1:length(case_control)) {
 cov$V1 = case_control
 
 run_analysis <- function(df, covars, nperm) {
-  null_formula <- paste(c("V1 ~ 1", colnames(covars)[3:ncol(covars) - 1]), sep = " + ", collapse = " + ")
-  eprintf(paste("formula: ", null_formula))
-  obj <- SKAT_Null_Model(formula(null_formula), data=covars, out_type = "D", n.Resampling = nperm, type.Resampling = "permutation", Adjustment = F)
+  obj <- KAT.null(as.vector(covars$V1), as.matrix(covars[,2:ncol(covars)]))
   
   for(gene in levels(df$Gene)) {
     s = df[df$Gene == gene,]
@@ -54,8 +53,8 @@ run_analysis <- function(df, covars, nperm) {
     for(ts in levels(s$Transcript)) {
       Z = t(as.matrix(s[s$Transcript == ts,4:ncol(s)]))
       Z[Z > 2] = 0
-      res <- SKAT(Z, obj, kernel="linear", method="optimal")
-      eprintf("%s %s %6.5f %6.5f", gene, ts, res$p.value, sum(res$p.value.resampling <= res$p.value) / nperm)
+      res <- SKATh(obj, Z)
+      eprintf("%s %s %6.5f", gene, ts, res)
     }
   }
 }

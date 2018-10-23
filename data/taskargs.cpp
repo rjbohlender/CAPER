@@ -17,7 +17,7 @@ TaskArgs::TaskArgs(Stage stage,
 	: stage_(stage),
 	  gene_(std::move(gene)),
 	  cov_(cov),
-	  method_(tp.method, tp.kernel, cov),
+	  method_(tp, cov),
 	  stage_1_permutations_(s1_perm),
 	  stage_2_permutations_(s2_perm),
 	  permutations(perm),
@@ -39,7 +39,7 @@ TaskArgs::TaskArgs(Stage stage,
 	: stage_(stage),
 	  gene_(std::move(gene)),
 	  cov_(cov),
-	  method_(tp.method, tp.kernel, cov),
+	  method_(tp, cov),
 	  stage_1_permutations_(tp.stage_1_permutations),
 	  stage_2_permutations_(tp.stage_2_permutations),
 	  permutations(perm),
@@ -143,12 +143,18 @@ std::vector<std::vector<int32_t>> &TaskArgs::get_permutations() {
 }
 
 void TaskArgs::cleanup() {
-  Binomial link("logit");
-  for(const auto &ts : gene_.get_transcripts()) {
-    arma::mat X = arma::mat(arma::sum(gene_.get_matrix(ts).t(), 0));
-    arma::mat D = arma::join_vert(cov_.get_covariate_matrix(), X);
-    BayesianGLM<Binomial> fit(D, cov_.get_original_phenotypes(), link);
-    results[ts].odds = std::exp(fit.beta_(fit.beta_.n_elem - 1));
+  if(!tp_.alternate_permutation) {
+	Binomial link("logit");
+	for(const auto &ts : gene_.get_transcripts()) {
+	  arma::mat X = arma::mat(arma::sum(gene_.get_matrix(ts).t(), 0));
+	  arma::mat D = arma::join_vert(cov_.get_covariate_matrix(), X);
+	  BayesianGLM<Binomial> fit(D, cov_.get_original_phenotypes(), link);
+	  results[ts].odds = std::exp(fit.beta_(fit.beta_.n_elem - 1));
+	}
+  } else {
+	for(const auto &ts : gene_.get_transcripts()) {
+	  results[ts].odds = 1; // default
+	}
   }
   gene_.clear(cov_, results, tp_);
   cov_.clear();

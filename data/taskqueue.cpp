@@ -136,15 +136,22 @@ void TaskQueue::stage_1(TaskArgs &ta) {
   }
 
   if (verbose_) {
-	for (const auto &v : ta.results) {
-	  std::cerr << "Stage 1: " << ta.get_gene().get_gene() << "\t" << v.second.transcript << "\t";
-	  std::cerr << v.second.original << std::endl;
-	}
+    if(ta.get_tp().alternate_permutation) {
+	  for (const auto &v : ta.results) {
+		std::cerr << "Stage 1: " << ta.get_gene().get_gene() << "\t" << v.second.transcript << "\t";
+		std::cerr << std::fixed << std::setprecision(2) << v.second.original << std::endl;
+	  }
+    } else {
+	  for (const auto &v : ta.results) {
+		std::cerr << "Stage 1: " << ta.get_gene().get_gene() << "\t" << v.second.transcript << "\t";
+		std::cerr << std::fixed << std::setprecision(6) << v.second.original << std::endl;
+	  }
+    }
   }
 
   int iter = 0;
   while (iter < ta.get_npermutations()) {
-	if (!(ta.get_methods().str() == "SKAT") && !(ta.get_methods().str() == "SKATO") && !(ta.get_methods().str() == "BURDEN")) {
+	if (!ta.get_tp().alternate_permutation) {
 	  ta.get_cov().set_phenotype_vector(ta.get_permutations()[iter]);
 	}
 	int transcript_no = -1;
@@ -154,7 +161,7 @@ void TaskQueue::stage_1(TaskArgs &ta) {
 	  const std::string &k = v.second.transcript;
 	  double perm_val;
 
-	  if (!(ta.get_methods().str() == "SKAT") && !(ta.get_methods().str() == "SKATO") && !(ta.get_methods().str() == "BURDEN")) {
+	  if (!ta.get_tp().alternate_permutation) {
 		perm_val = call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), v.second.transcript, ta.get_tp(), false, false);
 	  } else {
 		if (transcript_no == 0) {
@@ -233,18 +240,19 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 
 
   // Setup
-  for (auto &v : ta.results) {
-	const std::string &k = v.second.transcript;
+  if(!ta.get_tp().alternate_permutation) {
+	for (auto &v : ta.results) {
+	  const std::string &k = v.second.transcript;
 
-	if (std::isnan(v.second.original)) {
-	  v.second.original = call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), k, ta.get_tp(), false, true);
-	}
-	// Minor allele carrier indices
-	mac_indices[k] = arma::find(arma::sum(arma::mat(ta.get_gene().get_matrix(k)), 1) > 0);
-	maj_indices[k] = arma::find(arma::sum(arma::mat(ta.get_gene().get_matrix(k)), 1) == 0);
+	  if (std::isnan(v.second.original)) {
+		v.second.original = call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), k, ta.get_tp(), false, true);
+	  }
+	  // Minor allele carrier indices
+	  mac_indices[k] = arma::find(arma::sum(arma::mat(ta.get_gene().get_matrix(k)), 1) > 0);
+	  maj_indices[k] = arma::find(arma::sum(arma::mat(ta.get_gene().get_matrix(k)), 1) == 0);
 
 #if 0
-	int bin_count = 1;
+	  int bin_count = 1;
 	while(maj_indices[k].n_rows / (2 * bin_count) > mac_indices[k].n_rows)
 	  bin_count++;
 
@@ -264,10 +272,19 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 	  maj_case_count[k].push_back(ta.get_cov().get_ncases() - v);
 	}
 #endif
-	assert(mac_indices[k].n_rows + maj_indices[k].n_rows == ta.get_cov().get_nsamples());
+	  assert(mac_indices[k].n_rows + maj_indices[k].n_rows == ta.get_cov().get_nsamples());
 
-	mac_odds[k] = ta.get_cov().get_odds()(mac_indices[k]);
-	maj_odds[k] = ta.get_cov().get_odds()(maj_indices[k]);
+	  mac_odds[k] = ta.get_cov().get_odds()(mac_indices[k]);
+	  maj_odds[k] = ta.get_cov().get_odds()(maj_indices[k]);
+	}
+  } else {
+	for (auto &v : ta.results) {
+	  const std::string &k = v.second.transcript;
+
+	  if (std::isnan(v.second.original)) {
+		v.second.original = call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), k, ta.get_tp(), false, true);
+	  }
+	}
   }
 
   int iter = 0;
@@ -287,7 +304,7 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 	  transcript_no++;
 
 	  // SKAT corrects for covariates so we don't use this permutation approach
-	  if (!(ta.get_methods().str() == "SKAT") && !(ta.get_methods().str() == "SKATO") && !(ta.get_methods().str() == "BURDEN")) {
+	  if (!ta.get_tp().alternate_permutation) {
 		// Permute minor allele carriers
 		// arma::vec temp_odds(mac_odds[k].n_rows + 1, arma::fill::zeros);
 		// temp_odds(arma::span(0, mac_odds[k].n_rows - 1)) = mac_odds[k];
@@ -426,10 +443,17 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 	iter++;
   }
   if (verbose_) {
-	for (const auto &v : ta.results) {
-	  std::cerr << "Stage 2: " << ta.get_gene().get_gene() << "\t" << v.second.transcript << "\t";
-	  std::cerr << std::fixed << std::setprecision(2) << v.second.original << std::endl;
-	}
+    if(!ta.get_tp().alternate_permutation) {
+	  for (const auto &v : ta.results) {
+		std::cerr << "Stage 2: " << ta.get_gene().get_gene() << "\t" << v.second.transcript << "\t";
+		std::cerr << std::fixed << std::setprecision(2) << v.second.original << std::endl;
+	  }
+    } else {
+	  for (const auto &v : ta.results) {
+		std::cerr << "Stage 2: " << ta.get_gene().get_gene() << "\t" << v.second.transcript << "\t";
+		std::cerr << std::fixed << std::setprecision(6) << v.second.original << std::endl;
+	  }
+    }
   }
   if (ta.get_tp().permute_set) {
     pset_ofs.close();
@@ -531,9 +555,9 @@ double TaskQueue::call_method(Methods &method, Gene &gene, Covariates &cov, cons
   } else if(tp.method == "CMC") {
     return method.CMC(gene, cov, k, tp.maf);
   } else if(tp.method == "SKAT") {
-    return method.SKATR(gene, k, shuffle, tp.a, tp.b, detail);
+    return method.SKATR(gene, k, shuffle, tp.a, tp.b, detail, tp.linear);
   } else if(tp.method == "SKATO") {
-    return method.SKATRO(gene, k, shuffle, tp.a, tp.b, detail);
+    return method.SKATRO(gene, k, shuffle, tp.a, tp.b, detail, tp.linear);
   } else if(tp.method == "VAAST") {
     return method.Vaast(gene, cov, k, tp.score_only_minor, tp.score_only_alternative, 2.0, tp.group_size, detail);
   } else if(tp.method == "VT") {

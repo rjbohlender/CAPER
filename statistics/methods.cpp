@@ -24,7 +24,7 @@
 #include "../data/gene.hpp"
 #include "../data/covariates.hpp"
 #include "skat_adjust.hpp"
-#include "../third_party/SKAT/qfc2.hpp"
+#include "../third_party/QFC/qfc2.hpp"
 #include "vaast.hpp"
 
 constexpr double Methods::rho_[];
@@ -80,24 +80,28 @@ Methods::Methods(std::string method)
 	  kernel_(Kernel::Linear) {
 }
 
-Methods::Methods(std::string method, std::string kernel, Covariates &cov)
-	: method_(std::move(method)) {
-  if (kernel == "Linear") {
+Methods::Methods(TaskParams &tp, Covariates &cov)
+	: method_(tp.method) {
+  if (tp.kernel == "Linear") {
 	kernel_ = Kernel::Linear;
-  } else if (kernel == "wLinear") {
+  } else if (tp.kernel == "wLinear") {
 	kernel_ = Kernel::wLinear;
-  } else if (kernel == "IBS") {
+  } else if (tp.kernel == "IBS") {
 	kernel_ = Kernel::IBS;
-  } else if (kernel == "wIBS") {
+  } else if (tp.kernel == "wIBS") {
 	kernel_ = Kernel::wIBS;
-  } else if (kernel == "Quadratic") {
+  } else if (tp.kernel == "Quadratic") {
 	kernel_ = Kernel::Quadratic;
-  } else if (kernel == "twoWayX") {
+  } else if (tp.kernel == "twoWayX") {
 	kernel_ = Kernel::twoWayX;
   }
 
-  if (method_ == "SKAT" || method_ == "SKATO" || method_ == "BURDEN") {
+  if (tp.alternate_permutation && !tp.linear) {
 	obj_ = std::make_shared<SKATR_Null>(cov);
+	lin_obj_ = nullptr;
+  } else if(tp.alternate_permutation && tp.linear) {
+    obj_ = nullptr;
+    lin_obj_ = std::make_shared<SKATR_Linear_Null>(cov);
   }
 }
 
@@ -522,7 +526,7 @@ double Methods::VT(Gene &gene, Covariates &cov, const std::string &k) {
   arma::vec hmaf = arma::unique(maf);
 
   arma::vec zscores(hmaf.n_rows - 1, arma::fill::zeros);
-  arma::vec res = Y - cov.get_probability();
+  arma::vec res = Y - cov.get_fitted();
 
   for (arma::uword i = 0; i < hmaf.n_rows - 1; i++) {
 	arma::mat Xmat_subset = X.cols(arma::find(maf < hmaf[i + 1]));
@@ -685,11 +689,15 @@ arma::mat Methods::kernel_twoWayX(arma::mat &Xmat, arma::uword n, arma::uword p)
  * @param b
  * @return
  */
-double Methods::SKATR(Gene &gene, const std::string &k, bool shuffle, int a, int b, bool detail) {
-  arma::mat G(gene.get_matrix(k));
+double Methods::SKATR(Gene &gene, const std::string &k, bool shuffle, int a, int b, bool detail, bool linear) {
+  arma::sp_mat G(gene.get_matrix(k));
 
   if (shuffle) {
-	obj_->shuffle();
+	if (linear) {
+	  lin_obj_->shuffle();
+	} else {
+	  obj_->shuffle();
+	}
   }
 
   check_weights(gene, k);
@@ -697,10 +705,22 @@ double Methods::SKATR(Gene &gene, const std::string &k, bool shuffle, int a, int
 
   arma::mat W = arma::diagmat(weights);
 
-  arma::mat tmp = obj_->get_Ux().t() * G;
+  arma::mat tmp;
+  if (linear) {
+	tmp = lin_obj_->get_Ux().t() * G;
+  } else {
+    tmp = obj_->get_Ux().t() * G;
+  }
 
-  arma::mat Gs = (arma::diagmat(obj_->get_Yv()) * G).t() * G - tmp.t() * tmp;
-  arma::rowvec Zs = arma::sum(arma::diagmat(obj_->get_U0()) * G);
+  arma::mat Gs;
+  arma::rowvec Zs;
+  if(linear) {
+    Gs = G.t() * G - tmp.t() * tmp;
+    Zs = arma::sum(arma::diagmat(lin_obj_->get_U0()) * G) / std::sqrt(lin_obj_->get_s2());
+  } else {
+    Gs = (arma::diagmat(obj_->get_Yv()) * G).t() * G - tmp.t() * tmp;
+    Zs = arma::sum(arma::diagmat(obj_->get_U0()) * G);
+  }
 
   arma::mat R = (Gs * W) * W;
   arma::mat Z = Zs * W;
@@ -719,9 +739,13 @@ double Methods::SKATR(Gene &gene, const std::string &k, bool shuffle, int a, int
   return SKAT_pval(Q, s);
 }
 
-double Methods::SKATRO(Gene &gene, const std::string &k, bool shuffle, int a, int b, bool detail) {
+double Methods::SKATRO(Gene &gene, const std::string &k, bool shuffle, int a, int b, bool detail, bool linear) {
   if (shuffle) {
-	obj_->shuffle();
+	if (linear) {
+	  lin_obj_->shuffle();
+	} else {
+	  obj_->shuffle();
+	}
   }
 
   arma::mat G(gene.get_matrix(k));
@@ -732,10 +756,23 @@ double Methods::SKATRO(Gene &gene, const std::string &k, bool shuffle, int a, in
 
   arma::mat W = arma::diagmat(weights);
 
-  arma::mat tmp = obj_->get_Ux().t() * G;
+  arma::mat tmp;
+  if(linear) {
+    tmp = lin_obj_->get_Ux().t() * G;
+  } else {
+	tmp = obj_->get_Ux().t() * G;
+  }
 
-  arma::mat Gs = (arma::diagmat(obj_->get_Yv()) * G).t() * G - tmp.t() * tmp;
-  arma::rowvec Zs = arma::sum(arma::diagmat(obj_->get_U0()) * G);
+
+  arma::mat Gs;
+  arma::rowvec Zs;
+  if(linear) {
+	Gs = G.t() * G - tmp.t() * tmp;
+	Zs = arma::sum(arma::diagmat(lin_obj_->get_U0()) * G) / std::sqrt(lin_obj_->get_s2());
+  } else {
+	Gs = (arma::diagmat(obj_->get_Yv()) * G).t() * G - tmp.t() * tmp;
+	Zs = arma::sum(arma::diagmat(obj_->get_U0()) * G);
+  }
 
   arma::mat R = (Gs * W).t() * W;
   arma::mat Z = Zs * W;
@@ -938,17 +975,23 @@ double Methods::Saddlepoint(double Q, arma::vec lambda) {
   boost::uintmax_t max_iter = 1000;
   std::pair<double, double>
 	  tmp = boost::math::tools::toms748_solve(hatzetafn, lmin, lmax, tol, max_iter);
+#elif 0
+  int digits = std::numeric_limits<double>::digits - 3;
+  boost::math::tools::eps_tolerance<double> tol(digits);
+  boost::uintmax_t max_iter = 1000;
+  double factor = (lmax - lmin) / 100;
+  std::pair<double, double>
+	  tmp = boost::math::tools::bracket_and_solve_root(hatzetafn, lmin, factor, true, tol, max_iter);
 #else
   int digits = std::numeric_limits<double>::digits - 3;
   boost::math::tools::eps_tolerance<double> tol(digits);
   boost::uintmax_t max_iter = 1000;
-  double factor = (lmax - lmin) / 1000;
   std::pair<double, double>
-	  tmp = boost::math::tools::bracket_and_solve_root(hatzetafn, lmin, factor, true, tol, max_iter);
+	  tmp = boost::math::tools::bisect(hatzetafn, lmin, lmax, tol, max_iter);
 
 #endif
 
-  double hatzeta = tmp.first + (tmp.second - tmp.first) / 2;
+  double hatzeta = tmp.first + (tmp.second - tmp.first) / 2.;
 
   double w = sgn(hatzeta) * std::sqrt(2 * (hatzeta * Q - k0(hatzeta)));
   double v = hatzeta * std::sqrt(kpprime0(hatzeta));
@@ -956,8 +999,8 @@ double Methods::Saddlepoint(double Q, arma::vec lambda) {
   if (std::abs(hatzeta) < 1e-4 || std::isnan(w) || std::isnan(v)) {
 	return Liu_pval(Q, lambda);
   } else {
-	boost::math::normal norm;
-	return 1. - boost::math::cdf(norm, w + log(v / w) / w);
+	boost::math::normal norm(0, 1);
+	return boost::math::cdf(boost::math::complement(norm, w + log(v / w) / w));
   }
 }
 

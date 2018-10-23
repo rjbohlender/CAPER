@@ -209,12 +209,12 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
 	arma::sp_mat Xcont(X.n_rows, controls.n_elem);
 
 	arma::uword j = 0;
-	for(const auto &k : cases) {
+	for (const auto &k : cases) {
 	  Xcase.col(j) = X.col(k);
 	  j++;
 	}
 	j = 0;
-	for(const auto &k : controls) {
+	for (const auto &k : controls) {
 	  Xcont.col(j) = X.col(k);
 	  j++;
 	}
@@ -225,53 +225,96 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
 	arma::vec case_ref = 2 * cases.n_elem - case_alt;
 	arma::vec cont_alt = X * (1. - Y);
 	arma::vec cont_ref = 2 * controls.n_elem - cont_alt;
-	// Get odds
-	Binomial link("logit");
-	arma::mat D = arma::join_vert(cov.get_covariate_matrix(), arma::mat(X).each_col() - arma::mean(arma::mat(X), 1));
-	BayesianGLM<Binomial> fit(D, Y, link);
-	for (const auto &pos : positions_[ts]) {
-	  // Get transcripts
-	  if (pos_ts_map.find(pos) == pos_ts_map.end()) {
-		pos_ts_map[pos] = {ts};
-	  } else {
-		pos_ts_map[pos].push_back(ts);
+	if (!tp.linear) {
+	  // Get odds
+	  Binomial link("logit");
+	  arma::mat D = arma::join_vert(cov.get_covariate_matrix(), arma::mat(X).each_col() - arma::mean(arma::mat(X), 1));
+	  BayesianGLM<Binomial> fit(D, Y, link);
+	  for (const auto &pos : positions_[ts]) {
+		// Get transcripts
+		if (pos_ts_map.find(pos) == pos_ts_map.end()) {
+		  pos_ts_map[pos] = {ts};
+		} else {
+		  pos_ts_map[pos].push_back(ts);
+		}
+		// Get scores
+		if (pos_score_map.find(pos) == pos_score_map.end()) {
+		  if (variant_scores_[ts].empty())
+			variant_scores_[ts].zeros(positions_[ts].size());
+		  pos_score_map[pos] = variant_scores_[ts](i);
+		  pos_odds_map[pos] = fit.beta_(cov.get_covariate_matrix().n_rows + i);
+		  pos_odds_pval_map[pos] = fit.pval_(cov.get_covariate_matrix().n_rows + i);
+		}
+		// Get frequency
+		if (pos_freq_map.find(pos) == pos_freq_map.end()) {
+		  pos_freq_map[pos] = maf(i);
+		}
+		// Get counts
+		if (pos_caseref_map.find(pos) == pos_caseref_map.end()) {
+		  pos_caseref_map[pos] = case_ref(i);
+		}
+		if (pos_casealt_map.find(pos) == pos_casealt_map.end()) {
+		  pos_casealt_map[pos] = case_alt(i);
+		}
+		if (pos_contref_map.find(pos) == pos_contref_map.end()) {
+		  pos_contref_map[pos] = cont_ref(i);
+		}
+		if (pos_contalt_map.find(pos) == pos_contalt_map.end()) {
+		  pos_contalt_map[pos] = cont_alt(i);
+		}
+		// Get indices
+		arma::uvec carriers = arma::find(arma::rowvec(X.row(i)) > 0);
+		if (pos_caseidx_map.find(pos) == pos_caseidx_map.end()) {
+		  pos_caseidx_map[pos] = arma::intersect(cases, carriers);
+		}
+		if (pos_contidx_map.find(pos) == pos_contidx_map.end()) {
+		  pos_contidx_map[pos] = arma::intersect(controls, carriers);
+		}
+		i++;
 	  }
-	  // Get scores
-	  if (pos_score_map.find(pos) == pos_score_map.end()) {
-		if (variant_scores_[ts].empty())
-		  variant_scores_[ts].zeros(positions_[ts].size());
-		pos_score_map[pos] = variant_scores_[ts](i);
-		pos_odds_map[pos] = fit.beta_(cov.get_covariate_matrix().n_rows + i);
-		pos_odds_pval_map[pos] = fit.pval_(cov.get_covariate_matrix().n_rows + i);
+	  results[ts].testable = testable(ts, cov, tp);
+	} else {
+	  for (const auto &pos : positions_[ts]) {
+		// Get transcripts
+		if (pos_ts_map.find(pos) == pos_ts_map.end()) {
+		  pos_ts_map[pos] = {ts};
+		} else {
+		  pos_ts_map[pos].push_back(ts);
+		}
+		// Get scores
+		if (pos_score_map.find(pos) == pos_score_map.end()) {
+		  if (variant_scores_[ts].empty())
+			variant_scores_[ts].zeros(positions_[ts].size());
+		  pos_score_map[pos] = variant_scores_[ts](i);
+		}
+		// Get frequency
+		if (pos_freq_map.find(pos) == pos_freq_map.end()) {
+		  pos_freq_map[pos] = maf(i);
+		}
+		// Get counts
+		if (pos_caseref_map.find(pos) == pos_caseref_map.end()) {
+		  pos_caseref_map[pos] = case_ref(i);
+		}
+		if (pos_casealt_map.find(pos) == pos_casealt_map.end()) {
+		  pos_casealt_map[pos] = case_alt(i);
+		}
+		if (pos_contref_map.find(pos) == pos_contref_map.end()) {
+		  pos_contref_map[pos] = cont_ref(i);
+		}
+		if (pos_contalt_map.find(pos) == pos_contalt_map.end()) {
+		  pos_contalt_map[pos] = cont_alt(i);
+		}
+		// Get indices
+		arma::uvec carriers = arma::find(arma::rowvec(X.row(i)) > 0);
+		if (pos_caseidx_map.find(pos) == pos_caseidx_map.end()) {
+		  pos_caseidx_map[pos] = arma::intersect(cases, carriers);
+		}
+		if (pos_contidx_map.find(pos) == pos_contidx_map.end()) {
+		  pos_contidx_map[pos] = arma::intersect(controls, carriers);
+		}
+		i++;
 	  }
-	  // Get frequency
-	  if (pos_freq_map.find(pos) == pos_freq_map.end()) {
-		pos_freq_map[pos] = maf(i);
-	  }
-	  // Get counts
-	  if (pos_caseref_map.find(pos) == pos_caseref_map.end()) {
-		pos_caseref_map[pos] = case_ref(i);
-	  }
-	  if (pos_casealt_map.find(pos) == pos_casealt_map.end()) {
-		pos_casealt_map[pos] = case_alt(i);
-	  }
-	  if (pos_contref_map.find(pos) == pos_contref_map.end()) {
-		pos_contref_map[pos] = cont_ref(i);
-	  }
-	  if (pos_contalt_map.find(pos) == pos_contalt_map.end()) {
-		pos_contalt_map[pos] = cont_alt(i);
-	  }
-	  // Get indices
-	  arma::uvec carriers = arma::find(arma::rowvec(X.row(i)) > 0);
-	  if (pos_caseidx_map.find(pos) == pos_caseidx_map.end()) {
-		pos_caseidx_map[pos] = arma::intersect(cases, carriers);
-	  }
-	  if (pos_contidx_map.find(pos) == pos_contidx_map.end()) {
-		pos_contidx_map[pos] = arma::intersect(controls, carriers);
-	  }
-	  i++;
 	}
-	results[ts].testable = testable(ts, cov, tp);
   }
 
   for (const auto &v : pos_ts_map) {

@@ -31,7 +31,7 @@ enum class Kernel {
 class Methods {
 public:
   explicit Methods(std::string method);
-  Methods(std::string method, std::string kernel, Covariates &cov);
+  Methods(TaskParams &tp, Covariates &cov);
 
   std::string str();
 
@@ -43,9 +43,9 @@ public:
   // Li and Leal 2008
   double CMC(Gene &gene, Covariates &cov, const std::string &k, double maf = 0.005);
   // Wu, Guan, and Pankow 2016
-  double SKATR(Gene &gene, const std::string &k, bool shuffle, int a, int b, bool detail = false);
+  double SKATR(Gene &gene, const std::string &k, bool shuffle, int a, int b, bool detail = false, bool linear = false);
   // Wu, Guan, and Pankow 2016
-  double SKATRO(Gene &gene, const std::string &k, bool shuffle, int a, int b, bool detail = false);
+  double SKATRO(Gene &gene, const std::string &k, bool shuffle, int a, int b, bool detail = false, bool linear = false);
   double Vaast(Gene &gene,
 			   Covariates &cov,
 			   const std::string &k,
@@ -105,6 +105,7 @@ private:
 
   // SKATR Null Model
   std::shared_ptr<SKATR_Null> obj_;
+  std::shared_ptr<SKATR_Linear_Null> lin_obj_;
 
   // Davies method
   double SKAT_pval(double Q, arma::vec lambda);
