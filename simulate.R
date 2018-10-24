@@ -1,7 +1,7 @@
 # Quick and dirty genetic simulation
 
 sink("~/CLionProjects/Permute_Associate/test.sim/test.matrix")
-total <- 5000
+total <- 50000
 
 # Log odds 
 lodds <- log(10)

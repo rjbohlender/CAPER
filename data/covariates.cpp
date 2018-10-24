@@ -36,8 +36,8 @@ Covariates::Covariates(std::stringstream &ss)
 void Covariates::print() {
   for (unsigned long i = 0; i < phenotypes_.n_rows; i++) {
 	std::cout << phenotypes_[i];
-	for (unsigned long j = 0; j < covariates_.n_cols; j++) {
-	  std::cout << "\t" << covariates_(i, j);
+	for (unsigned long j = 0; j < design_.n_cols; j++) {
+	  std::cout << "\t" << design_(i, j);
 	}
 	std::cout << "\n";
   }
@@ -55,16 +55,16 @@ void Covariates::set_phenotype_vector(std::vector<int32_t> &vec) {
   phenotypes_ = arma::conv_to<arma::colvec>::from(vec);
 }
 
-unsigned long Covariates::get_nsamples() {
+arma::uword Covariates::get_nsamples() {
   return nsamples_;
 }
 
-unsigned long Covariates::get_ncases() {
+arma::uword Covariates::get_ncases() {
   return ncases_;
 }
 
 arma::mat &Covariates::get_covariate_matrix() {
-  return covariates_;
+  return design_;
 }
 
 arma::colvec &Covariates::get_odds() {
@@ -88,13 +88,19 @@ arma::vec &Covariates::get_mean() {
 }
 
 void Covariates::shuffle() {
-  indices_ = arma::shuffle(indices_);
+  // Fisher-Yates shuffle is 3-7x faster than armadillo's shuffle
+  for(arma::sword i = indices_.n_elem - 1; i >= 0; i--) {
+    arma::sword j = static_cast<arma::sword>(crand.IRandom(0, i));
+    arma::uword tmp = indices_[i];
+    indices_[i] = indices_[j];
+    indices_[j] = tmp;
+  }
 }
 
 void Covariates::clear() {
   phenotypes_.reset();
   original_.reset();
-  covariates_.reset();
+  design_.reset();
   odds_.reset();
 }
 
@@ -172,15 +178,15 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
   original_ = arma::conv_to<arma::colvec>::from(phenotypes);
 
   // Features are i, samples are j
-  covariates_ = arma::mat(covariates.size() + 1, covariates[0].size());
+  design_ = arma::mat(covariates.size() + 1, covariates[0].size());
   for (arma::uword i = 0; i < covariates.size() + 1; i++) {
 	for (arma::uword j = 0; j < covariates[0].size(); j++) {
 	  if (i == 0) {
 		// First feature is just 1s, intercept
 		// Do this here
-		covariates_(i, j) = 1;
+		design_(i, j) = 1;
 	  } else {
-		covariates_(i, j) = covariates[i - 1][j];
+		design_(i, j) = covariates[i - 1][j];
 	  }
 	}
   }
@@ -233,15 +239,15 @@ void Covariates::parse(std::stringstream &ss) {
   original_ = arma::conv_to<arma::colvec>::from(phenotypes);
 
   // Features are i, samples are j
-  covariates_ = arma::mat(covariates.size() + 1, covariates[0].size());
+  design_ = arma::mat(covariates.size() + 1, covariates[0].size());
   for (arma::uword i = 0; i < covariates.size() + 1; i++) {
 	for (arma::uword j = 0; j < covariates[0].size(); j++) {
 	  if (i == 0) {
 		// First feature is just 1s, intercept
 		// Do this here
-		covariates_(i, j) = 1;
+		design_(i, j) = 1;
 	  } else {
-		covariates_(i, j) = covariates[i - 1][j];
+		design_(i, j) = covariates[i - 1][j];
 	  }
 	}
   }
@@ -253,13 +259,13 @@ void Covariates::parse(std::stringstream &ss) {
 void Covariates::fit_null() {
   if(linear_) {
     Gaussian link("identity");
-    GLM<Gaussian> fit(covariates_, phenotypes_, link);
+    GLM<Gaussian> fit(design_, phenotypes_, link);
     fitted_ = fit.mu_;
     eta_ = fit.eta_;
     coef_ = fit.beta_.t();
   } else {
 	Binomial link("logit");
-	BayesianGLM<Binomial> fit(covariates_, phenotypes_, link);
+	GLM<Binomial> fit(design_, phenotypes_, link);
 	odds_ = fit.mu_ / (1. - fit.mu_);
 	fitted_ = fit.mu_;
 	eta_ = fit.eta_;
@@ -293,7 +299,7 @@ void Covariates::sort_covariates(std::string &header) {
 
   // Sort the phenotypes and covariates according to the order in the matrix file.
   phenotypes_ = phenotypes_(indices);
-  covariates_ = covariates_.cols(indices);
+  design_ = design_.cols(indices);
 
   fit_null();
 

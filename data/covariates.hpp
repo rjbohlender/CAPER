@@ -5,15 +5,15 @@
 #ifndef PERMUTE_ASSOCIATE_COVARIATES_HPP
 #define PERMUTE_ASSOCIATE_COVARIATES_HPP
 
-#include "../utility/split.hpp"
-#include "../statistics/logistic_regression.hpp"
-#include "permutation.hpp"
-
 #include <string>
 #include <vector>
 #include <fstream>
 #include <iostream>
 #include <armadillo>
+
+#include "../utility/split.hpp"
+#include "../statistics/logistic_regression.hpp"
+#include "permutation.hpp"
 
 class Covariates {
 public:
@@ -33,8 +33,8 @@ public:
   void set_phenotype_vector(arma::colvec &vec);
   void set_phenotype_vector(std::vector<int32_t> &vec);
 
-  unsigned long get_nsamples();
-  unsigned long get_ncases();
+  arma::uword get_nsamples();
+  arma::uword get_ncases();
 
   arma::mat &get_covariate_matrix();
   arma::colvec &get_odds();
@@ -56,10 +56,11 @@ public:
   bool is_sorted();
 
 private:
+  CRandomMersenne crand;
   std::vector<std::string> samples_;
-  arma::colvec phenotypes_;
-  arma::colvec original_;
-  arma::mat covariates_;
+  arma::colvec phenotypes_; // Possibly permuted phenotype vector
+  arma::colvec original_; // Original phenotype vector
+  arma::mat design_; // Design matrix
   arma::colvec odds_;
   arma::vec fitted_;
   arma::uvec indices_;

@@ -115,6 +115,8 @@ void Methods::clear(std::vector<std::string> &v) {
   }
   Q_sim_all.clear();
   re2.reset();
+  obj_.reset();
+  lin_obj_.reset();
 }
 
 double Methods::BURDEN(Gene &gene, const std::string &k, bool shuffle, int a, int b) {

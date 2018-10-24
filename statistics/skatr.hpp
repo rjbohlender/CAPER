@@ -24,6 +24,7 @@ public:
   auto get_X() noexcept -> const arma::mat &;
 
 private:
+  CRandomMersenne crand;
   arma::vec U0;          // Residuals
   arma::vec pi0;         // The fitted probabilities
   arma::vec Yv;          // The variance vector
@@ -50,6 +51,7 @@ public:
   auto get_X() noexcept -> const arma::mat &;
 
 private:
+  CRandomMersenne crand;
   arma::vec U0;          // Residuals
   double s2;             // The residual variance
   arma::mat Ux;          // ;

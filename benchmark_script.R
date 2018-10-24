@@ -41,11 +41,13 @@ run_analysis <- function(args) {
       case_control[i] = 0
     }
   }
+  
+  nperm <- 0
 
   cov$V1 = case_control
   null_formula <- paste(c("V1 ~ 1", colnames(cov)[3:ncol(cov) - 1]), sep = " + ", collapse = " + ")
   eprintf(paste("formula: ", null_formula))
-  obj <- SKAT_Null_Model(formula(null_formula), data=cov, out_type = "D", n.Resampling = 0, type.Resampling = "permutation", Adjustment = F)
+  obj <- SKAT_Null_Model(formula(null_formula), data=cov, out_type = "D", n.Resampling = nperm, type.Resampling = "permutation", Adjustment = F)
   
   for(gene in levels(df$Gene)) {
     s = df[df$Gene == gene,]
@@ -55,9 +57,9 @@ run_analysis <- function(args) {
       Z = t(as.matrix(s[s$Transcript == ts,4:ncol(s)]))
       Z[Z > 2] = 0
       res <- SKAT(Z, obj, kernel="linear", method="optimal")
-      eprintf("%s %s %6.5f %6.5f", gene, ts, res$p.value, sum(res$p.value.resampling <= res$p.value) / (nperm > 0) ? nperm : 1)
+      eprintf("%s %s %6.5f", gene, ts, res$p.value)
     }
   }
 }
 
-system.time(run_analysis(df, cov, 1))
+system.time(run_analysis(args))
