@@ -66,7 +66,8 @@ std::vector<std::string> &Gene::get_positions(const std::string &k) {
 }
 
 void Gene::clear(Covariates &cov, std::unordered_map<std::string, Result> &results, TaskParams &tp) {
-  generate_detail(cov, results, tp);
+  if(!tp.nodetail)
+	generate_detail(cov, results, tp);
 
   // Set matrix size to 0x0 to free space.
   for (auto &v : genotypes_) {
@@ -272,7 +273,8 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
 		}
 		i++;
 	  }
-	  results[ts].testable = testable(ts, cov, tp);
+	  if(tp.testable)
+		results[ts].testable = testable(ts, cov, tp);
 	} else {
 	  for (const auto &pos : positions_[ts]) {
 		// Get transcripts

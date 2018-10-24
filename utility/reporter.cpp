@@ -18,7 +18,8 @@ Reporter::Reporter(TaskQueue &tq, TaskParams &tp)
 
   // Write output
   report_simple(tp);
-  report_detail(tq, tp);
+  if(!tp.nodetail)
+	report_detail(tq, tp);
 }
 
 auto Reporter::extract_results(std::vector<TaskArgs> &tq_results) -> void {

@@ -42,6 +42,10 @@ TaskQueue::~TaskQueue() {
   }
 }
 
+size_t TaskQueue::size() {
+  return q_.size();
+}
+
 void TaskQueue::join() {
   using namespace std::chrono_literals;
   // Complete jobs

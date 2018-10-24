@@ -124,8 +124,8 @@ void JobDispatcher::single_dispatch(Gene &gene) {
 			  tp_,
 			  *permutation_ptr_);
   // Limit adding jobs to prevent excessive memory usage
-  while (!tq_.empty()) {
-	std::this_thread::sleep_for(0.1s);
+  while (tq_.size() > tp_.nthreads - 1) {
+	std::this_thread::sleep_for(0.001s);
   }
   tq_.dispatch(std::move(ta));
   ngenes_++;
@@ -211,8 +211,8 @@ void JobDispatcher::multiple_dispatch(Gene &gene) {
 					*permutation_ptr_);
 
 		// Limit adding jobs to prevent excessive memory usage
-		while (!tq_.empty()) {
-		  std::this_thread::sleep_for(0.1s);
+		while (tq_.size() > tp_.nthreads - 1) {
+		  std::this_thread::sleep_for(0.001s);
 		}
 		tq_.dispatch(ta);
 	  } else {
@@ -230,8 +230,8 @@ void JobDispatcher::multiple_dispatch(Gene &gene) {
 		total_success += tp_.success_threshold / tq_.get_nthreads();
 
 		// Limit adding jobs to prevent excessive memory usage
-		while (!tq_.empty()) {
-		  std::this_thread::sleep_for(0.1s);
+		while (tq_.size() > tp_.nthreads - 1) {
+		  std::this_thread::sleep_for(0.001s);
 		}
 		tq_.dispatch(ta);
 	  }

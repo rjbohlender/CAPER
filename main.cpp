@@ -41,6 +41,7 @@ int main(int argc, char **argv) {
   bool score_only_alternative = false;
   bool testable = false;
   bool linear = false;
+  bool nodetail = false;
   boost::optional<std::string> bed;
   boost::optional<std::string> weight;
   boost::optional<std::string> gene_list;
@@ -92,6 +93,9 @@ int main(int argc, char **argv) {
 			("score_only_alternative",
 			 po::bool_switch(&score_only_alternative),
 			 "Score only alternative alleles in VAAST.")
+			("nodetail",
+			 po::bool_switch(&nodetail),
+			 "Don't produce detailed, variant level output.")
 			("maf", po::value<double>()->default_value(0.005), "Minor allele frequency cutoff for CMC collapsing.")
 			("permute_out", po::value(&permute_set), "Output permutations to the given file.")
 			("testable", po::bool_switch(&testable), "Return scores only for genes with at least scoreable variants in VAAST. VAAST only option.")
@@ -194,6 +198,7 @@ int main(int argc, char **argv) {
   // Options
   tp.verbose = verbose;
   tp.gene_list = gene_list;
+  tp.nodetail = nodetail;
   // SKAT Options
   tp.kernel = vm["kernel"].as<std::string>();
   tp.adjust = adjust;

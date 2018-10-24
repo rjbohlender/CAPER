@@ -32,6 +32,7 @@ public:
 
   // Status
   bool empty();
+  size_t size();
 
   // Detail output
   void duplicate();

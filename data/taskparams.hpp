@@ -56,6 +56,7 @@ struct TaskParams {
 
   // Gene list
   boost::optional<std::string> gene_list;
+  bool nodetail;
 
   // SKAT Parameters
   std::string kernel; // Kernel selection

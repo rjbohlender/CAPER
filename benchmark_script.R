@@ -11,41 +11,41 @@ eprintf <- function(...) {
 setwd("~/CLionProjects/Permute_Associate/")
 args = c("test.sim/test_data.txt", "test.sim/test_data.cov", "test.sim/test_data.ped")
 
-matrix_file = args[1]
-covar_file = args[2]
-ped_file = args[3]
+run_analysis <- function(args) {
 
-eprintf("Loading matrix.")
-df <- fread(matrix_file, header=T)
-eprintf("Loaded matrix.")
-cov <- fread(covar_file, header=F)
-eprintf("Loaded covariates.")
-ped <- fread(ped_file, header=T)
-eprintf("Loaded ped.")
+  matrix_file = args[1]
+  covar_file = args[2]
+  ped_file = args[3]
 
-df <- as.data.frame(df)
-colnames(df)[1] = "Gene"
-colnames(df)[2] = "Transcript"
-colnames(df)[3] = "Location"
-df$Gene = as.factor(df$Gene)
-cov <- as.data.frame(cov)
-ped <- as.data.frame(ped)
+  eprintf("Loading matrix.")
+  df <- fread(matrix_file, header=T)
+  eprintf("Loaded matrix.")
+  cov <- fread(covar_file, header=F)
+  eprintf("Loaded covariates.")
+  ped <- fread(ped_file, header=T)
+  eprintf("Loaded ped.")
 
-case_control = as.vector(ped[,6])
-for(i in 1:length(case_control)) {
-  if(case_control[i] == 2) {
-    case_control[i] = 1
-  } else {
-    case_control[i] = 0
+  df <- as.data.frame(df)
+  colnames(df)[1] = "Gene"
+  colnames(df)[2] = "Transcript"
+  colnames(df)[3] = "Location"
+  df$Gene = as.factor(df$Gene)
+  cov <- as.data.frame(cov)
+  ped <- as.data.frame(ped)
+
+  case_control = as.vector(ped[,6])
+  for(i in 1:length(case_control)) {
+    if(case_control[i] == 2) {
+      case_control[i] = 1
+    } else {
+      case_control[i] = 0
+    }
   }
-}
 
-cov$V1 = case_control
-
-run_analysis <- function(df, covars, nperm) {
-  null_formula <- paste(c("V1 ~ 1", colnames(covars)[3:ncol(covars) - 1]), sep = " + ", collapse = " + ")
+  cov$V1 = case_control
+  null_formula <- paste(c("V1 ~ 1", colnames(cov)[3:ncol(cov) - 1]), sep = " + ", collapse = " + ")
   eprintf(paste("formula: ", null_formula))
-  obj <- SKAT_Null_Model(formula(null_formula), data=covars, out_type = "D", n.Resampling = nperm, type.Resampling = "permutation", Adjustment = F)
+  obj <- SKAT_Null_Model(formula(null_formula), data=cov, out_type = "D", n.Resampling = 0, type.Resampling = "permutation", Adjustment = F)
   
   for(gene in levels(df$Gene)) {
     s = df[df$Gene == gene,]
@@ -55,7 +55,7 @@ run_analysis <- function(df, covars, nperm) {
       Z = t(as.matrix(s[s$Transcript == ts,4:ncol(s)]))
       Z[Z > 2] = 0
       res <- SKAT(Z, obj, kernel="linear", method="optimal")
-      eprintf("%s %s %6.5f %6.5f", gene, ts, res$p.value, sum(res$p.value.resampling <= res$p.value) / nperm)
+      eprintf("%s %s %6.5f %6.5f", gene, ts, res$p.value, sum(res$p.value.resampling <= res$p.value) / (nperm > 0) ? nperm : 1)
     }
   }
 }
