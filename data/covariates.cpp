@@ -16,6 +16,7 @@
 Covariates::Covariates(const std::string& ifile, const std::string& pedfile, bool linear)
 	: nsamples_(0),
 	  ncases_(0),
+	  crand((int)time(nullptr)),
 	  linear_(linear) {
 
   parse(ifile, pedfile);
@@ -26,6 +27,7 @@ Covariates::Covariates(const std::string& ifile, const std::string& pedfile, boo
 Covariates::Covariates(std::stringstream &ss)
 	: nsamples_(0),
 	  ncases_(0),
+	  crand((int)time(nullptr)),
 	  linear_(false) {
   parse(ss);
   fit_null();
