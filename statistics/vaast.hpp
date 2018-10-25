@@ -80,7 +80,7 @@ struct VAAST {
 
   // Constructors
   VAAST(Gene &gene,
-		Covariates &cov,
+		arma::vec &Y,
 		const std::string &k,
 		bool score_only_minor,
 		bool score_only_alternative,
@@ -88,7 +88,7 @@ struct VAAST {
 		arma::uword group_threshold,
 		bool detail);
   VAAST(arma::sp_mat X,
-		Covariates &cov,
+		arma::vec &Y,
 		arma::vec &weights,
 		std::vector<std::string> &positions_,
 		const std::string &k,

@@ -176,7 +176,7 @@ arma::vec VariantGroup::log_likelihood(arma::vec &freq, arma::vec &allele0, arma
 }
 
 VAAST::VAAST(Gene &gene,
-			 Covariates &cov,
+			 arma::vec &Y,
 			 const std::string &k,
 			 bool score_only_minor,
 			 bool score_only_alternative,
@@ -185,7 +185,7 @@ VAAST::VAAST(Gene &gene,
 			 bool detail)
 	: som(score_only_minor), soa(score_only_alternative), detail(detail), k(k), group_threshold(group_threshold),
 	  site_penalty(site_penalty),
-	  X(gene.get_matrix(k)), Y(cov.get_phenotype_vector()) {
+	  X(gene.get_matrix(k)), Y(Y) {
   // Verify weights are okay
   check_weights(gene);
 
@@ -235,7 +235,7 @@ VAAST::VAAST(Gene &gene,
 }
 
 VAAST::VAAST(arma::sp_mat Xmat,
-			 Covariates &cov,
+			 arma::vec &Y,
 			 arma::vec &weights,
 			 std::vector<std::string> &positions_,
 			 const std::string &k,
@@ -245,7 +245,7 @@ VAAST::VAAST(arma::sp_mat Xmat,
 			 arma::uword group_threshold)
 	: som(score_only_minor), soa(score_only_alternative), detail(true), k(k), group_threshold(group_threshold),
 	  site_penalty(site_penalty),
-	  X(std::move(Xmat)), Y(cov.get_phenotype_vector()) {
+	  X(std::move(Xmat)), Y(Y) {
 
   if (group_threshold == 0 || X.n_cols == 1) {
 	score = Score(X, Y, weights);

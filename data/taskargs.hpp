@@ -37,7 +37,7 @@ public:
   // Constructors
   TaskArgs(Stage stage,
 		   Gene gene,
-		   Covariates cov,
+		   const std::shared_ptr<Covariates> &cov,
 		   TaskParams &tp,
 		   arma::uword succ_thresh,
 		   arma::uword s1_perm,
@@ -45,7 +45,7 @@ public:
 		   std::vector<std::vector<int32_t>> &perm);
   TaskArgs(Stage stage,
 		   Gene gene,
-		   Covariates cov,
+		   const std::shared_ptr<Covariates> &cov,
 		   TaskParams &tp,
 		   std::vector<std::vector<int32_t>> &perm);
   TaskArgs(const TaskArgs &ta);
@@ -80,13 +80,10 @@ public:
 
   Permute &get_permute(const std::string &k);
 
-  int get_a();
-  int get_b();
-
 private:
   Stage stage_;
   Gene gene_;
-  Covariates cov_;
+  std::shared_ptr<Covariates> cov_;
   Methods method_;
   TaskParams tp_;
 

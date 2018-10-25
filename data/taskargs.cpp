@@ -8,7 +8,7 @@
 
 TaskArgs::TaskArgs(Stage stage,
 				   Gene gene,
-				   Covariates cov,
+				   const std::shared_ptr<Covariates> &cov,
 				   TaskParams &tp,
 				   arma::uword succ_thresh,
 				   arma::uword s1_perm,
@@ -17,7 +17,7 @@ TaskArgs::TaskArgs(Stage stage,
 	: stage_(stage),
 	  gene_(std::move(gene)),
 	  cov_(cov),
-	  method_(tp, cov),
+	  method_(tp, *cov),
 	  stage_1_permutations_(s1_perm),
 	  stage_2_permutations_(s2_perm),
 	  permutations(perm),
@@ -33,13 +33,13 @@ TaskArgs::TaskArgs(Stage stage,
 
 TaskArgs::TaskArgs(Stage stage,
 				   Gene gene,
-				   Covariates cov,
+				   const std::shared_ptr<Covariates> &cov,
 				   TaskParams &tp,
 				   std::vector<std::vector<int32_t>> &perm)
 	: stage_(stage),
 	  gene_(std::move(gene)),
 	  cov_(cov),
-	  method_(tp, cov),
+	  method_(tp, *cov),
 	  stage_1_permutations_(tp.stage_1_permutations),
 	  stage_2_permutations_(tp.stage_2_permutations),
 	  permutations(perm),
@@ -112,7 +112,7 @@ Gene &TaskArgs::get_gene() {
 }
 
 Covariates &TaskArgs::get_cov() {
-  return cov_;
+  return *cov_;
 }
 
 Methods &TaskArgs::get_methods() {
@@ -147,8 +147,8 @@ void TaskArgs::cleanup() {
 	Binomial link("logit");
 	for(const auto &ts : gene_.get_transcripts()) {
 	  arma::mat X = arma::mat(arma::sum(gene_.get_matrix(ts).t(), 0));
-	  arma::mat D = arma::join_vert(cov_.get_covariate_matrix(), X);
-	  BayesianGLM<Binomial> fit(D, cov_.get_original_phenotypes(), link);
+	  arma::mat D = arma::join_vert(cov_->get_covariate_matrix(), X);
+	  BayesianGLM<Binomial> fit(D, cov_->get_original_phenotypes(), link);
 	  results[ts].odds = std::exp(fit.beta_(fit.beta_.n_elem - 1));
 	}
   } else {
@@ -156,8 +156,8 @@ void TaskArgs::cleanup() {
 	  results[ts].odds = 1; // default
 	}
   }
-  gene_.clear(cov_, results, tp_);
-  cov_.clear();
+  gene_.clear(*cov_, results, tp_);
+  //cov_->clear();
   method_.clear(gene_.get_transcripts());
 }
 
@@ -301,15 +301,6 @@ bool TaskArgs::has_multiple_transcripts() {
 Permute &TaskArgs::get_permute(const std::string &k) {
   return permute[k];
 }
-
-int TaskArgs::get_a() {
-  return tp_.a;
-}
-
-int TaskArgs::get_b() {
-  return tp_.b;
-}
-
 
 TaskParams &TaskArgs::get_tp() {
   return tp_;

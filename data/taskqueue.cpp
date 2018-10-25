@@ -137,7 +137,14 @@ void TaskQueue::stage_1(TaskArgs &ta) {
   // Set original value
   for (auto &v : ta.results) {
 	v.second.original =
-		call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), v.second.transcript, ta.get_tp(), false, true);
+		call_method(ta.get_methods(),
+					ta.get_gene(),
+					ta.get_cov(),
+					ta.get_cov().get_original_phenotypes(),
+					ta.get_tp(),
+					v.second.transcript,
+					false,
+					true);
   }
 
   if (verbose_) {
@@ -166,12 +173,27 @@ void TaskQueue::stage_1(TaskArgs &ta) {
 	  const std::string &k = v.second.transcript;
 	  double perm_val;
 
+	  arma::vec phenotypes;
 	  if (!ta.get_tp().alternate_permutation) {
+		phenotypes = arma::conv_to<arma::vec>::from(ta.get_permutations()[iter]);
 		perm_val =
-			call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), v.second.transcript, ta.get_tp(), false, false);
+			call_method(ta.get_methods(),
+						ta.get_gene(),
+						ta.get_cov(),
+						phenotypes,
+						ta.get_tp(),
+						v.second.transcript,
+						false,
+						false);
 	  } else {
-		perm_val = call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), v.second.transcript, ta.get_tp(),
-							   transcript_no == 0, false);
+		perm_val = call_method(ta.get_methods(),
+							   ta.get_gene(),
+							   ta.get_cov(),
+							   phenotypes,
+							   ta.get_tp(),
+							   v.second.transcript,
+							   transcript_no == 0,
+							   false);
 	  }
 
 	  // ta.increment_permuted(v.second.transcript, perm_val);
@@ -248,7 +270,14 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 	  const std::string &k = v.second.transcript;
 
 	  if (std::isnan(v.second.original)) {
-		v.second.original = call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), k, ta.get_tp(), false, true);
+		v.second.original = call_method(ta.get_methods(),
+										ta.get_gene(),
+										ta.get_cov(),
+										ta.get_cov().get_original_phenotypes(),
+										ta.get_tp(),
+										k,
+										false,
+										true);
 	  }
 	  // Minor allele carrier indices
 	  mac_indices[k] = arma::find(arma::sum(arma::mat(ta.get_gene().get_matrix(k)), 1) > 0);
@@ -285,7 +314,14 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 	  const std::string &k = v.second.transcript;
 
 	  if (std::isnan(v.second.original)) {
-		v.second.original = call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), k, ta.get_tp(), false, true);
+		v.second.original = call_method(ta.get_methods(),
+										ta.get_gene(),
+										ta.get_cov(),
+										ta.get_cov().get_original_phenotypes(),
+										ta.get_tp(),
+										k,
+										false,
+										true);
 	  }
 	}
   }
@@ -416,11 +452,23 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 		// phenotypes(maj_indices[k]) = arma::shuffle(temp);
 
 #endif
-		ta.get_cov().set_phenotype_vector(phenotypes);
-
-		perm_val = call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), k, ta.get_tp(), false, false);
+		perm_val = call_method(ta.get_methods(),
+							   ta.get_gene(),
+							   ta.get_cov(),
+							   phenotypes,
+							   ta.get_tp(),
+							   k,
+							   false,
+							   false);
 	  } else {
-		  perm_val = call_method(ta.get_methods(), ta.get_gene(), ta.get_cov(), k, ta.get_tp(), transcript_no == 0, false);
+		  perm_val = call_method(ta.get_methods(),
+								 ta.get_gene(),
+								 ta.get_cov(),
+								 phenotypes,
+								 ta.get_tp(),
+								 k,
+								 transcript_no == 0,
+								 false);
 	  }
 
 	  // ta.increment_permuted(v.second.transcript, perm_val);
@@ -549,26 +597,27 @@ void TaskQueue::check_perm(const std::string &method,
 double TaskQueue::call_method(Methods &method,
 							  Gene &gene,
 							  Covariates &cov,
-							  const std::string &k,
+							  arma::vec &phenotypes,
 							  TaskParams &tp,
+							  const std::string &k,
 							  bool shuffle,
 							  bool detail) {
   if (tp.method == "BURDEN") {
 	return method.BURDEN(gene, k, shuffle, tp.a, tp.b);
   } else if (tp.method == "CALPHA") {
-	return method.CALPHA(gene, cov, k);
+	return method.CALPHA(gene, phenotypes, k);
   } else if (tp.method == "CMC") {
-	return method.CMC(gene, cov, k, tp.maf);
+	return method.CMC(gene, phenotypes, k, tp.maf);
   } else if (tp.method == "SKAT") {
 	return method.SKATR(gene, k, shuffle, tp.a, tp.b, detail, tp.linear);
   } else if (tp.method == "SKATO") {
 	return method.SKATRO(gene, k, shuffle, tp.a, tp.b, detail, tp.linear);
   } else if (tp.method == "VAAST") {
-	return method.Vaast(gene, cov, k, tp.score_only_minor, tp.score_only_alternative, 2.0, tp.group_size, detail);
+	return method.Vaast(gene, phenotypes, k, tp.score_only_minor, tp.score_only_alternative, 2.0, tp.group_size, detail);
   } else if (tp.method == "VT") {
-	return method.VT(gene, cov, k);
+	return method.VT(gene, phenotypes, cov.get_residuals(), k);
   } else if (tp.method == "WSS") {
-	return method.WSS(gene, cov, k);
+	return method.WSS(gene, phenotypes, k);
   }
 }
 

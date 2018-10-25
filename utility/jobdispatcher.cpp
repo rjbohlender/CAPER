@@ -12,7 +12,7 @@
 using namespace std::chrono_literals;
 
 JobDispatcher::JobDispatcher(TaskParams &tp)
-	: tp_(tp), tq_(tp_.nthreads - 1, tp.verbose), cov_(tp.covariates_path, tp.ped_path, tp.linear) {
+	: tp_(tp), tq_(tp_.nthreads - 1, tp.verbose), cov_(std::make_shared<Covariates>(tp.covariates_path, tp.ped_path, tp.linear)) {
   // Initialize bed and weights
   if(tp.gene_list)
     gene_list_ = RJBUtil::Splitter<std::string>(*tp.gene_list, ",");
@@ -30,14 +30,14 @@ JobDispatcher::JobDispatcher(TaskParams &tp)
   std::getline(gt_ifs_, header_);
 
   // Sort covariates
-  cov_.sort_covariates(header_);
+  cov_->sort_covariates(header_);
 
   permutation_ptr_ = std::make_shared<std::vector<std::vector<int32_t>>>();
   // Generate permutations for stage 1
   if (tp.stage_1_permutations > 0 && !tp.alternate_permutation) {
 	permute_.get_permutations(permutation_ptr_,
-							  cov_.get_odds(),
-							  cov_.get_ncases(),
+							  cov_->get_odds(),
+							  cov_->get_ncases(),
 							  tp.stage_1_permutations,
 							  tp.nthreads - 1);
   }
@@ -54,7 +54,7 @@ JobDispatcher::JobDispatcher(TaskParams &tp)
 	}
 	pset_ofs.close();
 
-	cov_.get_fitted().t().print(lr_ofs);
+	cov_->get_fitted().t().print(lr_ofs);
 	lr_ofs.close();
 	// Finish if there are no stage 2 permutations.
 	if (tp.stage_2_permutations == 0) {
@@ -82,6 +82,8 @@ JobDispatcher::JobDispatcher(TaskParams &tp)
   }
 
   Reporter(tq_, tp_);
+
+  cov_.reset();
 }
 
 void JobDispatcher::all_gene_dispatcher() {
@@ -103,7 +105,7 @@ void JobDispatcher::all_gene_dispatcher() {
 	  if (!gene_.empty()) {
 		if (std::any_of(nvariants_.cbegin(), nvariants_.cend(), [&](const auto &v) { return v.second > 0; })) {
 		  // Dispatch gene
-		  Gene gene_data(current, cov_.get_nsamples(), nvariants_, weight_);
+		  Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_);
 
 		  single_dispatch(gene_data);
 		  // Reset for next gene
@@ -115,7 +117,7 @@ void JobDispatcher::all_gene_dispatcher() {
 	  }
 	}
   }
-  Gene gene_data(current, cov_.get_nsamples(), nvariants_, weight_);
+  Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_);
 
   single_dispatch(gene_data);
 }
@@ -154,7 +156,7 @@ void JobDispatcher::gene_list_dispatcher() {
 	  if (!gene_.empty()) {
 		if (std::any_of(nvariants_.cbegin(), nvariants_.cend(), [&](const auto &v) { return v.second > 0; })) {
 		  // Dispatch gene
-		  Gene gene_data(current, cov_.get_nsamples(), nvariants_, weight_);
+		  Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_);
 
 		  multiple_dispatch(gene_data);
 
@@ -190,7 +192,7 @@ void JobDispatcher::gene_list_dispatcher() {
   if (fit == gene_list_.cend()) {
 	return;
   }
-  Gene gene_data(current, cov_.get_nsamples(), nvariants_, weight_);
+  Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_);
 
   multiple_dispatch(gene_data);
 }

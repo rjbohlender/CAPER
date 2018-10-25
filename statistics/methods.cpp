@@ -133,9 +133,8 @@ double Methods::BURDEN(Gene &gene, const std::string &k, bool shuffle, int a, in
   return std::pow(arma::accu(arma::sum(arma::diagmat(obj_->get_U0()) * G) * W), 2);
 }
 
-double Methods::CALPHA(Gene &gene, Covariates &cov, const std::string &k) {
+double Methods::CALPHA(Gene &gene, arma::vec &Y, const std::string &k) {
   arma::sp_mat X(gene.get_matrix(k));
-  arma::vec Y(cov.get_phenotype_vector());
 
   double nA = arma::sum(Y); // Case count
   double nU = Y.n_rows - nA; // Control count
@@ -163,9 +162,8 @@ double Methods::CALPHA(Gene &gene, Covariates &cov, const std::string &k) {
   return arma::sum(arma::pow(g - (n * p0), 2) - (n * p0 * (1 - p0)));
 }
 
-double Methods::CMC(Gene &gene, Covariates &cov, const std::string &k, double maf) {
+double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &k, double maf) {
   arma::mat X(gene.get_matrix(k));
-  arma::vec Y = cov.get_phenotype_vector();
 
   double N = Y.n_rows;
   double nA = arma::sum(Y);     // Case count
@@ -198,7 +196,11 @@ double Methods::CMC(Gene &gene, Covariates &cov, const std::string &k, double ma
   arma::rowvec Yymean = arma::mean(Yy);
 
   arma::mat COV = ((nA - 1.) * arma::cov(Xx) + (nU - 1.) * arma::cov(Yy)) / (N - 2.);
-  arma::mat INV;
+  // QR decomposition and inversion
+  arma::mat Q, R;
+  arma::qr_econ(Q, R, COV);
+  arma::mat INV = arma::inv(arma::trimatu(R) * arma::trimatl(R.t()));
+#if 0
   if (!arma::inv_sympd(INV, COV)) {
 	// Inversion failed
 	arma::vec eigvals;
@@ -210,6 +212,7 @@ double Methods::CMC(Gene &gene, Covariates &cov, const std::string &k, double ma
 
 	INV = eigvecs * arma::diagmat(eigvals) * eigvecs_inv;
   }
+#endif
   arma::mat ret = (Xxmean - Yymean) * INV * (Xxmean - Yymean).t() * nA * nU / N;
   return arma::as_scalar(ret);
 }
@@ -407,7 +410,7 @@ double Methods::SKATO(Gene &gene,
 #endif
 
 double Methods::Vaast(Gene &gene,
-					  Covariates &cov,
+					  arma::vec &Y,
 					  const std::string &k,
 					  bool score_only_minor,
 					  bool score_only_alternative,
@@ -415,7 +418,7 @@ double Methods::Vaast(Gene &gene,
 					  arma::uword group_threshold,
 					  bool detail) {
 #if 1
-  VAAST vaast(gene, cov, k, score_only_minor, score_only_alternative, site_penalty, group_threshold, detail);
+  VAAST vaast(gene, Y, k, score_only_minor, score_only_alternative, site_penalty, group_threshold, detail);
   return vaast.score;
 #else
   arma::mat Xmat = gene.get_matrix(k);
@@ -519,16 +522,14 @@ double Methods::Vaast(Gene &gene,
 #endif
 }
 
-double Methods::VT(Gene &gene, Covariates &cov, const std::string &k) {
+double Methods::VT(Gene &gene, const arma::vec &Y, const arma::vec &res, const std::string &k) {
   arma::mat X(gene.get_matrix(k));
-  arma::vec Y = cov.get_phenotype_vector();
 
   // All variants should be the minor allele
   arma::vec maf = ((1. + arma::sum(X, 0)) / (2. + 2. * X.n_rows)).t();
   arma::vec hmaf = arma::unique(maf);
 
   arma::vec zscores(hmaf.n_rows - 1, arma::fill::zeros);
-  arma::vec res = Y - cov.get_fitted();
 
   for (arma::uword i = 0; i < hmaf.n_rows - 1; i++) {
 	arma::mat Xmat_subset = X.cols(arma::find(maf < hmaf[i + 1]));
@@ -545,9 +546,8 @@ double Methods::VT(Gene &gene, Covariates &cov, const std::string &k) {
   }
 }
 
-double Methods::WSS(Gene &gene, Covariates &cov, const std::string &k) {
+double Methods::WSS(Gene &gene, arma::vec &Y, const std::string &k) {
   arma::mat X(gene.get_matrix(k));
-  arma::vec Y = cov.get_phenotype_vector();
 
   double nA = arma::sum(Y); // Case count
   double nU = Y.n_rows - nA; // Control count

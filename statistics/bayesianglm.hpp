@@ -19,6 +19,7 @@ struct BayesianGLM {
   arma::vec beta_; // coefficients
   arma::vec mu_;   // fitted.values
   arma::vec eta_;  // linear.predictors
+  arma::vec s_err_; // Standard error of estimated coefficients
   arma::vec pval_; // P-value of coefficients
 
   BayesianGLM(arma::mat &X, arma::vec &Y, LinkT &link) {
@@ -132,8 +133,8 @@ auto BayesianGLM<LinkT>::irls(arma::mat &X, arma::colvec &Y) -> arma::vec {
       dispersion = arma::as_scalar(mse_resid) + arma::as_scalar(mse_uncertainty);
     }
 
-    arma::vec s_err = arma::sqrt(V_coef.diag() * dispersion);
-    arma::vec tval = coef / s_err;
+    s_err_ = arma::sqrt(V_coef.diag() * dispersion);
+    arma::vec tval = coef / s_err_;
 
     if(pval_.n_elem == 0) {
       pval_.reshape(arma::size(tval));

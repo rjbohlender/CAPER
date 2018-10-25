@@ -44,7 +44,6 @@ private:
   // Member variables
   TaskParams tp_;
   TaskQueue tq_;
-  Covariates cov_;
   Bed bed_;
   Weight weight_;
   Permute permute_;
@@ -62,6 +61,7 @@ private:
   arma::uword ntranscripts_ = 0;
   arma::uword ngenes_ = 0;
 
+  std::shared_ptr<Covariates> cov_;
   std::shared_ptr<std::vector<std::vector<int32_t>>> permutation_ptr_;
 };
 

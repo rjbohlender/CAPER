@@ -72,7 +72,14 @@ private:
 				  int success_threshold,
 				  std::pair<const std::string, Result> &v);
 
-  double call_method(Methods &method, Gene &gene, Covariates &cov, const std::string &k, TaskParams &tp, bool shuffle, bool detail);
+  double call_method(Methods &method,
+					   Gene &gene,
+					   Covariates &cov,
+					   arma::vec &phenotypes,
+					   TaskParams &tp,
+					   const std::string &k,
+					   bool shuffle,
+					   bool detail);
 
   void stage_1(TaskArgs &ta);
   void stage_2(TaskArgs &ta);

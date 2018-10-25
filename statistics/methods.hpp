@@ -39,23 +39,23 @@ public:
 
   // Wu, Guan, and Pankow 2016
   double BURDEN(Gene &gene, const std::string &k, bool shuffle, int a, int b);
-  double CALPHA(Gene &gene, Covariates &cov, const std::string &k);
+  double CALPHA(Gene &gene, arma::vec &Y, const std::string &k);
   // Li and Leal 2008
-  double CMC(Gene &gene, Covariates &cov, const std::string &k, double maf = 0.005);
+  double CMC(Gene &gene, arma::vec &Y, const std::string &k, double maf = 0.005);
   // Wu, Guan, and Pankow 2016
   double SKATR(Gene &gene, const std::string &k, bool shuffle, int a, int b, bool detail = false, bool linear = false);
   // Wu, Guan, and Pankow 2016
   double SKATRO(Gene &gene, const std::string &k, bool shuffle, int a, int b, bool detail = false, bool linear = false);
   double Vaast(Gene &gene,
-			   Covariates &cov,
+			   arma::vec &Y,
 			   const std::string &k,
 			   bool score_only_minor = true,
 			   bool score_only_alternative = true,
 			   double site_penalty = 2.0,
 			   arma::uword group_threshold = 4,
 			   bool detail = false);
-  double VT(Gene &gene, Covariates &cov, const std::string &k);
-  double WSS(Gene &gene, Covariates &cov, const std::string &k);
+  double VT(Gene &gene, const arma::vec &Y, const arma::vec &res, const std::string &k);
+  double WSS(Gene &gene, arma::vec &Y, const std::string &k);
 
 private:
   const std::string method_;

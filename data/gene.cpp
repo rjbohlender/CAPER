@@ -186,6 +186,7 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
   std::unordered_map<std::string, double> pos_score_map;
   std::unordered_map<std::string, double> pos_freq_map;
   std::unordered_map<std::string, double> pos_odds_map;
+  std::unordered_map<std::string, double> pos_serr_map;
   std::unordered_map<std::string, double> pos_odds_pval_map;
 
   // Case/Control Ref and Alt counts
@@ -231,6 +232,7 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
 			variant_scores_[ts].zeros(positions_[ts].size());
 		  pos_score_map[pos] = variant_scores_[ts](i);
 		  pos_odds_map[pos] = fit.beta_(cov.get_covariate_matrix().n_rows + i);
+		  pos_serr_map[pos] = fit.s_err_(cov.get_covariate_matrix().n_rows + i);
 		  pos_odds_pval_map[pos] = fit.pval_(cov.get_covariate_matrix().n_rows + i);
 		}
 		// Get frequency
@@ -310,10 +312,11 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
 	detail << gene_ << "\t";
 	print_comma_sep(v.second, detail);
 	detail << "\t";
-	detail << boost::format("%1$s\t%2$.2f\t%3$.2f\t%4$.4f\t%5$d\t%6$d\t%7$d\t%8$d\t%9$d")
+	detail << boost::format("%1$s\t%2$.2f\t%3$.2f\t%4$.4f\t%5$.4f\t%6$d\t%7$d\t%8$d\t%9$d\t%10$d")
 		% v.first
 		% pos_score_map[v.first]
 		% std::exp(pos_odds_map[v.first])
+		% pos_serr_map[v.first]
 		% pos_odds_pval_map[v.first]
 		% pos_freq_map[v.first]
 		% pos_caseref_map[v.first]
@@ -361,7 +364,7 @@ auto Gene::testable(const std::string &k, Covariates &cov, TaskParams &tp) -> bo
   }
   assert(arma::accu(extreme_phen) == ncase);
 
-  VAAST vaast(genotypes_[k], cov, weights_[k], positions_[k], k, tp.score_only_minor, tp.score_only_alternative, 2., tp.group_size);
+  VAAST vaast(genotypes_[k], extreme_phen, weights_[k], positions_[k], k, tp.score_only_minor, tp.score_only_alternative, 2., tp.group_size);
 
   return arma::accu(vaast.expanded_scores > 0) >= 4;
 }
