@@ -206,19 +206,6 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
 	arma::uvec controls = arma::find(Y == 0);
 
 	arma::sp_mat X(genotypes_[ts].t());
-	arma::sp_mat Xcase(X.n_rows, cases.n_elem);
-	arma::sp_mat Xcont(X.n_rows, controls.n_elem);
-
-	arma::uword j = 0;
-	for (const auto &k : cases) {
-	  Xcase.col(j) = X.col(k);
-	  j++;
-	}
-	j = 0;
-	for (const auto &k : controls) {
-	  Xcont.col(j) = X.col(k);
-	  j++;
-	}
 
 	arma::vec maf = arma::vec(arma::mean(X, 1) / 2.);
 	// Ref/Alt Counts

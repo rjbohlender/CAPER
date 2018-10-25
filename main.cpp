@@ -204,12 +204,16 @@ int main(int argc, char **argv) {
   tp.adjust = adjust;
   tp.linear = linear;
   // Beta weights
-  tp.a = std::stod(beta_split[0]);
-  tp.b = std::stod(beta_split[1]);
+  tp.a = std::stoi(beta_split[0]);
+  tp.b = std::stoi(beta_split[1]);
   // Testability
   tp.testable = testable;
 
   tp.alternate_permutation = tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN";
+  if(tp.linear && !tp.alternate_permutation) {
+    std::cerr << "Quantitative trait analysis is only supported for the SKATO, SKAT, and BURDEN methods." << std::endl;
+    std::exit(1);
+  }
 
   assert(tp.nthreads > 1);
   if(tp.permute_set && tp.nthreads) {

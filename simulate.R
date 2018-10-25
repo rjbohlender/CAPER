@@ -1,7 +1,7 @@
 # Quick and dirty genetic simulation
 
 sink("~/CLionProjects/Permute_Associate/test.sim/test.matrix")
-total <- 50000
+total <- 500000
 
 # Log odds 
 lodds <- log(10)
@@ -16,22 +16,21 @@ for(i in 1:ngenes) {
 }
 
 
-data = NULL
+data = matrix(0L, nrow = total, ncol = ngenes)
 location = 0
 for(i in 1:ngenes) {
-  gene = NULL
+  gene = matrix(rbinom(total * nsnps[i], 2, freq[[i]]), nrow = nsnps[i], ncol = total)
   for(j in 1:nsnps[i]) {
     location = location + 1
-    gene = rbind(gene, rbinom(total, 2, freq[[i]][j]))
     cat(
       paste(paste0("gene_", i), 
             paste0("transcript_", i), 
-            paste("chr1", location, location, sep="-"),
+            paste("chr1", location, location, "SNV", sep="-"),
             paste(gene[j,], sep = "", collapse = '\t'),
             sep = "\t"))
     cat("\n")
   }
-  data = cbind(data, colSums(gene))
+  data[, i] = colSums(gene)
 }
 
 sink()

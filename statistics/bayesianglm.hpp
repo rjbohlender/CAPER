@@ -119,7 +119,7 @@ auto BayesianGLM<LinkT>::irls(arma::mat &X, arma::colvec &Y) -> arma::vec {
       prior_sd = prior_scale;
     } else {
       prior_sd = arma::sqrt(
-          arma::pow(coef - prior_mean, 2) + V_coef.diag() * dispersion + prior_df % arma::pow(prior_scale, 2) / (1. + prior_df)
+          (arma::pow(coef - prior_mean, 2) + V_coef.diag() * dispersion + prior_df % arma::pow(prior_scale, 2)) / (1. + prior_df)
           );
     }
     eta = A * coef(arma::span(0, nvars - 1)) + offset;

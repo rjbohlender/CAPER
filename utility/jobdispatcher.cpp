@@ -91,6 +91,9 @@ void JobDispatcher::all_gene_dispatcher() {
   while (std::getline(gt_ifs_, line)) {
 	RJBUtil::Splitter<std::string> split(line, "\t");
 	RJBUtil::Splitter<std::string> vsplit(split[2], "-");
+	if(vsplit.size() < 2) {
+	  throw(std::logic_error("Position not formatted correctly. Should be chromosome-start-end-type."));
+	}
 
 	// If this line is part of the same gene
 	if (split[0] == gene_) {
