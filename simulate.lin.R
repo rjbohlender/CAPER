@@ -1,6 +1,8 @@
 # Quick and dirty genetic simulation
 
-sink("~/CLionProjects/Permute_Associate/test.lin.sim/test.matrix")
+d <- ("./test.lin.sim/")
+
+sink(paste0(d, "test.matrix"))
 total <- 100000
 
 ngenes <- 1000
@@ -53,13 +55,13 @@ header <- paste0(header, "\n")
 
 # Output the matrix header
 
-sink("~/CLionProjects/Permute_Associate/test.lin.sim/header.txt")
+sink(paste0(d, "header.txt"))
 cat(header)
 sink()
 
 # Write a ped file
 
-sink("~/CLionProjects/Permute_Associate/test.lin.sim/test_data.ped")
+sink(paste0(d, "test_data.ped"))
 cat("#fid\tiid\tpid\tmid\tsex\taff\n")
 for(i in 1:length(labels)) {
   if(case_control[i] > 0) {
@@ -73,7 +75,7 @@ sink()
 
 # Write a covariate matrix
 
-sink("~/CLionProjects/Permute_Associate/test.lin.sim/test_data.cov")
+sink(paste0(d, "test_data.cov"))
 for(i in 1:length(labels)) {
   cat(paste(labels[i], paste(rnorm(10), collapse="\t"), sep="\t"))
   cat("\n")

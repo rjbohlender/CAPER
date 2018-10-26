@@ -2,7 +2,9 @@
 
 library(Matrix)
 
-sink("~/CLionProjects/Permute_Associate/test.sim/test.matrix")
+d <- "./test.sim/"
+
+sink(paste0(d, "test.matrix"))
 total <- 1000
 
 # Log odds 
@@ -70,13 +72,13 @@ header <- paste0(header, "\n")
 
 # Output the matrix header
 
-sink("~/CLionProjects/Permute_Associate/test.sim/header.txt")
+sink(paste0(d, "header.txt"))
 cat(header)
 sink()
 
 # Write a ped file
 
-sink("~/CLionProjects/Permute_Associate/test.sim/test_data.ped")
+sink(paste0(d, "test_data.ped"))
 cat("#fid\tiid\tpid\tmid\tsex\taff\n")
 for(i in 1:length(labels)) {
   if(case_control[i] == 1) {
@@ -90,7 +92,7 @@ sink()
 
 # Write a covariate matrix
 
-sink("~/CLionProjects/Permute_Associate/test.sim/test_data.cov")
+sink(paste0(d, "test_data.cov"))
 for(i in 1:length(labels)) {
   cat(paste(labels[i], paste(rnorm(10), collapse="\t"), sep="\t"))
   cat("\n")
