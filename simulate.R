@@ -1,5 +1,7 @@
 # Quick and dirty genetic simulation
 
+library(Matrix)
+
 sink("~/CLionProjects/Permute_Associate/test.sim/test.matrix")
 total <- 1000
 
@@ -16,10 +18,10 @@ for(i in 1:ngenes) {
 }
 
 
-data = matrix(0L, nrow = total, ncol = ngenes)
+data = Matrix(0L, nrow = total, ncol = ngenes, sparse = T)
 location = 0
 for(i in 1:ngenes) {
-  gene = matrix(rbinom(total * nsnps[i], 2, freq[[i]]), nrow = nsnps[i], ncol = total)
+  gene = Matrix(rbinom(total * nsnps[i], 2, freq[[i]]), nrow = nsnps[i], ncol = total, sparse = T)
   for(j in 1:nsnps[i]) {
     location = location + 1
     cat(
@@ -40,7 +42,7 @@ func <- function(x) {
   ret <- NULL
   for(i in x) {
     b <- c(rep(lodds, ncausal), rep(log(i), ngenes - ncausal))
-    ret <- c(ret, mean(binomial()$linkinv(data %*% b)) - 0.5)
+    ret <- c(ret, mean(binomial()$linkinv(as.matrix(data %*% b))) - 0.5)
   }
   ret
 }
@@ -48,8 +50,7 @@ func <- function(x) {
 odds_nc <- uniroot(func, c(0.001, 2))$root
 
 betas <- c(rep(lodds, ncausal), rep(log(odds_nc), ngenes - ncausal))
-case_control <- rbinom(total, 1, binomial()$linkinv(data %*% betas))
-mean(binomial()$linkinv(data %*% betas))
+case_control <- rbinom(total, 1, binomial()$linkinv(as.matrix(data %*% betas)))
 
 case_count = 0;
 control_count = 0;
