@@ -123,8 +123,15 @@ void Gene::parse(std::stringstream &ss) {
 	  // Handle missing data
 	  if (val > 2 || val < 0)
 		val = 0;
-	  if(val != 0)
-		genotypes_[transcripts_.back()](j - 3, i - 1) = val;
+	  if(val != 0) {
+	    try {
+		  genotypes_[transcripts_.back()](j - 3, i - 1) = val;
+	    } catch(std::exception &e) {
+	      std::cerr << "Failed to set value for: row = " << j - 3 << " col = " << i - 1 << std::endl;
+	      std::cerr << "Gene: " << splitter[0] << " Transcript: " << splitter[1] << " Location: " << splitter[2] << std::endl;
+	      throw(e);
+	    }
+	  }
 	}
 	i++;
   }
