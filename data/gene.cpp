@@ -130,27 +130,13 @@ void Gene::parse(std::stringstream &ss) {
   }
   // Switch to counting minor allele
   for (auto &v : genotypes_) {
+    arma::rowvec maf = arma::rowvec(arma::mean(v.second) / 2.);
 	// For each variant
-	for (i = 0; i < v.second.n_cols; i++) {
-	  // Check allele frequency
-	  if (arma::mean(arma::vec(v.second.col(i))) / 2 > 0.5) {
-		for (arma::uword j = 0; j < v.second.n_rows; j++) {
-		  switch ((int) v.second(j, i)) {
-		  case 0: {
-			v.second(j, i) = 2;
-			break;
-		  }
-		  case 1: {
-			break;
-		  }
-		  case 2: {
-			v.second(j, i) = 0;
-			break;
-		  }
-		  default: break;
-		  }
-		}
-	  }
+	for (arma::uword k : arma::find(maf > 0.5).eval()) {
+	  // Swap assignment
+	  v.second.col(k).replace(0, 3); // Placeholder to unique value
+	  v.second.col(k).replace(2, 0);
+	  v.second.col(k).replace(3, 2);
 	}
   }
 }

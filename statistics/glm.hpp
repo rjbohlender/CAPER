@@ -66,7 +66,6 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
 
   // Aliases
   arma::mat A = X.t();
-  arma::vec &b = Y;
 
   arma::uword m = A.n_rows;
   arma::uword n = A.n_cols;
@@ -78,46 +77,48 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
   arma::svd_econ(U, S, V, A);
 
   // Matrices and Vectors
-  arma::vec t(m, arma::fill::randn);
+  arma::vec eta(m, arma::fill::randn);
   arma::vec s(n, arma::fill::randn);
-  arma::vec s_old;
   arma::vec weights(m, arma::fill::ones);
 
+  double dev = arma::sum(link.dev_resids(Y, link.linkinv(eta), weights));
+  double devold = 0;
+
   do {
-    arma::vec gv = link.linkinv(t);
-    arma::vec varg = link.variance(gv);
-    arma::vec gvp = link.mueta(t);
+    devold = dev;
+
+    arma::vec g = link.linkinv(eta);
+    arma::vec varg = link.variance(g);
+    arma::vec gprime = link.mueta(eta);
 
     arma::vec z(m, arma::fill::zeros);
     arma::vec W(m, arma::fill::zeros);
 
-    z = t + (b - gv) / gvp;
-    W = weights % arma::pow(gvp, 2) / varg;
-
-
-    s_old = s;
+    z = eta + (Y - g) / gprime;
+    W = weights % arma::pow(gprime, 2) / varg;
 
     arma::mat C;
     bool success = arma::chol(C, U.t() * (U.each_col() % W));
     if(!success) {
       std::cerr << z.t();
       std::cerr << W.t();
-      std::cerr << gv.t();
+      std::cerr << g.t();
       std::cerr << varg.t();
-      std::cerr << gvp.t();
+      std::cerr << gprime.t();
     }
 
     s = solve(arma::trimatl(C.t()), U.t() * (W % z));
     s = solve(arma::trimatu(C), s);
 
-    t = U * s;
-
-    update = arma::norm(s - s_old);
+    eta = U * s;
 
     iter++;
-  } while(iter < max_iter && update > tol);
 
-  return (V * (arma::diagmat(1. / S) * (U.t() * t)));
+    dev = arma::sum(link.dev_resids(Y, g, weights));
+
+  } while(iter < max_iter && std::abs(dev - devold) / (0.1 + std::abs(dev)) > tol);
+
+  return (V * (arma::diagmat(1. / S) * (U.t() * eta)));
 }
 
 #endif //PERMUTE_ASSOCIATE_GLM_HPP

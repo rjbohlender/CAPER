@@ -1,7 +1,7 @@
 # Quick and dirty genetic simulation
 
 sink("~/CLionProjects/Permute_Associate/test.sim/test.matrix")
-total <- 500000
+total <- 1000
 
 # Log odds 
 lodds <- log(10)
@@ -12,7 +12,7 @@ ncausal <- 10
 
 freq <- list()
 for(i in 1:ngenes) {
-  freq[[i]] <- runif(nsnps[i], 5 / total, 65 / total)
+  freq[[i]] <- runif(nsnps[i], 0.001, 0.01)
 }
 
 
@@ -35,8 +35,21 @@ for(i in 1:ngenes) {
 
 sink()
 
-betas <- c(rep(lodds, ncausal), rep(log(0.1) / (ngenes - ncausal), ngenes - ncausal))
+# Find best val for noncausal genes
+func <- function(x) {
+  ret <- NULL
+  for(i in x) {
+    b <- c(rep(lodds, ncausal), rep(log(i), ngenes - ncausal))
+    ret <- c(ret, mean(binomial()$linkinv(data %*% b)) - 0.5)
+  }
+  ret
+}
+
+odds_nc <- uniroot(func, c(0.001, 2))$root
+
+betas <- c(rep(lodds, ncausal), rep(log(odds_nc), ngenes - ncausal))
 case_control <- rbinom(total, 1, binomial()$linkinv(data %*% betas))
+mean(binomial()$linkinv(data %*% betas))
 
 case_count = 0;
 control_count = 0;

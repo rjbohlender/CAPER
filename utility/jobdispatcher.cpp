@@ -187,14 +187,11 @@ void JobDispatcher::gene_list_dispatcher() {
 	  }
 	}
   }
-  // Check if we're finished.
-  auto fit = find_gene(gene_);
-  if (fit == gene_list_.cend()) {
-	return;
-  }
-  Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_);
+  if(!current.str().empty()) {
+	Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_);
 
-  multiple_dispatch(gene_data);
+	multiple_dispatch(gene_data);
+  }
 }
 
 void JobDispatcher::multiple_dispatch(Gene &gene) {

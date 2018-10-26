@@ -193,7 +193,7 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
 	}
   }
 #ifndef NDEBUG
-  std::cerr << "Covariates_ n_rows = " << covariates_.n_rows << " Covariates_ n_cols = " << covariates_.n_cols << "\n";
+  std::cerr << "Covariates_ n_rows = " << design_.n_rows << " Covariates_ n_cols = " << design_.n_cols << "\n";
 #endif
 }
 
@@ -254,7 +254,7 @@ void Covariates::parse(std::stringstream &ss) {
 	}
   }
 #ifndef NDEBUG
-  std::cerr << "Covariates_ n_rows = " << covariates_.n_rows << " Covariates_ n_cols = " << covariates_.n_cols << "\n";
+  std::cerr << "Covariates_ n_rows = " << design_.n_rows << " Covariates_ n_cols = " << design_.n_cols << "\n";
 #endif
 }
 
