@@ -8,13 +8,13 @@
 #include <armadillo>
 
 struct Family {
-  virtual arma::vec link(arma::mat &X, arma::vec &beta) noexcept = 0;
-  virtual arma::vec link(arma::vec &mu) noexcept = 0;
-  virtual arma::vec linkinv(arma::mat &X, arma::vec &beta) noexcept = 0;
-  virtual arma::vec linkinv(arma::vec &eta) noexcept = 0;
-  virtual arma::vec variance(arma::vec &mu) noexcept = 0;
-  virtual arma::vec mueta(arma::vec &eta) noexcept = 0;
-  virtual arma::vec dev_resids(arma::vec &y, arma::vec &mu, arma::vec &weight) noexcept = 0;
+  virtual arma::vec link(const arma::mat &X, const arma::vec &beta) noexcept = 0;
+  virtual arma::vec link(const arma::vec &mu) noexcept = 0;
+  virtual arma::vec linkinv(const arma::mat &X, const arma::vec &beta) noexcept = 0;
+  virtual arma::vec linkinv(const arma::vec &eta) noexcept = 0;
+  virtual arma::vec variance(const arma::vec &mu) noexcept = 0;
+  virtual arma::vec mueta(const arma::vec &eta) noexcept = 0;
+  virtual arma::vec dev_resids(const arma::vec &y, const arma::vec &mu, const arma::vec &weight) noexcept = 0;
 };
 
 #endif //PERMUTE_ASSOCIATE_LINK_HPP

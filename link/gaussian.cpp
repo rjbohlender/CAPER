@@ -13,7 +13,7 @@ const std::string Gaussian::family {"gaussian"};
 Gaussian::Gaussian(const std::string &link)
 : linkid(check_linkid(link)), linkname(link) {}
 
-arma::vec Gaussian::link(arma::mat &X, arma::vec &beta) noexcept {
+arma::vec Gaussian::link(const arma::mat &X, const arma::vec &beta) noexcept {
   switch(linkid) {
   case Gaussian::LinkID::Identity:
     return X * beta;
@@ -26,7 +26,7 @@ arma::vec Gaussian::link(arma::mat &X, arma::vec &beta) noexcept {
   }
 }
 
-arma::vec Gaussian::link(arma::vec &mu) noexcept {
+arma::vec Gaussian::link(const arma::vec &mu) noexcept {
   switch(linkid) {
   case Gaussian::LinkID::Identity:
     return mu;
@@ -39,7 +39,7 @@ arma::vec Gaussian::link(arma::vec &mu) noexcept {
   }
 }
 
-arma::vec Gaussian::linkinv(arma::mat &X, arma::vec &beta) noexcept {
+arma::vec Gaussian::linkinv(const arma::mat &X, const arma::vec &beta) noexcept {
   switch(linkid) {
   case Gaussian::LinkID::Identity:
     return X * beta;
@@ -52,7 +52,7 @@ arma::vec Gaussian::linkinv(arma::mat &X, arma::vec &beta) noexcept {
   }
 }
 
-arma::vec Gaussian::linkinv(arma::vec &eta) noexcept {
+arma::vec Gaussian::linkinv(const arma::vec &eta) noexcept {
   switch(linkid) {
   case Gaussian::LinkID::Identity:
     return eta;
@@ -65,7 +65,7 @@ arma::vec Gaussian::linkinv(arma::vec &eta) noexcept {
   }
 }
 
-arma::vec Gaussian::variance(arma::vec &mu) noexcept {
+arma::vec Gaussian::variance(const arma::vec &mu) noexcept {
   // All branches are identical. Can be replaced.
   switch(linkid) {
   case Gaussian::LinkID::Identity:
@@ -79,7 +79,7 @@ arma::vec Gaussian::variance(arma::vec &mu) noexcept {
   }
 }
 
-arma::vec Gaussian::mueta(arma::vec &eta) noexcept {
+arma::vec Gaussian::mueta(const arma::vec &eta) noexcept {
   switch(linkid) {
   case Gaussian::LinkID::Identity:
     return arma::vec(arma::size(eta), arma::fill::ones);
@@ -106,7 +106,7 @@ Gaussian::LinkID Gaussian::check_linkid(const std::string &link) {
   }
 }
 
-arma::vec Gaussian::dev_resids(arma::vec &y, arma::vec &mu, arma::vec &weight) noexcept {
+arma::vec Gaussian::dev_resids(const arma::vec &y, const arma::vec &mu, const arma::vec &weight) noexcept {
   return weight % arma::pow(y - mu, 2);
 }
 

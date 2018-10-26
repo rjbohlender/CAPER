@@ -16,7 +16,7 @@ const std::string Binomial::family {"binomial"};
 Binomial::Binomial(const std::string &link)
 : linkid(check_linkid(link)), linkname(link) {}
 
-arma::vec Binomial::link(arma::mat &X, arma::vec &beta) noexcept {
+arma::vec Binomial::link(const arma::mat &X, const arma::vec &beta) noexcept {
   switch(linkid) {
 	case Binomial::LinkID::Logit:
 	  return arma::log(X * beta / (1. - X * beta));
@@ -47,7 +47,7 @@ arma::vec Binomial::link(arma::mat &X, arma::vec &beta) noexcept {
   }
 }
 
-arma::vec Binomial::link(arma::vec &mu) noexcept {
+arma::vec Binomial::link(const arma::vec &mu) noexcept {
   switch(linkid) {
   case Binomial::LinkID::Logit:
 	return arma::log(mu / (1. - mu));
@@ -78,7 +78,7 @@ arma::vec Binomial::link(arma::vec &mu) noexcept {
   }
 }
 
-arma::vec Binomial::linkinv(arma::mat &X, arma::vec &beta) noexcept {
+arma::vec Binomial::linkinv(const arma::mat &X, const arma::vec &beta) noexcept {
   switch(linkid) {
   case Binomial::LinkID::Logit:
 	return 1. / (1. + arma::exp(-X * beta));
@@ -109,7 +109,7 @@ arma::vec Binomial::linkinv(arma::mat &X, arma::vec &beta) noexcept {
   }
 }
 
-arma::vec Binomial::linkinv(arma::vec &eta) noexcept {
+arma::vec Binomial::linkinv(const arma::vec &eta) noexcept {
   switch(linkid) {
   case Binomial::LinkID::Logit:
 	return 1. / (1. + arma::exp(-eta));
@@ -140,19 +140,19 @@ arma::vec Binomial::linkinv(arma::vec &eta) noexcept {
   }
 }
 
-arma::vec Binomial::variance(arma::vec &mu) noexcept {
+arma::vec Binomial::variance(const arma::vec &mu) noexcept {
   return mu % (1. - mu);
 }
 
-arma::vec Binomial::mueta(arma::vec &eta) noexcept {
+arma::vec Binomial::mueta(const arma::vec &eta) noexcept {
   switch(linkid) {
   case LinkID::Logit:
 	return arma::exp(eta) / arma::pow((arma::exp(eta) + 1.), 2);
   case LinkID::Probit:
     return arma::normpdf(eta);
   case LinkID::cloglog: {
-    eta = arma::clamp(eta, arma::min(eta), 700);
-    arma::vec ret = arma::exp(eta) * arma::exp(-arma::exp(eta));
+    arma::vec re_eta = arma::clamp(eta, arma::min(eta), 700);
+    arma::vec ret = arma::exp(re_eta) * arma::exp(-arma::exp(re_eta));
 	return arma::clamp(ret, std::numeric_limits<double>::min(), arma::max(ret));
   }
   case LinkID::Cauchit: {
@@ -188,7 +188,7 @@ Binomial::LinkID Binomial::check_linkid(const std::string &link) {
   }
 }
 
-arma::vec Binomial::dev_resids(arma::vec &y, arma::vec &mu, arma::vec &weight) noexcept {
+arma::vec Binomial::dev_resids(const arma::vec &y, const arma::vec &mu, const arma::vec &weight) noexcept {
   auto y_log_y = [](const arma::vec &y, const arma::vec &mu) {
     arma::vec ret = y % log(y / mu);
     ret.replace(arma::datum::nan, 0);
