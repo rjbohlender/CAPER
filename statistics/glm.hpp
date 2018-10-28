@@ -58,6 +58,8 @@ auto GLM<LinkT>::gradient_descent(arma::mat &X, arma::colvec &Y) -> arma::vec {
 
 template<typename LinkT>
 auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
+  arma::wall_clock timer;
+  timer.tic();
   std::cerr << "Running IRLS.\n";
   const auto tol = 1e-8;
   const auto max_iter = 25;
@@ -81,8 +83,8 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
   arma::vec s(n, arma::fill::randn);
   arma::vec weights(m, arma::fill::ones);
 
-  double dev = arma::sum(link.dev_resids(Y, link.linkinv(eta), weights));
-  double devold = 0;
+  double dev = 0;
+  double devold;
 
   do {
     devold = dev;
@@ -117,6 +119,7 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
     dev = arma::sum(link.dev_resids(Y, g, weights));
 
   } while(iter < max_iter && std::abs(dev - devold) / (0.1 + std::abs(dev)) > tol);
+  std::cerr << "Finished IRLS in: " << timer.toc() << "s" << std::endl;
 
   return (V * (arma::diagmat(1. / S) * (U.t() * eta)));
 }

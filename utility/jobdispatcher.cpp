@@ -34,6 +34,8 @@ JobDispatcher::JobDispatcher(TaskParams &tp)
 
   permutation_ptr_ = std::make_shared<std::vector<std::vector<int32_t>>>();
   // Generate permutations for stage 1
+  arma::wall_clock timer;
+  timer.tic();
   if (tp.stage_1_permutations > 0 && !tp.alternate_permutation) {
 	permute_.get_permutations(permutation_ptr_,
 							  cov_->get_odds(),
@@ -41,6 +43,8 @@ JobDispatcher::JobDispatcher(TaskParams &tp)
 							  tp.stage_1_permutations,
 							  tp.nthreads - 1);
   }
+  std::cerr << "Time spent generating stage 1 permutations: " << timer.toc() << std::endl;
+  // Time for 1000 permutations, 1000 samples -> 0.5s, 10000 samples-> 30s, 100000 samples 3300s
 
   // Permutation set output | Developer option
   if (tp.permute_set) {

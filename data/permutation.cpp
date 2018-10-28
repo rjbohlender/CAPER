@@ -179,7 +179,7 @@ arma::vec Permute::calculate_fisher_mean(int32_t n, arma::vec &odds) {
 
 std::vector<std::vector<int32_t>> Permute::permutations_maj_bin(int nperm,
 																arma::vec &odds,
-																int ncases,
+																arma::uword ncases,
 																arma::uvec &mac_indices,
 																arma::uvec &maj_indices) {
   std::vector<std::vector<int32_t>> ret(nperm);

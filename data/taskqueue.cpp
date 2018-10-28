@@ -163,9 +163,6 @@ void TaskQueue::stage_1(TaskArgs &ta) {
 
   int iter = 0;
   while (iter < ta.get_npermutations()) {
-	if (!ta.get_tp().alternate_permutation) {
-	  ta.get_cov().set_phenotype_vector(ta.get_permutations()[iter]);
-	}
 	int transcript_no = -1;
 
 	for (auto &v : ta.results) {

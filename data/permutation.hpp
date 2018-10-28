@@ -32,7 +32,7 @@ struct Permute {
 						int seed);
   std::vector<std::vector<int32_t>> permutations_maj_bin(int nperm,
 														 arma::vec &odds,
-														 int ncases,
+														 arma::uword ncases,
 														 arma::uvec &mac_indices,
 														 arma::uvec &maj_indices);
   arma::vec calculate_fisher_mean(int32_t n, arma::vec &odds);

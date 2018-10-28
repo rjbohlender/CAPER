@@ -821,7 +821,10 @@ double Methods::SKATRO(Gene &gene, const std::string &k, bool shuffle, int a, in
 	arma::mat mk = (1 - rho_[i]) * R + c1 * RJ2 + c2;
 
 	arma::mat Utmp, Vtmp;
-	arma::svd_econ(Utmp, lamk[i], Vtmp, mk);
+	bool svd_success = arma::svd_econ(Utmp, lamk[i], Vtmp, mk);
+	if(!svd_success) {
+	  lamk[i] = arma::svd(mk);
+	}
 
 	double tol = 1e-20;
 	lamk[i] = arma::clamp(lamk[i], tol, lamk[i].max());

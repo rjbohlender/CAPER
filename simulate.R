@@ -5,7 +5,7 @@ library(Matrix)
 d <- "./test.sim/"
 
 sink(paste0(d, "test.matrix"))
-total <- 1000
+total <- 100000
 
 # Log odds 
 lodds <- log(10)
@@ -98,3 +98,46 @@ for(i in 1:length(labels)) {
   cat("\n")
 }
 sink()
+
+
+### TEST
+if(sys.nframe() == 0L) {
+  library(lme4)
+  
+  setwd("~/CLionProjects/Permute_Associate/")
+  
+  df <- read.table(paste0(d, "test_data.txt"), header=T, comment.char = "~")
+  cov <- read.table(paste0(d, "test_data.cov"), header=F)
+  ped <- read.table(paste0(d, "test_data.ped"), header=F)
+  
+  case_control = ped[,6]
+  for(i in 1:length(case_control)) {
+    if(case_control[i] == 2) {
+      case_control[i] = 1
+    } else {
+      case_control[i] = 0
+    }
+  }
+  
+  cov$V1 = rep(1, length(case_control))
+  
+  for(gene in levels(df$X.Gene)) {
+    s = df[df$X.Gene == gene,]
+    s$Transcript = factor(s$Transcript)
+    
+    for(ts in levels(s$Transcript)) {
+      Z = t(as.matrix(s[s$Transcript == ts,4:ncol(s)]))
+      Z[Z > 2] = 0
+      Z <- Z[, colSums(Z) > 0]
+      p <- colMeans(Z) / 2
+      Z.sw <- sweep(Z, 2, 2 * p)
+      Z.sc <- sweep(Z.sw, 2, 2 * p * (1 - p), FUN = "/")
+      grm <- Z.sc %*% t(Z.sw) / ncol(Z)
+      new_df <- cbind(case_control, cov, Z, grm)
+      # This doesn't work. You have to use the GRM to specify the variance structure. Apparently not
+      # possible in lmer. 
+      f1 <- formula(paste("case_control ~ . + ( 0 |", paste(colnames(grm), collapse = "+"), ")"))
+      res <- glmer(f1, data = new_df, family = binomial)
+    }
+  }
+}
