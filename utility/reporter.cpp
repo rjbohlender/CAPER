@@ -64,7 +64,7 @@ auto Reporter::extract_results(std::vector<TaskArgs> &tq_results) -> void {
       if(a.empirical_midp != b.empirical_midp) {
         return a.empirical_midp < b.empirical_midp;
       } else {
-        return b.original < a.original;
+        return a.original < b.original;
       }
     });
   } else {
