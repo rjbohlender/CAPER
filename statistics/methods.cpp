@@ -957,9 +957,15 @@ double Methods::Saddlepoint(double Q, arma::vec lambda) {
   auto kpprime0 = [&](double &zeta) -> double {
 	return 2 * arma::accu(arma::pow(ulambda, 2) / arma::pow(1 - 2 * (zeta * ulambda), 2));
   };
+#if 0
   auto hatzetafn = [&](double zeta) -> double {
 	return kprime0(zeta) - Q;
   };
+#else
+  auto hatzetafn = [&](double zeta) -> std::pair<double, double> {
+	return std::make_pair(kprime0(zeta) - Q, kpprime0(zeta));
+  };
+#endif
 
   arma::uword n = ulambda.size();
 
@@ -989,14 +995,15 @@ double Methods::Saddlepoint(double Q, arma::vec lambda) {
 	  tmp = boost::math::tools::bracket_and_solve_root(hatzetafn, lmin, factor, true, tol, max_iter);
 #else
   int digits = std::numeric_limits<double>::digits - 3;
-  boost::math::tools::eps_tolerance<double> tol(digits);
+  // boost::math::tools::eps_tolerance<double> tol(digits);
+  int tol = static_cast<int>(digits * 0.6);
   boost::uintmax_t max_iter = 1000;
-  std::pair<double, double>
-	  tmp = boost::math::tools::bisect(hatzetafn, lmin, lmax, tol, max_iter);
+  double guess = (lmax - lmin) / 2.;
+  double hatzeta = boost::math::tools::newton_raphson_iterate(hatzetafn, guess, lmin, lmax, tol, max_iter);
 
 #endif
 
-  double hatzeta = tmp.first + (tmp.second - tmp.first) / 2.;
+  //double hatzeta = tmp.first + (tmp.second - tmp.first) / 2.;
 
   double w = sgn(hatzeta) * std::sqrt(2 * (hatzeta * Q - k0(hatzeta)));
   double v = hatzeta * std::sqrt(kpprime0(hatzeta));
