@@ -89,7 +89,7 @@ private:
 #endif
 
   // Check weighting
-  void check_weights(Gene &gene, const std::string &k, int a = 1, int b = 25, bool no_weight = true);
+  void check_weights(Gene &gene, const std::string &k, int a = 1, int b = 25, bool no_weight = false);
 
   // Kernel member functions
   arma::mat kernel_Linear(arma::mat &Xmat);

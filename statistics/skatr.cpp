@@ -20,6 +20,12 @@ SKATR_Null::SKATR_Null(Covariates &cov)
   U0 = Y - pi0;
 
   indices = arma::regspace<arma::uvec>(0, Y.n_rows - 1);
+
+  std::cerr << "pi0: " << pi0.t();
+  std::cerr << "Ux: " << Ux.row(0);
+  std::cerr << "U0: " << U0.t();
+  std::cerr << "Yv: " << Yv.t();
+  std::cerr << "Yh: " << Yh.t();
 }
 
 auto SKATR_Null::shuffle() noexcept -> void{

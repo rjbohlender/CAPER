@@ -724,12 +724,12 @@ double Methods::SKATR(Gene &gene, const std::string &k, bool shuffle, int a, int
     Zs = arma::sum(arma::diagmat(obj_->get_U0()) * G);
   }
 
-  arma::mat R = (Gs * W) * W;
+  arma::mat R = (Gs * W).t() * W;
   arma::mat Z = Zs * W;
 
   arma::vec s;
   arma::mat U, V;
-  arma::svd(U, s, V, R);
+  arma::svd_econ(U, s, V, R, "right");
 
   double Q = arma::accu(arma::pow(Z, 2));
 
@@ -945,7 +945,6 @@ double Methods::Saddlepoint(double Q, arma::vec lambda) {
 
   if (ulambda.has_nan()) {
 	ulambda.replace(arma::datum::nan, 0);
-	std::cerr << ulambda.t();
   }
 
   auto k0 = [&](double &zeta) -> double {
@@ -1062,6 +1061,7 @@ double Methods::SKAT_pval(double Q, arma::vec lambda) {
   if (std::isnan(Q)) {
 	return 1;
   }
+
   std::vector<double> lb1 = arma::conv_to<std::vector<double>>::from(lambda);
   std::vector<double> nc1(lb1.size(), 0);
   std::vector<int> df(lb1.size(), 1);
@@ -1071,7 +1071,7 @@ double Methods::SKAT_pval(double Q, arma::vec lambda) {
 
   QFC qfc(lb1, nc1, df, sigma, Q, lim1, acc);
 
-  double pval = 1 - qfc.get_res();
+  double pval = 1. - qfc.get_res();
   if (pval >= 1 || pval <= 0 || qfc.get_fault() > 0) {
 	pval = Saddlepoint(Q, lambda);
   }

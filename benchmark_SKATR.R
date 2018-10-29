@@ -10,7 +10,8 @@ eprintf <- function(...) {
 
 # args = commandArgs(trailingOnly = T)
 setwd("~/CLionProjects/Permute_Associate/")
-args = c("test.sim/test_data.txt", "test.sim/test_data.cov", "test.sim/test_data.ped")
+# args = c("test.sim/test_data.txt", "test.sim/test_data.cov", "test.sim/test_data.ped")
+args = c("~/Downloads/MDA_Ovarian/case_control.report.matrix.sort.txt", "~/Downloads/MDA_Ovarian/samples_pca.matrix.txt", "~/Downloads/MDA_Ovarian/xqc.new.ped")
 
 run_analysis <- function(args) {
   matrix_file = args[1]
@@ -33,31 +34,47 @@ run_analysis <- function(args) {
   cov <- as.data.frame(cov)
   ped <- as.data.frame(ped)
   
-  case_control = as.vector(ped[,6])
+  names <- colnames(df)[4:ncol(df)]
+  name_order <- NULL
+  for(n in names) {
+    name_order <- c(name_order, which(ped[,2] == n))
+  }
+  
+  case_control = ped[name_order, 6]
   for(i in 1:length(case_control)) {
-    if(case_control[i] == 2) {
-      case_control[i] = 1
-    } else {
-      case_control[i] = 0
-    }
+    case_control[i] = ifelse(case_control[i] == 2, 1, 0)
+  }
+  
+  name_order <- NULL
+  for(n in names) {
+    name_order <- c(name_order, which(cov$V1 == n))
   }
   
   cov$V1 = case_control
+  
+  for(i in 2:ncol(cov)) {
+    cov[,i] = cov[name_order,i]
+  }
 
   obj <- KAT.null(as.vector(cov$V1), as.matrix(cov[,2:ncol(cov)]))
   
   for(gene in levels(df$Gene)) {
+    if(gene != "BRCA1") {
+      next;
+    }
     s = df[df$Gene == gene,]
     s$Transcript = factor(s$Transcript)
     
     for(ts in levels(s$Transcript)) {
       Z = t(as.matrix(s[s$Transcript == ts,4:ncol(s)]))
       Z[Z > 2] = 0
-      res <- SKATOh(obj, Z)
+      res <- SKATh(obj, Z)
       eprintf("%s %s %6.5f", gene, ts, res)
     }
   }
 }
+
+run_analysis(args)
 
 system.time(run_analysis(args))
 
