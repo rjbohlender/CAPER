@@ -13,6 +13,7 @@
 #include <boost/math/distributions/chi_squared.hpp>
 #include <boost/math/distributions/non_central_chi_squared.hpp>
 #include <boost/math/distributions/normal.hpp>
+#include <boost/math/distributions/fisher_f.hpp>
 #include <boost/math/quadrature/trapezoidal.hpp>
 #include <boost/math/quadrature/gauss_kronrod.hpp>
 #include <boost/math/tools/roots.hpp>
@@ -151,7 +152,7 @@ double Methods::CALPHA(Gene &gene, arma::vec &Y, const std::string &k) {
 
   arma::vec g(X.n_cols, arma::fill::zeros);
   arma::uvec case_idx = arma::find(Y == 1);
-  for(auto it = X.begin(); it != X.end(); it++) {
+  for(auto it = X.begin(); it != X.end(); ++it) {
     if(arma::find(case_idx == it.row()).eval().n_elem > 0) {
       g(it.col())++;
     }
@@ -196,13 +197,14 @@ double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &k, double maf) 
   arma::rowvec Yymean = arma::mean(Yy);
 
   arma::mat COV = ((nA - 1.) * arma::cov(Xx) + (nU - 1.) * arma::cov(Yy)) / (N - 2.);
-  // QR decomposition and inversion
-  arma::mat Q, R;
-  arma::qr_econ(Q, R, COV);
-  arma::mat INV = arma::inv(arma::trimatu(R) * arma::trimatl(R.t()));
+  arma::mat INV;
+  if(!arma::inv_sympd(INV, COV)) {
+    arma::pinv(INV, COV);
+  }
 #if 0
   if (!arma::inv_sympd(INV, COV)) {
 	// Inversion failed
+	std::cerr << "Inversion failed." << std::endl;
 	arma::vec eigvals;
 	arma::mat eigvecs;
 	arma::eig_sym(eigvals, eigvecs, COV);
@@ -214,7 +216,23 @@ double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &k, double maf) 
   }
 #endif
   arma::mat ret = (Xxmean - Yymean) * INV * (Xxmean - Yymean).t() * nA * nU / N;
-  return arma::as_scalar(ret);
+  auto p = static_cast<double>(Xxmean.n_elem);
+  double stat = arma::as_scalar(ret) * (nA + nU - 1 - p) / (p * (nA + nU - 2)); // F(N, nA + nU - 1 - N) distributed
+  if(stat < 0)
+    stat = 0;
+  boost::math::fisher_f fisher_f(p, nA + nU - 1 - p);
+  double pval;
+  try{
+	pval = boost::math::cdf(boost::math::complement(fisher_f, stat));
+  } catch(boost::exception &e) {
+    std::cerr << "COV: " << COV;
+    std::cerr << "INV: " << INV;
+    std::cerr << "Xxmean: " << Xxmean;
+	std::cerr << "Yymean: " << Yymean;
+    std::cerr << "ret: " << arma::as_scalar(ret);
+    throw;
+  }
+  return pval;
 }
 
 #if 0

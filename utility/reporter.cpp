@@ -8,7 +8,8 @@
 
 const std::set<std::string> Reporter::pvalue_methods_ {
   "SKAT",
-  "SKATO"
+  "SKATO",
+  "CMC"
 };
 
 Reporter::Reporter(TaskQueue &tq, TaskParams &tp)
