@@ -120,3 +120,7 @@ void Result::set_rank(int rank) {
   this->rank = rank;
 }
 
+void Result::set_odds(double odds) {
+  this->odds = odds;
+}
+

@@ -550,7 +550,7 @@ void TaskQueue::check_perm(const std::string &method,
 						   int success_threshold,
 						   std::pair<const std::string, Result> &v) {
   // SKATO returns a pvalue so we need to reverse the successes
-  if (method == "SKATO" || method == "SKAT") {
+  if (method == "SKATO" || method == "SKAT" || method == "CMC") {
 	if (perm_val <= v.second.original) {
 	  if (v.second.successes < success_threshold) {
 		v.second.successes++;

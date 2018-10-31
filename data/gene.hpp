@@ -72,6 +72,7 @@ private:
   std::vector<std::string> samples_;
 
   std::map<std::string, arma::vec> variant_scores_; // Stored if detail is true
+  std::map<std::string, double> odds_;
 
   TaskParams tp_;
 

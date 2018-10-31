@@ -27,6 +27,7 @@ struct Result {
 
   Result &combine(const Result& res);
   void set_rank(int rank);
+  void set_odds(double odds);
 
   std::string gene;
   std::string transcript;
