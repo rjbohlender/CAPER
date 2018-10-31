@@ -109,7 +109,7 @@ void JobDispatcher::all_gene_dispatcher() {
 	  if (!gene_.empty()) {
 		if (std::any_of(nvariants_.cbegin(), nvariants_.cend(), [&](const auto &v) { return v.second > 0; })) {
 		  // Dispatch gene
-		  Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_);
+		  Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_, tp_);
 
 		  single_dispatch(gene_data);
 		  // Reset for next gene
@@ -121,7 +121,7 @@ void JobDispatcher::all_gene_dispatcher() {
 	  }
 	}
   }
-  Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_);
+  Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_, tp_);
 
   single_dispatch(gene_data);
 }
@@ -160,7 +160,7 @@ void JobDispatcher::gene_list_dispatcher() {
 	  if (!gene_.empty()) {
 		if (std::any_of(nvariants_.cbegin(), nvariants_.cend(), [&](const auto &v) { return v.second > 0; })) {
 		  // Dispatch gene
-		  Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_);
+		  Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_, tp_);
 
 		  multiple_dispatch(gene_data);
 
@@ -192,7 +192,7 @@ void JobDispatcher::gene_list_dispatcher() {
 	}
   }
   if(!current.str().empty()) {
-	Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_);
+	Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_, tp_);
 
 	multiple_dispatch(gene_data);
   }

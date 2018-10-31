@@ -31,7 +31,8 @@ public:
   Gene(std::stringstream &ss,
 		 unsigned long nsamples,
 		 std::map<std::string, arma::uword> &nvariants,
-		 const Weight &weight);
+		 const Weight &weight,
+		 TaskParams tp);
 
   void print();
 
@@ -71,6 +72,8 @@ private:
   std::vector<std::string> samples_;
 
   std::map<std::string, arma::vec> variant_scores_; // Stored if detail is true
+
+  TaskParams tp_;
 
   std::string header_;
   std::string detail_;

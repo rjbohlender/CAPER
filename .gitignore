@@ -58,3 +58,7 @@ matrix2hdf5.cpp
 /test.sim/
 /test.lin.sim/
 /.Rhistory
+
+statistics/nuts.cpp
+statistics/nuts.hpp
+bernoulli.R

@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <cassert>
 #include <armadillo>
+#include <set>
 
 #include <boost/optional.hpp>
 
@@ -86,6 +87,8 @@ private:
   std::shared_ptr<Covariates> cov_;
   Methods method_;
   TaskParams tp_;
+
+  static const std::set<std::string> pvalue_methods_;
 
   int stage_1_permutations_;
   int stage_2_permutations_;

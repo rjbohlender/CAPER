@@ -30,6 +30,7 @@ struct TaskParams {
   std::string genotypes_path;
   std::string covariates_path;
   std::string ped_path;
+  arma::uword mac;
 
   boost::optional<std::string> bed;
   boost::optional<std::string> weight;

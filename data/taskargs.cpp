@@ -6,6 +6,12 @@
 #include "../statistics/bayesianglm.hpp"
 #include "../link/binomial.hpp"
 
+const std::set<std::string> TaskArgs::pvalue_methods_ {
+  "SKAT",
+  "SKATO",
+  "CMC"
+};
+
 TaskArgs::TaskArgs(Stage stage,
 				   Gene gene,
 				   const std::shared_ptr<Covariates> &cov,
@@ -263,7 +269,7 @@ void TaskArgs::calc_multitranscript_pvalues() {
 	results[ts].permuted.pop_back();
 
 	arma::vec pvals;
-	if (method_.str() == "SKATO" || method_.str() == "SKAT") {
+	if (pvalue_methods_.find(method_.str()) != pvalue_methods_.end()) {
 	  // SKATO Returns pvalues so reverse success criteria
 	  pvals = rank(permuted, "ascend");
 	} else {

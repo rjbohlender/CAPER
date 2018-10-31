@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
 			 "The number of threads. The default is half of the cpu count + 1.")
 			("method,m",
 			 po::value<std::string>()->default_value("VAAST"),
-			 "The statistical method to be used.\nOptions: {CALPHA, CMC, SKAT, WSS, VAAST, VT}.\nThe default is VAAST.")
+			 "The statistical method to be used.\nOptions: {BURDEN, CALPHA, CMC, SKAT, WSS, VAAST, VT}.\nThe default is VAAST.")
 			("stage_1_max_perm,1",
 			 po::value<arma::uword>()->default_value(100000),
 			 "The maximum number of permutations to be performed in the first stage. The default is 100,000.")
@@ -81,6 +81,9 @@ int main(int argc, char **argv) {
 			("kernel,k",
 			 po::value<std::string>()->default_value("wLinear"),
 			 "Kernel for use with SKAT.\nOne of: {Linear, wLinear, IBS, wIBS, Quadratic, twoWayX}. Default is wLinear.")
+			("mac",
+			  po::value<arma::uword>()->default_value(250),
+			  "Minor allele count cutoff, default value 250.")
 			("linear",
 			 po::bool_switch(&linear),
 			 "Quantitative trait switch.")
@@ -199,6 +202,7 @@ int main(int argc, char **argv) {
   tp.verbose = verbose;
   tp.gene_list = gene_list;
   tp.nodetail = nodetail;
+  tp.mac = vm["mac"].as<arma::uword>();
   // SKAT Options
   tp.kernel = vm["kernel"].as<std::string>();
   tp.adjust = adjust;
@@ -213,6 +217,13 @@ int main(int argc, char **argv) {
   if(tp.linear && !tp.alternate_permutation) {
     std::cerr << "Quantitative trait analysis is only supported for the SKATO, SKAT, and BURDEN methods." << std::endl;
     std::exit(1);
+  }
+
+  if(tp.mac <= 0) {
+    std::cerr << "Minor allele count cutoff must be greater than zero." << std::endl;
+    std::exit(1);
+  } else if(tp.mac > 500) {
+    std::cerr << "WARNING: This software is concerned with evaluating rare events. With a minor allele cutoff > 500, you should consider analyzing those variants using single marker tests." << std::endl;
   }
 
   assert(tp.nthreads > 1);

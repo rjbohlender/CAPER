@@ -15,9 +15,11 @@
 Gene::Gene(std::stringstream &ss,
 		   unsigned long nsamples,
 		   std::map<std::string, arma::uword> &nvariants,
-		   const Weight &weight)
+		   const Weight &weight,
+		   TaskParams tp)
 	: nsamples_(nsamples),
-	  nvariants_(nvariants) {
+	  nvariants_(nvariants),
+	  tp_(std::move(tp)) {
   parse(ss);
   if (!weight.empty()) {
 	for (const auto &k : transcripts_) {
@@ -144,6 +146,19 @@ void Gene::parse(std::stringstream &ss) {
 	  v.second.col(k).replace(0, 3); // Placeholder to unique value
 	  v.second.col(k).replace(2, 0);
 	  v.second.col(k).replace(3, 2);
+	}
+  }
+  // Drop variants with minor allele count > tp_.mac.
+  for(const auto & ts : transcripts_) {
+	arma::rowvec sums = arma::rowvec(arma::sum(genotypes_[ts], 0));
+	for(arma::sword i = sums.n_elem - 1; i > 0; --i) {
+	  if(sums[i] > tp_.mac) {
+	    if(tp_.verbose) {
+	      std::cerr << "Removing: " << gene_ << " " << ts << " " << positions_[ts][i] << " | count: " << sums[i] << " due to MAC filter." << std::endl;
+	    }
+	    genotypes_[ts].shed_col(i);
+	    positions_[ts].erase(positions_[ts].begin() + i);
+	  }
 	}
   }
 }
