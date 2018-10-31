@@ -213,7 +213,7 @@ int main(int argc, char **argv) {
   // Testability
   tp.testable = testable;
 
-  tp.alternate_permutation = tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN";
+  tp.alternate_permutation = tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN" || tp.method == "VT";
   if(tp.linear && !tp.alternate_permutation) {
     std::cerr << "Quantitative trait analysis is only supported for the SKATO, SKAT, and BURDEN methods." << std::endl;
     std::exit(1);
