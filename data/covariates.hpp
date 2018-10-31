@@ -33,15 +33,15 @@ public:
   void set_phenotype_vector(arma::colvec &vec);
   void set_phenotype_vector(std::vector<int32_t> &vec);
 
-  arma::uword get_nsamples();
-  arma::uword get_ncases();
+  arma::uword get_nsamples() const;
+  arma::uword get_ncases() const;
 
   arma::mat &get_covariate_matrix();
   arma::colvec &get_odds();
   arma::colvec &get_original_phenotypes();
   arma::vec &get_fitted();
   arma::uvec &get_indices();
-  arma::vec get_residuals();
+  arma::vec get_residuals() const;
   arma::vec &get_mean();
   arma::rowvec &get_coef();
 

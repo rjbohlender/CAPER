@@ -57,11 +57,11 @@ void Covariates::set_phenotype_vector(std::vector<int32_t> &vec) {
   phenotypes_ = arma::conv_to<arma::colvec>::from(vec);
 }
 
-arma::uword Covariates::get_nsamples() {
+arma::uword Covariates::get_nsamples() const {
   return nsamples_;
 }
 
-arma::uword Covariates::get_ncases() {
+arma::uword Covariates::get_ncases() const {
   return ncases_;
 }
 
@@ -316,7 +316,7 @@ arma::rowvec &Covariates::get_coef() {
   return coef_;
 }
 
-arma::vec Covariates::get_residuals() {
+arma::vec Covariates::get_residuals() const {
   return phenotypes_ - fitted_;
 }
 

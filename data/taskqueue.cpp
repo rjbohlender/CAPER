@@ -612,7 +612,7 @@ double TaskQueue::call_method(Methods &method,
   } else if (tp.method == "VAAST") {
 	return method.Vaast(gene, phenotypes, k, tp.score_only_minor, tp.score_only_alternative, 2.0, tp.group_size, detail);
   } else if (tp.method == "VT") {
-	return method.VT(gene, phenotypes, cov.get_residuals(), k);
+	return method.VT(gene, k, false);
   } else if (tp.method == "WSS") {
 	return method.WSS(gene, phenotypes, k);
   } else {

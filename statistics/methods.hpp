@@ -16,6 +16,7 @@
 #include "skat.hpp"
 #include "skat_adjust.hpp"
 #include "skatr.hpp"
+#include "vt.hpp"
 
 arma::vec rank(arma::vec &v, const char *direction);
 
@@ -54,7 +55,7 @@ public:
 			   double site_penalty = 2.0,
 			   arma::uword group_threshold = 4,
 			   bool detail = false);
-  double VT(Gene &gene, const arma::vec &Y, const arma::vec &res, const std::string &k);
+  double VT(Gene &gene, const std::string &k, bool shuffle);
   double WSS(Gene &gene, arma::vec &Y, const std::string &k);
 
 private:
@@ -106,6 +107,9 @@ private:
   // SKATR Null Model
   std::shared_ptr<SKATR_Null> obj_;
   std::shared_ptr<SKATR_Linear_Null> lin_obj_;
+
+  // VT Helper
+  std::shared_ptr<VT_Res> vt_obj_;
 
   // Davies method
   double SKAT_pval(double Q, arma::vec lambda);

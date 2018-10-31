@@ -97,12 +97,14 @@ Methods::Methods(TaskParams &tp, Covariates &cov)
 	kernel_ = Kernel::twoWayX;
   }
 
-  if (tp.alternate_permutation && !tp.linear) {
+  if ((tp.method == "SKAT" || tp.method == "SKATO") && !tp.linear) {
 	obj_ = std::make_shared<SKATR_Null>(cov);
 	lin_obj_ = nullptr;
-  } else if(tp.alternate_permutation && tp.linear) {
+  } else if((tp.method == "SKAT" || tp.method == "SKATO") && tp.linear) {
     obj_ = nullptr;
     lin_obj_ = std::make_shared<SKATR_Linear_Null>(cov);
+  } else if(tp.method == "VT") {
+    vt_obj_ = std::make_shared<VT_Res>(cov);
   }
 }
 
@@ -540,8 +542,13 @@ double Methods::Vaast(Gene &gene,
 #endif
 }
 
-double Methods::VT(Gene &gene, const arma::vec &Y, const arma::vec &res, const std::string &k) {
+double Methods::VT(Gene &gene, const std::string &k, bool shuffle) {
+  if(shuffle) {
+    vt_obj_->shuffle();
+  }
   arma::sp_mat X(gene.get_matrix(k));
+
+  arma::vec res = vt_obj_->get_residuals();
 
   // All variants should be the minor allele
   // arma::vec maf = ((1. + arma::sum(X, 0)) / (2. + 2. * X.n_rows)).t();
