@@ -541,18 +541,25 @@ double Methods::Vaast(Gene &gene,
 }
 
 double Methods::VT(Gene &gene, const arma::vec &Y, const arma::vec &res, const std::string &k) {
-  arma::mat X(gene.get_matrix(k));
+  arma::sp_mat X(gene.get_matrix(k));
 
   // All variants should be the minor allele
-  arma::vec maf = ((1. + arma::sum(X, 0)) / (2. + 2. * X.n_rows)).t();
+  // arma::vec maf = ((1. + arma::sum(X, 0)) / (2. + 2. * X.n_rows)).t();
+  arma::vec maf = arma::vec(arma::mean(X, 0).t() / 2.);
   arma::vec hmaf = arma::unique(maf);
 
-  arma::vec zscores(hmaf.n_rows - 1, arma::fill::zeros);
+  arma::vec zscores(hmaf.n_rows, arma::fill::zeros);
 
-  for (arma::uword i = 0; i < hmaf.n_rows - 1; i++) {
-	arma::mat Xmat_subset = X.cols(arma::find(maf < hmaf[i + 1]));
-	double znum = arma::sum(arma::sum(arma::diagmat(res) * Xmat_subset, 0));
-	double zden = std::sqrt(arma::sum(arma::sum(arma::pow(X.cols(arma::find(maf < hmaf[i + 1])), 2))));
+  for (arma::uword i = 0; i < hmaf.n_rows; i++) {
+    arma::uvec idx = arma::find(maf <= hmaf[i]);
+    double znum = 0, zden = 0;
+	for(const auto &j : idx) {
+	  // znum = arma::sum(arma::sum(arma::diagmat(res) * Xmat_subset, 0));
+	  znum += arma::accu(res % X.col(i));
+	  // zden += std::sqrt(arma::sum(arma::sum(arma::pow(X.cols(arma::find(maf < hmaf[i + 1])), 2))));
+	  zden += arma::accu(X.col(i) % X.col(i));
+	}
+	zden = std::sqrt(zden);
 	zscores(i) = znum / zden;
   }
 

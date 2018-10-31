@@ -615,6 +615,8 @@ double TaskQueue::call_method(Methods &method,
 	return method.VT(gene, phenotypes, cov.get_residuals(), k);
   } else if (tp.method == "WSS") {
 	return method.WSS(gene, phenotypes, k);
+  } else {
+    throw(std::logic_error("Failed to find method."));
   }
 }
 
