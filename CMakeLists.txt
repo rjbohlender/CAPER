@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(Permute_Associate)
+project(Permute_Associate CXX)
 
 set(CMAKE_CXX_STANDARD 14)
 
@@ -46,6 +46,8 @@ set(PROJECT_SUPPORT_FILES
     third_party/stocc/randomc.h
     third_party/stocc/mersenne.cpp
     third_party/stocc/userintf.cpp
+    third_party/stocc/sfmt.h
+    third_party/stocc/sfmt.cpp
     statistics/logistic_regression.hpp
     statistics/logistic_regression.cpp
     data/permutation.cpp
@@ -84,7 +86,14 @@ set(PROJECT_SUPPORT_FILES
     link/binomial.cpp
     link/binomial.hpp
     statistics/glm.hpp
-    statistics/bayesianglm.hpp statistics/vt.cpp statistics/vt.hpp)
+    statistics/bayesianglm.hpp
+    statistics/vt.cpp
+    statistics/vt.hpp
+    data/calccasm.cpp
+    data/calccasm.hpp
+    statistics/skatr.cpp
+    statistics/skatr.hpp)
+
 
 include_directories("${CMAKE_CURRENT_LIST_DIR}/third_party")
 include_directories(${ARMADILLO_INCLUDE_DIRS})
@@ -95,7 +104,7 @@ include_directories(${BLAS_INCLUDE_DIRS})
 
 add_executable(Permute_Associate
                main.cpp
-               ${PROJECT_SUPPORT_FILES} data/calccasm.cpp data/calccasm.hpp statistics/skatr.cpp statistics/skatr.hpp)
+               ${PROJECT_SUPPORT_FILES})
 
 target_link_libraries(Permute_Associate ${ARMADILLO_LIBRARIES})
 target_link_libraries(Permute_Associate ${CMAKE_THREAD_LIBS_INIT})

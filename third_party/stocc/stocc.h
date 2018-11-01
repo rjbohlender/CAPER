@@ -221,10 +221,10 @@
       // Inherit from StocRBase when building for R-language interface
       #define STOC_BASE StocRBase
    #else
-      #define STOC_BASE CRandomMersenne     // C++ Mersenne Twister
+      //#define STOC_BASE CRandomMersenne     // C++ Mersenne Twister
       // Or choose any other random number generator base class, for example:
-      //#include "randoma.h"
-      //#define STOC_BASE CRandomSFMTA      // Binary library SFMT generator
+      #include "sfmt.h"
+      #define STOC_BASE CRandomSFMT      // Binary library SFMT generator
    #endif
 #endif
 
