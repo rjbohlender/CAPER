@@ -3,7 +3,7 @@
 d <- ("./test.lin.sim/")
 
 sink(paste0(d, "test.matrix"))
-total <- 100000
+total <- 1000
 
 ngenes <- 1000
 nsnps <- rpois(ngenes, 20)

@@ -132,6 +132,8 @@ int main(int argc, char **argv) {
 	  "CMC",
 	  "VT",
 	  "WSS",
+	  "RVT1",
+	  "RVT2",
 	  "SKAT",
 	  "SKATO",
 	  "VAAST"
@@ -148,7 +150,7 @@ int main(int argc, char **argv) {
 
   if (method_choices.count(vm["method"].as<std::string>()) == 0) {
 	// Method not among choices
-	std::cerr << "Method must be one of {BURDEN, CALPHA, CMC, VT, WSS, SKAT, SKATO, VAAST}.\n";
+	std::cerr << "Method must be one of {BURDEN, CALPHA, CMC, RVT1, RVT2, SKAT, SKATO, VAAST, VT, WSS}.\n";
 	std::cerr << desc << "\n";
 	return 1;
   }
@@ -214,8 +216,9 @@ int main(int argc, char **argv) {
   tp.testable = testable;
 
   tp.alternate_permutation = tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN" || tp.method == "VT";
-  if(tp.linear && !tp.alternate_permutation) {
-    std::cerr << "Quantitative trait analysis is only supported for the SKATO, SKAT, and BURDEN methods." << std::endl;
+  tp.quantitative = tp.method == "RVT1" || tp.method == "RVT2" || tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN" || tp.method == "VT";
+  if(tp.linear && !tp.quantitative) {
+    std::cerr << "Quantitative trait analysis is only supported for the RVT1, RVT2, SKATO, SKAT, and BURDEN methods." << std::endl;
     std::exit(1);
   }
 

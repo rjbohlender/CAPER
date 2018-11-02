@@ -10,7 +10,9 @@
 #include "gene.hpp"
 #include "../statistics/vaast.hpp"
 #include "../link/binomial.hpp"
+#include "../link/gaussian.hpp"
 #include "../statistics/bayesianglm.hpp"
+#include "../statistics/glm.hpp"
 
 Gene::Gene(std::stringstream &ss,
 		   unsigned long nsamples,
@@ -273,6 +275,19 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
 	  if(tp.testable)
 		results[ts].testable = testable(ts, cov, tp);
 	} else {
+	  // Get odds via Moser & Coombs (2004) -- Rather than dichotomizing, we fit normally and recover OR
+	  Gaussian link("identity");
+	  arma::mat D = arma::join_vert(cov.get_covariate_matrix(), arma::mat(X).each_col() - arma::mean(arma::mat(X), 1));
+	  GLM<Gaussian> fit(D, Y, link);
+
+	  // Transform values
+	  arma::uword n = cov.get_covariate_matrix().n_rows;
+	  double lambda = arma::datum::pi / std::sqrt(3);
+	  arma::vec var = link.variance(fit.mu_);
+	  arma::mat fisher_info = arma::inv(D * arma::diagmat(var) * D.t());
+	  arma::mat A = arma::eye(Y.n_elem, Y.n_elem) - D.t() * arma::inv(D * D.t()) * D;
+	  double sd = arma::as_scalar(arma::sqrt(Y.t() * A * Y / (Y.n_elem - D.n_rows)));
+
 	  for (const auto &pos : positions_[ts]) {
 		// Get transcripts
 		if (pos_ts_map.find(pos) == pos_ts_map.end()) {
@@ -285,6 +300,9 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
 		  if (variant_scores_[ts].empty())
 			variant_scores_[ts].zeros(positions_[ts].size());
 		  pos_score_map[pos] = variant_scores_[ts](i);
+		  pos_odds_map[pos] = lambda * fit.beta_(n + i - 1) / sd;
+		  pos_serr_map[pos] = std::sqrt(fisher_info.diag()(n + i));
+		  pos_odds_pval_map[pos] = arma::datum::nan;
 		}
 		// Get frequency
 		if (pos_freq_map.find(pos) == pos_freq_map.end()) {
@@ -315,27 +333,44 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
 	  }
 	}
   }
-
-  for (const auto &v : pos_ts_map) {
-	detail << gene_ << "\t";
-	print_comma_sep(v.second, detail);
-	detail << "\t";
-	detail << boost::format("%1$s\t%2$.2f\t%3$.2f\t%4$.4f\t%5$.4f\t%6$d\t%7$d\t%8$d\t%9$d\t%10$d")
-		% v.first
-		% pos_score_map[v.first]
-		% std::exp(pos_odds_map[v.first])
-		% pos_serr_map[v.first]
-		% pos_odds_pval_map[v.first]
-		% pos_freq_map[v.first]
-		% pos_caseref_map[v.first]
-		% pos_casealt_map[v.first]
-		% pos_contref_map[v.first]
-		% pos_contalt_map[v.first];
-	detail << "\t";
-	print_semicolon_sep(pos_caseidx_map[v.first], detail);
-	detail << "\t";
-	print_semicolon_sep(pos_contidx_map[v.first], detail);
-	detail << std::endl;
+  if(tp.linear) {
+    // Output for quantitative traits
+	for (const auto &v : pos_ts_map) {
+	  detail << gene_ << "\t";
+	  print_comma_sep(v.second, detail);
+	  detail << "\t";
+	  detail << boost::format("%1$s\t%2$.2f\t%3$.2f\t%4$.4f\t%5$.4f\t%6$d")
+		  % v.first
+		  % pos_score_map[v.first]
+		  % std::exp(pos_odds_map[v.first])
+		  % pos_serr_map[v.first]
+		  % pos_odds_pval_map[v.first]
+		  % pos_freq_map[v.first];
+	  detail << std::endl;
+	}
+  } else {
+    // Output for binary traits
+	for (const auto &v : pos_ts_map) {
+	  detail << gene_ << "\t";
+	  print_comma_sep(v.second, detail);
+	  detail << "\t";
+	  detail << boost::format("%1$s\t%2$.2f\t%3$.2f\t%4$.4f\t%5$.4f\t%6$d\t%7$d\t%8$d\t%9$d\t%10$d")
+		  % v.first
+		  % pos_score_map[v.first]
+		  % std::exp(pos_odds_map[v.first])
+		  % pos_serr_map[v.first]
+		  % pos_odds_pval_map[v.first]
+		  % pos_freq_map[v.first]
+		  % pos_caseref_map[v.first]
+		  % pos_casealt_map[v.first]
+		  % pos_contref_map[v.first]
+		  % pos_contalt_map[v.first];
+	  detail << "\t";
+	  print_semicolon_sep(pos_caseidx_map[v.first], detail);
+	  detail << "\t";
+	  print_semicolon_sep(pos_contidx_map[v.first], detail);
+	  detail << std::endl;
+	}
   }
   detail_ = detail.str();
 }

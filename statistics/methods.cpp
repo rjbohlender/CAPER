@@ -28,6 +28,10 @@
 #include "../third_party/QFC/qfc2.hpp"
 #include "vaast.hpp"
 
+#include "../link/binomial.hpp"
+#include "../link/gaussian.hpp"
+#include "glm.hpp"
+
 constexpr double Methods::rho_[];
 
 // TODO Check with Chad / Yao re: replacing NAN values for MGIT
@@ -235,6 +239,62 @@ double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &k, double maf) 
     throw;
   }
   return pval;
+}
+
+double Methods::RVT1(Gene &gene, arma::vec &Y, arma::mat &design, const std::string &k, bool linear) {
+  if(linear) {
+	// Quantitative trait
+	arma::sp_mat X = gene.get_matrix(k).t();
+	Gaussian link("identity");
+	GLM<Gaussian> fit1(design, Y, link);
+	arma::mat d2 = arma::join_vert(design, arma::rowvec(arma::sum(X) / X.n_rows));
+	GLM<Gaussian> fit2(d2, Y, link);
+
+	double n = Y.n_elem;
+
+	boost::math::chi_squared chisq(1);
+ 	double stat = (fit1.dev_ - fit2.dev_) / (fit2.dev_ / (n - d2.n_rows));
+	return boost::math::cdf(boost::math::complement(chisq, stat));
+  } else {
+    // Binary trait
+	arma::sp_mat X = gene.get_matrix(k).t();
+	Binomial link("logit");
+	GLM<Binomial> fit1(design, Y, link);
+	arma::mat d2 = arma::join_vert(design, arma::rowvec(arma::sum(X) / X.n_rows));
+	GLM<Binomial> fit2(d2, Y, link);
+
+	boost::math::chi_squared chisq(1);
+	return boost::math::cdf(boost::math::complement(chisq, fit1.dev_ - fit2.dev_));
+  }
+}
+
+double Methods::RVT2(Gene &gene, arma::vec &Y, arma::mat &design, const std::string &k, bool linear) {
+  if(linear) {
+	// Quantitative trait
+	arma::sp_mat X = gene.get_matrix(k).t();
+	Gaussian link("identity");
+	GLM<Gaussian> fit1(design, Y, link);
+	arma::rowvec r = arma::conv_to<arma::rowvec>::from(arma::rowvec(arma::sum(X)) > 0);
+	arma::mat d2 = arma::join_vert(design, r);
+	GLM<Gaussian> fit2(d2, Y, link);
+
+	double n = Y.n_elem;
+
+	boost::math::chi_squared chisq(1);
+	double stat = (fit1.dev_ - fit2.dev_) / (fit2.dev_ / (n - d2.n_rows));
+	return boost::math::cdf(boost::math::complement(chisq, stat));
+  } else {
+	// Binary trait
+	arma::sp_mat X = gene.get_matrix(k).t();
+	Binomial link("logit");
+	GLM<Binomial> fit1(design, Y, link);
+	arma::rowvec r = arma::conv_to<arma::rowvec>::from(arma::rowvec(arma::sum(X)) > 0);
+	arma::mat d2 = arma::join_vert(design, r);
+	GLM<Binomial> fit2(d2, Y, link);
+
+	boost::math::chi_squared chisq(1);
+	return boost::math::cdf(boost::math::complement(chisq, fit1.dev_ - fit2.dev_));
+  }
 }
 
 #if 0
@@ -589,6 +649,7 @@ double Methods::WSS(Gene &gene, arma::vec &Y, const std::string &k) {
   arma::vec q = (mU + 1.) / (2. * nU + 2.);
 
   arma::mat w = arma::diagmat(1. / arma::sqrt(n * (arma::diagmat(q) * (1. - q))));
+  w.replace(arma::datum::nan, 0);
 
   arma::mat gamma_mat = X * w;
   gamma_mat.replace(arma::datum::nan, 0);

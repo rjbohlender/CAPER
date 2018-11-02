@@ -151,7 +151,7 @@ void TaskQueue::stage_1(TaskArgs &ta) {
 	if (!ta.get_tp().alternate_permutation) {
 	  for (const auto &v : ta.results) {
 		std::cerr << "Stage 1: " << ta.get_gene().get_gene() << "\t" << v.second.transcript << "\t";
-		std::cerr << std::fixed << std::setprecision(2) << v.second.original << std::endl;
+		std::cerr << std::fixed << std::setprecision(6) << v.second.original << std::endl;
 	  }
 	} else {
 	  for (const auto &v : ta.results) {
@@ -352,34 +352,46 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 		// permutations[0].pop_back(); // Drop end
 		// permutations[0].shrink_to_fit();
 
-		permutations = ta.get_permute(k).permutations_maj_bin(1,
-															  ta.get_cov().get_odds(),
-															  ta.get_cov().get_ncases(),
-															  mac_indices[k],
-															  maj_indices[k]);
-		arma::uword total_cases = 0;
-		for (int i = 0; i < mac_indices[k].n_elem; i++) {
-		  phenotypes(mac_indices[k](i)) = permutations[0][i];
-		  if (permutations[0][i] == 1)
-			total_cases++; // Count cases in mac
-		}
-
-		if (ta.get_tp().permute_set && transcript_no == 0) {
-		  for (const auto &v : phenotypes) {
-			if (v > 1 || v < 0) {
-			  throw (std::logic_error("phenotypes should be either 0 or 1"));
-			}
-			pset_ofs << v << "\t";
+		if(ta.get_tp().linear) {
+		  // Fisher-Yates Shuffle
+		  for(arma::sword i = phenotypes.n_elem - 1; i > 0; --i) {
+			std::uniform_int_distribution<> dis(0, i);
+			arma::uword j = static_cast<arma::uword>(dis(gen_));
+			double tmp = phenotypes(i);
+			phenotypes(i) = phenotypes(j);
+			phenotypes(j) = tmp;
 		  }
-		  pset_ofs << "\n";
+
+		} else {
+		  permutations = ta.get_permute(k).permutations_maj_bin(1,
+																ta.get_cov().get_odds(),
+																ta.get_cov().get_ncases(),
+																mac_indices[k],
+																maj_indices[k]);
+		  arma::uword total_cases = 0;
+		  for (int i = 0; i < mac_indices[k].n_elem; i++) {
+			phenotypes(mac_indices[k](i)) = permutations[0][i];
+			if (permutations[0][i] == 1)
+			  total_cases++; // Count cases in mac
+		  }
+
+		  if (ta.get_tp().permute_set && transcript_no == 0) {
+			for (const auto &v : phenotypes) {
+			  if (v > 1 || v < 0) {
+				throw (std::logic_error("phenotypes should be either 0 or 1"));
+			  }
+			  pset_ofs << v << "\t";
+			}
+			pset_ofs << "\n";
+		  }
+
+		  arma::vec temp(maj_indices[k].n_elem, arma::fill::zeros);
+		  arma::uword remaining_cases = ta.get_cov().get_ncases() - total_cases;
+		  temp(arma::span(0, remaining_cases - 1)) =
+			  arma::vec(ta.get_cov().get_ncases() - total_cases, arma::fill::ones);
+
+		  phenotypes(maj_indices[k]) = temp;
 		}
-
-		arma::vec temp(maj_indices[k].n_elem, arma::fill::zeros);
-		arma::uword remaining_cases = ta.get_cov().get_ncases() - total_cases;
-		temp(arma::span(0, remaining_cases - 1)) =
-			arma::vec(ta.get_cov().get_ncases() - total_cases, arma::fill::ones);
-
-		phenotypes(maj_indices[k]) = temp;
 #if 0
 		permutations = get_permutations(1, mac_odds[k], mac_case_count[k][iter]);
 
@@ -490,7 +502,7 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 	if (!ta.get_tp().alternate_permutation) {
 	  for (const auto &v : ta.results) {
 		std::cerr << "Stage 2: " << ta.get_gene().get_gene() << "\t" << v.second.transcript << "\t";
-		std::cerr << std::fixed << std::setprecision(2) << v.second.original << std::endl;
+		std::cerr << std::fixed << std::setprecision(6) << v.second.original << std::endl;
 	  }
 	} else {
 	  for (const auto &v : ta.results) {
@@ -550,7 +562,7 @@ void TaskQueue::check_perm(const std::string &method,
 						   int success_threshold,
 						   std::pair<const std::string, Result> &v) {
   // SKATO returns a pvalue so we need to reverse the successes
-  if (method == "SKATO" || method == "SKAT" || method == "CMC") {
+  if (method == "SKATO" || method == "SKAT" || method == "CMC" || method == "RVT1" || method == "RVT2") {
 	if (perm_val <= v.second.original) {
 	  if (v.second.successes < success_threshold) {
 		v.second.successes++;
@@ -605,6 +617,10 @@ double TaskQueue::call_method(Methods &method,
 	return method.CALPHA(gene, phenotypes, k);
   } else if (tp.method == "CMC") {
 	return method.CMC(gene, phenotypes, k, tp.maf);
+  } else if (tp.method == "RVT1") {
+    return method.RVT1(gene, phenotypes, cov.get_covariate_matrix(), k, tp.linear);
+  } else if (tp.method == "RVT2") {
+	return method.RVT2(gene, phenotypes, cov.get_covariate_matrix(), k, tp.linear);
   } else if (tp.method == "SKAT") {
 	return method.SKATR(gene, k, shuffle, tp.a, tp.b, detail, tp.linear);
   } else if (tp.method == "SKATO") {

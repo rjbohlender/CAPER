@@ -21,6 +21,7 @@ struct TaskParams {
   // For SKATO, SKAT, BURDEN
   bool alternate_permutation;
   bool linear;
+  bool quantitative;
 
   // Method
   std::string method;

@@ -15,14 +15,16 @@ struct GLM {
   arma::vec beta_; // coefficients
   arma::vec mu_;   // fitted.values
   arma::vec eta_;  // linear.predictors
+  double dev_;
 
   GLM(arma::mat &X, arma::vec &Y, LinkT &link) {
-    try{
+    //try{
       beta_ = irls_svdnewton(X, Y);
-    } catch(std::exception &e) {
-      std::cerr << "IRLS failed; Using gradient descent." << std::endl;
-      beta_ = gradient_descent(X, Y);
-    }
+    //} catch(std::exception &e) {
+      //std::cerr << "IRLS failed; Using gradient descent." << std::endl;
+      //beta_ = gradient_descent(X, Y);
+      //std::cerr << e.what();
+    //}
 
     arma::mat A = X.t();
     mu_ = link.linkinv(A, beta_);
@@ -60,7 +62,6 @@ template<typename LinkT>
 auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
   arma::wall_clock timer;
   timer.tic();
-  std::cerr << "Running IRLS.\n";
   const auto tol = 1e-8;
   const auto max_iter = 25;
   auto update = 0.;
@@ -83,11 +84,11 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
   arma::vec s(n, arma::fill::randn);
   arma::vec weights(m, arma::fill::ones);
 
-  double dev = 0;
+  dev_ = 0;
   double devold;
 
   do {
-    devold = dev;
+    devold = dev_;
 
     arma::vec g = link.linkinv(eta);
     arma::vec varg = link.variance(g);
@@ -102,11 +103,7 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
     arma::mat C;
     bool success = arma::chol(C, U.t() * (U.each_col() % W));
     if(!success) {
-      std::cerr << z.t();
-      std::cerr << W.t();
-      std::cerr << g.t();
-      std::cerr << varg.t();
-      std::cerr << gprime.t();
+      C = arma::chol(U.t() * (U.each_col() % W) + 1e-5);
     }
 
     s = solve(arma::trimatl(C.t()), U.t() * (W % z));
@@ -116,10 +113,9 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
 
     iter++;
 
-    dev = arma::sum(link.dev_resids(Y, g, weights));
+    dev_ = arma::sum(link.dev_resids(Y, g, weights));
 
-  } while(iter < max_iter && std::abs(dev - devold) / (0.1 + std::abs(dev)) > tol);
-  std::cerr << "Finished IRLS in: " << timer.toc() << "s" << std::endl;
+  } while(iter < max_iter && std::abs(dev_ - devold) / (0.1 + std::abs(dev_)) > tol);
 
   return (V * (arma::diagmat(1. / S) * (U.t() * eta)));
 }

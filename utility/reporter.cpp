@@ -9,7 +9,9 @@
 const std::set<std::string> Reporter::pvalue_methods_ {
   "SKAT",
   "SKATO",
-  "CMC"
+  "CMC",
+  "RVT1",
+  "RVT2"
 };
 
 Reporter::Reporter(TaskQueue &tq, TaskParams &tp)
@@ -74,7 +76,7 @@ auto Reporter::extract_results(std::vector<TaskArgs> &tq_results) -> void {
       if(a.empirical_midp != b.empirical_midp) {
         return a.empirical_midp < b.empirical_midp;
       } else {
-        return a.original < b.original;
+        return a.original > b.original;
       }
     });
   }
@@ -172,11 +174,10 @@ auto Reporter::report_simple(TaskParams &tp) -> void {
   double permutation_mean = 0;
   double permutation_variance = 0;
 
-  bool unfin = false;
   for (auto &v : results_) {
-	if (v.successes < tp.success_threshold && !unfin) {
-	  unfinished.push_back(results_.back().gene);
-	  unfin = true;
+	if (v.successes < tp.success_threshold) {
+	  if(std::find(unfinished.begin(), unfinished.end(), v.gene) == unfinished.end())
+		unfinished.push_back(v.gene);
 	}
 	permutation_mean += v.permutations;
   }
@@ -199,7 +200,7 @@ auto Reporter::report_simple(TaskParams &tp) -> void {
   std::cerr << "Permutation sd: " << std::sqrt(permutation_variance) << std::endl;
   std::cerr << "Transcripts submitted: " << results_.size() << std::endl;
 
-  if (!unfinished.empty()) {
+  if (!unfinished.empty() && tp.total_permutations > 0) {
     // Print command to run unfinished
     std::stringstream uf_ss;
     uf_ss << tp.program_path << " ";
@@ -253,8 +254,15 @@ auto Reporter::report_detail(TaskQueue &tq, TaskParams &tp) -> void {
 
   std::ofstream detail(detail_path_ss.str());
 
-  std::string header =
-      "#Gene\tTranscripts\tVariant\tScore\tOR\tOR_SE\tOR_P\tAF\tcase_ref\tcase_alt\tcontrol_ref\tcontrol_alt\tcase_list\tcontrol_list";
+  std::string header;
+
+  if(tp.linear) {
+    header =
+        "#Gene\tTranscripts\tVariant\tScore\tOR\tOR_SE\tOR_P\tAF";
+  } else {
+	header =
+		"#Gene\tTranscripts\tVariant\tScore\tOR\tOR_SE\tOR_P\tAF\tcase_ref\tcase_alt\tcontrol_ref\tcontrol_alt\tcase_list\tcontrol_list";
+  }
   detail << header << std::endl;
 
   int i = 0; // For each gene

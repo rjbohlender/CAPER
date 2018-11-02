@@ -265,6 +265,11 @@ void Covariates::fit_null() {
     fitted_ = fit.mu_;
     eta_ = fit.eta_;
     coef_ = fit.beta_.t();
+    // From Moser and Coombs (2004) -- Get Logistic Regression params without dichotomizing
+    double lambda = arma::datum::pi / std::sqrt(3);
+    Binomial alt_link("logit");
+    arma::vec temp_mu = alt_link.linkinv(((lambda * coef_ / std::sqrt(fit.dev_)) * design_).t());
+    odds_ = temp_mu / (1. - temp_mu); // Individual odds, as if the data were dichotomized
   } else {
 	Binomial link("logit");
 	GLM<Binomial> fit(design_, phenotypes_, link);

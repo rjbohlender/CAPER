@@ -43,6 +43,9 @@ public:
   double CALPHA(Gene &gene, arma::vec &Y, const std::string &k);
   // Li and Leal 2008
   double CMC(Gene &gene, arma::vec &Y, const std::string &k, double maf = 0.005);
+  // Morris and Zeggini 2010
+  double RVT1(Gene &gene, arma::vec &Y, arma::mat &design, const std::string &k, bool linear);
+  double RVT2(Gene &gene, arma::vec &Y, arma::mat &design, const std::string &k, bool linear);
   // Wu, Guan, and Pankow 2016
   double SKATR(Gene &gene, const std::string &k, bool shuffle, int a, int b, bool detail = false, bool linear = false);
   // Wu, Guan, and Pankow 2016
@@ -56,6 +59,7 @@ public:
 			   arma::uword group_threshold = 4,
 			   bool detail = false);
   double VT(Gene &gene, const std::string &k, bool shuffle);
+  // Madsen, Browning 2009
   double WSS(Gene &gene, arma::vec &Y, const std::string &k);
 
 private:
