@@ -14,15 +14,60 @@ const std::set<std::string> Reporter::pvalue_methods_ {
   "RVT2"
 };
 
-Reporter::Reporter(TaskQueue &tq, TaskParams &tp)
+Reporter::Reporter(TaskParams &tp)
+: method_(tp.method), gene_list_(tp.gene_list), testable_(tp.testable) {
+  std::stringstream simple_path_ss;
+  std::stringstream detail_path_ss;
+  std::string header;
+
+  simple_path_ss << tp.output_path << "/" << tp.method;
+  if(tp.group_size > 0)
+    simple_path_ss << boost::format(".g%1$d") % tp.group_size;
+  if(tp.testable)
+    simple_path_ss << ".testable";
+  simple_path_ss << ".simple";
+
+  simple_file_ = std::ofstream(simple_path_ss.str());
+
+  simple_file_ << std::setw(20) << std::left << "Gene";
+  simple_file_ << std::setw(20) << "Transcript";
+  simple_file_ << std::setw(20) << "Original";
+  simple_file_ << std::setw(20) << "Empirical_P";
+  simple_file_ << std::setw(20) << "Empirical_MidP";
+  simple_file_ << std::setw(20) << "Successes";
+  simple_file_ << std::setw(20) << "Permutations";
+  simple_file_ << std::setw(20) << "MGIT";
+  simple_file_ << std::setw(20) << "MGIT_Successes";
+  simple_file_ << std::setw(20) << "OddsRatio" << std::endl;
+
+  detail_path_ss << tp.output_path << "/" << tp.method;
+  if(tp.group_size > 0)
+    detail_path_ss << boost::format(".g%1$d") % tp.group_size;
+  if(tp.testable)
+    detail_path_ss << ".testable";
+  detail_path_ss << ".detail";
+
+  detail_file_ = std::ofstream(detail_path_ss.str());
+
+  if(tp.linear) {
+    header =
+        "#Gene\tTranscripts\tVariant\tScore\tOR\tOR_SE\tOR_P\tAF";
+  } else {
+    header =
+        "#Gene\tTranscripts\tVariant\tScore\tOR\tOR_SE\tOR_P\tAF\tcase_ref\tcase_alt\tcontrol_ref\tcontrol_alt\tcase_list\tcontrol_list";
+  }
+  detail_file_ << header << std::endl;
+}
+
+Reporter::Reporter(std::vector<TaskArgs> &res, TaskParams &tp)
 : method_(tp.method), gene_list_(tp.gene_list), testable_(tp.testable) {
   // Extract results
-  extract_results(tq.get_results());
+  extract_results(res);
 
   // Write output
   report_simple(tp);
   if(!tp.nodetail)
-	report_detail(tq, tp);
+	report_detail(res, tp);
 }
 
 auto Reporter::extract_results(std::vector<TaskArgs> &tq_results) -> void {
@@ -147,29 +192,20 @@ auto Reporter::recalculate_mgit(std::map<std::string, std::map<std::string, Resu
 }
 
 auto Reporter::report_simple(TaskParams &tp) -> void {
-  std::stringstream simple_path_ss;
-  simple_path_ss << tp.output_path << "/" << tp.method;
-  if(tp.group_size > 0)
-    simple_path_ss << boost::format(".g%1$d") % tp.group_size;
-  if(tp.testable)
-    simple_path_ss << ".testable";
-  simple_path_ss << ".simple";
-  std::ofstream simple_ofs(simple_path_ss.str());
-
   // Holds unfinished genes
   std::vector<std::string> unfinished;
 
-  simple_ofs << std::setw(20) << std::left << "Rank";
-  simple_ofs << std::setw(20) << "Gene";
-  simple_ofs << std::setw(20) << "Transcript";
-  simple_ofs << std::setw(20) << "Original";
-  simple_ofs << std::setw(20) << "Empirical_P";
-  simple_ofs << std::setw(20) << "Empirical_MidP";
-  simple_ofs << std::setw(20) << "Successes";
-  simple_ofs << std::setw(20) << "Permutations";
-  simple_ofs << std::setw(20) << "MGIT";
-  simple_ofs << std::setw(20) << "MGIT_Successes";
-  simple_ofs << std::setw(20) << "OddsRatio" << std::endl;
+  simple_file_ << std::setw(20) << std::left << "Rank";
+  simple_file_ << std::setw(20) << "Gene";
+  simple_file_ << std::setw(20) << "Transcript";
+  simple_file_ << std::setw(20) << "Original";
+  simple_file_ << std::setw(20) << "Empirical_P";
+  simple_file_ << std::setw(20) << "Empirical_MidP";
+  simple_file_ << std::setw(20) << "Successes";
+  simple_file_ << std::setw(20) << "Permutations";
+  simple_file_ << std::setw(20) << "MGIT";
+  simple_file_ << std::setw(20) << "MGIT_Successes";
+  simple_file_ << std::setw(20) << "OddsRatio" << std::endl;
   // Print header and formatted results
   double permutation_mean = 0;
   double permutation_variance = 0;
@@ -189,12 +225,12 @@ auto Reporter::report_simple(TaskParams &tp) -> void {
   int rank = 1;
   for(auto &v : results_) {
     v.set_rank(rank);
-    write_to_stream(simple_ofs, v);
+    write_to_stream(simple_file_, v);
     rank++;
   }
 
-  simple_ofs.flush();
-  simple_ofs.close();
+  simple_file_.flush();
+  simple_file_.close();
 
   std::cerr << "Permutation mean: " << permutation_mean << std::endl;
   std::cerr << "Permutation sd: " << std::sqrt(permutation_variance) << std::endl;
@@ -243,7 +279,7 @@ auto Reporter::report_simple(TaskParams &tp) -> void {
   }
 }
 
-auto Reporter::report_detail(TaskQueue &tq, TaskParams &tp) -> void {
+auto Reporter::report_detail(std::vector<TaskArgs> &res, TaskParams &tp) -> void {
   std::stringstream detail_path_ss;
   detail_path_ss << tp.output_path << "/" << tp.method;
   if(tp.group_size > 0)
@@ -269,10 +305,10 @@ auto Reporter::report_detail(TaskQueue &tq, TaskParams &tp) -> void {
   for (auto &v : details_) {
 	detail << v;
 	// Print sample / index map at the end
-	if (i == tq.get_results().size() - 1) {
+	if (i == res.size() - 1) {
 	  detail << "## Sample Index Map" << std::endl;
 	  int j = 0;
-	  for (auto &s : tq.get_results()[0].get_gene().get_samples()) {
+	  for (auto &s : res[0].get_gene().get_samples()) {
 		detail << "#\t" << s << "\t" << j << std::endl;
 		j++;
 	  }
@@ -291,3 +327,18 @@ auto Reporter::write_to_stream(std::ostream &os, Result &res) -> void {
   }
 }
 
+auto Reporter::sync_write_simple(Result &res) -> void {
+  lock_.lock(); // Acquire lock
+
+  simple_file_ << res;
+
+  lock_.unlock();
+}
+
+auto Reporter::sync_write_detail(const std::string &d) -> void {
+  lock_.lock(); // Acquire lock
+
+  detail_file_ << d;
+
+  lock_.unlock();
+}

@@ -78,8 +78,7 @@ Result &Result::operator=(Result &&rhs) noexcept {
 }
 
 std::ostream &operator<<(std::ostream &stream, const Result &rhs) {
-  stream << std::setw(20) << std::left << rhs.rank;
-  stream << std::setw(20) << rhs.gene;
+  stream << std::setw(20) << std::left << rhs.gene;
   stream << std::setw(20) << rhs.transcript;
   stream << std::setw(20) << std::setprecision(10) << rhs.original;
   stream << std::setw(20) << std::setprecision(10) << rhs.empirical_p;

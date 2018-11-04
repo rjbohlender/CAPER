@@ -6,17 +6,27 @@
 #define PERMUTE_ASSOCIATE_REPORTER_HPP
 
 #include <set>
+#include <mutex>
 
-#include "../data/taskqueue.hpp"
+#include "../data/taskargs.hpp"
 
 class Reporter {
 public:
-  Reporter(TaskQueue &tq, TaskParams &tp);
+  explicit Reporter(TaskParams &tp);
+  Reporter(std::vector<TaskArgs> &res, TaskParams &tp);
 
-  auto report_detail(TaskQueue &tq, TaskParams &tp) -> void;
+  auto report_detail(std::vector<TaskArgs> &res, TaskParams &tp) -> void;
   auto report_simple(TaskParams &tp) -> void;
 
+  auto sync_write_simple(Result &res) -> void;
+  auto sync_write_detail(const std::string &d) -> void;
+
 private:
+  // For thread-safe concurrent writing
+  std::mutex lock_;
+  std::ofstream simple_file_;
+  std::ofstream detail_file_;
+
   const std::string method_;
   const bool gene_list_;
   const bool testable_;

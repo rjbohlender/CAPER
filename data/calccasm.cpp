@@ -7,38 +7,51 @@
 #include "calccasm.hpp"
 #include "../utility/split.hpp"
 
-CalcCASM::CalcCASM(double ncase, double ncontrol)
+CalcCASM::CalcCASM(double ncase, double ncontrol, TaskParams &tp)
 : ncase(ncase),
   ncontrol(ncontrol) {
 
   // Read in phastcons data
-  parse_phastcons();
+  parse_phastcons(tp);
 }
 
 double CalcCASM::get_score(const std::string &chr, int spos, int epos, const std::string &type) {
-  if(spos == epos) {
-    double pr = phastcons_scores_[chr][spos];
-
-    if(pr == 1) {
-      double ai1 = (1. - pr) / (ncase * 2);
-      double hi1 = (1. - pr) / (ncontrol * 2);
-    } else if(pr == 0) {
-      double ai0 = pr / (ncase * 2);
-      double hi0 = pr / (ncontrol * 2);
-    } else {
-      double ai0 = pr / (ncase * 2);
-      double ai1 = (1. - pr) / (ncase * 2);
-
-      double hi0 = pr / (ncontrol * 2);
-      double hi1 = (1. - pr) / (ncontrol * 2);
-
-      return 0;
-    }
+  if(type == "SNV") {
+    calc_snv_score(chr, spos);
+  } else {
+    calc_ind_score(chr, spos, epos);
   }
 }
 
-void CalcCASM::parse_phastcons() {
-  std::ifstream ifs(phastcons_path_);
+auto CalcCASM::calc_snv_score(const std::string &chr, int spos) -> double {
+  double pr = phastcons_scores_[chr][spos];
+
+  if(pr == 1) {
+    double ai1 = (1. - pr) / (ncase * 2);
+    double hi1 = (1. - pr) / (ncontrol * 2);
+  } else if(pr == 0) {
+    double ai0 = pr / (ncase * 2);
+    double hi0 = pr / (ncontrol * 2);
+  } else {
+    double ai0 = pr / (ncase * 2);
+    double ai1 = (1. - pr) / (ncase * 2);
+
+    double hi0 = pr / (ncontrol * 2);
+    double hi1 = (1. - pr) / (ncontrol * 2);
+  }
+}
+
+auto CalcCASM::calc_ind_score(const std::string &chr, int spos, int epos) -> double {
+  return 0;
+}
+
+auto CalcCASM::parse_phastcons(TaskParams &tp) -> void {
+  RJBUtil::Splitter<std::string> path_splitter(tp.base, "/");
+  std::string path;
+  for(arma::uword i = 0; i < path_splitter.size() - 2; i++) {
+    path += path_splitter[i];
+  }
+  std::ifstream ifs(path + phastcons_path_);
   std::string line;
 
   while(std::getline(ifs, line)) {
@@ -52,7 +65,7 @@ void CalcCASM::parse_phastcons() {
   }
 }
 
-const std::map<std::string, double> CalcCASM::cons_controlled_ratio_ {
+const std::unordered_map<std::string, double> CalcCASM::cons_controlled_ratio_ {
     {"A0T-cons", 0.996750910767506},
     {"A0T-uncons", 0.275372722662558},
     {"A0T", 0.540349794825659},

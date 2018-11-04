@@ -9,6 +9,7 @@
 #include <string>
 #include <memory>
 
+#include "reporter.hpp"
 #include "../data/covariates.hpp"
 #include "../data/taskargs.hpp"
 #include "../data/taskqueue.hpp"
@@ -18,7 +19,7 @@
 
 class JobDispatcher {
 public:
-  explicit JobDispatcher(TaskParams &tp);
+  explicit JobDispatcher(TaskParams &tp, std::shared_ptr<Reporter> reporter);
 
 private:
   // Member functions

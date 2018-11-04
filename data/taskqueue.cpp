@@ -4,26 +4,28 @@
 
 #include "taskqueue.hpp"
 
-TaskQueue::TaskQueue(size_t thread_cnt)
+TaskQueue::TaskQueue(size_t thread_cnt, std::shared_ptr<Reporter> reporter)
 	: threads_(thread_cnt),
 	  ntasks_(0),
 	  quit_(false),
 	  gen_(rd_()),
 	  verbose_(false),
-	  nthreads_(thread_cnt) {
+	  nthreads_(thread_cnt),
+	  reporter_(std::move(reporter)) {
   for (size_t i = 0; i < threads_.size(); i++) {
 	threads_[i] = std::thread(
 		std::bind(&TaskQueue::thread_handler, this));
   }
 }
 
-TaskQueue::TaskQueue(size_t thread_cnt, bool verbose)
+TaskQueue::TaskQueue(size_t thread_cnt, bool verbose, std::shared_ptr<Reporter> reporter)
 	: threads_(thread_cnt),
 	  ntasks_(0),
 	  quit_(false),
 	  gen_(rd_()),
 	  verbose_(verbose),
-	  nthreads_(thread_cnt) {
+	  nthreads_(thread_cnt),
+	  reporter_(std::move(reporter)) {
   for (size_t i = 0; i < threads_.size(); i++) {
 	threads_[i] = std::thread(
 		std::bind(&TaskQueue::thread_handler, this));
@@ -118,13 +120,23 @@ void TaskQueue::thread_handler() {
 	  } else if (stage == Stage::Done) {
 		// MGIT
 		op.calc_multitranscript_pvalues();
-		// Free memory
+		// Finalize result calculations and free memory
 		op.cleanup();
 
-		// Lock and do results queue
-		lock.lock();
-		results_.emplace_back(op);
-		lock.unlock();
+		// Report results for non-gene_list run
+		if (!op.get_tp().gene_list) {
+		  for (auto &r : op.results) {
+			reporter_->sync_write_simple(r.second);
+		  }
+		  reporter_->sync_write_detail(op.get_gene().get_detail());
+		}
+
+		// Lock and do results queue if gene list
+		if (op.get_tp().gene_list) {
+		  lock.lock();
+		  results_.emplace_back(op);
+		  lock.unlock();
+		}
 		ntasks_--;
 	  }
 

@@ -104,3 +104,17 @@ from the one automatically detected to another, perhaps newer compiler:
 ```bash
 cmake -DCMAKE_CXX_COMPILER=<path_to_executable> ..
 ```
+
+## Benchmarks
+
+Testing on a mid-2015 MacBook Pro, 2.2Ghz Core i7, 16GB 1600 Mhz DDR3 ram.
+
+| Test  | Samples | Genes | Permutations |  Time (sec) |
+| -----:|:-------:|:-----:|:------------:|:-----------:|
+| CMC   | 100000  | 1000  | 0            |  341.42     |
+| RVT1  | 100000  | 1000  | 0            |  377.89     |
+| RVT2  | 100000  | 1000  | 0            |  405.56     |
+| VAAST | 100000  | 1000  | 10000        |  2086.53    |
+| SKAT-O| 100000  | 1000  | 0            |  7096.02    |
+| WSS   | 100000  | 1000  | 10000        |  3432.29    |
+| SKAT  | 100000  | 1000  | 10000        |  28293.36   |

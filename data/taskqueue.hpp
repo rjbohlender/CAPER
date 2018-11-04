@@ -14,13 +14,14 @@
 
 #include "taskargs.hpp"
 #include "permutation.hpp"
+#include "../utility/reporter.hpp"
 
 class TaskQueue {
 
 public:
   // Construtors
-  explicit TaskQueue(size_t thread_cnt);
-  TaskQueue(size_t thread_cnt, bool verbose);
+  explicit TaskQueue(size_t thread_cnt, std::shared_ptr<Reporter> reporter);
+  TaskQueue(size_t thread_cnt, bool verbose, std::shared_ptr<Reporter> reporter);
 
   // Destructor
   ~TaskQueue();
@@ -48,6 +49,7 @@ private:
 
   // Messages
   bool verbose_;
+  std::shared_ptr<Reporter> reporter_;
 
   // Threading
   std::mutex lock_;

@@ -156,7 +156,7 @@ void Gene::parse(std::stringstream &ss) {
 	for(arma::sword i = sums.n_elem - 1; i > 0; --i) {
 	  if(sums[i] > tp_.mac) {
 	    if(tp_.verbose) {
-	      std::cerr << "Removing: " << gene_ << " " << ts << " " << positions_[ts][i] << " | count: " << sums[i] << " due to MAC filter." << std::endl;
+	      // std::cerr << "Removing: " << gene_ << " " << ts << " " << positions_[ts][i] << " | count: " << sums[i] << " due to MAC filter." << std::endl;
 	    }
 	    genotypes_[ts].shed_col(i);
 	    positions_[ts].erase(positions_[ts].begin() + i);

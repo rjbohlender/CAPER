@@ -11,8 +11,8 @@
 
 using namespace std::chrono_literals;
 
-JobDispatcher::JobDispatcher(TaskParams &tp)
-	: tp_(tp), tq_(tp_.nthreads - 1, tp.verbose), cov_(std::make_shared<Covariates>(tp.covariates_path, tp.ped_path, tp.linear)) {
+JobDispatcher::JobDispatcher(TaskParams &tp, std::shared_ptr<Reporter> reporter)
+	: tp_(tp), tq_(tp_.nthreads - 1, tp.verbose, reporter), cov_(std::make_shared<Covariates>(tp.covariates_path, tp.ped_path, tp.linear)) {
   // Initialize bed and weights
   if(tp.gene_list)
     gene_list_ = RJBUtil::Splitter<std::string>(*tp.gene_list, ",");
@@ -85,7 +85,8 @@ JobDispatcher::JobDispatcher(TaskParams &tp)
 	permutation_ptr_.reset();
   }
 
-  Reporter(tq_, tp_);
+  if(tp.gene_list)
+	Reporter(tq_.get_results(), tp_);
 
   cov_.reset();
 }

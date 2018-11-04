@@ -64,20 +64,16 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
   timer.tic();
   const auto tol = 1e-8;
   const auto max_iter = 25;
-  auto update = 0.;
   auto iter = 0;
 
-  // Aliases
-  arma::mat A = X.t();
-
-  arma::uword m = A.n_rows;
-  arma::uword n = A.n_cols;
+  arma::uword m = X.n_cols;
+  arma::uword n = X.n_rows;
 
   // SVD
   arma::mat U, V;
   arma::vec S;
 
-  arma::svd_econ(U, S, V, A, "both", "std");
+  arma::svd_econ(U, S, V, X.t(), "both", "std");
 
   // Matrices and Vectors
   arma::vec eta(m, arma::fill::randn);

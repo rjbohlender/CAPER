@@ -11,6 +11,8 @@
 #include <boost/optional.hpp>
 
 struct TaskParams {
+  // Base command
+  std::string base;
   // Permutation paramters
   arma::uword success_threshold;
 

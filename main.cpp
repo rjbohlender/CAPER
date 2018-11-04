@@ -20,6 +20,7 @@
 #include "utility/main_support.hpp"
 #include "utility/jobdispatcher.hpp"
 #include "data/taskparams.hpp"
+#include "utility/reporter.hpp"
 
 namespace po = boost::program_options;
 
@@ -178,6 +179,9 @@ int main(int argc, char **argv) {
 	  cmd_ss << argv[i] << " ";
 	}
   }
+
+  tp.base = argv[0];
+
   tp.full_command = cmd_ss.str();
 
   tp.success_threshold = vm["successes"].as<arma::uword>();
@@ -252,8 +256,6 @@ int main(int argc, char **argv) {
 	}
   }
 
-  TaskQueue tq(tp.nthreads - 1, tp.verbose);
-
   // Check for correct file paths
   if (!check_file_exists(tp.genotypes_path)) {
 	std::cerr << "Incorrect file path for genotypes." << std::endl;
@@ -279,7 +281,9 @@ int main(int argc, char **argv) {
   // Initialize randomization
   arma::arma_rng::set_seed_random();
 
-  JobDispatcher jd(tp);
+  auto reporter = std::make_shared<Reporter>(tp);
+
+  JobDispatcher jd(tp, reporter);
 
   double n = timer.toc();
   std::cerr << "Elapsed time: " << n << std::endl;
