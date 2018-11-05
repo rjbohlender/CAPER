@@ -52,11 +52,11 @@ public:
 
   std::string get_detail();
 
-  bool is_weighted(const std::string &k);
+  auto is_weighted(const std::string &k) -> bool;
+  auto is_testable() -> bool;
 
-  void generate_detail(Covariates &cov, std::unordered_map<std::string, Result> &results, TaskParams &tp);
-
-  void clear(Covariates &cov, std::unordered_map<std::string, Result> &results, TaskParams &tp);
+  auto generate_detail(Covariates &cov, std::unordered_map<std::string, Result> &results, TaskParams &tp) -> void;
+  auto clear(Covariates &cov, std::unordered_map<std::string, Result> &results, TaskParams &tp) -> void;
 
 private:
   std::map<std::string, bool> weights_set_;
@@ -73,6 +73,7 @@ private:
 
   std::map<std::string, arma::vec> variant_scores_; // Stored if detail is true
   std::map<std::string, double> odds_;
+  bool testable_;
 
   TaskParams tp_;
 

@@ -274,6 +274,8 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
 	  }
 	  if(tp.testable)
 		results[ts].testable = testable(ts, cov, tp);
+	  if(!testable_)
+	    testable_ = results[ts].testable;
 	} else {
 	  // Get odds via Moser & Coombs (2004) -- Rather than dichotomizing, we fit normally and recover OR
 	  Gaussian link("identity");
@@ -410,6 +412,10 @@ auto Gene::testable(const std::string &k, Covariates &cov, TaskParams &tp) -> bo
   VAAST vaast(genotypes_[k], extreme_phen, weights_[k], positions_[k], k, tp.score_only_minor, tp.score_only_alternative, 2., tp.group_size);
 
   return arma::accu(vaast.expanded_scores > 0) >= 4;
+}
+
+auto Gene::is_testable() -> bool {
+  return testable_;
 }
 
 void print_comma_sep(arma::uvec &x, std::ostream &os) {

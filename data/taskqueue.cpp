@@ -128,7 +128,7 @@ void TaskQueue::thread_handler() {
 		  for (auto &r : op.results) {
 			reporter_->sync_write_simple(r.second);
 		  }
-		  reporter_->sync_write_detail(op.get_gene().get_detail());
+		  reporter_->sync_write_detail(op.get_gene().get_detail(), op.get_gene().is_testable());
 		}
 
 		// Lock and do results queue if gene list
@@ -163,12 +163,12 @@ void TaskQueue::stage_1(TaskArgs &ta) {
 	if (!ta.get_tp().alternate_permutation) {
 	  for (const auto &v : ta.results) {
 		std::cerr << "Stage 1: " << ta.get_gene().get_gene() << "\t" << v.second.transcript << "\t";
-		std::cerr << std::fixed << std::setprecision(6) << v.second.original << std::endl;
+		std::cerr << std::defaultfloat << std::setprecision(6) << v.second.original << std::endl;
 	  }
 	} else {
 	  for (const auto &v : ta.results) {
 		std::cerr << "Stage 1: " << ta.get_gene().get_gene() << "\t" << v.second.transcript << "\t";
-		std::cerr << std::fixed << std::setprecision(6) << v.second.original << std::endl;
+		std::cerr << std::defaultfloat << std::setprecision(6) << v.second.original << std::endl;
 	  }
 	}
   }
@@ -514,12 +514,12 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 	if (!ta.get_tp().alternate_permutation) {
 	  for (const auto &v : ta.results) {
 		std::cerr << "Stage 2: " << ta.get_gene().get_gene() << "\t" << v.second.transcript << "\t";
-		std::cerr << std::fixed << std::setprecision(6) << v.second.original << std::endl;
+		std::cerr << std::defaultfloat << std::setprecision(6) << v.second.original << std::endl;
 	  }
 	} else {
 	  for (const auto &v : ta.results) {
 		std::cerr << "Stage 2: " << ta.get_gene().get_gene() << "\t" << v.second.transcript << "\t";
-		std::cerr << std::fixed << std::setprecision(6) << v.second.original << std::endl;
+		std::cerr << std::defaultfloat << std::setprecision(6) << v.second.original << std::endl;
 	  }
 	}
   }

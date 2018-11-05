@@ -19,7 +19,7 @@ public:
   auto report_simple(TaskParams &tp) -> void;
 
   auto sync_write_simple(Result &res) -> void;
-  auto sync_write_detail(const std::string &d) -> void;
+  auto sync_write_detail(const std::string &d, bool testable) -> void;
 
 private:
   // For thread-safe concurrent writing

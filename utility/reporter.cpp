@@ -330,15 +330,25 @@ auto Reporter::write_to_stream(std::ostream &os, Result &res) -> void {
 auto Reporter::sync_write_simple(Result &res) -> void {
   lock_.lock(); // Acquire lock
 
-  simple_file_ << res;
+  if(testable_) {
+    if(res.testable)
+      simple_file_ << res;
+  } else {
+    simple_file_ << res;
+  }
 
   lock_.unlock();
 }
 
-auto Reporter::sync_write_detail(const std::string &d) -> void {
+auto Reporter::sync_write_detail(const std::string &d, bool testable) -> void {
   lock_.lock(); // Acquire lock
 
-  detail_file_ << d;
+  if(testable_) {
+    if(testable)
+	  detail_file_ << d;
+  } else {
+    detail_file_ << d;
+  }
 
   lock_.unlock();
 }

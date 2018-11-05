@@ -903,8 +903,9 @@ double Methods::SKATRO(Gene &gene, const std::string &k, bool shuffle, int a, in
 	// Pure burden
 	if (rho_[i] == 1) {
 	  boost::math::chi_squared chisq(1); // 1-df chisq
-	  pval[i] = 1 - boost::math::cdf(chisq, Qb / R1);
-	  break;
+	  double stat = Qb / R1;
+	  pval[i] = boost::math::cdf(boost::math::complement(chisq, stat));
+	  continue;
 	}
 
 	// Setup Davies
@@ -979,7 +980,7 @@ double Methods::SKATRO(Gene &gene, const std::string &k, bool shuffle, int a, in
 	std::cerr << "p_value: " << p_value << " pmin: " << pmin << "\n";
   }
 
-  return std::min(p_value, pmin * K);
+  return std::max(std::numeric_limits<double>::min(), std::min(p_value, pmin * K));
 }
 
 double Methods::Liu_qval_mod(double pval, arma::vec lambda) {
@@ -999,14 +1000,12 @@ double Methods::Liu_qval_mod(double pval, arma::vec lambda) {
   double beta1 = 2 * arma::datum::sqrt2 * s1;
   double beta2 = 12 * s2;
 
-  double type1 = 0;
   double a, d, l;
   if (s1 * s1 > s2) {
 	a = 1. / (s1 - std::sqrt(s1 * s1 - s2));
 	d = s1 * std::pow(a, 3) - a * a;
 	l = a * a - 2 * d;
   } else {
-	type1 = 1;
 	l = 1. / s2;
 	a = std::sqrt(l);
 	d = 0;
@@ -1144,7 +1143,7 @@ double Methods::Liu_pval(double Q, arma::vec lambda) {
 
   try {
 	boost::math::non_central_chi_squared chisq(df, d);
-	return 1 - boost::math::cdf(chisq, Qnorm);
+	return boost::math::cdf(boost::math::complement(chisq, Qnorm));
   } catch (std::exception &e) {
 	return 1;
   }
