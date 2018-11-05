@@ -61,8 +61,29 @@ Reporter::Reporter(TaskParams &tp)
 
 Reporter::Reporter(std::vector<TaskArgs> &res, TaskParams &tp)
 : method_(tp.method), gene_list_(tp.gene_list), testable_(tp.testable) {
+  std::stringstream simple_path_ss;
+  std::stringstream detail_path_ss;
+  std::string header;
+
+  simple_path_ss << tp.output_path << "/" << tp.method;
+  if(tp.group_size > 0)
+    simple_path_ss << boost::format(".g%1$d") % tp.group_size;
+  if(tp.testable)
+    simple_path_ss << ".testable";
+  simple_path_ss << ".simple";
+
+  detail_path_ss << tp.output_path << "/" << tp.method;
+  if(tp.group_size > 0)
+    detail_path_ss << boost::format(".g%1$d") % tp.group_size;
+  if(tp.testable)
+    detail_path_ss << ".testable";
+  detail_path_ss << ".detail";
+
+  simple_file_ = std::ofstream(simple_path_ss.str());
+  detail_file_ = std::ofstream(detail_path_ss.str());
   // Extract results
   extract_results(res);
+
 
   // Write output
   report_simple(tp);
@@ -195,8 +216,7 @@ auto Reporter::report_simple(TaskParams &tp) -> void {
   // Holds unfinished genes
   std::vector<std::string> unfinished;
 
-  simple_file_ << std::setw(20) << std::left << "Rank";
-  simple_file_ << std::setw(20) << "Gene";
+  simple_file_ << std::setw(20) << std::left << "Gene";
   simple_file_ << std::setw(20) << "Transcript";
   simple_file_ << std::setw(20) << "Original";
   simple_file_ << std::setw(20) << "Empirical_P";
@@ -280,16 +300,6 @@ auto Reporter::report_simple(TaskParams &tp) -> void {
 }
 
 auto Reporter::report_detail(std::vector<TaskArgs> &res, TaskParams &tp) -> void {
-  std::stringstream detail_path_ss;
-  detail_path_ss << tp.output_path << "/" << tp.method;
-  if(tp.group_size > 0)
-    detail_path_ss << boost::format(".g%1$d") % tp.group_size;
-  if(tp.testable)
-    detail_path_ss << ".testable";
-  detail_path_ss << ".detail";
-
-  std::ofstream detail(detail_path_ss.str());
-
   std::string header;
 
   if(tp.linear) {
@@ -299,17 +309,17 @@ auto Reporter::report_detail(std::vector<TaskArgs> &res, TaskParams &tp) -> void
 	header =
 		"#Gene\tTranscripts\tVariant\tScore\tOR\tOR_SE\tOR_P\tAF\tcase_ref\tcase_alt\tcontrol_ref\tcontrol_alt\tcase_list\tcontrol_list";
   }
-  detail << header << std::endl;
+  detail_file_ << header << std::endl;
 
   int i = 0; // For each gene
   for (auto &v : details_) {
-	detail << v;
+	detail_file_ << v;
 	// Print sample / index map at the end
 	if (i == res.size() - 1) {
-	  detail << "## Sample Index Map" << std::endl;
+	  detail_file_ << "## Sample Index Map" << std::endl;
 	  int j = 0;
 	  for (auto &s : res[0].get_gene().get_samples()) {
-		detail << "#\t" << s << "\t" << j << std::endl;
+		detail_file_ << "#\t" << s << "\t" << j << std::endl;
 		j++;
 	  }
 	}

@@ -281,7 +281,10 @@ int main(int argc, char **argv) {
   // Initialize randomization
   arma::arma_rng::set_seed_random();
 
-  auto reporter = std::make_shared<Reporter>(tp);
+  std::shared_ptr<Reporter> reporter = nullptr;
+  if(!tp.gene_list) {
+	reporter = std::make_shared<Reporter>(tp);
+  }
 
   JobDispatcher jd(tp, reporter);
 

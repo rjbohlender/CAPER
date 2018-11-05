@@ -97,9 +97,14 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
     W = weights % arma::pow(gprime, 2) / varg;
 
     arma::mat C;
-    bool success = arma::chol(C, U.t() * (U.each_col() % W));
-    if(!success) {
-      C = arma::chol(U.t() * (U.each_col() % W) + 1e-5);
+    arma::mat UWU = U.t() * (U.each_col() % W);
+    bool success = arma::chol(C, UWU);
+    arma::vec scale = UWU.diag();
+    arma::uword tries = 0;
+    while(!success && tries < 10) {
+      UWU.diag() += arma::mean(scale) + 1e-5;
+      success = arma::chol(C, UWU);
+      tries++;
     }
 
     s = solve(arma::trimatl(C.t()), U.t() * (W % z));
