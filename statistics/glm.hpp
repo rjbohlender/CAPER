@@ -73,7 +73,7 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
   arma::mat U, V;
   arma::vec S;
 
-  arma::svd_econ(U, S, V, X.t(), "both", "std");
+  arma::svd_econ(U, S, V, X.t(), "both", "dc");
 
   // Matrices and Vectors
   arma::vec eta(m, arma::fill::randn);
