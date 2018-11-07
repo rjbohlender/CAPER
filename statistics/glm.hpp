@@ -60,8 +60,6 @@ auto GLM<LinkT>::gradient_descent(arma::mat &X, arma::colvec &Y) -> arma::vec {
 
 template<typename LinkT>
 auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
-  arma::wall_clock timer;
-  timer.tic();
   const auto tol = 1e-8;
   const auto max_iter = 25;
   auto iter = 0;
@@ -93,8 +91,8 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
     arma::vec varg = link.variance(g);
     arma::vec gprime = link.mueta(eta);
 
-    arma::vec z(m, arma::fill::zeros);
-    arma::vec W(m, arma::fill::zeros);
+    arma::vec z(m);
+    arma::vec W(m);
 
     z = eta + (Y - g) / gprime;
     W = weights % arma::pow(gprime, 2) / varg;

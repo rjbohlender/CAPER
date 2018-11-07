@@ -192,6 +192,7 @@ arma::vec Binomial::dev_resids(const arma::vec &y, const arma::vec &mu, const ar
   auto y_log_y = [](const arma::vec &y, const arma::vec &mu) {
     arma::vec ret = y % log(y / mu);
     ret.replace(arma::datum::nan, 0);
+	ret.replace(arma::datum::inf, 0);
     return ret;
   };
   arma::vec ret = 2. * weight % (y_log_y(y, mu) + y_log_y((1. - y), (1. - mu)));
