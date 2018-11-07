@@ -82,7 +82,7 @@ Reporter::Reporter(std::vector<TaskArgs> &res, TaskParams &tp)
   simple_file_ = std::ofstream(simple_path_ss.str());
   detail_file_ = std::ofstream(detail_path_ss.str());
   // Extract results
-  extract_results(res, t);
+  extract_results(res, tp);
 
 
   // Write output
