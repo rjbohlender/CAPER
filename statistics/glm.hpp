@@ -73,7 +73,10 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
   arma::mat U, V;
   arma::vec S;
 
-  arma::svd_econ(U, S, V, X.t(), "both", "dc");
+  bool success = arma::svd_econ(U, S, V, X.t(), "both", "dc");
+  if(!success) {
+    arma::svd_econ(U, S, V, X.t(), "both", "std");
+  }
 
   // Matrices and Vectors
   arma::vec eta(m, arma::fill::randn);
@@ -98,7 +101,7 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
 
     arma::mat C;
     arma::mat UWU = U.t() * (U.each_col() % W);
-    bool success = arma::chol(C, UWU);
+    success = arma::chol(C, UWU);
     arma::vec scale = UWU.diag();
     arma::uword tries = 0;
     while(!success && tries < 10) {

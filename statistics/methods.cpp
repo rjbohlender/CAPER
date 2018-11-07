@@ -253,6 +253,7 @@ double Methods::RVT1(Gene &gene, arma::vec &Y, arma::mat &design, const std::str
 	double n = Y.n_elem;
 
 	boost::math::chi_squared chisq(1);
+	// TODO: Should be rank not n_rows
  	double stat = (fit1.dev_ - fit2.dev_) / (fit2.dev_ / (n - d2.n_rows));
 	return boost::math::cdf(boost::math::complement(chisq, stat));
   } else {
