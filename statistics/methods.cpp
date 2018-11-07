@@ -843,7 +843,7 @@ double Methods::SKATRO(Gene &gene, const std::string &k, bool shuffle, int a, in
 	}
   }
 
-  arma::mat G(gene.get_matrix(k));
+  arma::sp_mat G(gene.get_matrix(k));
   arma::uword N = G.n_cols; // Variant count
 
   check_weights(gene, k);
@@ -873,8 +873,7 @@ double Methods::SKATRO(Gene &gene, const std::string &k, bool shuffle, int a, in
   arma::mat Z = Zs * W;
 
   arma::vec s;
-  arma::mat U, V;
-  arma::svd(U, s, V, R);
+  arma::svd(s, R);
 
   arma::uword K = 8; // Length of rho_
 
@@ -933,8 +932,7 @@ double Methods::SKATRO(Gene &gene, const std::string &k, bool shuffle, int a, in
   }
 
   arma::vec lam;
-  arma::mat Utmp, Vtmp;
-  arma::svd(Utmp, lam, Vtmp, R - (Rs * Rs.t()) / R1);
+  arma::svd(lam, R - (Rs * Rs.t()) / R1);
 
   lam = arma::clamp(lam, 0, lam.max()).eval()(arma::span(0, lam.n_rows - 1), arma::span::all);
 
