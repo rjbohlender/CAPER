@@ -822,8 +822,7 @@ double Methods::SKATR(Gene &gene, const std::string &k, bool shuffle, int a, int
   arma::mat Z = Zs * W;
 
   arma::vec s;
-  arma::mat U, V;
-  arma::svd_econ(U, s, V, R, "right");
+  arma::svd(s, R);
 
   double Q = arma::accu(arma::pow(Z, 2));
 
