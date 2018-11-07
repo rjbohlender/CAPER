@@ -47,7 +47,14 @@ public:
   double RVT1(Gene &gene, arma::vec &Y, arma::mat &design, const std::string &k, bool linear);
   double RVT2(Gene &gene, arma::vec &Y, arma::mat &design, const std::string &k, bool linear);
   // Wu, Guan, and Pankow 2016
-  double SKATR(Gene &gene, const std::string &k, bool shuffle, int a, int b, bool detail = false, bool linear = false);
+  double SKATR(Gene &gene,
+			   const std::string &k,
+			   bool shuffle,
+			   int a,
+			   int b,
+			   bool detail,
+			   bool linear,
+			   bool permute);
   // Wu, Guan, and Pankow 2016
   double SKATRO(Gene &gene, const std::string &k, bool shuffle, int a, int b, bool detail = false, bool linear = false);
   double Vaast(Gene &gene,

@@ -634,7 +634,7 @@ double TaskQueue::call_method(Methods &method,
   } else if (tp.method == "RVT2") {
 	return method.RVT2(gene, phenotypes, cov.get_covariate_matrix(), k, tp.linear);
   } else if (tp.method == "SKAT") {
-	return method.SKATR(gene, k, shuffle, tp.a, tp.b, detail, tp.linear);
+	return method.SKATR(gene, k, shuffle, tp.a, tp.b, detail, tp.linear, tp.total_permutations > 0);
   } else if (tp.method == "SKATO") {
 	return method.SKATRO(gene, k, shuffle, tp.a, tp.b, detail, tp.linear);
   } else if (tp.method == "VAAST") {

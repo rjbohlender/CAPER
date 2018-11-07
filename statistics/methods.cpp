@@ -128,7 +128,7 @@ void Methods::clear(std::vector<std::string> &v) {
 
 double Methods::BURDEN(Gene &gene, const std::string &k, bool shuffle, int a, int b) {
   if (shuffle) {
-	obj_->shuffle();
+	obj_->shuffle(false);
   }
 
   arma::sp_mat G(gene.get_matrix(k));
@@ -785,14 +785,21 @@ arma::mat Methods::kernel_twoWayX(arma::mat &Xmat, arma::uword n, arma::uword p)
  * @param b
  * @return
  */
-double Methods::SKATR(Gene &gene, const std::string &k, bool shuffle, int a, int b, bool detail, bool linear) {
+double Methods::SKATR(Gene &gene,
+					  const std::string &k,
+					  bool shuffle,
+					  int a,
+					  int b,
+					  bool detail,
+					  bool linear,
+					  bool permute) {
   arma::sp_mat G(gene.get_matrix(k));
 
   if (shuffle) {
 	if (linear) {
 	  lin_obj_->shuffle();
 	} else {
-	  obj_->shuffle();
+	  obj_->shuffle(permute);
 	}
   }
 
@@ -800,38 +807,54 @@ double Methods::SKATR(Gene &gene, const std::string &k, bool shuffle, int a, int
   arma::vec weights = gene.get_weights(k);
 
   arma::mat W = arma::diagmat(weights);
+  // We're permuting, only calculate the Q-value
+  if (permute) {
+	arma::rowvec Zs;
+	if (linear) {
+	  Zs = arma::sum(arma::diagmat(lin_obj_->get_U0()) * G) / std::sqrt(lin_obj_->get_s2());
+	} else {
+	  Zs = arma::sum(arma::diagmat(obj_->get_U0()) * G);
+	}
+	arma::mat Z = Zs * W;
 
-  arma::mat tmp;
-  if (linear) {
-	tmp = lin_obj_->get_Ux().t() * G;
+	double Q = arma::accu(arma::pow(Z, 2));
+
+	return Q;
+    // We're not permuting, return asymptotic p-values
   } else {
-    tmp = obj_->get_Ux().t() * G;
+
+	arma::mat tmp;
+	if (linear) {
+	  tmp = lin_obj_->get_Ux().t() * G;
+	} else {
+	  tmp = obj_->get_Ux().t() * G;
+	}
+
+	arma::mat Gs;
+	arma::rowvec Zs;
+	if (linear) {
+	  Gs = G.t() * G - tmp.t() * tmp;
+	  Zs = arma::sum(arma::diagmat(lin_obj_->get_U0()) * G) / std::sqrt(lin_obj_->get_s2());
+	} else {
+	  Gs = (arma::diagmat(obj_->get_Yv()) * G).t() * G - tmp.t() * tmp;
+	  Zs = arma::sum(arma::diagmat(obj_->get_U0()) * G);
+	}
+
+	arma::mat R = (Gs * W).t() * W;
+	arma::mat Z = Zs * W;
+
+	arma::vec s;
+	arma::svd(s, R);
+
+	double Q = arma::accu(arma::pow(Z, 2));
+
+	if (detail) {
+	  arma::vec variant_scores = arma::sum(arma::pow(Z, 2), 0).t();
+	  gene.set_scores(k, variant_scores);
+	}
+
+	return SKAT_pval(Q, s);
   }
-
-  arma::mat Gs;
-  arma::rowvec Zs;
-  if(linear) {
-    Gs = G.t() * G - tmp.t() * tmp;
-    Zs = arma::sum(arma::diagmat(lin_obj_->get_U0()) * G) / std::sqrt(lin_obj_->get_s2());
-  } else {
-    Gs = (arma::diagmat(obj_->get_Yv()) * G).t() * G - tmp.t() * tmp;
-    Zs = arma::sum(arma::diagmat(obj_->get_U0()) * G);
-  }
-
-  arma::mat R = (Gs * W).t() * W;
-  arma::mat Z = Zs * W;
-
-  arma::vec s;
-  arma::svd(s, R);
-
-  double Q = arma::accu(arma::pow(Z, 2));
-
-  if (detail) {
-	arma::vec variant_scores = arma::sum(arma::pow(Z, 2), 0).t();
-	gene.set_scores(k, variant_scores);
-  }
-
-  return SKAT_pval(Q, s);
 }
 
 double Methods::SKATRO(Gene &gene, const std::string &k, bool shuffle, int a, int b, bool detail, bool linear) {
@@ -839,7 +862,7 @@ double Methods::SKATRO(Gene &gene, const std::string &k, bool shuffle, int a, in
 	if (linear) {
 	  lin_obj_->shuffle();
 	} else {
-	  obj_->shuffle();
+	  obj_->shuffle(false);
 	}
   }
 

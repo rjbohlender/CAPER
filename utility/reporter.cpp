@@ -82,7 +82,7 @@ Reporter::Reporter(std::vector<TaskArgs> &res, TaskParams &tp)
   simple_file_ = std::ofstream(simple_path_ss.str());
   detail_file_ = std::ofstream(detail_path_ss.str());
   // Extract results
-  extract_results(res);
+  extract_results(res, t);
 
 
   // Write output
@@ -91,7 +91,7 @@ Reporter::Reporter(std::vector<TaskArgs> &res, TaskParams &tp)
 	report_detail(res, tp);
 }
 
-auto Reporter::extract_results(std::vector<TaskArgs> &tq_results) -> void {
+auto Reporter::extract_results(std::vector<TaskArgs> &tq_results, TaskParams &tp) -> void {
   if(gene_list_) {
     // Combine results
     std::map<std::string, std::map<std::string, Result>> results;
@@ -127,7 +127,7 @@ auto Reporter::extract_results(std::vector<TaskArgs> &tq_results) -> void {
   }
 
   // Sort extracted results
-  if(pvalue_methods_.find(method_) != pvalue_methods_.end()) {
+  if(pvalue_methods_.find(method_) != pvalue_methods_.end() && (method_ != "SKAT" || tp.total_permutations == 0 )) {
     // Sort by midp and asymptotic pvalue
     std::sort(results_.begin(), results_.end(), [](auto &a, auto &b) {
       if(a.empirical_midp != b.empirical_midp) {

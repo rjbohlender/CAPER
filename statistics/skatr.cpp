@@ -22,7 +22,7 @@ SKATR_Null::SKATR_Null(Covariates &cov)
   indices = arma::regspace<arma::uvec>(0, Y.n_rows - 1);
 }
 
-auto SKATR_Null::shuffle() noexcept -> void{
+auto SKATR_Null::shuffle(bool skip_svd) noexcept -> void{
   // Fisher-Yates shuffle
   for(arma::sword i = indices.n_elem - 1; i >= 0; i--) {
 	auto j = static_cast<arma::sword>(crand.IRandom(0, i));
@@ -32,11 +32,13 @@ auto SKATR_Null::shuffle() noexcept -> void{
 	indices[i] = tmp;
   }
 
-  arma::mat U, V;
-  arma::vec s;
-  arma::svd_econ(U, s, V, arma::diagmat(Yh(indices)) * X.t());
+  if(!skip_svd) {
+    arma::mat U, V;
+    arma::vec s;
+    arma::svd_econ(U, s, V, arma::diagmat(Yh(indices)) * X.t());
 
-  Ux = arma::diagmat(Yh) * U;
+    Ux = arma::diagmat(Yh) * U;
+  }
 }
 
 auto SKATR_Null::get_U0() noexcept -> arma::vec {

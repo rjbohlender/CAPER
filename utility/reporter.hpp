@@ -35,7 +35,7 @@ private:
 
   static const std::set<std::string> pvalue_methods_;
 
-  auto extract_results(std::vector<TaskArgs> &tq_results) -> void;
+  auto extract_results(std::vector<TaskArgs> &tq_results, TaskParams &tp) -> void;
   auto write_to_stream(std::ostream &os, Result &res) -> void;
   auto recalculate_mgit(std::map<std::string, std::map<std::string, Result>> &results) -> void;
 };

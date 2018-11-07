@@ -12,7 +12,7 @@ public:
   explicit SKATR_Null(Covariates &cov);
 
   // Handle permutation
-  auto shuffle() noexcept -> void;
+  auto shuffle(bool skip_svd = false) noexcept -> void;
 
   auto get_U0() noexcept -> arma::vec;
   auto get_pi0() noexcept -> arma::vec;
