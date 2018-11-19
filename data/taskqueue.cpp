@@ -208,7 +208,7 @@ void TaskQueue::stage_1(TaskArgs &ta) {
 	  // ta.increment_permuted(v.second.transcript, perm_val);
 	  v.second.permuted.push_back(perm_val);
 
-	  check_perm(ta.get_methods().str(), perm_val, ta.success_threshold, v);
+	  check_perm(ta.get_tp(), perm_val, ta.success_threshold, v);
 
 	  // Update total number of permutations
 	  v.second.permutations++;
@@ -495,7 +495,7 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 	  // ta.increment_permuted(v.second.transcript, perm_val);
 	  v.second.permuted.push_back(perm_val);
 
-	  check_perm(ta.get_methods().str(), perm_val, ta.success_threshold, v);
+	  check_perm(ta.get_tp(), perm_val, ta.success_threshold, v);
 
 	  // Update total number of permutations
 	  v.second.permutations++;
@@ -569,12 +569,12 @@ std::vector<TaskArgs> &TaskQueue::get_results_duplicate() {
   return results_detail_;
 }
 
-void TaskQueue::check_perm(const std::string &method,
+void TaskQueue::check_perm(const TaskParams &tp,
 						   double perm_val,
 						   int success_threshold,
 						   std::pair<const std::string, Result> &v) {
   // SKATO returns a pvalue so we need to reverse the successes
-  if (method == "SKATO" || method == "SKAT" || method == "CMC" || method == "RVT1" || method == "RVT2") {
+  if (tp.method == "SKATO" || (tp.method == "SKAT" && tp.total_permutations == 0) || tp.method == "CMC" || tp.method == "RVT1" || tp.method == "RVT2") {
 	if (perm_val <= v.second.original) {
 	  if (v.second.successes < success_threshold) {
 		v.second.successes++;

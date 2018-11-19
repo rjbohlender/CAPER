@@ -69,7 +69,7 @@ private:
   void thread_handler();
 
   // Support member function
-  void check_perm(const std::string &method,
+  void check_perm(const TaskParams &tp,
 				  double perm_val,
 				  int success_threshold,
 				  std::pair<const std::string, Result> &v);

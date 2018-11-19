@@ -803,7 +803,7 @@ double Methods::SKATR(Gene &gene,
 	}
   }
 
-  check_weights(gene, k);
+  check_weights(gene, k, a, b);
   arma::vec weights = gene.get_weights(k);
 
   arma::mat W = arma::diagmat(weights);
@@ -869,7 +869,7 @@ double Methods::SKATRO(Gene &gene, const std::string &k, bool shuffle, int a, in
   arma::sp_mat G(gene.get_matrix(k));
   arma::uword N = G.n_cols; // Variant count
 
-  check_weights(gene, k);
+  check_weights(gene, k, a, b);
   arma::vec weights = gene.get_weights(k);
 
   arma::mat W = arma::diagmat(weights);

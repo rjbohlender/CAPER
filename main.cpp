@@ -85,9 +85,9 @@ int main(int argc, char **argv) {
 			("mac",
 			  po::value<arma::uword>()->default_value(250),
 			  "Minor allele count cutoff, default value 250.")
-			("linear",
+			("qtl",
 			 po::bool_switch(&linear),
-			 "Quantitative trait switch.")
+			 "Analyze a quantitative trait. Value are assumed to be finite floating point values.")
 			("beta_weights",
 			 po::value<std::string>()->default_value("1,25"),
 			 "Parameters for the beta distribution. Two values, comma separated corresponding to a,b. Default is 1,25.")
