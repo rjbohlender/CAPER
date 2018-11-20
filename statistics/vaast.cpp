@@ -144,7 +144,11 @@ double VariantGroup::Score(const arma::sp_mat &X, const arma::vec &Y, const arma
   nvariants = X.n_cols; // Number of variants
 
   arma::vec log_lh = LRT();
-  variant_scores = 2.0 * (log_lh + arma::log(w)) - site_penalty;
+  variant_scores = 2.0 * (log_lh + arma::log(w));
+  for(auto & v : variant_scores) {
+    if (v > site_penalty)
+      v -= site_penalty;
+  }
 
   variant_mask();
   variant_scores(mask).zeros();
