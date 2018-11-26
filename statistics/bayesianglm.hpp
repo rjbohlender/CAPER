@@ -46,6 +46,13 @@ auto BayesianGLM<LinkT>::irls(arma::mat &X, arma::colvec &Y) -> arma::vec {
   arma::uword nobs = A.n_rows;
   arma::uword nvars = A.n_cols;
 
+  if(nobs < nvars) {
+    std::cerr << "WARNING: More variables than observations in regression. Returning ones." << std::endl;
+    arma::vec ret(nvars);
+    ret.fill(arma::datum::nan);
+    return ret;
+  }
+
   // Setup priors
   arma::vec prior_mean(nvars, arma::fill::zeros);
   arma::vec prior_df(nvars, arma::fill::ones);

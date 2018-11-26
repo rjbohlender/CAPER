@@ -240,10 +240,18 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
 		if (pos_score_map.find(pos) == pos_score_map.end()) {
 		  if (variant_scores_[ts].empty())
 			variant_scores_[ts].zeros(positions_[ts].size());
-		  pos_score_map[pos] = variant_scores_[ts](i);
-		  pos_odds_map[pos] = fit.beta_(cov.get_covariate_matrix().n_rows + i);
-		  pos_serr_map[pos] = fit.s_err_(cov.get_covariate_matrix().n_rows + i);
-		  pos_odds_pval_map[pos] = fit.pval_(cov.get_covariate_matrix().n_rows + i);
+		  if (!fit.beta_.has_nan()) {
+			pos_score_map[pos] = variant_scores_[ts](i);
+			pos_odds_map[pos] = fit.beta_(cov.get_covariate_matrix().n_rows + i);
+			pos_serr_map[pos] = fit.s_err_(cov.get_covariate_matrix().n_rows + i);
+			pos_odds_pval_map[pos] = fit.pval_(cov.get_covariate_matrix().n_rows + i);
+		  } else {
+		    // Regression failed -- too many features
+			pos_score_map[pos] = variant_scores_[ts](i);
+			pos_odds_map[pos] = 1.;
+			pos_serr_map[pos] = 1.;
+			pos_odds_pval_map[pos] = 1.;
+		  }
 		}
 		// Get frequency
 		if (pos_freq_map.find(pos) == pos_freq_map.end()) {

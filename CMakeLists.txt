@@ -11,7 +11,7 @@ find_package(Boost 1.66.0 COMPONENTS program_options REQUIRED)
 
 if (APPLE)
     # -fsanitize=address -fsanitize=undefined -Wall -pedantic
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -pg")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
 endif ()
 
 if (UNIX)
