@@ -8,6 +8,7 @@
 
 #include "main_support.hpp"
 #include "reporter.hpp"
+#include "filesystem.hpp"
 
 using namespace std::chrono_literals;
 
@@ -24,10 +25,19 @@ JobDispatcher::JobDispatcher(TaskParams &tp, std::shared_ptr<Reporter> reporter)
   // Set staging
   stage_ = (tp_.stage_1_permutations > 0) ? Stage::Stage1 : Stage::Stage2;
 
-  gt_ifs_.open(tp.genotypes_path);
+  // Handle zipped input
+  if(is_gzipped(tp.genotypes_path)) {
+	gt_ifs_.open(tp.genotypes_path, std::ios_base::in | std::ios_base::binary);
+	gt_streambuf.push(boost::iostreams::gzip_decompressor());
+	gt_streambuf.push(gt_ifs_);
+  } else {
+    gt_ifs_.open(tp.genotypes_path, std::ios_base::in);
+    gt_streambuf.push(gt_ifs_);
+  }
 
+  std::istream gt_stream(&gt_streambuf);
   // Retrieve header line
-  std::getline(gt_ifs_, header_);
+  std::getline(gt_stream, header_);
 
   // Sort covariates
   cov_->sort_covariates(header_);
@@ -68,10 +78,10 @@ JobDispatcher::JobDispatcher(TaskParams &tp, std::shared_ptr<Reporter> reporter)
 
   if (!tp.gene_list) {
 	// Parse if no gene_list
-	all_gene_dispatcher();
+	all_gene_dispatcher(gt_stream);
   } else {
 	// Parse with gene_list
-	gene_list_dispatcher();
+	gene_list_dispatcher(gt_stream);
   }
 
   // Close open files
@@ -91,11 +101,11 @@ JobDispatcher::JobDispatcher(TaskParams &tp, std::shared_ptr<Reporter> reporter)
   cov_.reset();
 }
 
-void JobDispatcher::all_gene_dispatcher() {
+void JobDispatcher::all_gene_dispatcher(std::istream &gt_stream) {
   std::string line;
   std::stringstream current;
 
-  while (std::getline(gt_ifs_, line)) {
+  while (std::getline(gt_stream, line)) {
 	RJBUtil::Splitter<std::string> split(line, "\t");
 	RJBUtil::Splitter<std::string> vsplit(split[2], "-");
 	if(vsplit.size() < 2) {
@@ -145,11 +155,11 @@ auto JobDispatcher::find_gene(const std::string &gene) {
   return std::find(gene_list_.cbegin(), gene_list_.cend(), gene);
 }
 
-void JobDispatcher::gene_list_dispatcher() {
+void JobDispatcher::gene_list_dispatcher(std::istream &gt_stream) {
   std::string line;
   std::stringstream current;
 
-  while (std::getline(gt_ifs_, line)) {
+  while (std::getline(gt_stream, line)) {
 	RJBUtil::Splitter<std::string> split(line, "\t");
 	RJBUtil::Splitter<std::string> vsplit(split[2], "-");
 

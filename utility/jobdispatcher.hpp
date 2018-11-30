@@ -17,6 +17,9 @@
 #include "../data/bed.hpp"
 #include "../data/weight.hpp"
 
+#include <boost/iostreams/filtering_streambuf.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
+
 class JobDispatcher {
 public:
   explicit JobDispatcher(TaskParams &tp, std::shared_ptr<Reporter> reporter);
@@ -24,11 +27,11 @@ public:
 private:
   // Member functions
   // Dispatch
-  void all_gene_dispatcher();
+  void all_gene_dispatcher(std::istream &gt_stream);
   void single_dispatch(Gene &gene);
   // Gene list
   auto find_gene(const std::string &gene);
-  void gene_list_dispatcher();
+  void gene_list_dispatcher(std::istream &gt_stream);
   void multiple_dispatch(Gene &gene);
 
   // Input parsing
@@ -52,6 +55,7 @@ private:
 
   // Gene parsing
   std::ifstream gt_ifs_;
+  boost::iostreams::filtering_streambuf<boost::iostreams::input> gt_streambuf;
   std::string header_;
   std::string gene_;
   std::string transcript_;

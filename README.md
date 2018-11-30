@@ -1,48 +1,53 @@
-# Permute Associate
+# Permute Associate #
 
-Permute Associate is a tool for gene-based testing of rare variants in sequencing
-studies of any size. We provide methods for the analysis of data provided in simple,
-plain text, array formats. Permutation and statistical computation is multithreaded.
+Permute Associate is a tool for gene-based testing of rare variants in
+sequencing studies of any size. We provide methods for the analysis of
+data provided in simple, plain text, array formats. Permutation and
+statistical computation is multithreaded.
 
-This software has been carefully designed to reduce memory overhead as much as possible
-through the use of shared read only objects, and elimination of data that is no longer
-needed. Total concurrent memory usage increases with the number of threads. By default,
-the software uses half of the available number of cpus, but this can be controlled.
+This software has been carefully designed to reduce memory overhead as
+much as possible through the use of shared read only objects, and
+elimination of data that is no longer needed. Total concurrent memory
+usage increases with the number of threads. By default, the software
+uses half of the available number of cpus, but this can be controlled.
 
-All methods are available for the analysis of binary traits. Quantitative traits can be analyzed
-using the BURDEN, RVT1, RVT2, SKAT, and SKATO methods currently.
+All methods are available for the analysis of binary
+traits. Quantitative traits can be analyzed using the BURDEN, RVT1,
+RVT2, SKAT, and SKATO methods currently.
 
-## Approach
+## Approach ##
 
-We have implemented an alternative to the efficient resampling approach
-presented in Lee, Fuchsberger, Kim, and Scott (2016). In short, we use 
-covariate adjusted permutation for the minor allele carriers in a gene. 
-We permute the phenotype of all individuals according to their odds estimated from
-logistic regression. This only applies to methods that do not use residuals from
-a linear or glm fit. For other methods, phenotypes are uniformly shuffled.
+We have implemented an alternative to the efficient resampling
+approach presented in Lee, Fuchsberger, Kim, and Scott (2016). In
+short, we use covariate adjusted permutation for the minor allele
+carriers in a gene.  We permute the phenotype of all individuals
+according to their odds estimated from logistic regression. This only
+applies to methods that do not use residuals from a linear or glm
+fit. For other methods, phenotypes are uniformly shuffled.
 
-SKAT and SKATO are implemented using the method described by Wu, Guan, and Pankow (2016).
-The variant based statistic provides significant computational speedup over the individual
-based statistic, especially for very large datasets. Even with the computation advantage that
-this approach provides, it is still time consuming to permute SKAT-O.
+SKAT and SKATO are implemented using the method described by Wu, Guan,
+and Pankow (2016).  The variant based statistic provides significant
+computational speedup over the individual based statistic, especially
+for very large datasets. Even with the computation advantage that this
+approach provides, it is still time consuming to permute SKAT-O.
 
-## Supported Methods
+## Supported Methods ##
 
 Methods can be chosen using the -m, or --method option. The default method is 
 VAAST.
 
-- BURDEN (Wu, Guan, Pankow 2016)
-- CALPHA (Neale et al. 2011)
-- CMC (Li, Leal 2008)
-- RVT1 (Morris, Zeggini 2010)
-- RVT2 (Morris, Zeggini 2010)
-- SKAT (Wu et al. 2011; Wu, Guan, Pankow 2016)
-- SKATO (Lee, Wu, Lin 2012; Wu, Guan, Pankow 2016)
-- VAAST (Yandell et al. 2011) -- Default
-- VT (Price et al. 2010)
-- WSS (Madsen, Browning 2009)
+	- BURDEN (Wu, Guan, Pankow 2016)
+	- CALPHA (Neale et al. 2011)
+	- CMC (Li, Leal 2008)
+	- RVT1 (Morris, Zeggini 2010)
+	- RVT2 (Morris, Zeggini 2010)
+	- SKAT (Wu et al. 2011; Wu, Guan, Pankow 2016)
+	- SKATO (Lee, Wu, Lin 2012; Wu, Guan, Pankow 2016)
+	- VAAST (Yandell et al. 2011) -- Default
+	- VT (Price et al. 2010)
+	- WSS (Madsen, Browning 2009)
 
-## Compiling
+## Compiling ##
 
 Dependencies: 
 - Tested with Armadillo >= 8.600
@@ -105,7 +110,7 @@ from the one automatically detected to another, perhaps newer compiler:
 cmake -DCMAKE_CXX_COMPILER=<path_to_executable> ..
 ```
 
-## Benchmarks
+## Benchmarks ##
 
 Testing on a mid-2015 MacBook Pro, 2.2Ghz Core i7, 16GB 1600 Mhz DDR3 ram.
 
@@ -118,3 +123,50 @@ Testing on a mid-2015 MacBook Pro, 2.2Ghz Core i7, 16GB 1600 Mhz DDR3 ram.
 | SKAT-O| 100000  | 1000  | 0            |  487.79     |
 | WSS   | 100000  | 1000  | 10000        |  3432.29    |
 | SKAT  | 100000  | 1000  | 10000        |  28293.36   |
+
+1049.7s with gzipped data, 1000 permutations of VAAST.
+1063.4s with unzipped data, 1000 permutations of VAAST.
+
+Overall, working with gzipped data has no significant impact on runtime.
+
+## File Formats ##
+
+The file formats used are simple, plain text formats.
+
+### Matrix ###
+
+The matrix format used for the genotype file includes a header and is is as follows:
+
+	1) Gene (e.g., BRCA1)
+	2) Transcript (e.g., NM_700030) 
+	3) Location (e.g., chr1-123456-123456-SNV)
+	4+) Allele count (e.g., 0/1/2 - will be converted to minor allele count)
+
+Note that the annotation at the end of the location is used for
+grouping in VAAST, and the program will fail without it if the
+annotation is not present.
+
+Variants are expected to be repeated for each transcript they appear
+in. This does increase the size of the file, but simplifies
+parsing. Because the format is simple, and QC is expected to be
+finished before this program is run, the file remains reasonably
+lean. E.g., with 20,000 simulated genes, and 100,000 samples, a matrix
+file, uncompressed, is only 56GB.
+
+### Bed Mask File ###
+
+The "-b" option allows the user to provide a ".bed" format file to mask
+problematic variants. The .bed format for the mask file is as follows:
+
+	1) Chromosome
+	2) Start position of masked region
+	3) End position of masked region
+	
+XQC (in the Cross Platform Association Toolkit) will provide a mask
+file for those variants that fail QC if it is being used.
+
+### Weights ###
+
+Essentially a bed format file, with the 4th column a weight that will
+be converted to a log scale. Weights will be used by VAAST, and SKAT /
+SKAT-O if the weighted linear kernel is used.

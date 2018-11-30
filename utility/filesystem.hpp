@@ -8,5 +8,6 @@
 #include <string>
 
 bool check_file_exists(const std::string &path);
+bool is_gzipped(const std::string &path);
 
 #endif //PERMUTE_ASSOCIATE_FILESYSTEM_HPP

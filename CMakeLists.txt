@@ -7,7 +7,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 find_package(Armadillo REQUIRED)
 find_package(Threads REQUIRED)
-find_package(Boost 1.66.0 COMPONENTS program_options REQUIRED)
+find_package(Boost 1.66.0 COMPONENTS program_options iostreams REQUIRED)
 
 if (APPLE)
     # -fsanitize=address -fsanitize=undefined -Wall -pedantic
