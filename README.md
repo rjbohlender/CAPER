@@ -62,9 +62,11 @@ brew install boost
 
 ```
 
-If you're working in a cluster or otherwise managed environment, ensure that Armadillo is compiled
-against both Lapack and BLAS, or an alternative like Intel MKL. Without that, this software will fail
-when calling Singular Value Decomposition and other algorithms not provided by Armadillo itself.
+If you're working in a cluster or otherwise managed environment,
+ensure that Armadillo is compiled against both Lapack and BLAS, or an
+alternative like Intel MKL. Without that, this software will fail when
+calling Singular Value Decomposition and other algorithms not provided
+by Armadillo itself.
 
 Create a build directory and run cmake.
 
@@ -76,9 +78,10 @@ cmake -DCMAKE_BUILD_TYPE=Release ..
 make
 ```
 
-If cmake fails to detect armadillo, but you're sure it is available, you may 
-need to direct cmake to the library, e.g., when compiling on a cluster, with 
-packages in non-standard locations. In that case the following should work:
+If cmake fails to detect armadillo, but you're sure it is available,
+you may need to direct cmake to the library, e.g., when compiling on a
+cluster, with packages in non-standard locations. In that case the
+following should work:
 
 ```bash
 mkdir pabuild && cd pabuild
@@ -102,9 +105,10 @@ The location for boost may need to be specified if it isn't installed in a typic
 cmake -DBOOST_ROOT=<path_to_boost> ..
 ```
 
-You can combine the above as necessary. Earlier versions of the Armadillo
-library may work, but haven't been tested. If you need to change the compiler used
-from the one automatically detected to another, perhaps newer compiler:
+You can combine the above as necessary. Earlier versions of the
+Armadillo library may work, but haven't been tested. If you need to
+change the compiler used from the one automatically detected to
+another, perhaps newer compiler:
 
 ```bash
 cmake -DCMAKE_CXX_COMPILER=<path_to_executable> ..
@@ -135,7 +139,9 @@ The file formats used are simple, plain text formats.
 
 ### Matrix ###
 
-The matrix format used for the genotype file includes a header and is is as follows:
+Matrix files may be zipped with gzip, or unzipped. They are provided
+to the program with the "-i" flag. The matrix format used for the
+genotype file includes a header and is is as follows:
 
 	1) Gene (e.g., BRCA1)
 	2) Transcript (e.g., NM_700030) 
@@ -144,14 +150,17 @@ The matrix format used for the genotype file includes a header and is is as foll
 
 Note that the annotation at the end of the location is used for
 grouping in VAAST, and the program will fail without it if the
-annotation is not present.
+annotation is not present when grouping is used. Because it is assumed
+to be present, if that annotation is missing and you provide weights,
+it will result in the weights not being found.
 
 Variants are expected to be repeated for each transcript they appear
 in. This does increase the size of the file, but simplifies
 parsing. Because the format is simple, and QC is expected to be
 finished before this program is run, the file remains reasonably
 lean. E.g., with 20,000 simulated genes, and 100,000 samples, a matrix
-file, uncompressed, is only 56GB.
+file, uncompressed, is only 56GB. Compressed with gzip defaults, the same
+matrix file is only 841MB. 
 
 ### Bed Mask File ###
 

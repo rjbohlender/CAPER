@@ -24,7 +24,14 @@ Weight::Weight(const std::string &ifile) {
 
 	ss << splitter[0] << "-" << splitter[1] << "-" << splitter[2] << "-" << splitter[3];
 
-	double score = std::stod(splitter[4]);
+	double score;
+	try {
+		score = std::stod(splitter[4]);
+	} catch(std::exception &e) {
+		std::cerr << "Failed to convert weight to double. Line was: " << line << std::endl;
+		std::cerr << "Line should be tab separated and formatted as <chrom> <start_pos> <end_pos> <type> <weight>" << std::endl;
+		throw(e);
+	}
 
 	// Prevent math errors
 	scores_[ss.str()] = score;

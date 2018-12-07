@@ -62,3 +62,4 @@ matrix2hdf5.cpp
 statistics/nuts.cpp
 statistics/nuts.hpp
 bernoulli.R
+/testOV/
