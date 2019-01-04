@@ -3,6 +3,7 @@
 //
 
 #include <fstream>
+#include <sys/stat.h>
 
 #include "filesystem.hpp"
 
@@ -10,6 +11,11 @@
 bool check_file_exists(const std::string &path) {
   std::ifstream ifs(path);
   return ifs.good();
+}
+
+bool check_directory_exists(const std::string &path) {
+  struct stat st;
+  return (stat(path.c_str(), &st) == 0);
 }
 
 bool is_gzipped(const std::string &path) {

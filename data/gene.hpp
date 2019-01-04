@@ -19,7 +19,6 @@
 #include "result.hpp"
 #include "taskparams.hpp"
 
-
 arma::uvec setdiff(arma::uvec x, arma::uvec y);
 void print_comma_sep(arma::uvec &x, std::ostream &os);
 void print_comma_sep(std::vector<std::string> &x, std::ostream &os);
@@ -29,10 +28,10 @@ void print_semicolon_sep(arma::uvec &x, std::ostream &os);
 class Gene {
 public:
   Gene(std::stringstream &ss,
-		 unsigned long nsamples,
-		 std::map<std::string, arma::uword> &nvariants,
-		 const Weight &weight,
-		 TaskParams tp);
+	   unsigned long nsamples,
+	   std::map<std::string, arma::uword> &nvariants,
+	   const Weight &weight,
+	   TaskParams tp);
 
   void print();
 
@@ -52,6 +51,8 @@ public:
 
   std::string get_detail();
 
+  auto is_skippable() -> bool;
+  auto is_polymorphic(const std::string &k) -> bool;
   auto is_weighted(const std::string &k) -> bool;
   auto is_testable() -> bool;
 
@@ -74,6 +75,8 @@ private:
   std::map<std::string, arma::vec> variant_scores_; // Stored if detail is true
   std::map<std::string, double> odds_;
   bool testable_;
+  bool skippable_;
+  std::map<std::string, bool> polymorphic_;
 
   TaskParams tp_;
 

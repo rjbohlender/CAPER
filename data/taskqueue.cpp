@@ -182,6 +182,10 @@ void TaskQueue::stage_1(TaskArgs &ta) {
 	  const std::string &k = v.second.transcript;
 	  double perm_val;
 
+	  // Skip transcripts with no variants
+	  if (!ta.get_gene().is_polymorphic(k))
+		continue;
+
 	  arma::vec phenotypes;
 	  if (!ta.get_tp().alternate_permutation) {
 		phenotypes = arma::conv_to<arma::vec>::from(ta.get_permutations()[iter]);
@@ -350,6 +354,10 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 	  const std::string &k = v.second.transcript;
 
 	  transcript_no++;
+
+	  // Skip transcripts with no variants
+	  if (!ta.get_gene().is_polymorphic(k))
+	    continue;
 
 	  // SKAT corrects for covariates so we don't use this permutation approach
 	  if (!ta.get_tp().alternate_permutation) {

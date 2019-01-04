@@ -3,6 +3,7 @@
 //
 
 #include "reporter.hpp"
+#include "filesystem.hpp"
 
 #include <boost/format.hpp>
 
@@ -20,6 +21,10 @@ Reporter::Reporter(TaskParams &tp)
   std::stringstream detail_path_ss;
   std::string header;
 
+  if(!check_directory_exists(tp.output_path)) {
+    throw(std::runtime_error("Output path is invalid."));
+  }
+
   simple_path_ss << tp.output_path << "/" << tp.method;
   if(tp.group_size > 0)
     simple_path_ss << boost::format(".g%1$d") % tp.group_size;
@@ -28,7 +33,9 @@ Reporter::Reporter(TaskParams &tp)
   simple_path_ss << ".simple";
 
   simple_file_ = std::ofstream(simple_path_ss.str());
-
+  if(!simple_file_.good()) {
+    throw(std::runtime_error("Simple file failed to open for writing.\n"));
+  }
   simple_file_ << std::setw(20) << std::left << "Gene";
   simple_file_ << std::setw(20) << "Transcript";
   simple_file_ << std::setw(20) << "Original";
@@ -48,6 +55,10 @@ Reporter::Reporter(TaskParams &tp)
   detail_path_ss << ".detail";
 
   detail_file_ = std::ofstream(detail_path_ss.str());
+  if(!detail_file_.good()) {
+    throw(std::runtime_error("Detail file failed to open for writing.\n"));
+  }
+
 
   if(tp.linear) {
     header =
@@ -65,6 +76,10 @@ Reporter::Reporter(std::vector<TaskArgs> &res, TaskParams &tp)
   std::stringstream detail_path_ss;
   std::string header;
 
+  if(!check_directory_exists(tp.output_path)) {
+    throw(std::runtime_error("Output path is invalid."));
+  }
+
   simple_path_ss << tp.output_path << "/" << tp.method;
   if(tp.group_size > 0)
     simple_path_ss << boost::format(".g%1$d") % tp.group_size;
@@ -81,6 +96,13 @@ Reporter::Reporter(std::vector<TaskArgs> &res, TaskParams &tp)
 
   simple_file_ = std::ofstream(simple_path_ss.str());
   detail_file_ = std::ofstream(detail_path_ss.str());
+
+  if(!simple_file_.good()) {
+    throw(std::runtime_error("Simple file failed to open for writing.\n"));
+  }
+  if(!detail_file_.good()) {
+    throw(std::runtime_error("Detail file failed to open for writing.\n"));
+  }
   // Extract results
   extract_results(res, tp);
 

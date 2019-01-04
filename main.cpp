@@ -277,7 +277,11 @@ int main(int argc, char **argv) {
 	std::cerr << desc << "\n";
 	std::exit(1);
   }
-
+  if (!check_directory_exists(tp.output_path)) {
+  	std::cerr << "Output path is invalid." << std::endl;
+  	std::cerr << desc << "\n";
+  	std::exit(1);
+  }
   // Initialize randomization
   arma::arma_rng::set_seed_random();
 

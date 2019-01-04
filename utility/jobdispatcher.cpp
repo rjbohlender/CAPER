@@ -13,10 +13,11 @@
 using namespace std::chrono_literals;
 
 JobDispatcher::JobDispatcher(TaskParams &tp, std::shared_ptr<Reporter> reporter)
-	: tp_(tp), tq_(tp_.nthreads - 1, tp.verbose, reporter), cov_(std::make_shared<Covariates>(tp.covariates_path, tp.ped_path, tp.linear)) {
+	: tp_(tp), tq_(tp_.nthreads - 1, tp.verbose, reporter),
+	  cov_(std::make_shared<Covariates>(tp.covariates_path, tp.ped_path, tp.linear)) {
   // Initialize bed and weights
-  if(tp.gene_list)
-    gene_list_ = RJBUtil::Splitter<std::string>(*tp.gene_list, ",");
+  if (tp.gene_list)
+	gene_list_ = RJBUtil::Splitter<std::string>(*tp.gene_list, ",");
   if (tp.bed)
 	bed_ = Bed(*tp.bed);
   if (tp.weight)
@@ -26,13 +27,13 @@ JobDispatcher::JobDispatcher(TaskParams &tp, std::shared_ptr<Reporter> reporter)
   stage_ = (tp_.stage_1_permutations > 0) ? Stage::Stage1 : Stage::Stage2;
 
   // Handle zipped input
-  if(is_gzipped(tp.genotypes_path)) {
+  if (is_gzipped(tp.genotypes_path)) {
 	gt_ifs_.open(tp.genotypes_path, std::ios_base::in | std::ios_base::binary);
 	gt_streambuf.push(boost::iostreams::gzip_decompressor());
 	gt_streambuf.push(gt_ifs_);
   } else {
-    gt_ifs_.open(tp.genotypes_path, std::ios_base::in);
-    gt_streambuf.push(gt_ifs_);
+	gt_ifs_.open(tp.genotypes_path, std::ios_base::in);
+	gt_streambuf.push(gt_ifs_);
   }
 
   std::istream gt_stream(&gt_streambuf);
@@ -95,7 +96,7 @@ JobDispatcher::JobDispatcher(TaskParams &tp, std::shared_ptr<Reporter> reporter)
 	permutation_ptr_.reset();
   }
 
-  if(tp.gene_list)
+  if (tp.gene_list)
 	Reporter(tq_.get_results(), tp_);
 
   cov_.reset();
@@ -108,8 +109,8 @@ void JobDispatcher::all_gene_dispatcher(std::istream &gt_stream) {
   while (std::getline(gt_stream, line)) {
 	RJBUtil::Splitter<std::string> split(line, "\t");
 	RJBUtil::Splitter<std::string> vsplit(split[2], "-");
-	if(vsplit.size() < 2) {
-	  throw(std::logic_error("Position not formatted correctly. Should be chromosome-start-end-type."));
+	if (vsplit.size() < 2) {
+	  throw (std::logic_error("Position not formatted correctly. Should be chromosome-start-end-type."));
 	}
 
 	// If this line is part of the same gene
@@ -134,7 +135,8 @@ void JobDispatcher::all_gene_dispatcher(std::istream &gt_stream) {
   }
   Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_, tp_);
 
-  single_dispatch(gene_data);
+  if (!gene_data.is_skippable())
+	single_dispatch(gene_data);
 }
 
 void JobDispatcher::single_dispatch(Gene &gene) {
@@ -173,7 +175,8 @@ void JobDispatcher::gene_list_dispatcher(std::istream &gt_stream) {
 		  // Dispatch gene
 		  Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_, tp_);
 
-		  multiple_dispatch(gene_data);
+		  if(!gene_data.is_skippable())
+			multiple_dispatch(gene_data);
 
 		  auto fit = find_gene(split[0]);
 		  if (fit != gene_list_.cend()) {
@@ -202,10 +205,11 @@ void JobDispatcher::gene_list_dispatcher(std::istream &gt_stream) {
 	  }
 	}
   }
-  if(!current.str().empty()) {
+  if (!current.str().empty()) {
 	Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_, tp_);
 
-	multiple_dispatch(gene_data);
+	if(!gene_data.is_skippable())
+	  multiple_dispatch(gene_data);
   }
 }
 
