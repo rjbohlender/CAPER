@@ -20,6 +20,12 @@ Weight::Weight(const std::string &ifile) {
     }
 	RJBUtil::Splitter<std::string> splitter(line, "\t");
 
+    if(splitter.size() < 5) {
+	  std::cerr << "Incorrectly formatted weight line. Line was: " << line << std::endl;
+	  std::cerr << "Line should be tab separated and formatted as <chrom> <start_pos> <end_pos> <type> <weight>" << std::endl;
+	  throw(std::runtime_error("Incorrect line in weight file."));
+    }
+
 	std::stringstream ss;
 
 	ss << splitter[0] << "-" << splitter[1] << "-" << splitter[2] << "-" << splitter[3];

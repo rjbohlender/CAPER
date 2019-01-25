@@ -47,6 +47,7 @@ int main(int argc, char **argv) {
   boost::optional<std::string> weight;
   boost::optional<std::string> gene_list;
   boost::optional<std::string> permute_set;
+  boost::optional<double> pthresh;
 
   try {
 	desc.add_options()
@@ -85,6 +86,9 @@ int main(int argc, char **argv) {
 			("mac",
 			  po::value<arma::uword>()->default_value(250),
 			  "Minor allele count cutoff, default value 250.")
+			("pthresh,j",
+			 po::value(&pthresh),
+			 "The threshold to terminate permutation based on whether it is outside the p-value CI.")
 			("qtl",
 			 po::bool_switch(&linear),
 			 "Analyze a quantitative trait. Value are assumed to be finite floating point values.")
