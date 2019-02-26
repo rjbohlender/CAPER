@@ -28,7 +28,12 @@ Weight::Weight(const std::string &ifile) {
 
 	std::stringstream ss;
 
-	ss << splitter[0] << "-" << splitter[1] << "-" << splitter[2] << "-" << splitter[3];
+    if(splitter[3] == "SNP") {
+	  ss << splitter[0] << "-" << splitter[1] << "-" << splitter[2] << "-" << "SNV";
+    } else {
+	  ss << splitter[0] << "-" << splitter[1] << "-" << splitter[2] << "-" << splitter[3];
+    }
+
 
 	double score;
 	try {

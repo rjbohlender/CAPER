@@ -5,6 +5,8 @@
 #ifndef PERMUTE_ASSOCIATE_BAYESIANGLM_HPP
 #define PERMUTE_ASSOCIATE_BAYESIANGLM_HPP
 
+#define ARMA_DONT_USE_WRAPPER
+
 #include <armadillo>
 
 #include <boost/math/distributions/normal.hpp>

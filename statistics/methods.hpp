@@ -5,6 +5,8 @@
 #ifndef PERMUTE_ASSOCIATE_METHODS_HPP
 #define PERMUTE_ASSOCIATE_METHODS_HPP
 
+#define ARMA_DONT_USE_WRAPPER
+
 #include <map>
 #include <string>
 #include <armadillo>

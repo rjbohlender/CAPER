@@ -4,6 +4,8 @@
 
 #include "main_support.hpp"
 
+#define ARMA_DONT_USE_WRAPPER
+
 #include <armadillo>
 #include <chrono>
 #include <iomanip>

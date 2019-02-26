@@ -5,6 +5,8 @@
 #ifndef PERMUTE_ASSOCIATE_COVARIATES_HPP
 #define PERMUTE_ASSOCIATE_COVARIATES_HPP
 
+#define ARMA_DONT_USE_WRAPPER
+
 #include <string>
 #include <vector>
 #include <fstream>

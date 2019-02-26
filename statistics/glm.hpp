@@ -5,6 +5,8 @@
 #ifndef PERMUTE_ASSOCIATE_GLM_HPP
 #define PERMUTE_ASSOCIATE_GLM_HPP
 
+#define ARMA_DONT_USE_WRAPPER
+
 #include <armadillo>
 
 #include "../link/family.hpp"

@@ -5,6 +5,8 @@
 #ifndef PERMUTE_ASSOCIATE_GENE_HPP
 #define PERMUTE_ASSOCIATE_GENE_HPP
 
+#define ARMA_DONT_USE_WRAPPER
+
 #include <string>
 #include <sstream>
 #include <iostream>

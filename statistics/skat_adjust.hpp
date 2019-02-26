@@ -5,6 +5,8 @@
 #ifndef PERMUTE_ASSOCIATE_SKAT_ADJUST_HPP
 #define PERMUTE_ASSOCIATE_SKAT_ADJUST_HPP
 
+#define ARMA_DONT_USE_WRAPPER
+
 #include <armadillo>
 #include <memory>
 
