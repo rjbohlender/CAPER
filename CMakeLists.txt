@@ -106,6 +106,9 @@ add_executable(Permute_Associate
                main.cpp
                ${PROJECT_SUPPORT_FILES})
 
+if(FALSE)
+	target_link_libraries(Permute_Associate nvblas)
+endif()
 target_link_libraries(Permute_Associate ${ARMADILLO_LIBRARIES})
 target_link_libraries(Permute_Associate ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(Permute_Associate ${Boost_LIBRARIES})
