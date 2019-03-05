@@ -125,8 +125,23 @@ void TaskQueue::thread_handler() {
 
 		// Report results for non-gene_list run
 		if (!op.get_tp().gene_list) {
-		  for (auto &r : op.results) {
-			reporter_->sync_write_simple(r.second);
+		  if(op.get_tp().top_only) {
+		    // Find the most significant result.
+		    std::unique_ptr<Result> topres;
+		    for(auto &r : op.results) {
+		      if(topres == nullptr) {
+		        topres = std::make_unique<Result>(r.second);
+		      } else {
+		        if(topres->empirical_p > r.second.empirical_p) {
+		          topres = std::make_unique<Result>(r.second);
+		        }
+		      }
+		    }
+			reporter_->sync_write_simple(*topres);
+		  } else {
+			for (auto &r : op.results) {
+			  reporter_->sync_write_simple(r.second);
+			}
 		  }
 		  reporter_->sync_write_detail(op.get_gene().get_detail(), op.get_gene().is_testable());
 		}

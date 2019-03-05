@@ -43,6 +43,7 @@ int main(int argc, char **argv) {
   bool testable = false;
   bool linear = false;
   bool nodetail = false;
+  bool top_only = false;
   boost::optional<std::string> bed;
   boost::optional<std::string> weight;
   boost::optional<std::string> gene_list;
@@ -107,6 +108,7 @@ int main(int argc, char **argv) {
 			("maf", po::value<double>()->default_value(0.005), "Minor allele frequency cutoff for CMC collapsing.")
 			("permute_out", po::value(&permute_set), "Output permutations to the given file.")
 			("testable", po::bool_switch(&testable), "Return scores only for genes with at least scoreable variants in VAAST. VAAST only option.")
+			("top_only", po::bool_switch(&top_only), "Output only the top transcript in the simple file.")
 			("quiet,q", "Don't print status messages.");
 	po::store(po::parse_command_line(argc, argv, desc), vm);
 	if (vm.count("help")) {
@@ -212,6 +214,7 @@ int main(int argc, char **argv) {
   tp.verbose = verbose;
   tp.gene_list = gene_list;
   tp.nodetail = nodetail;
+  tp.top_only = top_only;
   tp.mac = vm["mac"].as<arma::uword>();
   // SKAT Options
   tp.kernel = vm["kernel"].as<std::string>();

@@ -48,6 +48,7 @@ struct TaskParams {
   // Detailed VAAST output
   std::string full_command;
   std::string output_path;
+  bool top_only;
 
   // VAAST
   arma::uword group_size;

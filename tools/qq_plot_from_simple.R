@@ -1,3 +1,4 @@
+#!/usr/bin/env Rscript
 # Title     : Create a QQ plot from the simple file output of a run
 # Created by: rjbohlender
 # Created on: 2019-01-30
