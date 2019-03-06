@@ -33,7 +33,14 @@ int main(int argc, char **argv) {
   timer.tic();
 
   // BOOST Program Options Implementation
-  po::options_description desc("Permutation tool for gene-based rare-variant analysis.\nAllowed options");
+  po::options_description all("");
+  po::options_description visible("Permutation tool for gene-based rare-variant analysis.\nAllowed options");
+  po::options_description required("Required");
+  po::options_description optional("Optional");
+  po::options_description vaast("VAAST Options");
+  po::options_description skat("SKAT Options");
+  po::options_description cmc("CMC Options");
+  po::options_description hidden("Hidden Options");
   po::variables_map vm;
 
   bool verbose = true;
@@ -51,68 +58,85 @@ int main(int argc, char **argv) {
   boost::optional<double> pthresh;
 
   try {
-	desc.add_options()
-			("help,h", "Print this help message.")
-			("input,i", po::value<std::string>()->required(), "Genotype matrix file path.")
-			("covariates,c",
-			 po::value<std::string>()->required(),
-			 "The covariate table file, including phenotypes.\nPhenotypes {0=control, 1=case} should be in the first column.")
-			("ped,p", po::value<std::string>()->required(), "Path to the .ped file.")
-			("bed-file,b",
-			 po::value(&bed),
-			 "A bed file to be used as a filter. All specified regions will be excluded.")
-			("output,o",
-			 po::value<std::string>()->required(),
-			 "Path to output directory. Two files will be output: a simple transcript level results file, and a detailed variant level result file.")
-			("weight-file,w", po::value(&weight), "A file providing weights.")
-			("group_size,g",
-			 po::value<arma::uword>()->default_value(0),
-			 "Group size. VAAST can collapse variants into groups of variants with adjacent weights. Default = 4.")
-			("nthreads,t",
-			 po::value<size_t>()->default_value(std::thread::hardware_concurrency() / 2 + 1),
-			 "The number of threads. The default is half of the cpu count + 1.")
-			("method,m",
-			 po::value<std::string>()->default_value("VAAST"),
-			 "The statistical method to be used.\nOptions: {BURDEN, CALPHA, CMC, SKAT, WSS, VAAST, VT}.\nThe default is VAAST.")
-			("stage_1_max_perm,1",
-			 po::value<arma::uword>()->default_value(100000),
-			 "The maximum number of permutations to be performed in the first stage. The default is 100,000.")
-			("stage_2_max_perm,2",
-			 po::value<arma::uword>()->default_value(1000000),
-			 "The maximum number of permutations to be performed in the second stage. The default is 1,000,000.")
-			("no_adjust,n", "Disable small sample size adjustment for SKATO.")
+    required.add_options()
+				("input,i", po::value<std::string>()->required(), "Genotype matrix file path.")
+				("covariates,c",
+				 po::value<std::string>()->required(),
+				 "The covariate table file, including phenotypes.\nPhenotypes {0=control, 1=case} should be in the first column.")
+				("ped,p", po::value<std::string>()->required(), "Path to the .ped file.")
+				("output,o",
+				 po::value<std::string>()->required(),
+				 "Path to output directory. Two files will be output: a simple transcript level results file, and a detailed variant level result file.")
+				 ;
+    optional.add_options()
+				("bed-file,b",
+				 po::value(&bed),
+				 "A bed file to be used as a filter. All specified regions will be excluded.")
+				("weight-file,w", po::value(&weight), "A file providing weights.")
+				("nthreads,t",
+				 po::value<size_t>()->default_value(std::thread::hardware_concurrency() / 2 + 1),
+				 "The number of threads. Minimum number of threads = 2. n + 1 threads, with one parent thread and n worker threads.")
+				("method,m",
+				 po::value<std::string>()->default_value("VAAST"),
+				 "The statistical method to be used.\nOptions: {BURDEN, CALPHA, CMC, SKAT, WSS, VAAST, VT}.")
+				("stage_1_max_perm,1",
+				 po::value<arma::uword>()->default_value(0),
+				 "The maximum number of permutations to be performed in the first stage permutation. A small number is recommended if your sample is large.")
+				("stage_2_max_perm,2",
+				 po::value<arma::uword>()->default_value(1000000),
+				 "The maximum number of permutations to be performed in the second stage.")
+				("mac",
+				 po::value<arma::uword>()->default_value(250),
+				 "Minor allele count cutoff.")
+				("pthresh,j",
+				 po::value(&pthresh),
+				 "The threshold to terminate permutation based on whether it is outside the p-value CI.")
+				("top_only", po::bool_switch(&top_only), "Output only the top transcript in the simple file.")
+				("successes,s", po::value<arma::uword>()->default_value(200), "Number of successes for early termination.")
+				("genes,l", po::value(&gene_list), "A comma-separated list of genes to analyze.")
+				("nodetail",
+				 po::bool_switch(&nodetail),
+				 "Don't produce detailed, variant level output.")
+				 ;
+    vaast.add_options()
+			 ("group_size,g",
+			  po::value<arma::uword>()->default_value(0),
+			  "Group size. VAAST can collapse variants into groups of variants with adjacent weights.")
+			 ("score_only_minor", po::bool_switch(&score_only_minor), "Score only minor alleles in VAAST.")
+			 ("score_only_alternative",
+			  po::bool_switch(&score_only_alternative),
+			  "Score only alternative alleles in VAAST.")
+			 ("testable",
+			 	po::bool_switch(&testable),
+			 	"Return scores only for genes with at least scoreable variants in VAAST.")
+			  ;
+    skat.add_options()
 			("kernel,k",
 			 po::value<std::string>()->default_value("wLinear"),
-			 "Kernel for use with SKAT.\nOne of: {Linear, wLinear, IBS, wIBS, Quadratic, twoWayX}. Default is wLinear.")
-			("mac",
-			  po::value<arma::uword>()->default_value(250),
-			  "Minor allele count cutoff, default value 250.")
-			("pthresh,j",
-			 po::value(&pthresh),
-			 "The threshold to terminate permutation based on whether it is outside the p-value CI.")
+			 "Kernel for use with SKAT.\nOne of: {Linear, wLinear}.")
 			("qtl",
 			 po::bool_switch(&linear),
 			 "Analyze a quantitative trait. Value are assumed to be finite floating point values.")
 			("beta_weights",
 			 po::value<std::string>()->default_value("1,25"),
-			 "Parameters for the beta distribution. Two values, comma separated corresponding to a,b. Default is 1,25.")
-			("successes,s", po::value<arma::uword>()->default_value(200), "Number of successes for early termination.")
-			("genes,l", po::value(&gene_list), "A comma-separated list of genes to analyze.")
-			("score_only_minor", po::bool_switch(&score_only_minor), "Score only minor alleles in VAAST.")
-			("score_only_alternative",
-			 po::bool_switch(&score_only_alternative),
-			 "Score only alternative alleles in VAAST.")
-			("nodetail",
-			 po::bool_switch(&nodetail),
-			 "Don't produce detailed, variant level output.")
-			("maf", po::value<double>()->default_value(0.005), "Minor allele frequency cutoff for CMC collapsing.")
+			 "Parameters for the beta distribution. Two values, comma separated corresponding to a,b.")
+			 ;
+    cmc.add_options()
+		   ("maf", po::value<double>()->default_value(0.005), "Minor allele frequency cutoff for CMC collapsing.")
+		   ;
+	all.add_options()
+			("help,h", "Print this help message.")
+			("quiet,q", "Don't print status messages.")
+			;
+	hidden.add_options()
+			// ("no_adjust,n", "Disable small sample size adjustment for SKATO.")
 			("permute_out", po::value(&permute_set), "Output permutations to the given file.")
-			("testable", po::bool_switch(&testable), "Return scores only for genes with at least scoreable variants in VAAST. VAAST only option.")
-			("top_only", po::bool_switch(&top_only), "Output only the top transcript in the simple file.")
-			("quiet,q", "Don't print status messages.");
-	po::store(po::parse_command_line(argc, argv, desc), vm);
+			;
+	all.add(required).add(optional).add(vaast).add(skat).add(cmc).add(hidden);
+	visible.add(required).add(optional).add(vaast).add(skat).add(cmc);
+	po::store(po::parse_command_line(argc, argv, all), vm);
 	if (vm.count("help")) {
-	  std::cerr << desc << "\n";
+	  std::cerr << visible << "\n";
 	  return 1;
 	}
 
@@ -126,7 +150,7 @@ int main(int argc, char **argv) {
 	}
   } catch (po::required_option &e) {
 	std::cerr << "Missing required option:\n" << e.what() << "\n";
-	std::cerr << desc << "\n";
+	std::cerr << all << "\n";
 	return 1;
   } catch (std::exception &e) {
 	std::cerr << "Error: " << e.what() << "\n";
@@ -158,14 +182,14 @@ int main(int argc, char **argv) {
   if (method_choices.count(vm["method"].as<std::string>()) == 0) {
 	// Method not among choices
 	std::cerr << "Method must be one of {BURDEN, CALPHA, CMC, RVT1, RVT2, SKAT, SKATO, VAAST, VT, WSS}.\n";
-	std::cerr << desc << "\n";
+	std::cerr << all << "\n";
 	return 1;
   }
 
   if (kernel_choices.count(vm["kernel"].as<std::string>()) == 0) {
 	// Method not among choices
 	std::cerr << "Kernel must be one of {Linear, wLinear, IBS, wIBS, Quadratic, twoWayX}.\n";
-	std::cerr << desc << "\n";
+	std::cerr << all << "\n";
 	return 1;
   }
 
@@ -216,6 +240,7 @@ int main(int argc, char **argv) {
   tp.nodetail = nodetail;
   tp.top_only = top_only;
   tp.mac = vm["mac"].as<arma::uword>();
+  tp.pthresh = pthresh;
   // SKAT Options
   tp.kernel = vm["kernel"].as<std::string>();
   tp.adjust = adjust;
@@ -266,27 +291,27 @@ int main(int argc, char **argv) {
   // Check for correct file paths
   if (!check_file_exists(tp.genotypes_path)) {
 	std::cerr << "Incorrect file path for genotypes." << std::endl;
-	std::cerr << desc << "\n";
+	std::cerr << all << "\n";
 	std::exit(1);
   }
   if (!check_file_exists(tp.covariates_path)) {
 	std::cerr << "Incorrect file path for covariates." << std::endl;
-	std::cerr << desc << "\n";
+	std::cerr << all << "\n";
 	std::exit(1);
   }
   if (tp.bed && !check_file_exists(*tp.bed)) {
 	std::cerr << "Incorrect file path for bed_file." << std::endl;
-	std::cerr << desc << "\n";
+	std::cerr << all << "\n";
 	std::exit(1);
   }
   if (tp.weight && !check_file_exists(*tp.weight)) {
 	std::cerr << "Incorrect file path for weight_file." << std::endl;
-	std::cerr << desc << "\n";
+	std::cerr << all << "\n";
 	std::exit(1);
   }
   if (!check_directory_exists(tp.output_path)) {
   	std::cerr << "Output path is invalid." << std::endl;
-  	std::cerr << desc << "\n";
+  	std::cerr << all << "\n";
   	std::exit(1);
   }
   // Initialize randomization

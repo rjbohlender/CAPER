@@ -45,6 +45,9 @@ struct TaskParams {
   // Output permutations
   boost::optional<std::string> permute_set;
 
+  // Alternate p-value threshold
+  boost::optional<double> pthresh;
+
   // Detailed VAAST output
   std::string full_command;
   std::string output_path;

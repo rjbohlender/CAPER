@@ -3,6 +3,16 @@ project(Permute_Associate CXX)
 
 set(CMAKE_CXX_STANDARD 14)
 
+macro(remove_cxx_flag flag)
+    string(REPLACE "${flag}" "" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
+endmacro()
+
+message(${CMAKE_CXX_FLAGS_RELEASE}) # print "-O3 -DNDEBUG"
+remove_cxx_flag("-O3")
+message(${CMAKE_CXX_FLAGS_RELEASE}) # print "-DNDEBUG"
+
+set(CMAKE_CXX_FLAGS_RELEASE  "${CMAKE_CXX_FLAGS_RELEASE} -O2")
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 find_package(Armadillo REQUIRED)

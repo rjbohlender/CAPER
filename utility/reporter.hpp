@@ -10,6 +10,19 @@
 
 #include "../data/taskargs.hpp"
 
+struct ResultLine {
+  std::string gene;
+  std::string transcript;
+  double original;
+  double empirical_p;
+  double empirical_midp;
+  unsigned long successes;
+  unsigned long permutations;
+  double mgit;
+  unsigned long mgit_successes;
+  double oddsratio;
+};
+
 class Reporter {
 public:
   explicit Reporter(TaskParams &tp);
@@ -21,9 +34,17 @@ public:
   auto sync_write_simple(Result &res) -> void;
   auto sync_write_detail(const std::string &d, bool testable) -> void;
 
+  auto sort_simple() -> void;
+
 private:
   // For thread-safe concurrent writing
   std::mutex lock_;
+  // Paths -- .tmp for sorting
+  std::stringstream simple_path_ss;
+  std::stringstream simple_path_tmp_ss;
+  std::stringstream detail_path_ss;
+
+  std::ofstream simple_file_tmp_;
   std::ofstream simple_file_;
   std::ofstream detail_file_;
 

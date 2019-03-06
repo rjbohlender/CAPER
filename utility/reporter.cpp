@@ -17,8 +17,6 @@ const std::set<std::string> Reporter::pvalue_methods_ {
 
 Reporter::Reporter(TaskParams &tp)
 : method_(tp.method), gene_list_(tp.gene_list), testable_(tp.testable) {
-  std::stringstream simple_path_ss;
-  std::stringstream detail_path_ss;
   std::string header;
 
   if(!check_directory_exists(tp.output_path)) {
@@ -31,21 +29,22 @@ Reporter::Reporter(TaskParams &tp)
   if(tp.testable)
     simple_path_ss << ".testable";
   simple_path_ss << ".simple";
+  simple_path_tmp_ss << simple_path_ss.str() << ".tmp";
 
-  simple_file_ = std::ofstream(simple_path_ss.str());
-  if(!simple_file_.good()) {
+  simple_file_tmp_ = std::ofstream(simple_path_tmp_ss.str());
+  if(!simple_file_tmp_.good()) {
     throw(std::runtime_error("Simple file failed to open for writing.\n"));
   }
-  simple_file_ << std::setw(20) << std::left << "Gene";
-  simple_file_ << std::setw(20) << "Transcript";
-  simple_file_ << std::setw(20) << "Original";
-  simple_file_ << std::setw(20) << "Empirical_P";
-  simple_file_ << std::setw(20) << "Empirical_MidP";
-  simple_file_ << std::setw(20) << "Successes";
-  simple_file_ << std::setw(20) << "Permutations";
-  simple_file_ << std::setw(20) << "MGIT";
-  simple_file_ << std::setw(20) << "MGIT_Successes";
-  simple_file_ << std::setw(20) << "OddsRatio" << std::endl;
+  simple_file_tmp_ << std::setw(20) << std::left << "Gene";
+  simple_file_tmp_ << std::setw(20) << "Transcript";
+  simple_file_tmp_ << std::setw(20) << "Original";
+  simple_file_tmp_ << std::setw(20) << "Empirical_P";
+  simple_file_tmp_ << std::setw(20) << "Empirical_MidP";
+  simple_file_tmp_ << std::setw(20) << "Successes";
+  simple_file_tmp_ << std::setw(20) << "Permutations";
+  simple_file_tmp_ << std::setw(20) << "MGIT";
+  simple_file_tmp_ << std::setw(20) << "MGIT_Successes";
+  simple_file_tmp_ << std::setw(20) << "OddsRatio" << std::endl;
 
   detail_path_ss << tp.output_path << "/" << tp.method;
   if(tp.group_size > 0)
@@ -94,10 +93,10 @@ Reporter::Reporter(std::vector<TaskArgs> &res, TaskParams &tp)
     detail_path_ss << ".testable";
   detail_path_ss << ".detail";
 
-  simple_file_ = std::ofstream(simple_path_ss.str());
+  simple_file_tmp_ = std::ofstream(simple_path_ss.str());
   detail_file_ = std::ofstream(detail_path_ss.str());
 
-  if(!simple_file_.good()) {
+  if(!simple_file_tmp_.good()) {
     throw(std::runtime_error("Simple file failed to open for writing.\n"));
   }
   if(!detail_file_.good()) {
@@ -238,16 +237,16 @@ auto Reporter::report_simple(TaskParams &tp) -> void {
   // Holds unfinished genes
   std::vector<std::string> unfinished;
 
-  simple_file_ << std::setw(20) << std::left << "Gene";
-  simple_file_ << std::setw(20) << "Transcript";
-  simple_file_ << std::setw(20) << "Original";
-  simple_file_ << std::setw(20) << "Empirical_P";
-  simple_file_ << std::setw(20) << "Empirical_MidP";
-  simple_file_ << std::setw(20) << "Successes";
-  simple_file_ << std::setw(20) << "Permutations";
-  simple_file_ << std::setw(20) << "MGIT";
-  simple_file_ << std::setw(20) << "MGIT_Successes";
-  simple_file_ << std::setw(20) << "OddsRatio" << std::endl;
+  simple_file_tmp_ << std::setw(20) << std::left << "Gene";
+  simple_file_tmp_ << std::setw(20) << "Transcript";
+  simple_file_tmp_ << std::setw(20) << "Original";
+  simple_file_tmp_ << std::setw(20) << "Empirical_P";
+  simple_file_tmp_ << std::setw(20) << "Empirical_MidP";
+  simple_file_tmp_ << std::setw(20) << "Successes";
+  simple_file_tmp_ << std::setw(20) << "Permutations";
+  simple_file_tmp_ << std::setw(20) << "MGIT";
+  simple_file_tmp_ << std::setw(20) << "MGIT_Successes";
+  simple_file_tmp_ << std::setw(20) << "OddsRatio" << std::endl;
   // Print header and formatted results
   double permutation_mean = 0;
   double permutation_variance = 0;
@@ -267,12 +266,12 @@ auto Reporter::report_simple(TaskParams &tp) -> void {
   int rank = 1;
   for(auto &v : results_) {
     v.set_rank(rank);
-    write_to_stream(simple_file_, v);
+    write_to_stream(simple_file_tmp_, v);
     rank++;
   }
 
-  simple_file_.flush();
-  simple_file_.close();
+  simple_file_tmp_.flush();
+  simple_file_tmp_.close();
 
   std::cerr << "Permutation mean: " << permutation_mean << std::endl;
   std::cerr << "Permutation sd: " << std::sqrt(permutation_variance) << std::endl;
@@ -364,9 +363,9 @@ auto Reporter::sync_write_simple(Result &res) -> void {
 
   if(testable_) {
     if(res.testable)
-      simple_file_ << res;
+      simple_file_tmp_ << res;
   } else {
-    simple_file_ << res;
+    simple_file_tmp_ << res;
   }
 
   lock_.unlock();
@@ -383,4 +382,83 @@ auto Reporter::sync_write_detail(const std::string &d, bool testable) -> void {
   }
 
   lock_.unlock();
+}
+
+auto Reporter::sort_simple() -> void {
+  simple_file_ = std::ofstream(simple_path_ss.str());
+  if(!simple_file_.good()) {
+    throw(std::runtime_error("Simple file failed to open for writing.\n"));
+  }
+  simple_file_tmp_.close();
+  std::ifstream ifs(simple_path_tmp_ss.str());
+  std::string line;
+
+  unsigned long rank = 1;
+
+  simple_file_ << std::setw(20) << std::left << "Rank";
+  simple_file_ << std::setw(20) << "Gene";
+  simple_file_ << std::setw(20) << "Transcript";
+  simple_file_ << std::setw(20) << "Original";
+  simple_file_ << std::setw(20) << "Empirical_P";
+  simple_file_ << std::setw(20) << "Empirical_MidP";
+  simple_file_ << std::setw(20) << "Successes";
+  simple_file_ << std::setw(20) << "Permutations";
+  simple_file_ << std::setw(20) << "MGIT";
+  simple_file_ << std::setw(20) << "MGIT_Successes";
+  simple_file_ << std::setw(20) << "OddsRatio" << std::endl;
+
+  std::vector<ResultLine> results;
+  unsigned long lineno = 0;
+
+  while(std::getline(ifs, line)) {
+    if(lineno == 0) {
+      lineno++;
+      continue;
+    }
+    RJBUtil::Splitter<std::string> splitter(line, " \t");
+
+    ResultLine rs = ResultLine {
+      .gene = splitter[0],
+      .transcript = splitter[1],
+      .original = std::stod(splitter[2]),
+      .empirical_p = std::stod(splitter[3]),
+      .empirical_midp = std::stod(splitter[4]),
+      .successes = std::stoul(splitter[5]),
+      .permutations = std::stoul(splitter[6]),
+      .mgit = std::stod(splitter[7]),
+      .mgit_successes = std::stoul(splitter[8]),
+      .oddsratio = std::stod(splitter[9])
+    };
+
+    results.push_back(rs);
+
+    lineno++;
+  }
+
+  ifs.close();
+
+  // Sort results and write them out
+  std::sort(results.begin(), results.end(), [](ResultLine &a, ResultLine &b) { return a.empirical_p < b.empirical_p; });
+
+  for(const auto &rs : results) {
+    simple_file_ << std::setw(20) << std::left <<  rank;
+    simple_file_ << std::setw(20) << rs.gene;
+    simple_file_ << std::setw(20) << rs.transcript;
+    simple_file_ << std::setw(20) << rs.original;
+    simple_file_ << std::setw(20) << rs.empirical_p;
+    simple_file_ << std::setw(20) << rs.empirical_midp;
+    simple_file_ << std::setw(20) << rs.successes;
+    simple_file_ << std::setw(20) << rs.permutations;
+    simple_file_ << std::setw(20) << rs.mgit;
+    simple_file_ << std::setw(20) << rs.mgit_successes;
+    simple_file_ << std::setw(20) << rs.oddsratio << std::endl;
+
+    rank++;
+  }
+
+  simple_file_.flush();
+  simple_file_.close();
+
+  // Delete tmp file
+  std::remove(simple_path_tmp_ss.str().c_str());
 }

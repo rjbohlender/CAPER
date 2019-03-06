@@ -3,6 +3,7 @@
 //
 
 #include "taskqueue.hpp"
+#include <boost/math/special_functions/erf.hpp>
 
 TaskQueue::TaskQueue(size_t thread_cnt, std::shared_ptr<Reporter> reporter)
 	: threads_(thread_cnt),
@@ -57,6 +58,8 @@ void TaskQueue::join() {
 
   quit_ = true;
   cv_.notify_all();
+
+  reporter_->sort_simple();
 
   for (size_t i = 0; i < threads_.size(); i++) {
 	if (threads_[i].joinable()) {
@@ -227,10 +230,10 @@ void TaskQueue::stage_1(TaskArgs &ta) {
 	  // ta.increment_permuted(v.second.transcript, perm_val);
 	  v.second.permuted.push_back(perm_val);
 
-	  check_perm(ta.get_tp(), perm_val, ta.success_threshold, v);
-
 	  // Update total number of permutations
 	  v.second.permutations++;
+
+	  check_perm(ta.get_tp(), perm_val, ta.success_threshold, v);
 
 	  // Track when we reached success threshold
 	  if (v.second.successes == ta.success_threshold && v.second.min_success_at < 0) {
@@ -518,12 +521,13 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 	  // ta.increment_permuted(v.second.transcript, perm_val);
 	  v.second.permuted.push_back(perm_val);
 
-	  check_perm(ta.get_tp(), perm_val, ta.success_threshold, v);
-
 	  // Update total number of permutations
 	  v.second.permutations++;
 
-	  // Track when we reached 30
+	  check_perm(ta.get_tp(), perm_val, ta.success_threshold, v);
+
+	  // Track when we reached threshold
+
 	  if (v.second.successes == ta.success_threshold && v.second.min_success_at < 0) {
 		v.second.min_success_at = v.second.permutations;
 	  }
@@ -599,7 +603,24 @@ void TaskQueue::check_perm(const TaskParams &tp,
   // SKATO returns a pvalue so we need to reverse the successes
   if (tp.method == "SKATO" || (tp.method == "SKAT" && tp.total_permutations == 0) || tp.method == "CMC" || tp.method == "RVT1" || tp.method == "RVT2") {
 	if (perm_val <= v.second.original) {
-	  if (v.second.successes < success_threshold) {
+	  if (tp.pthresh) {
+		v.second.successes++;
+		if (perm_val == v.second.original) {
+		  v.second.mid_successes += 0.5;
+		} else {
+		  v.second.mid_successes++;
+		}
+
+	    double p = static_cast<double>(v.second.successes) / static_cast<double>(v.second.permutations);
+
+	    // 95% confidence interval
+	    double ci = 1.96 * std::sqrt(p * (1. - p) / v.second.permutations);
+	    // Ensure a minimum number of permutations
+		if (v.second.permutations > 10) {
+		  // Stop when the lower bound on the 95% confidence interval is greater than the threshold given
+		  v.second.done = p - ci > *tp.pthresh;
+		}
+	  } else if (v.second.successes < success_threshold) {
 		v.second.successes++;
 		if (perm_val == v.second.original) {
 		  v.second.mid_successes += 0.5;
@@ -618,7 +639,24 @@ void TaskQueue::check_perm(const TaskParams &tp,
 	}
   } else {
 	if (perm_val >= v.second.original) {
-	  if (v.second.successes < success_threshold) {
+	  if (tp.pthresh) {
+		v.second.successes++;
+		if (perm_val == v.second.original) {
+		  v.second.mid_successes += 0.5;
+		} else {
+		  v.second.mid_successes++;
+		}
+
+	    double p = static_cast<double>(v.second.successes) / static_cast<double>(v.second.permutations);
+
+	    // 95% confidence interval
+	    double ci = 1.96 * std::sqrt(p * (1. - p) / v.second.permutations);
+		// Ensure a minimum number of permutations
+	    if (v.second.permutations > 10) {
+		  // Stop when the lower bound on the 95% confidence interval is greater than the threshold given
+		  v.second.done = p - ci > *tp.pthresh;
+	    }
+	  } else if (v.second.successes < success_threshold) {
 		v.second.successes++;
 		if (perm_val == v.second.original) {
 		  v.second.mid_successes += 0.5;
