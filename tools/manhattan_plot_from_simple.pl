@@ -14,15 +14,14 @@ my $qqman_input = "$input.qqman";
 open OUT, ">$qqman_input";
 print OUT "SNP\tCHR\tBP\tP\n"; # Header line
 
-my %hash;
 my ($geneid, $c, $coord, $p);
 open FH, $ARGV[0];
 while (<FH>) {
     chomp;
     my @i = split ' ', $_; # Split on any number of whitespace characters
 
-    next if $i[0] eq "Gene" or $_ =~ /#/; # Skip the header
-    $geneid = $i[0];
+    next if $i[0] eq "Rank" or $_ =~ /#/; # Skip the header
+    $geneid = $i[1];
     if (defined $gene_coords->{$geneid}) {
         ($c, $coord) = @{$gene_coords->{$geneid}};
     } else {next;}
@@ -31,7 +30,7 @@ while (<FH>) {
 
     if ($c eq "X") { $c = 23; }
     elsif ($c eq "Y") {$c = 24; }
-    $p = $i[4];
+    $p = $i[5];
     print OUT "$geneid\t$c\t$coord\t$p\n";
 }
 close FH;
