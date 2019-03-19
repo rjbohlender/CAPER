@@ -21,7 +21,7 @@ class TaskQueue {
 public:
   // Construtors
   explicit TaskQueue(size_t thread_cnt, std::shared_ptr<Reporter> reporter);
-  TaskQueue(size_t thread_cnt, bool verbose, std::shared_ptr<Reporter> reporter);
+  TaskQueue(size_t thread_cnt, std::shared_ptr<Reporter> reporter, bool verbose);
 
   // Destructor
   ~TaskQueue();

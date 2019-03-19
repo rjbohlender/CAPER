@@ -13,7 +13,7 @@
 using namespace std::chrono_literals;
 
 JobDispatcher::JobDispatcher(TaskParams &tp, std::shared_ptr<Reporter> reporter)
-	: tp_(tp), tq_(tp_.nthreads - 1, tp.verbose, reporter),
+	: tp_(tp), tq_(tp_.nthreads - 1, reporter, tp.verbose),
 	  cov_(std::make_shared<Covariates>(tp.covariates_path, tp.ped_path, tp.linear)) {
   // Initialize bed and weights
   if (tp.gene_list)
@@ -106,6 +106,8 @@ void JobDispatcher::all_gene_dispatcher(std::istream &gt_stream) {
   std::string line;
   std::stringstream current;
 
+  int gene_no = 1;
+
   while (std::getline(gt_stream, line)) {
 	RJBUtil::Splitter<std::string> split(line, "\t");
 	RJBUtil::Splitter<std::string> vsplit(split[2], "-");
@@ -123,8 +125,17 @@ void JobDispatcher::all_gene_dispatcher(std::istream &gt_stream) {
 		  // Dispatch gene
 		  Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_, tp_);
 
-		  single_dispatch(gene_data);
+		  if(tp_.range_start && tp_.range_end) {
+		    if(gene_no >= *tp_.range_start && gene_no <= *tp_.range_end) {
+			  single_dispatch(gene_data);
+		    } else if(gene_no > *tp_.range_end) {
+		      break; // Stop early
+		    }
+		  } else {
+			single_dispatch(gene_data);
+		  }
 		  // Reset for next gene
+		  gene_no++;
 		  new_gene(current, line, split, vsplit);
 		}
 	  } else {

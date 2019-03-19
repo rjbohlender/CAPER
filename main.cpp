@@ -51,6 +51,7 @@ int main(int argc, char **argv) {
   bool linear = false;
   bool nodetail = false;
   bool top_only = false;
+  std::vector<int> gene_range;
   boost::optional<std::string> bed;
   boost::optional<std::string> weight;
   boost::optional<std::string> gene_list;
@@ -79,6 +80,9 @@ int main(int argc, char **argv) {
 				("method,m",
 				 po::value<std::string>()->default_value("VAAST"),
 				 "The statistical method to be used.\nOptions: {BURDEN, CALPHA, CMC, SKAT, WSS, VAAST, VT}.")
+				("range",
+				 po::value(&gene_range)->multitoken(),
+				 "A range of genes to analyze from the matrix file. Takes two values, a start gene number, and end gene number.\nThe program will only provide results for the values in that range. Gene count starts at 1.\nUseful for starting multiple jobs on a cluster each processing part of a file.")
 				("stage_1_max_perm,1",
 				 po::value<arma::uword>()->default_value(0),
 				 "The maximum number of permutations to be performed in the first stage permutation. A small number is recommended if your sample is large.")
@@ -140,6 +144,14 @@ int main(int argc, char **argv) {
 	  return 1;
 	}
 
+	std::vector<int> range_opt;
+	if (vm["range"].empty() || (range_opt = vm["range"].as<std::vector<int>>()).size() != 2 || (!vm["range"].empty() && !vm["genes"].empty())) {
+	  std::cerr << "--range takes two integer arguments\n";
+	  std::cerr << "--range cannot be used with the --genes or -l option.\n";
+	  std::cerr << visible << "\n";
+	  return 1;
+	}
+
 	po::notify(vm);
 
 	if (vm.count("quiet")) {
@@ -172,11 +184,11 @@ int main(int argc, char **argv) {
 
   std::set<std::string> kernel_choices = {
 	  "Linear",
-	  "wLinear",
-	  "IBS",
-	  "wIBS",
-	  "Quadratic",
-	  "twoWayX"
+	  "wLinear"
+	  //"IBS",
+	  //"wIBS",
+	  //"Quadratic",
+	  //"twoWayX"
   };
 
   if (method_choices.count(vm["method"].as<std::string>()) == 0) {
@@ -196,7 +208,7 @@ int main(int argc, char **argv) {
   /**********************
    * Setup task parameters
    **********************/
-  TaskParams tp{};
+  TaskParams tp;
 
   RJBUtil::Splitter<std::string> beta_split(vm["beta_weights"].as<std::string>(), ",");
 
@@ -256,6 +268,12 @@ int main(int argc, char **argv) {
   if(tp.linear && !tp.quantitative) {
     std::cerr << "Quantitative trait analysis is only supported for the RVT1, RVT2, SKATO, SKAT, and BURDEN methods." << std::endl;
     std::exit(1);
+  }
+
+  std::vector<int> range_opt;
+  if((range_opt = vm["range"].as<std::vector<int>>()).size() == 2) {
+    tp.range_start = range_opt[0];
+    tp.range_end = range_opt[1];
   }
 
   if(tp.mac <= 0) {

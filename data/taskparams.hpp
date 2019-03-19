@@ -37,6 +37,9 @@ struct TaskParams {
   std::string ped_path;
   arma::uword mac;
 
+  boost::optional<int> range_start;
+  boost::optional<int> range_end;
+
   boost::optional<std::string> bed;
   boost::optional<std::string> weight;
 
