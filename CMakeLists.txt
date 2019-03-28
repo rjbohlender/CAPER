@@ -102,7 +102,7 @@ set(PROJECT_SUPPORT_FILES
     data/calccasm.cpp
     data/calccasm.hpp
     statistics/skatr.cpp
-    statistics/skatr.hpp)
+    statistics/skatr.hpp statistics/power.cpp statistics/power.hpp)
 
 
 include_directories("${CMAKE_CURRENT_LIST_DIR}/third_party")

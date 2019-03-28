@@ -37,9 +37,12 @@ public:
 
   void print();
 
-  // Getters
+  // Member access
   std::string &get_gene();
+
   arma::sp_mat &get_matrix(const std::string &k);
+  void set_matrix(const std::string &k, arma::sp_mat &&data);
+
   std::vector<std::string> &get_transcripts();
   arma::uword get_nvariants(const std::string &k);
   std::vector<std::string> &get_positions(const std::string &k);

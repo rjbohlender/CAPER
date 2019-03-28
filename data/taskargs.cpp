@@ -60,6 +60,7 @@ TaskArgs::TaskArgs(Stage stage,
 }
 TaskArgs::TaskArgs(const TaskArgs &ta)
 	: results(ta.results),
+	  power_results(ta.power_results),
 	  permute(ta.permute),
 	  stage_(ta.stage_),
 	  gene_(ta.gene_),
@@ -75,6 +76,7 @@ TaskArgs::TaskArgs(const TaskArgs &ta)
 
 TaskArgs::TaskArgs(TaskArgs &&ta) noexcept
 	: results(std::move(ta.results)),
+	  power_results(std::move(ta.power_results)),
 	  permute(std::move(ta.permute)),
 	  stage_(ta.stage_),
 	  gene_(std::move(ta.gene_)),
@@ -93,6 +95,7 @@ TaskArgs &TaskArgs::operator=(const TaskArgs &rhs) {
   gene_ = rhs.gene_;
   cov_ = rhs.cov_;
   results = rhs.results;
+  power_results = rhs.power_results;
   permute = rhs.permute;
   stage_1_permutations_ = rhs.stage_1_permutations_;
   stage_2_permutations_ = rhs.stage_2_permutations_;

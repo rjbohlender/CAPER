@@ -9,6 +9,7 @@
 #include <mutex>
 
 #include "../data/taskargs.hpp"
+#include "../statistics/power.hpp"
 
 struct ResultLine {
   std::string gene;
@@ -30,9 +31,11 @@ public:
 
   auto report_detail(std::vector<TaskArgs> &res, TaskParams &tp) -> void;
   auto report_simple(TaskParams &tp) -> void;
+  auto report_power(std::vector<TaskArgs> &resv, TaskParams &tp) -> void;
 
   auto sync_write_simple(Result &res) -> void;
   auto sync_write_detail(const std::string &d, bool testable) -> void;
+  auto sync_write_power(std::vector<PowerRes> &prv) -> void;
 
   auto sort_simple() -> void;
 
@@ -47,6 +50,7 @@ private:
   std::ofstream simple_file_tmp_;
   std::ofstream simple_file_;
   std::ofstream detail_file_;
+  std::ofstream power_file_;
 
   const std::string method_;
   const bool gene_list_;

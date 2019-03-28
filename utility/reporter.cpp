@@ -71,45 +71,77 @@ Reporter::Reporter(TaskParams &tp)
 
 Reporter::Reporter(std::vector<TaskArgs> &res, TaskParams &tp)
 : method_(tp.method), gene_list_(tp.gene_list), testable_(tp.testable) {
-  std::stringstream simple_path_ss;
-  std::stringstream detail_path_ss;
-  std::string header;
-
   if(!check_directory_exists(tp.output_path)) {
     throw(std::runtime_error("Output path is invalid."));
   }
 
-  simple_path_ss << tp.output_path << "/" << tp.method;
-  if(tp.group_size > 0)
-    simple_path_ss << boost::format(".g%1$d") % tp.group_size;
-  if(tp.testable)
-    simple_path_ss << ".testable";
-  simple_path_ss << ".simple";
+  // Handle power analysis setup and return
+  if (tp.power) {
+    std::stringstream power_path_ss;
 
-  detail_path_ss << tp.output_path << "/" << tp.method;
-  if(tp.group_size > 0)
-    detail_path_ss << boost::format(".g%1$d") % tp.group_size;
-  if(tp.testable)
-    detail_path_ss << ".testable";
-  detail_path_ss << ".detail";
+    if(tp.method == "VAAST" && tp.group_size > 0) {
+      power_path_ss << tp.output_path << "/" << tp.method << ".g" << tp.group_size << ".power";
+    } else {
+      power_path_ss << tp.output_path << "/" << tp.method << ".power";
+    }
+    power_file_ = std::ofstream(power_path_ss.str());
 
-  simple_file_tmp_ = std::ofstream(simple_path_ss.str());
-  detail_file_ = std::ofstream(detail_path_ss.str());
+    // Initial header write
+    power_file_ << std::setw(15) << "Gene";
+    power_file_ << std::setw(15) << "Transcript";
+    power_file_ << std::setw(15) << "Method";
+    power_file_ << std::setw(15) << "Ncases";
+    power_file_ << std::setw(15) << "Ncontrols";
+    power_file_ << std::setw(15) << "Successes";
+    power_file_ << std::setw(15) << "Bootstraps";
+    power_file_ << std::setw(15) << "Ratio";
+    power_file_ << std::setw(15) << "Alpha";
+    power_file_ << std::endl;
 
-  if(!simple_file_tmp_.good()) {
-    throw(std::runtime_error("Simple file failed to open for writing.\n"));
+    if (tp.gene_list) {
+      report_power(res, tp);
+    }
+  } else {
+    // Normal execution
+    std::stringstream simple_path_ss;
+    std::stringstream detail_path_ss;
+    std::string header;
+
+    simple_path_ss << tp.output_path << "/" << tp.method;
+    if (tp.group_size > 0)
+      simple_path_ss << boost::format(".g%1$d") % tp.group_size;
+    if (tp.testable)
+      simple_path_ss << ".testable";
+    simple_path_ss << ".simple";
+
+    detail_path_ss << tp.output_path << "/" << tp.method;
+    if (tp.group_size > 0)
+      detail_path_ss << boost::format(".g%1$d") % tp.group_size;
+    if (tp.testable)
+      detail_path_ss << ".testable";
+    detail_path_ss << ".detail";
+
+    simple_file_tmp_ = std::ofstream(simple_path_ss.str());
+    detail_file_ = std::ofstream(detail_path_ss.str());
+
+    if (!simple_file_tmp_.good()) {
+      throw (std::runtime_error("Simple file failed to open for writing.\n"));
+    }
+    if (!detail_file_.good()) {
+      throw (std::runtime_error("Detail file failed to open for writing.\n"));
+    }
+    // Extract results
+    extract_results(res, tp);
+
+
+    // Write output
+    if (tp.gene_list) {
+      report_simple(tp);
+      if (!tp.nodetail) {
+        report_detail(res, tp);
+      }
+    }
   }
-  if(!detail_file_.good()) {
-    throw(std::runtime_error("Detail file failed to open for writing.\n"));
-  }
-  // Extract results
-  extract_results(res, tp);
-
-
-  // Write output
-  report_simple(tp);
-  if(!tp.nodetail)
-	report_detail(res, tp);
 }
 
 auto Reporter::extract_results(std::vector<TaskArgs> &tq_results, TaskParams &tp) -> void {
@@ -384,6 +416,23 @@ auto Reporter::sync_write_detail(const std::string &d, bool testable) -> void {
   lock_.unlock();
 }
 
+auto Reporter::sync_write_power(std::vector<PowerRes> &prv) -> void {
+  lock_.lock(); // Acquire lock
+
+  for(const auto &pr : prv) {
+    power_file_ << std::setw(20) << pr.gene;
+    power_file_ << std::setw(20) << pr.transcript;
+    power_file_ << std::setw(20) << pr.method;
+    power_file_ << std::setw(20) << pr.successes;
+    power_file_ << std::setw(20) << pr.bootstraps;
+    power_file_ << std::setw(20) << pr.ratio;
+    power_file_ << std::setw(20) << pr.alpha;
+    power_file_ << std::endl;
+  }
+
+  lock_.unlock();
+}
+
 auto Reporter::sort_simple() -> void {
   simple_file_ = std::ofstream(simple_path_ss.str());
   if(!simple_file_.good()) {
@@ -461,4 +510,23 @@ auto Reporter::sort_simple() -> void {
 
   // Delete tmp file
   std::remove(simple_path_tmp_ss.str().c_str());
+}
+
+auto Reporter::report_power(std::vector<TaskArgs> &resv, TaskParams &tp) -> void {
+  for (const auto &res : resv) {
+    for(const auto &pr : res.power_results) {
+      power_file_ << std::setw(15) << pr.gene;
+      power_file_ << std::setw(15) << pr.transcript;
+      power_file_ << std::setw(15) << pr.method;
+      power_file_ << std::setw(15) << pr.ncases;
+      power_file_ << std::setw(15) << pr.ncontrols;
+      power_file_ << std::setw(15) << pr.successes;
+      power_file_ << std::setw(15) << pr.bootstraps;
+      power_file_ << std::setw(15) << pr.ratio;
+      power_file_ << std::setw(15) << pr.alpha;
+      power_file_ << std::endl;
+    }
+  }
+  power_file_.flush();
+  power_file_.close();
 }

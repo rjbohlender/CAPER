@@ -3,6 +3,7 @@
 //
 
 #include "taskqueue.hpp"
+#include "../statistics/power.hpp"
 #include <boost/math/special_functions/erf.hpp>
 
 TaskQueue::TaskQueue(size_t thread_cnt, std::shared_ptr<Reporter> reporter)
@@ -19,8 +20,9 @@ TaskQueue::TaskQueue(size_t thread_cnt, std::shared_ptr<Reporter> reporter)
   }
 }
 
-TaskQueue::TaskQueue(size_t thread_cnt, std::shared_ptr<Reporter> reporter, bool verbose)
-	: threads_(thread_cnt),
+TaskQueue::TaskQueue(size_t thread_cnt, std::shared_ptr<Reporter> reporter, TaskParams tp, bool verbose)
+	: tp_(tp),
+	  threads_(thread_cnt),
 	  ntasks_(0),
 	  quit_(false),
 	  gen_(rd_()),
@@ -59,7 +61,8 @@ void TaskQueue::join() {
   quit_ = true;
   cv_.notify_all();
 
-  reporter_->sort_simple();
+  if(!tp_.power)
+	reporter_->sort_simple();
 
   for (size_t i = 0; i < threads_.size(); i++) {
 	if (threads_[i].joinable()) {
@@ -156,6 +159,16 @@ void TaskQueue::thread_handler() {
 		  lock.unlock();
 		}
 		ntasks_--;
+	  } else if(stage == Stage::Power) {
+	    power(op);
+	    if(!op.get_tp().gene_list) {
+		  reporter_->sync_write_power(op.power_results);
+	    } else {
+	      lock.lock();
+	      results_.emplace_back(op);
+	      lock.unlock();
+	    }
+	    ntasks_--;
 	  }
 
 	  lock.lock();
@@ -707,5 +720,14 @@ double TaskQueue::call_method(Methods &method,
   } else {
     throw(std::logic_error("Failed to find method."));
   }
+}
+
+void TaskQueue::power(TaskArgs &ta) {
+  // Conduct bootstrap power analysis
+  // Resample indices to construct new sets of data, then run calculate test statistic / p-value
+  // Report the number of successes for each transcript
+  Power power(ta.get_methods(), ta.get_gene(), ta.get_cov(), ta.get_tp(), ta.get_tp().bootstrap_reps);
+
+  ta.power_results = power.get_results();
 }
 

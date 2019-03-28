@@ -71,6 +71,13 @@ struct TaskParams {
   boost::optional<std::string> gene_list;
   bool nodetail;
 
+  // Run power analysis
+  bool power;
+  std::vector<double> alpha;
+  arma::uword bootstrap_reps;
+  std::vector<arma::uword> ncases;
+  std::vector<arma::uword> ncontrols;
+
   // SKAT Parameters
   std::string kernel; // Kernel selection
   bool adjust; // Sample size adjustment

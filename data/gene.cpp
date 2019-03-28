@@ -49,6 +49,10 @@ arma::sp_mat &Gene::get_matrix(const std::string &k) {
   return genotypes_[k];
 }
 
+void Gene::set_matrix(const std::string &k, arma::sp_mat &&data) {
+  genotypes_[k] = data;
+}
+
 std::string &Gene::get_gene() {
   return gene_;
 }

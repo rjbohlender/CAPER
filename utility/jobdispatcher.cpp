@@ -13,7 +13,7 @@
 using namespace std::chrono_literals;
 
 JobDispatcher::JobDispatcher(TaskParams &tp, std::shared_ptr<Reporter> reporter)
-	: tp_(tp), tq_(tp_.nthreads - 1, reporter, tp.verbose),
+	: tp_(tp), tq_(tp_.nthreads - 1, reporter, tp, tp.verbose),
 	  cov_(std::make_shared<Covariates>(tp.covariates_path, tp.ped_path, tp.linear)) {
   // Initialize bed and weights
   if (tp.gene_list)
@@ -24,7 +24,11 @@ JobDispatcher::JobDispatcher(TaskParams &tp, std::shared_ptr<Reporter> reporter)
 	weight_ = Weight(*tp.weight);
 
   // Set staging
-  stage_ = (tp_.stage_1_permutations > 0) ? Stage::Stage1 : Stage::Stage2;
+  if (tp_.power) {
+    stage_ = Stage::Power;
+  } else {
+	stage_ = (tp_.stage_1_permutations > 0) ? Stage::Stage1 : Stage::Stage2;
+  }
 
   // Handle zipped input
   if (is_gzipped(tp.genotypes_path)) {
@@ -54,7 +58,11 @@ JobDispatcher::JobDispatcher(TaskParams &tp, std::shared_ptr<Reporter> reporter)
 							  tp.stage_1_permutations,
 							  tp.nthreads - 1);
   }
-  std::cerr << "Time spent generating stage 1 permutations: " << timer.toc() << std::endl;
+  if(tp.stage_1_permutations > 0) {
+	std::cerr << "Time spent generating stage 1 permutations: " << timer.toc() << std::endl;
+  } else {
+    timer.toc();
+  }
   // Time for 1000 permutations, 1000 samples -> 0.5s, 10000 samples-> 30s, 100000 samples 3300s
 
   // Permutation set output | Developer option
@@ -96,8 +104,9 @@ JobDispatcher::JobDispatcher(TaskParams &tp, std::shared_ptr<Reporter> reporter)
 	permutation_ptr_.reset();
   }
 
-  if (tp.gene_list)
+  if (tp.gene_list) {
 	Reporter(tq_.get_results(), tp_);
+  }
 
   cov_.reset();
 }
@@ -230,6 +239,24 @@ void JobDispatcher::multiple_dispatch(Gene &gene) {
 	int total_s1_perm = 0;
 	int total_s2_perm = 0;
 	int total_success = 0;
+
+	// Single dispatch of gene list items for power analysis
+	if (tp_.power) {
+	  TaskArgs ta(stage_,
+	  	          gene,
+	  	          cov_,
+	  	          tp_,
+	  	          tp_.success_threshold,
+	  	          tp_.stage_1_permutations,
+	  	          tp_.stage_2_permutations,
+	  	          *permutation_ptr_);
+	  while (tq_.size() > tp_.nthreads - 1) {
+		std::this_thread::sleep_for(0.001s);
+	  }
+	  tq_.dispatch(ta);
+	  ngenes_++;
+	  return;
+	}
 
 	for (int i = 0; i < tq_.get_nthreads(); i++) {
 	  if (i == tq_.get_nthreads() - 1) {

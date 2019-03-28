@@ -21,7 +21,7 @@ class TaskQueue {
 public:
   // Construtors
   explicit TaskQueue(size_t thread_cnt, std::shared_ptr<Reporter> reporter);
-  TaskQueue(size_t thread_cnt, std::shared_ptr<Reporter> reporter, bool verbose);
+  TaskQueue(size_t thread_cnt, std::shared_ptr<Reporter> reporter, TaskParams tp, bool verbose);
 
   // Destructor
   ~TaskQueue();
@@ -43,6 +43,8 @@ public:
   size_t get_nthreads();
 
 private:
+  // Params
+  TaskParams tp_;
   // PRNG
   std::random_device rd_;
   std::mt19937 gen_;
@@ -85,6 +87,9 @@ private:
 
   void stage_1(TaskArgs &ta);
   void stage_2(TaskArgs &ta);
+
+  // Bootstrap power analysis
+  void power(TaskArgs &ta);
 };
 
 #endif //PERMUTE_ASSOCIATE_TASKQUEUE_HPP

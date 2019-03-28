@@ -52,6 +52,7 @@ int main(int argc, char **argv) {
   bool nodetail = false;
   bool top_only = false;
   std::vector<int> gene_range;
+  std::vector<std::string> power;
   boost::optional<std::string> bed;
   boost::optional<std::string> weight;
   boost::optional<std::string> gene_list;
@@ -120,7 +121,7 @@ int main(int argc, char **argv) {
 			 "Kernel for use with SKAT.\nOne of: {Linear, wLinear}.")
 			("qtl",
 			 po::bool_switch(&linear),
-			 "Analyze a quantitative trait. Value are assumed to be finite floating point values.")
+			 "Analyze a quantitative trait. Values are assumed to be finite floating point values.")
 			("beta_weights",
 			 po::value<std::string>()->default_value("1,25"),
 			 "Parameters for the beta distribution. Two values, comma separated corresponding to a,b.")
@@ -135,6 +136,9 @@ int main(int argc, char **argv) {
 	hidden.add_options()
 			// ("no_adjust,n", "Disable small sample size adjustment for SKATO.")
 			("permute_out", po::value(&permute_set), "Output permutations to the given file.")
+			("power",
+			 po::value(&power)->multitoken(),
+			 "Run a bootstrap power analysis for the data provided. Takes four values, the number of bootstrap replicates, the alpha level as a comma-separated list, the number of cases as a comma-separated list, and the number of controls as a comma-separated list.")
 			;
 	all.add(required).add(optional).add(vaast).add(skat).add(cmc).add(hidden);
 	visible.add(required).add(optional).add(vaast).add(skat).add(cmc);
@@ -145,13 +149,19 @@ int main(int argc, char **argv) {
 	}
 
 	std::vector<int> range_opt;
-	if (vm["range"].empty() || (range_opt = vm["range"].as<std::vector<int>>()).size() != 2 || (!vm["range"].empty() && !vm["genes"].empty())) {
+	if (!vm["range"].empty() && ((range_opt = vm["range"].as<std::vector<int>>()).size() != 2 || (!vm["range"].empty() && !vm["genes"].empty()))) {
 	  std::cerr << "--range takes two integer arguments\n";
 	  std::cerr << "--range cannot be used with the --genes or -l option.\n";
 	  std::cerr << visible << "\n";
 	  return 1;
 	}
 
+	std::vector<std::string> power_opt;
+	if (!vm["power"].empty() && ((power_opt = vm["power"].as<std::vector<std::string>>()).size() != 4)) {
+	  std::cerr << "--power takes four arguments, the first an integer argument for bootstrap replicates, the second a floating point value for alpha, the third and fourth are comma-separated lists of cases and control count pairs. The case-control count pairs are expected to be the same length.\n";
+	  std::cerr << all << "\n";
+	  return 1;
+	}
 	po::notify(vm);
 
 	if (vm.count("quiet")) {
@@ -262,6 +272,23 @@ int main(int argc, char **argv) {
   tp.b = std::stoi(beta_split[1]);
   // Testability
   tp.testable = testable;
+  // Power
+  tp.power = !vm["power"].empty();
+  if(tp.power) {
+    std::vector<std::string> power_ops = vm["power"].as<std::vector<std::string>>();
+    tp.bootstrap_reps = std::stoul(power_ops[0]);
+    RJBUtil::Splitter<std::string> alpha_splitter(power_ops[1], ",");
+    RJBUtil::Splitter<std::string> ncase_splitter(power_ops[2], ",");
+    RJBUtil::Splitter<std::string> ncontrol_splitter(power_ops[3], ",");
+
+	std::transform(alpha_splitter.begin(), alpha_splitter.end(), std::back_inserter(tp.alpha), [](std::string &v) { return std::stod(v); });
+    std::transform(ncase_splitter.begin(), ncase_splitter.end(), std::back_inserter(tp.ncases), [](std::string &v) { return std::stoul(v); });
+	std::transform(ncontrol_splitter.begin(), ncontrol_splitter.end(), std::back_inserter(tp.ncontrols), [](std::string &v) { return std::stoul(v); });
+
+	if (tp.ncases.size() != tp.ncontrols.size()) {
+	  throw std::runtime_error("ncases and ncontrols must have the same number of entries.");
+	}
+  }
 
   tp.alternate_permutation = tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN" || tp.method == "VT";
   tp.quantitative = tp.method == "RVT1" || tp.method == "RVT2" || tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN" || tp.method == "VT";
@@ -271,7 +298,7 @@ int main(int argc, char **argv) {
   }
 
   std::vector<int> range_opt;
-  if((range_opt = vm["range"].as<std::vector<int>>()).size() == 2) {
+  if(!vm["range"].empty() && (range_opt = vm["range"].as<std::vector<int>>()).size() == 2) {
     tp.range_start = range_opt[0];
     tp.range_end = range_opt[1];
   }
