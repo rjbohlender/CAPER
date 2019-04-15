@@ -73,7 +73,7 @@ struct TaskParams {
 
   // Run power analysis
   bool power;
-  std::vector<double> alpha;
+  arma::vec alpha;
   arma::uword bootstrap_reps;
   std::vector<arma::uword> ncases;
   std::vector<arma::uword> ncontrols;

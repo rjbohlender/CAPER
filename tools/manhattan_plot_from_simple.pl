@@ -43,7 +43,7 @@ system($cmd);
 #-------------------------
 # Subs -------------------
 #-------------------------
-sub get_coors {
+sub get_coords {
     my $file = shift;
 
     my $fh = FileHandle->new();

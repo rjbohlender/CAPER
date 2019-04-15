@@ -52,7 +52,7 @@ private:
   std::vector<PowerRes> power_res_;
 
   // Result storage
-  std::map<std::string, arma::uword> success_map_;
+  std::map<std::string, std::vector<arma::vec>> success_map_;
 
   // Sample data with replacement
   arma::sp_mat sample(arma::sp_mat &X, arma::uword ncases, arma::uword ncontrols);

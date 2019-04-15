@@ -172,7 +172,7 @@ int main(int argc, char **argv) {
 	}
   } catch (po::required_option &e) {
 	std::cerr << "Missing required option:\n" << e.what() << "\n";
-	std::cerr << all << "\n";
+	std::cerr << visible << "\n";
 	return 1;
   } catch (std::exception &e) {
 	std::cerr << "Error: " << e.what() << "\n";
@@ -204,14 +204,14 @@ int main(int argc, char **argv) {
   if (method_choices.count(vm["method"].as<std::string>()) == 0) {
 	// Method not among choices
 	std::cerr << "Method must be one of {BURDEN, CALPHA, CMC, RVT1, RVT2, SKAT, SKATO, VAAST, VT, WSS}.\n";
-	std::cerr << all << "\n";
+	std::cerr << visible << "\n";
 	return 1;
   }
 
   if (kernel_choices.count(vm["kernel"].as<std::string>()) == 0) {
 	// Method not among choices
-	std::cerr << "Kernel must be one of {Linear, wLinear, IBS, wIBS, Quadratic, twoWayX}.\n";
-	std::cerr << all << "\n";
+	std::cerr << "Kernel must be one of {Linear, wLinear}.\n";
+	std::cerr << visible << "\n";
 	return 1;
   }
 
@@ -281,9 +281,13 @@ int main(int argc, char **argv) {
     RJBUtil::Splitter<std::string> ncase_splitter(power_ops[2], ",");
     RJBUtil::Splitter<std::string> ncontrol_splitter(power_ops[3], ",");
 
-	std::transform(alpha_splitter.begin(), alpha_splitter.end(), std::back_inserter(tp.alpha), [](std::string &v) { return std::stod(v); });
+    std::vector<double> alpha_tmp;
+
+	std::transform(alpha_splitter.begin(), alpha_splitter.end(), std::back_inserter(alpha_tmp), [](std::string &v) { return std::stod(v); });
     std::transform(ncase_splitter.begin(), ncase_splitter.end(), std::back_inserter(tp.ncases), [](std::string &v) { return std::stoul(v); });
 	std::transform(ncontrol_splitter.begin(), ncontrol_splitter.end(), std::back_inserter(tp.ncontrols), [](std::string &v) { return std::stoul(v); });
+
+	tp.alpha = arma::conv_to<arma::vec>::from(alpha_tmp);
 
 	if (tp.ncases.size() != tp.ncontrols.size()) {
 	  throw std::runtime_error("ncases and ncontrols must have the same number of entries.");
@@ -336,27 +340,27 @@ int main(int argc, char **argv) {
   // Check for correct file paths
   if (!check_file_exists(tp.genotypes_path)) {
 	std::cerr << "Incorrect file path for genotypes." << std::endl;
-	std::cerr << all << "\n";
+	std::cerr << visible << "\n";
 	std::exit(1);
   }
   if (!check_file_exists(tp.covariates_path)) {
 	std::cerr << "Incorrect file path for covariates." << std::endl;
-	std::cerr << all << "\n";
+	std::cerr << visible << "\n";
 	std::exit(1);
   }
   if (tp.bed && !check_file_exists(*tp.bed)) {
 	std::cerr << "Incorrect file path for bed_file." << std::endl;
-	std::cerr << all << "\n";
+	std::cerr << visible << "\n";
 	std::exit(1);
   }
   if (tp.weight && !check_file_exists(*tp.weight)) {
 	std::cerr << "Incorrect file path for weight_file." << std::endl;
-	std::cerr << all << "\n";
+	std::cerr << visible << "\n";
 	std::exit(1);
   }
   if (!check_directory_exists(tp.output_path)) {
   	std::cerr << "Output path is invalid." << std::endl;
-  	std::cerr << all << "\n";
+  	std::cerr << visible << "\n";
   	std::exit(1);
   }
   // Initialize randomization
