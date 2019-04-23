@@ -54,6 +54,7 @@ struct VAAST {
   const bool som;      // score_only_minor
   const bool soa;      // score_only_alternative
   const bool detail;   // Add detailed output
+  const bool biallelic; // Biallelic variants get additional score
   const std::string k; // Transcript
   const arma::uword group_threshold;
   const double site_penalty;
@@ -87,7 +88,8 @@ struct VAAST {
 		bool score_only_alternative,
 		double site_penalty,
 		arma::uword group_threshold,
-		bool detail);
+		bool detail,
+		bool biallelic);
   VAAST(arma::sp_mat X,
 		arma::vec &Y,
 		arma::vec &weights,
@@ -95,8 +97,9 @@ struct VAAST {
 		const std::string &k,
 		bool score_only_minor,
 		bool score_only_alternative,
-		double site_penalty,
-		arma::uword group_threshold);
+		bool biallelic,
+		arma::uword group_threshold,
+		double site_penalty);
 
   void check_weights(Gene &gene);
   double Score();

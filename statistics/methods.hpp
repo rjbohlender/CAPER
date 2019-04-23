@@ -66,7 +66,8 @@ public:
 			   bool score_only_alternative = true,
 			   double site_penalty = 2.0,
 			   arma::uword group_threshold = 4,
-			   bool detail = false);
+			   bool detail = false,
+			   bool biallelic = false);
   double VT(Gene &gene, const std::string &k, bool shuffle);
   // Madsen, Browning 2009
   double WSS(Gene &gene, arma::vec &Y, const std::string &k);

@@ -712,7 +712,15 @@ double TaskQueue::call_method(Methods &method,
   } else if (tp.method == "SKATO") {
 	return method.SKATRO(gene, k, shuffle, tp.a, tp.b, detail, tp.linear);
   } else if (tp.method == "VAAST") {
-	return method.Vaast(gene, phenotypes, k, tp.score_only_minor, tp.score_only_alternative, 2.0, tp.group_size, detail);
+	return method.Vaast(gene,
+						phenotypes,
+						k,
+						tp.score_only_minor,
+						tp.score_only_alternative,
+						2.0,
+						tp.group_size,
+						detail,
+						tp.biallelic);
   } else if (tp.method == "VT") {
 	return method.VT(gene, k, shuffle);
   } else if (tp.method == "WSS") {

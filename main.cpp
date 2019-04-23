@@ -51,6 +51,7 @@ int main(int argc, char **argv) {
   bool linear = false;
   bool nodetail = false;
   bool top_only = false;
+  bool biallelic = false;
   std::vector<int> gene_range;
   std::vector<std::string> power;
   boost::optional<std::string> bed;
@@ -114,6 +115,9 @@ int main(int argc, char **argv) {
 			 ("testable",
 			 	po::bool_switch(&testable),
 			 	"Return scores only for genes with at least scoreable variants in VAAST.")
+			 ("biallelic",
+			  po::bool_switch(&biallelic),
+			  "Additional term for biallelic variants. For detecting potentially recessive variants.")
 			  ;
     skat.add_options()
 			("kernel,k",
@@ -272,6 +276,7 @@ int main(int argc, char **argv) {
   tp.b = std::stoi(beta_split[1]);
   // Testability
   tp.testable = testable;
+  tp.biallelic = biallelic;
   // Power
   tp.power = !vm["power"].empty();
   if(tp.power) {

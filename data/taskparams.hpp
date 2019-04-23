@@ -61,6 +61,7 @@ struct TaskParams {
   bool score_only_minor;
   bool score_only_alternative;
   bool testable;
+  bool biallelic;
 
   // CMC
   double maf;

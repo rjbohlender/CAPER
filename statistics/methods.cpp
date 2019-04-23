@@ -497,9 +497,10 @@ double Methods::Vaast(Gene &gene,
 					  bool score_only_alternative,
 					  double site_penalty,
 					  arma::uword group_threshold,
-					  bool detail) {
+					  bool detail,
+					  bool biallelic) {
 #if 1
-  VAAST vaast(gene, Y, k, score_only_minor, score_only_alternative, site_penalty, group_threshold, detail);
+  VAAST vaast(gene, Y, k, score_only_minor, score_only_alternative, site_penalty, group_threshold, detail, biallelic);
   return vaast.score;
 #else
   arma::mat Xmat = gene.get_matrix(k);

@@ -186,8 +186,9 @@ VAAST::VAAST(Gene &gene,
 			 bool score_only_alternative,
 			 double site_penalty,
 			 arma::uword group_threshold,
-			 bool detail)
-	: som(score_only_minor), soa(score_only_alternative), detail(detail), k(k), group_threshold(group_threshold),
+			 bool detail,
+			 bool biallelic)
+	: som(score_only_minor), soa(score_only_alternative), detail(detail), biallelic(biallelic), k(k), group_threshold(group_threshold),
 	  site_penalty(site_penalty),
 	  X(gene.get_matrix(k)), Y(Y) {
   // Verify weights are okay
@@ -238,18 +239,19 @@ VAAST::VAAST(Gene &gene,
   }
 }
 
-VAAST::VAAST(arma::sp_mat Xmat,
+VAAST::VAAST(arma::sp_mat X,
 			 arma::vec &Y,
 			 arma::vec &weights,
 			 std::vector<std::string> &positions_,
 			 const std::string &k,
 			 bool score_only_minor,
 			 bool score_only_alternative,
-			 double site_penalty,
-			 arma::uword group_threshold)
-	: som(score_only_minor), soa(score_only_alternative), detail(true), k(k), group_threshold(group_threshold),
+			 bool biallelic,
+			 arma::uword group_threshold,
+			 double site_penalty)
+	: som(score_only_minor), soa(score_only_alternative), detail(true), biallelic(biallelic), k(k), group_threshold(group_threshold),
 	  site_penalty(site_penalty),
-	  X(std::move(Xmat)), Y(Y) {
+	  X(std::move(X)), Y(Y) {
 
   if (group_threshold == 0 || X.n_cols == 1) {
 	score = Score(X, Y, weights);
@@ -329,6 +331,43 @@ double VAAST::Score(const arma::sp_mat &X, const arma::vec &Y, const arma::vec &
   control_allele1 = X.t() * (1 - Y);
   case_allele0 = 2. * n_case - case_allele1;
   control_allele0 = 2. * n_control - control_allele1;
+
+  // Handle collapsed variant
+  if(biallelic) {
+    // Via email:
+    // The idea is to add an additional term to the VAAST CLRT that captures the frequency of biallelic variants in cases and controls.
+    // For starters, we can try collapsing all variants with a positive VAAST score into one biallelic term.
+	arma::vec log_lh = LRT();
+	vaast_site_scores = 2.0 * (log_lh + arma::log(w)) - site_penalty;
+	variant_bitmask(X, Y, w);
+	vaast_site_scores(mask).zeros();
+
+	// Get all variants with positive vaast score
+	arma::uvec collapse = arma::find(vaast_site_scores > 0);
+	arma::vec variant(n_case + n_control, arma::fill::zeros);
+
+	for(arma::uword i = 0; i < collapse.n_elem; i++) {
+	  for(arma::uword j = 0; j < n_case + n_control; j++) {
+	    if(X(j, i) == 1) {
+	      variant(j) += 1;
+	    }
+	    if(X(j, i) == 2) {
+		  variant(j) += 2;
+	    }
+	  }
+	}
+	variant(arma::find(variant == 1)).fill(0); // Set all single hets to 0
+	variant(arma::find(variant > 1)).fill(1); // Set all compound hets and homozygous rare carriers to 1
+
+	case_allele1 = variant.t() * Y;
+	control_allele1 = variant.t() * (1 - Y);
+	case_allele0 = n_case - case_allele1;
+	control_allele0 = n_control - control_allele1; // Not 2 * because we're only allowing presence absence.
+
+	arma::vec biallelic_term = LRT();
+	double val = arma::accu(vaast_site_scores) + arma::accu(biallelic_term);
+	return (val >= 0) ? val : 0; // Mask all negative values
+  }
 
   arma::vec log_lh = LRT();
   vaast_site_scores = 2.0 * (log_lh + arma::log(w)) - site_penalty;
