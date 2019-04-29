@@ -22,7 +22,6 @@ Gene::Gene(std::stringstream &ss,
 	: nsamples_(nsamples),
 	  nvariants_(nvariants),
 	  tp_(std::move(tp)) {
-  parse(ss);
   if (!weight.empty()) {
 	for (const auto &k : transcripts_) {
 	  weights_[k].reshape(nvariants_[k], 1);
@@ -38,6 +37,7 @@ Gene::Gene(std::stringstream &ss,
 	  weights_set_[k] = false;
 	}
   }
+  parse(ss);
 }
 
 void Gene::print() {
@@ -166,10 +166,21 @@ void Gene::parse(std::stringstream &ss) {
 	for (arma::sword i = sums.n_elem - 1; i > 0; --i) {
 	  if (sums[i] > tp_.mac) {
 		if (tp_.verbose) {
-		  // std::cerr << "Removing: " << gene_ << " " << ts << " " << positions_[ts][i] << " | count: " << sums[i] << " due to MAC filter." << std::endl;
+		  std::cerr << "Removing: " << gene_ << " " << ts << " " << positions_[ts][i] << " | count: " << sums[i] << " due to MAC filter." << std::endl;
 		}
 		genotypes_[ts].shed_col(i);
 		positions_[ts].erase(positions_[ts].begin() + i);
+		if(weights_set_[ts]) {
+		  arma::uvec idx(weights_[ts].n_elem - 1, arma::fill::zeros);
+		  for(arma::uword j = 0; j < weights_[ts].n_elem; j++) {
+		    if(j > i) {
+		      idx[j - 1] = j;
+		    } else if(j < i) {
+			  idx[j] = j;
+		    }
+		  }
+		  weights_[ts] = weights_[ts](idx);
+		}
 	  }
 	}
 	// Check if any polymorphic. Mark transcripts skippable if all fixed.
