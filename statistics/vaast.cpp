@@ -343,19 +343,11 @@ double VAAST::Score(const arma::sp_mat &X, const arma::vec &Y, const arma::vec &
 	vaast_site_scores(mask).zeros();
 
 	// Get all variants with positive vaast score
+	arma::mat Xmat(X);
 	arma::uvec collapse = arma::find(vaast_site_scores > 0);
 	arma::vec variant(n_case + n_control, arma::fill::zeros);
 
-	for(arma::uword i = 0; i < collapse.n_elem; i++) {
-	  for(arma::uword j = 0; j < n_case + n_control; j++) {
-	    if(X(j, i) == 1) {
-	      variant(j) += 1;
-	    }
-	    if(X(j, i) == 2) {
-		  variant(j) += 2;
-	    }
-	  }
-	}
+	variant = arma::sum(Xmat.cols(collapse), 1);
 	variant(arma::find(variant == 1)).fill(0); // Set all single hets to 0
 	variant(arma::find(variant > 1)).fill(1); // Set all compound hets and homozygous rare carriers to 1
 

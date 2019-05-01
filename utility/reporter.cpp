@@ -28,6 +28,8 @@ Reporter::Reporter(TaskParams &tp)
     simple_path_ss << boost::format(".g%1$d") % tp.group_size;
   if(tp.testable)
     simple_path_ss << ".testable";
+  if(tp.biallelic)
+    simple_path_ss << ".biallelic";
   simple_path_ss << ".simple";
   simple_path_tmp_ss << simple_path_ss.str() << ".tmp";
 
@@ -51,6 +53,8 @@ Reporter::Reporter(TaskParams &tp)
     detail_path_ss << boost::format(".g%1$d") % tp.group_size;
   if(tp.testable)
     detail_path_ss << ".testable";
+  if(tp.biallelic)
+	detail_path_ss << ".biallelic";
   detail_path_ss << ".detail";
 
   detail_file_ = std::ofstream(detail_path_ss.str());
@@ -103,15 +107,13 @@ Reporter::Reporter(std::vector<TaskArgs> &res, TaskParams &tp)
     }
   } else {
     // Normal execution
-    std::stringstream simple_path_ss;
-    std::stringstream detail_path_ss;
-    std::string header;
-
     simple_path_ss << tp.output_path << "/" << tp.method;
     if (tp.group_size > 0)
       simple_path_ss << boost::format(".g%1$d") % tp.group_size;
     if (tp.testable)
       simple_path_ss << ".testable";
+	if (tp.biallelic)
+	  simple_path_ss << ".biallelic";
     simple_path_ss << ".simple";
 
     detail_path_ss << tp.output_path << "/" << tp.method;
@@ -119,6 +121,8 @@ Reporter::Reporter(std::vector<TaskArgs> &res, TaskParams &tp)
       detail_path_ss << boost::format(".g%1$d") % tp.group_size;
     if (tp.testable)
       detail_path_ss << ".testable";
+	if (tp.biallelic)
+	  detail_path_ss << ".biallelic";
     detail_path_ss << ".detail";
 
     simple_file_tmp_ = std::ofstream(simple_path_ss.str());
