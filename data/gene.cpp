@@ -22,6 +22,7 @@ Gene::Gene(std::stringstream &ss,
 	: nsamples_(nsamples),
 	  nvariants_(nvariants),
 	  tp_(std::move(tp)) {
+  parse(ss);
   if (!weight.empty()) {
 	for (const auto &k : transcripts_) {
 	  weights_[k].reshape(nvariants_[k], 1);
@@ -37,7 +38,6 @@ Gene::Gene(std::stringstream &ss,
 	  weights_set_[k] = false;
 	}
   }
-  parse(ss);
 }
 
 void Gene::print() {
@@ -108,7 +108,6 @@ void Gene::parse(std::stringstream &ss) {
 	  transcripts_.push_back(splitter[1]);
 	  // Start with matrix transposed
 	  genotypes_[transcripts_.back()] = arma::sp_mat(nsamples_, nvariants_[transcripts_.back()]);
-	  weights_[transcripts_.back()] = arma::vec(nvariants_[transcripts_.back()], arma::fill::zeros);
 	  // Reset counter on new transcript
 	  i = 1;
 	}
@@ -170,19 +169,10 @@ void Gene::parse(std::stringstream &ss) {
 		}
 		genotypes_[ts].shed_col(i);
 		positions_[ts].erase(positions_[ts].begin() + i);
-		if(weights_set_[ts]) {
-		  arma::uvec idx(weights_[ts].n_elem - 1, arma::fill::zeros);
-		  for(arma::uword j = 0; j < weights_[ts].n_elem; j++) {
-		    if(j > i) {
-		      idx[j - 1] = j;
-		    } else if(j < i) {
-			  idx[j] = j;
-		    }
-		  }
-		  weights_[ts] = weights_[ts](idx);
+		nvariants_[ts]--;
 		}
 	  }
-	}
+	weights_[ts] = arma::vec(nvariants_[ts], arma::fill::zeros);
 	// Check if any polymorphic. Mark transcripts skippable if all fixed.
 	if (arma::accu(sums) == 0) {
 	  polymorphic_[ts] = false;
@@ -222,6 +212,7 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
 
   std::unordered_map<std::string, std::vector<std::string>> pos_ts_map;
   std::unordered_map<std::string, double> pos_score_map;
+  std::unordered_map<std::string, double> pos_weight_map;
   std::unordered_map<std::string, double> pos_freq_map;
   std::unordered_map<std::string, double> pos_odds_map;
   std::unordered_map<std::string, double> pos_serr_map;
@@ -271,12 +262,14 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
 			variant_scores_[ts].zeros(positions_[ts].size());
 		  if (!fit.beta_.has_nan()) {
 			pos_score_map[pos] = variant_scores_[ts](i);
+			pos_weight_map[pos] = weights_[ts](i);
 			pos_odds_map[pos] = fit.beta_(cov.get_covariate_matrix().n_rows + i);
 			pos_serr_map[pos] = fit.s_err_(cov.get_covariate_matrix().n_rows + i);
 			pos_odds_pval_map[pos] = fit.pval_(cov.get_covariate_matrix().n_rows + i);
 		  } else {
 			// Regression failed -- too many features
 			pos_score_map[pos] = variant_scores_[ts](i);
+			pos_weight_map[pos] = weights_[ts](i);
 			pos_odds_map[pos] = 1.;
 			pos_serr_map[pos] = 1.;
 			pos_odds_pval_map[pos] = 1.;
@@ -379,9 +372,10 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
 	  detail << gene_ << "\t";
 	  print_comma_sep(v.second, detail);
 	  detail << "\t";
-	  detail << boost::format("%1$s\t%2$.2f\t%3$.2f\t%4$.4f\t%5$.4f\t%6$d")
+	  detail << boost::format("%1$s\t%2$.2f\t%3$.2f\t%4$.2f\t%5$.4f\t%6$.4f\t%7$d")
 		  % v.first
 		  % pos_score_map[v.first]
+		  % pos_weight_map[v.first]
 		  % std::exp(pos_odds_map[v.first])
 		  % pos_serr_map[v.first]
 		  % pos_odds_pval_map[v.first]
@@ -394,9 +388,10 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
 	  detail << gene_ << "\t";
 	  print_comma_sep(v.second, detail);
 	  detail << "\t";
-	  detail << boost::format("%1$s\t%2$.2f\t%3$.2f\t%4$.4f\t%5$.4f\t%6$d\t%7$d\t%8$d\t%9$d\t%10$d")
+	  detail << boost::format("%1$s\t%2$.2f\t%3$.2f\t%4$.2f\t%5$.4f\t%6$.4f\t%7$d\t%8$d\t%9$d\t%10$d\t%11$d")
 		  % v.first
 		  % pos_score_map[v.first]
+		  % pos_weight_map[v.first]
 		  % std::exp(pos_odds_map[v.first])
 		  % pos_serr_map[v.first]
 		  % pos_odds_pval_map[v.first]

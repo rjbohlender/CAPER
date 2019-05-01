@@ -61,7 +61,7 @@ void TaskQueue::join() {
   quit_ = true;
   cv_.notify_all();
 
-  if(!tp_.power)
+  if(!tp_.power && !tp_.gene_list)
 	reporter_->sort_simple();
 
   for (size_t i = 0; i < threads_.size(); i++) {
