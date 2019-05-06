@@ -30,6 +30,10 @@ Reporter::Reporter(TaskParams &tp)
     simple_path_ss << ".testable";
   if(tp.biallelic)
     simple_path_ss << ".biallelic";
+  if (tp.range_start && tp.range_end) {
+	simple_path_ss << "." << *tp.range_start;
+	simple_path_ss << "." << *tp.range_end;
+  }
   simple_path_ss << ".simple";
   simple_path_tmp_ss << simple_path_ss.str() << ".tmp";
 
@@ -55,6 +59,10 @@ Reporter::Reporter(TaskParams &tp)
     detail_path_ss << ".testable";
   if(tp.biallelic)
 	detail_path_ss << ".biallelic";
+  if (tp.range_start && tp.range_end) {
+	detail_path_ss << "." << *tp.range_start;
+	detail_path_ss << "." << *tp.range_end;
+  }
   detail_path_ss << ".detail";
 
   detail_file_ = std::ofstream(detail_path_ss.str());
@@ -114,6 +122,10 @@ Reporter::Reporter(std::vector<TaskArgs> &res, TaskParams &tp)
       simple_path_ss << ".testable";
 	if (tp.biallelic)
 	  simple_path_ss << ".biallelic";
+	if (tp.range_start && tp.range_end) {
+	  simple_path_ss << "." << *tp.range_start;
+	  simple_path_ss << "." << *tp.range_end;
+	}
     simple_path_ss << ".simple";
 
     detail_path_ss << tp.output_path << "/" << tp.method;
@@ -123,6 +135,10 @@ Reporter::Reporter(std::vector<TaskArgs> &res, TaskParams &tp)
       detail_path_ss << ".testable";
 	if (tp.biallelic)
 	  detail_path_ss << ".biallelic";
+	if (tp.range_start && tp.range_end) {
+	  detail_path_ss << "." << *tp.range_start;
+	  detail_path_ss << "." << *tp.range_end;
+	}
     detail_path_ss << ".detail";
 
     simple_file_tmp_ = std::ofstream(simple_path_ss.str());
