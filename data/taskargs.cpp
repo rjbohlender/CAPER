@@ -155,8 +155,8 @@ void TaskArgs::cleanup() {
   if(!tp_.linear) {
 	Binomial link("logit");
 	for(const auto &ts : gene_.get_transcripts()) {
-	  arma::mat X = arma::mat(arma::sum(gene_.get_matrix(ts).t(), 0));
-	  arma::mat D = arma::join_vert(cov_->get_covariate_matrix(), X);
+	  arma::mat X = arma::mat(arma::sum(gene_.get_matrix(ts).t(), 0).t());
+	  arma::mat D = arma::join_horiz(cov_->get_covariate_matrix(), X);
 	  BayesianGLM<Binomial> fit(D, cov_->get_original_phenotypes(), link);
 	  results[ts].set_odds(std::exp(fit.beta_(fit.beta_.n_elem - 1)));
 	}

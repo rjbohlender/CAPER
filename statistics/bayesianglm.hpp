@@ -27,7 +27,7 @@ struct BayesianGLM {
   BayesianGLM(arma::mat &X, arma::vec &Y, LinkT &link) {
 	beta_ = irls(X, Y);
 
-	arma::mat A = X.t();
+	arma::mat A = X;
 	mu_ = link.linkinv(A, beta_);
 	eta_ = link.link(A, beta_);
   }
@@ -43,13 +43,14 @@ auto BayesianGLM<LinkT>::irls(arma::mat &X, arma::colvec &Y) -> arma::vec {
   const auto max_iter = 2;
   auto iter = 0;
 
-  arma::mat A = X.t();
+  arma::mat A = X;
 
   arma::uword nobs = A.n_rows;
   arma::uword nvars = A.n_cols;
 
   if(nobs < nvars) {
     std::cerr << "WARNING: More variables than observations in regression. Returning ones." << std::endl;
+    throw(std::runtime_error("Too many variables."));
     arma::vec ret(nvars);
     ret.fill(arma::datum::nan);
     return ret;

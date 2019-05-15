@@ -235,19 +235,19 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
 	arma::uvec cases = arma::find(Y == 1);
 	arma::uvec controls = arma::find(Y == 0);
 
-	arma::sp_mat X(genotypes_[ts].t());
+	arma::sp_mat X(genotypes_[ts]);
 
 	arma::vec maf = arma::vec(arma::mean(X, 1) / 2.);
 	// Ref/Alt Counts
-	arma::vec case_alt = X * Y;
+	arma::vec case_alt = X.t() * Y;
 	arma::vec case_ref = 2 * cases.n_elem - case_alt;
-	arma::vec cont_alt = X * (1. - Y);
+	arma::vec cont_alt = X.t() * (1. - Y);
 	arma::vec cont_ref = 2 * controls.n_elem - cont_alt;
 	if (!tp.linear) {
 	  // Get odds
 	  Binomial link("logit");
-	  arma::mat D = arma::join_vert(cov.get_covariate_matrix(),
-									arma::mat(X).each_col() - arma::mean(arma::mat(X), 1));
+	  arma::mat D = arma::join_horiz(cov.get_covariate_matrix(),
+									arma::mat(X).each_row() - arma::mean(arma::mat(X), 0));
 	  BayesianGLM<Binomial> fit(D, Y, link);
 	  for (const auto &pos : positions_[ts]) {
 		// Get transcripts
@@ -263,9 +263,9 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
 		  if (!fit.beta_.has_nan()) {
 			pos_score_map[pos] = variant_scores_[ts](i);
 			pos_weight_map[pos] = weights_[ts](i);
-			pos_odds_map[pos] = fit.beta_(cov.get_covariate_matrix().n_rows + i);
-			pos_serr_map[pos] = fit.s_err_(cov.get_covariate_matrix().n_rows + i);
-			pos_odds_pval_map[pos] = fit.pval_(cov.get_covariate_matrix().n_rows + i);
+			pos_odds_map[pos] = fit.beta_(cov.get_covariate_matrix().n_cols + i);
+			pos_serr_map[pos] = fit.s_err_(cov.get_covariate_matrix().n_cols + i);
+			pos_odds_pval_map[pos] = fit.pval_(cov.get_covariate_matrix().n_cols + i);
 		  } else {
 			// Regression failed -- too many features
 			pos_score_map[pos] = variant_scores_[ts](i);
