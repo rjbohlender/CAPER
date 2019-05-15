@@ -147,7 +147,8 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
 
   // Parse the PCA matrix file
   while (std::getline(ifs, line)) {
-	RJBUtil::Splitter<std::string> splitter(line, "\t");
+	RJBUtil::Splitter<std::string> splitter(line, " \t");
+	covariates.emplace_back(std::vector<double>());
 
 	unsigned long i = 0;
 	for (const auto &v : splitter) {
@@ -163,12 +164,7 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
 
 		phenotypes.push_back(phen);
 	  } else {
-		if (covariates.size() < i) {
-		  covariates.emplace_back(std::vector<double>());
-		  covariates.at(i - 1).push_back(std::stod(v));
-		} else {
-		  covariates.at(i - 1).push_back(std::stod(v));
-		}
+	    covariates.back().push_back(std::stod(v));
 	  }
 	  i++;
 	}
@@ -179,16 +175,16 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
   phenotypes_ = arma::conv_to<arma::colvec>::from(phenotypes);
   original_ = arma::conv_to<arma::colvec>::from(phenotypes);
 
-  // Features are i, samples are j
-  design_ = arma::mat(covariates.size() + 1, covariates[0].size());
-  for (arma::uword i = 0; i < covariates.size() + 1; i++) {
-	for (arma::uword j = 0; j < covariates[0].size(); j++) {
-	  if (i == 0) {
+  // Features are j, samples are i
+  design_ = arma::mat(covariates.size(), covariates[0].size() + 1, arma::fill::zeros);
+  for (arma::uword i = 0; i < covariates.size(); i++) {
+	for (arma::uword j = 0; j < covariates[0].size() + 1; j++) {
+	  if (j == 0) {
 		// First feature is just 1s, intercept
 		// Do this here
 		design_(i, j) = 1;
 	  } else {
-		design_(i, j) = covariates[i - 1][j];
+		design_(i, j) = covariates[i][j - 1];
 	  }
 	}
   }
@@ -285,7 +281,7 @@ void Covariates::fit_null() {
  * @param header Header of the matrix file
  */
 void Covariates::sort_covariates(std::string &header) {
-  RJBUtil::Splitter<std::string> splitter(header, "\t");
+  RJBUtil::Splitter<std::string> splitter(header, " \t");
 
   arma::uvec indices(phenotypes_.n_rows, arma::fill::zeros);
 
@@ -306,7 +302,7 @@ void Covariates::sort_covariates(std::string &header) {
 
   // Sort the phenotypes and covariates according to the order in the matrix file.
   phenotypes_ = phenotypes_(indices);
-  design_ = design_.cols(indices);
+  design_ = design_.rows(indices);
 
   fit_null();
 
