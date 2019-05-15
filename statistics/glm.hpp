@@ -124,8 +124,8 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
     }
 
     s_old = s;
-    s = solve(arma::trimatl(C.t()), U.t() * (W % z), arma::solve_opts::allow_ugly);
-    s = solve(arma::trimatu(C), s, arma::solve_opts::allow_ugly);
+    s = solve(arma::trimatl(C.t()), U.t() * (W % z));
+    s = solve(arma::trimatu(C), s);
 
     eta = U * s;
 
@@ -238,7 +238,7 @@ auto GLM<LinkT>::irls(arma::mat &X, arma::colvec &Y) -> arma::vec {
 	arma::vec z = eta + (Y - g) / gprime;
 	arma::vec W = arma::pow(gprime, 2) / link.variance(g);
 	xold = x;
-	x = arma::solve(X.t() * (X.each_col() % W), X.t() * (W % z), arma::solve_opts::allow_ugly);
+	x = arma::solve(X.t() * (X.each_col() % W), X.t() * (W % z));
 	if(arma::norm(x - xold) < tol) {
 	  break;
 	}
