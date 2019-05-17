@@ -589,8 +589,8 @@ auto Reporter::sort_simple() -> void {
       .empirical_p = std::stod(splitter[3]),
       .empirical_midp = std::stod(splitter[4]),
       .mgit = std::stod(splitter[5]),
-      .mgit_successes = std::stoul(splitter[6]),
-      .successes = std::stoul(splitter[7]),
+      .successes = std::stoul(splitter[6]),
+      .mgit_successes = std::stoul(splitter[7]),
       .permutations = std::stoul(splitter[8])
     };
 
