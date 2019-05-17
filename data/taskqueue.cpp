@@ -132,22 +132,9 @@ void TaskQueue::thread_handler() {
 		// Report results for non-gene_list run
 		if (!op.get_tp().gene_list) {
 		  if(op.get_tp().top_only) {
-		    // Find the most significant result.
-		    std::unique_ptr<Result> topres;
-		    for(auto &r : op.results) {
-		      if(topres == nullptr) {
-		        topres = std::make_unique<Result>(r.second);
-		      } else {
-		        if(topres->empirical_p > r.second.empirical_p) {
-		          topres = std::make_unique<Result>(r.second);
-		        }
-		      }
-		    }
-			reporter_->sync_write_simple(*topres);
+			reporter_->sync_write_simple(op.results, true);
 		  } else {
-			for (auto &r : op.results) {
-			  reporter_->sync_write_simple(r.second);
-			}
+		    reporter_->sync_write_simple(op.results, false);
 		  }
 		  reporter_->sync_write_detail(op.get_gene().get_detail(), op.get_gene().is_testable());
 		}
@@ -702,7 +689,7 @@ double TaskQueue::call_method(Methods &method,
   } else if (tp.method == "CALPHA") {
 	return method.CALPHA(gene, phenotypes, k);
   } else if (tp.method == "CMC") {
-	return method.CMC(gene, phenotypes, k, tp.maf);
+	return method.CMC(gene, phenotypes, k, tp.cmcmaf);
   } else if (tp.method == "RVT1") {
     return method.RVT1(gene, phenotypes, cov.get_covariate_matrix(), k, tp.linear);
   } else if (tp.method == "RVT2") {

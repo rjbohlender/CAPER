@@ -43,14 +43,13 @@ Reporter::Reporter(TaskParams &tp)
   }
   simple_file_tmp_ << std::setw(20) << std::left << "Gene";
   simple_file_tmp_ << std::setw(20) << "Transcript";
-  simple_file_tmp_ << std::setw(20) << "Original";
+  simple_file_tmp_ << std::setw(20) << "Test_Statistic";
   simple_file_tmp_ << std::setw(20) << "Empirical_P";
   simple_file_tmp_ << std::setw(20) << "Empirical_MidP";
-  simple_file_tmp_ << std::setw(20) << "Successes";
-  simple_file_tmp_ << std::setw(20) << "Permutations";
   simple_file_tmp_ << std::setw(20) << "MGIT";
+  simple_file_tmp_ << std::setw(20) << "Successes";
   simple_file_tmp_ << std::setw(20) << "MGIT_Successes";
-  simple_file_tmp_ << std::setw(20) << "OddsRatio" << std::endl;
+  simple_file_tmp_ << std::setw(20) << "Permutations" << std::endl;
 
   detail_path_ss << tp.output_path << "/" << tp.method;
   if(tp.group_size > 0)
@@ -273,15 +272,91 @@ auto Reporter::recalculate_mgit(std::map<std::string, std::map<std::string, Resu
     }
     arma::vec mgit_pval_dist_ = arma::min(mgit_pval_mat, 1);
 
+    double min_p = std::numeric_limits<double>::max();
+    for (auto &tr : g.second) {
+      if(tr.second.empirical_p < min_p) {
+        min_p = tr.second.empirical_p;
+      }
+    }
+
     for (auto &tr : g.second) {
       unsigned long m = mgit_pval_dist_.n_rows;  // Total permutations
 
-      successes = arma::find(mgit_pval_dist_ <= tr.second.empirical_p).eval().n_rows;
+      successes = arma::find(mgit_pval_dist_ <= min_p).eval().n_rows;
 
       // Store multi-transcript p-value
       tr.second.mgit_p = (1.0 + successes) / (1.0 + m);
       tr.second.mgit_successes = static_cast<int>(successes);
     }
+  }
+}
+
+auto Reporter::recalculate_mgit(std::unordered_map<std::string, Result> &results) -> void {
+  // Skip MGIT if only a single transcript
+  if (results.size() == 1) {
+	for (auto &v : results) {
+	  v.second.mgit_p = v.second.empirical_p;
+	  v.second.mgit_successes = v.second.successes;
+	}
+	return;
+  }
+
+  // Shorthand
+  unsigned long n = results.size(); // Number of transcripts
+  arma::uword max_perm = 0;
+  arma::uword i, j, k;
+  double successes;
+
+  // Get max_perm
+  for (const auto &tr : results) {
+	if (tr.second.permutations > max_perm) {
+	  max_perm = tr.second.permutations;
+	}
+  }
+
+  arma::mat mgit_pval_mat = arma::mat(max_perm + 1, n);
+  i = 0;
+  for(auto &tr : results) {
+	int m = tr.second.permuted.size();
+
+	tr.second.permuted.push_back(tr.second.original);
+	arma::vec permuted = arma::conv_to<arma::vec>::from(tr.second.permuted);
+	arma::vec pvals;
+
+	// SKATO and SKAT return pvalues so reverse success criteria
+	if (pvalue_methods_.find(method_) != pvalue_methods_.end()) {
+	  pvals = rank(permuted, "ascend");
+	} else {
+	  pvals = rank(permuted, "descend");
+	}
+
+	pvals /= permuted.n_rows;
+
+	try {
+	  mgit_pval_mat.col(i) = pvals;
+	} catch (const std::logic_error &e) {
+	  std::cerr << "n_row: " << mgit_pval_mat.n_rows << " n_col: " << mgit_pval_mat.n_cols << "\n";
+	  throw (e);
+	}
+	i++;
+  }
+  arma::vec mgit_pval_dist_ = arma::min(mgit_pval_mat, 1);
+
+  double min_p = std::numeric_limits<double>::max();
+  for (auto &tr : results) {
+	if(tr.second.empirical_p < min_p) {
+	  min_p = tr.second.empirical_p;
+	}
+  }
+
+  for (auto &tr : results) {
+	unsigned long m = mgit_pval_dist_.n_rows;  // Total permutations
+
+	successes = arma::find(mgit_pval_dist_ <= min_p).eval().n_rows;
+
+	// Store multi-transcript p-value
+	tr.second.mgit_p = (1.0 + successes) / (1.0 + m);
+	tr.second.mgit_successes = static_cast<int>(successes);
   }
 }
 
@@ -291,14 +366,13 @@ auto Reporter::report_simple(TaskParams &tp) -> void {
 
   simple_file_tmp_ << std::setw(20) << std::left << "Gene";
   simple_file_tmp_ << std::setw(20) << "Transcript";
-  simple_file_tmp_ << std::setw(20) << "Original";
+  simple_file_tmp_ << std::setw(20) << "Test_Statistic";
   simple_file_tmp_ << std::setw(20) << "Empirical_P";
   simple_file_tmp_ << std::setw(20) << "Empirical_MidP";
+  simple_file_tmp_ << std::setw(20) << "MGIT_P";
   simple_file_tmp_ << std::setw(20) << "Successes";
-  simple_file_tmp_ << std::setw(20) << "Permutations";
-  simple_file_tmp_ << std::setw(20) << "MGIT";
   simple_file_tmp_ << std::setw(20) << "MGIT_Successes";
-  simple_file_tmp_ << std::setw(20) << "OddsRatio" << std::endl;
+  simple_file_tmp_ << std::setw(20) << "Permutations" << std::endl;
   // Print header and formatted results
   double permutation_mean = 0;
   double permutation_variance = 0;
@@ -410,14 +484,37 @@ auto Reporter::write_to_stream(std::ostream &os, Result &res) -> void {
   }
 }
 
-auto Reporter::sync_write_simple(Result &res) -> void {
+auto Reporter::sync_write_simple(std::unordered_map<std::string, Result> &results, bool top_only) -> void {
   lock_.lock(); // Acquire lock
 
+  recalculate_mgit(results);
+
+  if(top_only) {
+	// Find the most significant result.
+	std::unique_ptr<Result> topres;
+	for(auto &r : results) {
+	  if(topres == nullptr) {
+		topres = std::make_unique<Result>(r.second);
+	  } else {
+		if(topres->empirical_p > r.second.empirical_p) {
+		  topres = std::make_unique<Result>(r.second);
+		}
+	  }
+	}
+    lock_.unlock();
+    return;
+  }
+
   if(testable_) {
-    if(res.testable)
-      simple_file_tmp_ << res;
+    for(auto &tr : results) {
+      if(tr.second.testable) {
+        simple_file_tmp_ << tr.second;
+      }
+    }
   } else {
-    simple_file_tmp_ << res;
+	for(auto &tr : results) {
+	  simple_file_tmp_ << tr.second;
+	}
   }
 
   lock_.unlock();
@@ -467,14 +564,13 @@ auto Reporter::sort_simple() -> void {
   simple_file_ << std::setw(20) << std::left << "Rank";
   simple_file_ << std::setw(20) << "Gene";
   simple_file_ << std::setw(20) << "Transcript";
-  simple_file_ << std::setw(20) << "Original";
+  simple_file_ << std::setw(20) << "Test_Statistic";
   simple_file_ << std::setw(20) << "Empirical_P";
   simple_file_ << std::setw(20) << "Empirical_MidP";
+  simple_file_ << std::setw(20) << "MGIT_P";
   simple_file_ << std::setw(20) << "Successes";
-  simple_file_ << std::setw(20) << "Permutations";
-  simple_file_ << std::setw(20) << "MGIT";
   simple_file_ << std::setw(20) << "MGIT_Successes";
-  simple_file_ << std::setw(20) << "OddsRatio" << std::endl;
+  simple_file_ << std::setw(20) << "Permutations" << std::endl;
 
   std::vector<ResultLine> results;
   unsigned long lineno = 0;
@@ -492,11 +588,10 @@ auto Reporter::sort_simple() -> void {
       .original = std::stod(splitter[2]),
       .empirical_p = std::stod(splitter[3]),
       .empirical_midp = std::stod(splitter[4]),
-      .successes = std::stoul(splitter[5]),
-      .permutations = std::stoul(splitter[6]),
-      .mgit = std::stod(splitter[7]),
-      .mgit_successes = std::stoul(splitter[8]),
-      .oddsratio = std::stod(splitter[9])
+      .mgit = std::stod(splitter[5]),
+      .mgit_successes = std::stoul(splitter[6]),
+      .successes = std::stoul(splitter[7]),
+      .permutations = std::stoul(splitter[8])
     };
 
     results.push_back(rs);
@@ -516,11 +611,10 @@ auto Reporter::sort_simple() -> void {
     simple_file_ << std::setw(20) << rs.original;
     simple_file_ << std::setw(20) << rs.empirical_p;
     simple_file_ << std::setw(20) << rs.empirical_midp;
+	simple_file_ << std::setw(20) << rs.mgit;
     simple_file_ << std::setw(20) << rs.successes;
-    simple_file_ << std::setw(20) << rs.permutations;
-    simple_file_ << std::setw(20) << rs.mgit;
     simple_file_ << std::setw(20) << rs.mgit_successes;
-    simple_file_ << std::setw(20) << rs.oddsratio << std::endl;
+	simple_file_ << std::setw(20) << rs.permutations << std::endl;
 
     rank++;
   }

@@ -36,6 +36,7 @@ struct TaskParams {
   std::string covariates_path;
   std::string ped_path;
   arma::uword mac;
+  double maf;
 
   boost::optional<int> range_start;
   boost::optional<int> range_end;
@@ -64,7 +65,7 @@ struct TaskParams {
   bool biallelic;
 
   // CMC
-  double maf;
+  double cmcmaf;
 
   size_t nthreads;
 

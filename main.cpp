@@ -94,6 +94,9 @@ int main(int argc, char **argv) {
 				("mac",
 				 po::value<arma::uword>()->default_value(250),
 				 "Minor allele count cutoff.")
+				("maf,r",
+				 po::value<double>()->default_value(0.05),
+				 "Minor allele frequency cutoff. Default equivalent to XQC.")
 				("pthresh,j",
 				 po::value(&pthresh),
 				 "The threshold to terminate permutation based on whether it is outside the p-value CI.")
@@ -131,7 +134,9 @@ int main(int argc, char **argv) {
 			 "Parameters for the beta distribution. Two values, comma separated corresponding to a,b.")
 			 ;
     cmc.add_options()
-		   ("maf", po::value<double>()->default_value(0.005), "Minor allele frequency cutoff for CMC collapsing.")
+		   ("cmcmaf",
+		   	po::value<double>()->default_value(0.005),
+		   	"Minor allele frequency cutoff for CMC collapsing.")
 		   ;
 	all.add_options()
 			("help,h", "Print this help message.")
@@ -252,6 +257,7 @@ int main(int argc, char **argv) {
   tp.ped_path = vm["ped"].as<std::string>();
   tp.output_path = vm["output"].as<std::string>();
   tp.maf = vm["maf"].as<double>();
+  tp.cmcmaf = vm["cmcmaf"].as<double>();
   tp.group_size = vm["group_size"].as<arma::uword>();
   tp.score_only_minor = score_only_minor;
   tp.score_only_alternative = score_only_alternative;

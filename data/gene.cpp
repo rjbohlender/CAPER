@@ -162,10 +162,15 @@ void Gene::parse(std::stringstream &ss) {
   // Drop variants with minor allele count > tp_.mac.
   for (const auto &ts : transcripts_) {
 	arma::rowvec sums = arma::rowvec(arma::sum(genotypes_[ts], 0));
+	arma::rowvec maf = arma::rowvec(arma::mean(genotypes_[ts]) / 2.);
 	for (arma::sword i = sums.n_elem - 1; i > 0; --i) {
-	  if (sums[i] > tp_.mac) {
-		if (tp_.verbose) {
+	  bool bmac = sums[i] > tp_.mac;
+	  bool bmaf = maf[i] > tp_.maf;
+	  if (bmac || bmaf) {
+		if (tp_.verbose && bmac) {
 		  std::cerr << "Removing: " << gene_ << " " << ts << " " << positions_[ts][i] << " | count: " << sums[i] << " due to MAC filter." << std::endl;
+		} else if(tp_.verbose && bmaf) {
+		  std::cerr << "Removing: " << gene_ << " " << ts << " " << positions_[ts][i] << " | frequency: " << maf[i] << " due to MAF filter." << std::endl;
 		}
 		genotypes_[ts].shed_col(i);
 		positions_[ts].erase(positions_[ts].begin() + i);

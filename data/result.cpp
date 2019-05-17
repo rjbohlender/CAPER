@@ -83,11 +83,10 @@ std::ostream &operator<<(std::ostream &stream, const Result &rhs) {
   stream << std::setw(20) << std::defaultfloat << std::setprecision(10) << rhs.original;
   stream << std::setw(20) << std::setprecision(10) << rhs.empirical_p;
   stream << std::setw(20) << std::setprecision(10) << rhs.empirical_midp;
-  stream << std::setw(20) << rhs.successes;
-  stream << std::setw(20) << rhs.permutations;
   stream << std::setw(20) << rhs.mgit_p;
+  stream << std::setw(20) << rhs.successes;
   stream << std::setw(20) << rhs.mgit_successes;
-  stream << std::setw(20) << rhs.odds << std::endl;
+  stream << std::setw(20) << rhs.permutations << std::endl;
   return stream;
 }
 

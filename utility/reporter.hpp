@@ -33,7 +33,7 @@ public:
   auto report_simple(TaskParams &tp) -> void;
   auto report_power(std::vector<TaskArgs> &resv, TaskParams &tp) -> void;
 
-  auto sync_write_simple(Result &res) -> void;
+  auto sync_write_simple(std::unordered_map<std::string, Result> &results, bool top_only) -> void;
   auto sync_write_detail(const std::string &d, bool testable) -> void;
   auto sync_write_power(std::vector<PowerRes> &prv) -> void;
 
@@ -63,6 +63,7 @@ private:
   auto extract_results(std::vector<TaskArgs> &tq_results, TaskParams &tp) -> void;
   auto write_to_stream(std::ostream &os, Result &res) -> void;
   auto recalculate_mgit(std::map<std::string, std::map<std::string, Result>> &results) -> void;
+  auto recalculate_mgit(std::unordered_map<std::string, Result> &results) -> void;
 };
 
 #endif //PERMUTE_ASSOCIATE_REPORTER_HPP
