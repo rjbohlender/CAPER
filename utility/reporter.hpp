@@ -17,11 +17,10 @@ struct ResultLine {
   double original;
   double empirical_p;
   double empirical_midp;
-  unsigned long successes;
-  unsigned long permutations;
   double mgit;
+  unsigned long successes;
   unsigned long mgit_successes;
-  double oddsratio;
+  unsigned long permutations;
 };
 
 class Reporter {
