@@ -23,6 +23,10 @@ JobDispatcher::JobDispatcher(TaskParams &tp, std::shared_ptr<Reporter> reporter)
   if (tp.weight)
 	weight_ = Weight(*tp.weight);
 
+  // Update case/control count for reporter
+  reporter->set_ncases(cov_->get_ncases());
+  reporter->set_ncontrols(cov_->get_nsamples() - cov_->get_ncases());
+
   // Set staging
   if (tp_.power) {
     stage_ = Stage::Power;
@@ -43,6 +47,7 @@ JobDispatcher::JobDispatcher(TaskParams &tp, std::shared_ptr<Reporter> reporter)
   std::istream gt_stream(&gt_streambuf);
   // Retrieve header line
   std::getline(gt_stream, header_);
+
 
   // Sort covariates
   cov_->sort_covariates(header_);
@@ -104,9 +109,12 @@ JobDispatcher::JobDispatcher(TaskParams &tp, std::shared_ptr<Reporter> reporter)
 	permutation_ptr_.reset();
   }
 
-  if (tp.gene_list) {
-	Reporter(tq_.get_results(), tp_);
+  if (tp_.gene_list) {
+    reporter->report(tq_.get_results(), tp_);
   }
+
+  if(!tp_.power)
+	reporter->sort_simple(tp_);
 
   cov_.reset();
 }

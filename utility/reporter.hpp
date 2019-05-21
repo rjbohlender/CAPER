@@ -28,19 +28,26 @@ public:
   explicit Reporter(TaskParams &tp);
   Reporter(std::vector<TaskArgs> &res, TaskParams &tp);
 
+  auto report(std::vector<TaskArgs> &res, TaskParams &tp) -> void;
   auto report_detail(std::vector<TaskArgs> &res, TaskParams &tp) -> void;
   auto report_simple(TaskParams &tp) -> void;
   auto report_power(std::vector<TaskArgs> &resv, TaskParams &tp) -> void;
 
-  auto sync_write_simple(std::unordered_map<std::string, Result> &results, bool top_only) -> void;
+  auto sync_write_simple(std::unordered_map<std::string, Result> &results, TaskParams &tp, bool top_only) -> void;
   auto sync_write_detail(const std::string &d, bool testable) -> void;
   auto sync_write_power(std::vector<PowerRes> &prv) -> void;
 
-  auto sort_simple() -> void;
+  auto sort_simple(TaskParams &tp) -> void;
+
+  auto set_ncases(int ncases) -> void;
+  auto set_ncontrols(int ncontrols) -> void;
 
 private:
   // For thread-safe concurrent writing
   std::mutex lock_;
+  // For final simple output
+  int ncases_;
+  int ncontrols_;
   // Paths -- .tmp for sorting
   std::stringstream simple_path_ss;
   std::stringstream simple_path_tmp_ss;
@@ -56,6 +63,8 @@ private:
   const bool testable_;
   std::vector<Result> results_;
   std::vector<std::string> details_;
+  // Holds unfinished genes
+  std::vector<std::string> unfinished_;
 
   static const std::set<std::string> pvalue_methods_;
 

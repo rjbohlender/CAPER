@@ -16,7 +16,7 @@ const std::set<std::string> Reporter::pvalue_methods_ {
 };
 
 Reporter::Reporter(TaskParams &tp)
-: method_(tp.method), gene_list_(tp.gene_list), testable_(tp.testable) {
+: method_(tp.method), gene_list_(tp.gene_list), testable_(tp.testable), ncases_(0), ncontrols_(0) {
   std::string header;
 
   if(!check_directory_exists(tp.output_path)) {
@@ -46,7 +46,7 @@ Reporter::Reporter(TaskParams &tp)
   simple_file_tmp_ << std::setw(20) << "Test_Statistic";
   simple_file_tmp_ << std::setw(20) << "Empirical_P";
   simple_file_tmp_ << std::setw(20) << "Empirical_MidP";
-  simple_file_tmp_ << std::setw(20) << "MGIT";
+  simple_file_tmp_ << std::setw(20) << "MGIT_P";
   simple_file_tmp_ << std::setw(20) << "Successes";
   simple_file_tmp_ << std::setw(20) << "MGIT_Successes";
   simple_file_tmp_ << std::setw(20) << "Permutations" << std::endl;
@@ -72,16 +72,16 @@ Reporter::Reporter(TaskParams &tp)
 
   if(tp.linear) {
     header =
-        "#Gene\tTranscripts\tVariant\tScore\tOR\tOR_SE\tOR_P\tAF";
+        "Gene\tTranscripts\tVariant\tScore\tOR\tOR_SE\tOR_P\tAF";
   } else {
     header =
-        "#Gene\tTranscripts\tVariant\tScore\tOR\tOR_SE\tOR_P\tAF\tcase_ref\tcase_alt\tcontrol_ref\tcontrol_alt\tcase_list\tcontrol_list";
+        "Gene\tTranscripts\tVariant\tScore\tOR\tOR_SE\tOR_P\tAF\tcase_ref\tcase_alt\tcontrol_ref\tcontrol_alt\tcase_list\tcontrol_list";
   }
   detail_file_ << header << std::endl;
 }
 
 Reporter::Reporter(std::vector<TaskArgs> &res, TaskParams &tp)
-: method_(tp.method), gene_list_(tp.gene_list), testable_(tp.testable) {
+: method_(tp.method), gene_list_(tp.gene_list), testable_(tp.testable), ncases_(0), ncontrols_(0) {
   if(!check_directory_exists(tp.output_path)) {
     throw(std::runtime_error("Output path is invalid."));
   }
@@ -160,6 +160,25 @@ Reporter::Reporter(std::vector<TaskArgs> &res, TaskParams &tp)
         report_detail(res, tp);
       }
     }
+  }
+}
+
+auto Reporter::report(std::vector<TaskArgs> &res, TaskParams &tp) -> void {
+  if (tp.power) {
+	if (tp.gene_list) {
+	  report_power(res, tp);
+	}
+  } else {
+	// Extract results
+	extract_results(res, tp);
+
+	// Write output
+	if (tp.gene_list) {
+	  report_simple(tp);
+	  if (!tp.nodetail) {
+		report_detail(res, tp);
+	  }
+	}
   }
 }
 
@@ -361,26 +380,14 @@ auto Reporter::recalculate_mgit(std::unordered_map<std::string, Result> &results
 }
 
 auto Reporter::report_simple(TaskParams &tp) -> void {
-  // Holds unfinished genes
-  std::vector<std::string> unfinished;
-
-  simple_file_tmp_ << std::setw(20) << std::left << "Gene";
-  simple_file_tmp_ << std::setw(20) << "Transcript";
-  simple_file_tmp_ << std::setw(20) << "Test_Statistic";
-  simple_file_tmp_ << std::setw(20) << "Empirical_P";
-  simple_file_tmp_ << std::setw(20) << "Empirical_MidP";
-  simple_file_tmp_ << std::setw(20) << "MGIT_P";
-  simple_file_tmp_ << std::setw(20) << "Successes";
-  simple_file_tmp_ << std::setw(20) << "MGIT_Successes";
-  simple_file_tmp_ << std::setw(20) << "Permutations" << std::endl;
   // Print header and formatted results
   double permutation_mean = 0;
   double permutation_variance = 0;
 
   for (auto &v : results_) {
 	if (v.successes < tp.success_threshold) {
-	  if(std::find(unfinished.begin(), unfinished.end(), v.gene) == unfinished.end())
-		unfinished.push_back(v.gene);
+	  if(std::find(unfinished_.begin(), unfinished_.end(), v.gene) == unfinished_.end())
+		unfinished_.push_back(v.gene);
 	}
 	permutation_mean += v.permutations;
   }
@@ -402,60 +409,11 @@ auto Reporter::report_simple(TaskParams &tp) -> void {
   std::cerr << "Permutation mean: " << permutation_mean << std::endl;
   std::cerr << "Permutation sd: " << std::sqrt(permutation_variance) << std::endl;
   std::cerr << "Transcripts submitted: " << results_.size() << std::endl;
-
-  if (!unfinished.empty() && tp.total_permutations > 0) {
-    // Print command to run unfinished
-    std::stringstream uf_ss;
-    uf_ss << tp.program_path << " ";
-    uf_ss << "-g " << tp.genotypes_path << " ";
-    uf_ss << "-c " << tp.covariates_path << " ";
-    if (tp.bed) {
-      uf_ss << "-b " << *tp.bed << " ";
-    }
-    if (tp.weight) {
-      uf_ss << "-w " << *tp.weight << " ";
-    }
-    uf_ss << "-1 0 "; // Skip stage 1
-    uf_ss << "-2 " << tp.total_permutations * 10 << " ";
-    uf_ss << "-m " << tp.method << " ";
-    uf_ss << "-t " << tp.nthreads << " ";
-    if (tp.adjust) {
-      uf_ss << "-n ";
-    }
-    if (!tp.verbose) {
-      uf_ss << "-q ";
-    }
-    if (tp.a != 1 || tp.b != 25) {
-      uf_ss << "--beta_weights " << tp.a << "," << tp.b << " ";
-    }
-    if (tp.group_size > 0) {
-      uf_ss << " -g " << tp.group_size;
-    }
-
-    uf_ss << "-l ";
-    for (int i = 0; i < unfinished.size(); i++) {
-      if (i == unfinished.size() - 1) {
-        uf_ss << unfinished[i];
-      } else {
-        uf_ss << unfinished[i] << ",";
-      }
-    }
-    std::cerr << "Some genes did not reach the success threshold. Run the following command to check those genes."
-              << std::endl;
-    std::cerr << uf_ss.str() << std::endl;
-  }
 }
 
 auto Reporter::report_detail(std::vector<TaskArgs> &res, TaskParams &tp) -> void {
   std::string header;
 
-  if(tp.linear) {
-    header =
-        "#Gene\tTranscripts\tVariant\tScore\tWeight\tOR\tOR_SE\tOR_P\tAF";
-  } else {
-	header =
-		"#Gene\tTranscripts\tVariant\tScore\tWeight\tOR\tOR_SE\tOR_P\tAF\tcase_ref\tcase_alt\tcontrol_ref\tcontrol_alt\tcase_list\tcontrol_list";
-  }
   detail_file_ << header << std::endl;
 
   int i = 0; // For each gene
@@ -484,11 +442,17 @@ auto Reporter::write_to_stream(std::ostream &os, Result &res) -> void {
   }
 }
 
-auto Reporter::sync_write_simple(std::unordered_map<std::string, Result> &results, bool top_only) -> void {
+auto Reporter::sync_write_simple(std::unordered_map<std::string, Result> &results, TaskParams &tp, bool top_only) -> void {
   lock_.lock(); // Acquire lock
 
   recalculate_mgit(results);
 
+  for(const auto &v : results) {
+	if (v.second.successes < tp.success_threshold) {
+	  if(std::find(unfinished_.begin(), unfinished_.end(), v.second.gene) == unfinished_.end())
+		unfinished_.push_back(v.second.gene);
+	}
+  }
   if(top_only) {
 	// Find the most significant result.
 	std::unique_ptr<Result> topres;
@@ -530,6 +494,7 @@ auto Reporter::sync_write_detail(const std::string &d, bool testable) -> void {
     detail_file_ << d;
   }
 
+  detail_file_.flush();
   lock_.unlock();
 }
 
@@ -550,7 +515,7 @@ auto Reporter::sync_write_power(std::vector<PowerRes> &prv) -> void {
   lock_.unlock();
 }
 
-auto Reporter::sort_simple() -> void {
+auto Reporter::sort_simple(TaskParams &tp) -> void {
   simple_file_ = std::ofstream(simple_path_ss.str());
   if(!simple_file_.good()) {
     throw(std::runtime_error("Simple file failed to open for writing.\n"));
@@ -561,6 +526,9 @@ auto Reporter::sort_simple() -> void {
 
   unsigned long rank = 1;
 
+  simple_file_ << "# Command: " << tp.full_command << std::endl;
+  simple_file_ << "# Cases: " << ncases_ << std::endl;
+  simple_file_ << "# Controls: " << ncontrols_ << std::endl;
   simple_file_ << std::setw(20) << std::left << "Rank";
   simple_file_ << std::setw(20) << "Gene";
   simple_file_ << std::setw(20) << "Transcript";
@@ -624,6 +592,62 @@ auto Reporter::sort_simple() -> void {
 
   // Delete tmp file
   std::remove(simple_path_tmp_ss.str().c_str());
+
+  if (!unfinished_.empty() && tp.total_permutations > 0) {
+	// Print command to run unfinished
+	std::stringstream uf_ss;
+	uf_ss << tp.program_path << " ";
+	uf_ss << "-i " << tp.genotypes_path << " ";
+	uf_ss << "-c " << tp.covariates_path << " ";
+	uf_ss << "-o " << tp.output_path << " ";
+	uf_ss << "-p " << tp.ped_path << " ";
+	if (tp.bed) {
+	  uf_ss << "-b " << *tp.bed << " ";
+	}
+	if (tp.weight) {
+	  uf_ss << "-w " << *tp.weight << " ";
+	}
+	uf_ss << "-1 0 "; // Skip stage 1
+	uf_ss << "-2 " << tp.total_permutations * 10 << " ";
+	uf_ss << "-m " << tp.method << " ";
+	uf_ss << "-t " << tp.nthreads << " ";
+	if (!tp.verbose) {
+	  uf_ss << "-q ";
+	}
+	if (tp.a != 1 || tp.b != 25) {
+	  uf_ss << "--beta_weights " << tp.a << "," << tp.b << " ";
+	}
+	if (tp.group_size > 0) {
+	  uf_ss << " -g " << tp.group_size << " ";
+	}
+	if (tp.maf < 0.05) {
+	  uf_ss << "-r " << tp.maf << " ";
+	}
+	if (tp.mac != 250) {
+	  uf_ss << "--mac " << tp.mac << " ";
+	}
+	if (tp.nodetail) {
+	  uf_ss << "--nodetail ";
+	}
+	if(tp.score_only_minor) {
+	  uf_ss << "--score_only_minor ";
+	}
+	if(tp.score_only_alternative) {
+	  uf_ss << "--score_only_alternative ";
+	}
+
+	uf_ss << "-l ";
+	for (int i = 0; i < unfinished_.size(); i++) {
+	  if (i == unfinished_.size() - 1) {
+		uf_ss << unfinished_[i];
+	  } else {
+		uf_ss << unfinished_[i] << ",";
+	  }
+	}
+	std::cerr << "Some genes did not reach the success threshold. Run the following command to check those genes."
+			  << std::endl;
+	std::cerr << uf_ss.str() << std::endl;
+  }
 }
 
 auto Reporter::report_power(std::vector<TaskArgs> &resv, TaskParams &tp) -> void {
@@ -643,4 +667,12 @@ auto Reporter::report_power(std::vector<TaskArgs> &resv, TaskParams &tp) -> void
   }
   power_file_.flush();
   power_file_.close();
+}
+
+auto Reporter::set_ncases(int ncases) -> void {
+  ncases_ = ncases;
+}
+
+auto Reporter::set_ncontrols(int ncontrols) -> void {
+  ncontrols_ = ncontrols;
 }

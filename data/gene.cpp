@@ -129,8 +129,13 @@ void Gene::parse(std::stringstream &ss) {
 		std::exit(-1);
 	  }
 	  // Handle missing data
-	  if (val > 2 || val < 0)
+	  if (val > 2 || val < 0) {
+#ifdef IMPUTE
+		val = -9;
+#else
 		val = 0;
+#endif
+	  }
 	  if (val != 0) {
 		try {
 		  genotypes_[transcripts_.back()](j - 3, i - 1) = val;
@@ -146,6 +151,21 @@ void Gene::parse(std::stringstream &ss) {
 	}
 	i++;
   }
+#ifdef IMPUTE
+  // Impute missing
+  for (auto &v : genotypes_) {
+    arma::mat X(v.second);
+    for(arma::uword i = 0; i < X.n_cols; i++) {
+	  arma::uvec nonmissing = arma::find(X.col(i) != -9);
+	  arma::vec Xc = X.col(i);
+
+	  double maf = arma::sum(Xc(nonmissing)) / (2. * nonmissing.n_elem);
+
+	  X.col(i).replace(-9, maf);
+    }
+    v.second = arma::sp_mat(X);
+  }
+#endif
   // Switch to counting minor allele
   for (auto &v : genotypes_) {
 	arma::rowvec maf = arma::rowvec(arma::mean(v.second) / 2.);
@@ -168,7 +188,7 @@ void Gene::parse(std::stringstream &ss) {
 	  bool bmaf = maf[i] > tp_.maf;
 	  if (bmac || bmaf) {
 		if (tp_.verbose && bmac) {
-		  std::cerr << "Removing: " << gene_ << " " << ts << " " << positions_[ts][i] << " | count: " << sums[i] << " due to MAC filter." << std::endl;
+		  // std::cerr << "Removing: " << gene_ << " " << ts << " " << positions_[ts][i] << " | count: " << sums[i] << " due to MAC filter." << std::endl;
 		} else if(tp_.verbose && bmaf) {
 		  std::cerr << "Removing: " << gene_ << " " << ts << " " << positions_[ts][i] << " | frequency: " << maf[i] << " due to MAF filter." << std::endl;
 		}
@@ -179,7 +199,8 @@ void Gene::parse(std::stringstream &ss) {
 	  }
 	weights_[ts] = arma::vec(nvariants_[ts], arma::fill::zeros);
 	// Check if any polymorphic. Mark transcripts skippable if all fixed.
-	if (arma::accu(sums) == 0) {
+	if (arma::accu(sums) == 0 || nvariants_[ts] == 0) {
+	  std::cerr << "gene: " << gene_ << " marked skippable." << std::endl;
 	  polymorphic_[ts] = false;
 	} else {
 	  polymorphic_[ts] = true;
@@ -242,7 +263,7 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
 
 	arma::sp_mat X(genotypes_[ts]);
 
-	arma::vec maf = arma::vec(arma::mean(X, 1) / 2.);
+	arma::rowvec maf = arma::rowvec(arma::mean(X) / 2.);
 	// Ref/Alt Counts
 	arma::vec case_alt = X.t() * Y;
 	arma::vec case_ref = 2 * cases.n_elem - case_alt;
@@ -252,7 +273,7 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
 	  // Get odds
 	  Binomial link("logit");
 	  arma::mat D = arma::join_horiz(cov.get_covariate_matrix(),
-									arma::mat(X).each_row() - arma::mean(arma::mat(X), 0));
+									arma::mat(X).each_row() - 2 * maf);
 	  BayesianGLM<Binomial> fit(D, Y, link);
 	  for (const auto &pos : positions_[ts]) {
 		// Get transcripts
@@ -315,7 +336,7 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
 	  // Get odds via Moser & Coombs (2004) -- Rather than dichotomizing, we fit normally and recover OR
 	  Gaussian link("identity");
 	  arma::mat D = arma::join_vert(cov.get_covariate_matrix(),
-									arma::mat(X).each_col() - arma::mean(arma::mat(X), 1));
+									arma::mat(X).each_row() - maf);
 	  GLM<Gaussian> fit(D, Y, link);
 
 	  // Transform values

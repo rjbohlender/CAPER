@@ -18,7 +18,6 @@ Covariates::Covariates(const std::string& ifile, const std::string& pedfile, boo
 	  ncases_(0),
 	  crand((int)time(nullptr)),
 	  linear_(linear) {
-
   parse(ifile, pedfile);
   indices_ = arma::regspace<arma::uvec>(0, nsamples_ - 1);
   sorted_ = false;
@@ -283,21 +282,15 @@ void Covariates::fit_null() {
 void Covariates::sort_covariates(std::string &header) {
   RJBUtil::Splitter<std::string> splitter(header, " \t");
 
+  std::map<std::string, arma::uword> header_map;
+  for(auto it = splitter.begin() + 3; it != splitter.end(); it++) {
+    header_map[*it] = std::distance(splitter.begin() + 3, it);
+  }
+
   arma::uvec indices(phenotypes_.n_rows, arma::fill::zeros);
 
-  arma::uword i = 0;
-  for(const auto &v : splitter) {
-    if (i >= 3) {
-      arma::uword j = 0;
-      for(const auto &s : samples_) {
-        if(s == v) {
-          indices[i - 3] = j;
-          break;
-        }
-        j++;
-      }
-    }
-    i++;
+  for(arma::uword i = 0; i < phenotypes_.n_rows; i++) {
+    indices(i) = header_map[samples_[i]];
   }
 
   // Sort the phenotypes and covariates according to the order in the matrix file.

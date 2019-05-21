@@ -59,14 +59,17 @@ int main(int argc, char **argv) {
   boost::optional<std::string> gene_list;
   boost::optional<std::string> permute_set;
   boost::optional<double> pthresh;
+  boost::optional<arma::uword> approximate;
 
   try {
     required.add_options()
 				("input,i", po::value<std::string>()->required(), "Genotype matrix file path.")
 				("covariates,c",
 				 po::value<std::string>()->required(),
-				 "The covariate table file, including phenotypes.\nPhenotypes {0=control, 1=case} should be in the first column.")
-				("ped,p", po::value<std::string>()->required(), "Path to the .ped file.")
+				 "The covariate matrix file.\nFormat = sample_id\tcov1\t...")
+				("ped,p",
+				 po::value<std::string>()->required(),
+				 "Path to the .ped file containing the sample phenotypes.")
 				("output,o",
 				 po::value<std::string>()->required(),
 				 "Path to output directory. Two files will be output: a simple transcript level results file, and a detailed variant level result file.")
@@ -106,6 +109,9 @@ int main(int argc, char **argv) {
 				("nodetail",
 				 po::bool_switch(&nodetail),
 				 "Don't produce detailed, variant level output.")
+				("approx,a",
+				 po::value(&approximate),
+				 "Group minor allele carriers with more than n carriers into n bins with shared average odds. This option is useful for very large data sets where the total number of minor allele carriers to be permuted can be very large, and result in extreme run times. May result in a small loss of power.")
 				 ;
     vaast.add_options()
 			 ("group_size,g",
@@ -273,6 +279,7 @@ int main(int argc, char **argv) {
   tp.top_only = top_only;
   tp.mac = vm["mac"].as<arma::uword>();
   tp.pthresh = pthresh;
+  tp.approximate = approximate;
   // SKAT Options
   tp.kernel = vm["kernel"].as<std::string>();
   tp.adjust = adjust;
@@ -378,9 +385,7 @@ int main(int argc, char **argv) {
   arma::arma_rng::set_seed_random();
 
   std::shared_ptr<Reporter> reporter = nullptr;
-  if(!tp.gene_list) {
-	reporter = std::make_shared<Reporter>(tp);
-  }
+  reporter = std::make_shared<Reporter>(tp);
 
   JobDispatcher jd(tp, reporter);
 

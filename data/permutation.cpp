@@ -236,4 +236,97 @@ void Permute::permute_thread(std::shared_ptr<std::vector<std::vector<int32_t>>> 
   }
 
 }
+std::vector<std::vector<int32_t>> Permute::permutations_mac_bin(int nperm,
+																arma::vec &odds,
+																arma::uword ncases,
+																arma::uvec &mac_indices,
+																arma::uvec &maj_indices,
+																arma::uword &approximate) {
+  arma::uword binning_threshold = approximate;
+  std::vector<std::vector<int32_t>> ret(nperm);
+  for (int i = 0; i < nperm; i++) {
+	ret[i] = std::vector<int32_t>(odds.n_rows, 0);
+  }
+
+  // Create minor bins
+  std::vector<double> odds_;
+  arma::uvec odds_sort = arma::sort_index(odds(mac_indices));
+  std::vector<int32_t> m;
+  std::vector<arma::span> spans;
+  if (mac_indices.n_elem < binning_threshold) {
+    // Individual bins
+    odds_ = arma::conv_to<std::vector<double>>::from(odds(mac_indices));
+	m = std::vector<int32_t>(odds_.size(), 1);
+  } else {
+    // subset bins
+	double nbins = (mac_indices.n_elem > approximate) ? approximate : mac_indices.n_elem;
+	arma::uword stride = mac_indices.n_elem / nbins;
+	for (arma::uword i = 0; i < nbins; i++) {
+	  arma::span cur(i * stride, std::min(i * stride + stride - 1, mac_indices.n_elem));
+	  arma::vec odds_spanned = odds(odds_sort(cur));
+	  spans.push_back(cur);
+	  // Set number in group
+	  m.push_back(odds_spanned.n_elem);
+	  // Set odds for group
+	  odds_.push_back(arma::mean(odds_spanned));
+	}
+  }
+  // Maj bin
+  double nbins = 1;
+  arma::uword stride = maj_indices.n_elem / nbins;
+  odds_sort = arma::sort_index(odds(maj_indices));
+  for (arma::uword i = 0; i < nbins; i++) {
+	arma::span cur(i * stride, std::min(i * stride + stride - 1, maj_indices.n_elem));
+	arma::vec odds_spanned = odds(odds_sort(cur));
+	// Set number in group
+	m.push_back(odds_spanned.n_elem);
+	// Set odds for group
+	odds_.push_back(arma::mean(odds_spanned));
+  }
+
+  // successes, bin_size
+  auto unpack = [this](int n, int m){
+	arma::uvec r(m, arma::fill::zeros);
+	if (n > 0) {
+	  r(arma::span(0, n - 1)).fill(1);
+	}
+	// Fisher-Yates Shuffle
+	for(arma::sword i = r.n_elem - 1; i >= 0; i--) {
+	  auto j = static_cast<arma::sword>(sto.IRandom(0, i));
+	  arma::uword tmp = r[i];
+	  r[i] = r[j];
+	  r[j] = tmp;
+	}
+	return r;
+  };
+
+  odds_sort = arma::sort_index(odds(mac_indices));
+  // Generate permutations
+  for (int i = 0; i < nperm; i++) {
+    std::vector<int32_t> tmp(odds_.size(), 0);
+	sto.MultiFishersNCHyp(&tmp[0], &m[0], &odds_[0], ncases, odds_.size());
+
+	// Unpack bins
+	arma::uword filled = 0;
+	if (mac_indices.n_elem > binning_threshold) {
+	  for (int j = 0; j < spans.size(); j++) {
+		arma::uvec r = unpack(tmp[j], m[j]);
+	    for (int k = 0; k < r.n_elem; k++) {
+	      ret[i][k + filled] = r(k);
+	    }
+	    filled += m[j];
+	  }
+	  if(ret[i][filled] != 0) {
+		throw(std::runtime_error("miscount"));
+	  }
+	  ret[i][filled] = tmp.back();
+	} else {
+	  for(int j = 0; j < tmp.size(); j++) {
+	    ret[i][j] = tmp[j];
+	  }
+  	}
+  }
+
+  return ret;
+}
 

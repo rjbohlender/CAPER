@@ -44,7 +44,8 @@ Methods for class StochasticLib3
 Constructor
 ***********************************************************************/
 StochasticLib3::StochasticLib3(int seed) : StochasticLib1(seed) {
-   SetAccuracy(1.E-8);                  // set default accuracy
+   // SetAccuracy(1.E-8);                  // set default accuracy -- Original
+  SetAccuracy(1.E-8);                  // set default accuracy
    // Initialize variables
    fnc_n_last = -1, fnc_m_last = -1, fnc_N_last = -1;
    fnc_o_last = -1.;

@@ -37,6 +37,12 @@ struct Permute {
 														 arma::uword ncases,
 														 arma::uvec &mac_indices,
 														 arma::uvec &maj_indices);
+  std::vector<std::vector<int32_t>> permutations_mac_bin(int nperm,
+														 arma::vec &odds,
+														 arma::uword ncases,
+														 arma::uvec &mac_indices,
+														 arma::uvec &maj_indices,
+														 arma::uword &approximate);
   arma::vec calculate_fisher_mean(int32_t n, arma::vec &odds);
   std::vector<std::vector<int32_t>> cases_in_bins(int nperm,
 												  arma::colvec &odds,

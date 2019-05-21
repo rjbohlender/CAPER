@@ -38,6 +38,7 @@ struct TaskParams {
   arma::uword mac;
   double maf;
 
+  boost::optional<arma::uword> approximate;
   boost::optional<int> range_start;
   boost::optional<int> range_end;
 

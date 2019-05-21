@@ -61,9 +61,6 @@ void TaskQueue::join() {
   quit_ = true;
   cv_.notify_all();
 
-  if(!tp_.power && !tp_.gene_list)
-	reporter_->sort_simple();
-
   for (size_t i = 0; i < threads_.size(); i++) {
 	if (threads_[i].joinable()) {
 	  threads_[i].join();
@@ -131,20 +128,14 @@ void TaskQueue::thread_handler() {
 
 		// Report results for non-gene_list run
 		if (!op.get_tp().gene_list) {
-		  if(op.get_tp().top_only) {
-			reporter_->sync_write_simple(op.results, true);
-		  } else {
-		    reporter_->sync_write_simple(op.results, false);
-		  }
+		  reporter_->sync_write_simple(op.results, op.get_tp(), op.get_tp().top_only);
 		  reporter_->sync_write_detail(op.get_gene().get_detail(), op.get_gene().is_testable());
-		}
-
-		// Lock and do results queue if gene list
-		if (op.get_tp().gene_list) {
+		} else {
 		  lock.lock();
 		  results_.emplace_back(op);
 		  lock.unlock();
 		}
+
 		ntasks_--;
 	  } else if(stage == Stage::Power) {
 	    power(op);
@@ -401,11 +392,20 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 		  }
 
 		} else {
-		  permutations = ta.get_permute(k).permutations_maj_bin(1,
-																ta.get_cov().get_odds(),
-																ta.get_cov().get_ncases(),
-																mac_indices[k],
-																maj_indices[k]);
+		  if (ta.get_tp().approximate) {
+			permutations = ta.get_permute(k).permutations_mac_bin(1,
+																  ta.get_cov().get_odds(),
+																  ta.get_cov().get_ncases(),
+																  mac_indices[k],
+																  maj_indices[k],
+																  *ta.get_tp().approximate);
+		  } else {
+			permutations = ta.get_permute(k).permutations_maj_bin(1,
+																  ta.get_cov().get_odds(),
+																  ta.get_cov().get_ncases(),
+																  mac_indices[k],
+																  maj_indices[k]);
+		  }
 		  arma::uword total_cases = 0;
 		  for (int i = 0; i < mac_indices[k].n_elem; i++) {
 			phenotypes(mac_indices[k](i)) = permutations[0][i];
@@ -523,7 +523,6 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 
 	  // Update total number of permutations
 	  v.second.permutations++;
-
 	  check_perm(ta.get_tp(), perm_val, ta.success_threshold, v);
 
 	  // Track when we reached threshold
