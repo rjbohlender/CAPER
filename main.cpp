@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
 				("input,i", po::value<std::string>()->required(), "Genotype matrix file path.")
 				("covariates,c",
 				 po::value<std::string>()->required(),
-				 "The covariate matrix file.\nFormat = sample_id\tcov1\t...")
+				 "The covariate matrix file, tab separated.\nFormat = sample_id cov1 ...")
 				("ped,p",
 				 po::value<std::string>()->required(),
 				 "Path to the .ped file containing the sample phenotypes.")
