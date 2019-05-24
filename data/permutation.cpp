@@ -5,6 +5,7 @@
 #include <stocc/stocc.h>
 #include <ctime>
 #include <thread>
+#include <cassert>
 #include "permutation.hpp"
 
 Permute::Permute()
@@ -260,7 +261,7 @@ std::vector<std::vector<int32_t>> Permute::permutations_mac_bin(int nperm,
   } else {
     // subset bins
 	arma::vec mac_odds = arma::sort(odds(mac_indices));
-	double nbins = (mac_indices.n_elem > approximate) ? approximate : mac_indices.n_elem;
+	double nbins = 100;
 	double bin_width = arma::max(mac_odds) / nbins;
 	final_bins = nbins;
 	for (arma::uword i = 0; i < nbins; i++) {

@@ -468,7 +468,7 @@ auto Reporter::report_vaast(std::vector<TaskArgs> &res, TaskParams &tp) -> void 
 	  vaast_file_ << ts.second;
 	  vaast_file_ << "SCORE: " << boost::format("%1$.2f") % ta.results[ts.first].original << std::endl;
 	  vaast_file_ << "genome_permutation_p: " << p << std::endl;
-	  vaast_file_ << "genome_permutation_p_ci: " << sp - ci << "," << sp + ci << std::endl;
+	  vaast_file_ << "genome_permutation_p_ci: " << ((sp - ci > 0) ? sp - ci : 0) << "," << ((sp + ci > 1 ) ? 1 : sp + ci) << std::endl;
 	  vaast_file_ << "num_permutations: " << ta.results[ts.first].permutations << std::endl;
 	  vaast_file_ << "total_success: " << ta.results[ts.first].successes << std::endl;
 	}
@@ -508,6 +508,7 @@ auto Reporter::sync_write_simple(std::unordered_map<std::string, Result> &result
 		}
 	  }
 	}
+	simple_file_tmp_ << *topres;
     lock_.unlock();
     return;
   }
