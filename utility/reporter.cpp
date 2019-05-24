@@ -23,6 +23,23 @@ Reporter::Reporter(TaskParams &tp)
     throw(std::runtime_error("Output path is invalid."));
   }
 
+  // If using VAAST, output VAAST file
+  if(tp.method == "VAAST") {
+    vaast_path_ss << tp.output_path << "/" << tp.method;
+	if(tp.group_size > 0)
+	  vaast_path_ss << boost::format(".g%1$d") % tp.group_size;
+	if(tp.testable)
+	  vaast_path_ss << ".testable";
+	if(tp.biallelic)
+	  vaast_path_ss << ".biallelic";
+	if (tp.range_start && tp.range_end) {
+	  vaast_path_ss << "." << *tp.range_start;
+	  vaast_path_ss << "." << *tp.range_end;
+	}
+	vaast_path_ss << ".vaast";
+	vaast_file_ = std::ofstream(vaast_path_ss.str());
+  }
+
   simple_path_ss << tp.output_path << "/" << tp.method;
   if(tp.group_size > 0)
     simple_path_ss << boost::format(".g%1$d") % tp.group_size;
@@ -68,7 +85,6 @@ Reporter::Reporter(TaskParams &tp)
   if(!detail_file_.good()) {
     throw(std::runtime_error("Detail file failed to open for writing.\n"));
   }
-
 
   if(tp.linear) {
     header =
@@ -177,6 +193,9 @@ auto Reporter::report(std::vector<TaskArgs> &res, TaskParams &tp) -> void {
 	  report_simple(tp);
 	  if (!tp.nodetail) {
 		report_detail(res, tp);
+		if (tp.method == "VAAST") {
+		  report_vaast(res, tp);
+		}
 	  }
 	}
   }
@@ -429,6 +448,30 @@ auto Reporter::report_detail(std::vector<TaskArgs> &res, TaskParams &tp) -> void
 	  }
 	}
 	i++;
+  }
+}
+
+auto Reporter::report_vaast(std::vector<TaskArgs> &res, TaskParams &tp) -> void {
+  // Header information
+  vaast_file_ << "## PA_VERSION\t0.0" << std::endl;
+  vaast_file_ << "## COMMAND\t" << tp.full_command << std::endl;
+
+  for (auto &ta : res) {
+	for(auto &ts : ta.get_gene().get_vaast()) {
+	  double z2 = std::pow(1.96, 2);
+	  double n = ta.results[ts.first].permutations;
+	  double ns = ta.results[ts.first].successes;
+	  double nf = ta.results[ts.first].permutations - ta.results[ts.first].successes;
+	  double p = (ns + 1.) / (n + 1.);
+	  double sp = (p + z2 / (2 * (n + 1.))) / (1. + z2 / (n + 1.));
+	  double ci = 1.96 / (1. + z2 / n) * std::sqrt((p * (1 - p) / (n + 1.) + z2 / (4 * n * n)));
+	  vaast_file_ << ts.second;
+	  vaast_file_ << "SCORE: " << boost::format("%1$.2f") % ta.results[ts.first].original << std::endl;
+	  vaast_file_ << "genome_permutation_p: " << p << std::endl;
+	  vaast_file_ << "genome_permutation_p_ci: " << sp - ci << "," << sp + ci << std::endl;
+	  vaast_file_ << "num_permutations: " << ta.results[ts.first].permutations << std::endl;
+	  vaast_file_ << "total_success: " << ta.results[ts.first].successes << std::endl;
+	}
   }
 }
 

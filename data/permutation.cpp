@@ -252,24 +252,35 @@ std::vector<std::vector<int32_t>> Permute::permutations_mac_bin(int nperm,
   std::vector<double> odds_;
   arma::uvec odds_sort = arma::sort_index(odds(mac_indices));
   std::vector<int32_t> m;
-  std::vector<arma::span> spans;
+  arma::uword final_bins;
   if (mac_indices.n_elem < binning_threshold) {
     // Individual bins
     odds_ = arma::conv_to<std::vector<double>>::from(odds(mac_indices));
 	m = std::vector<int32_t>(odds_.size(), 1);
   } else {
     // subset bins
+	arma::vec mac_odds = arma::sort(odds(mac_indices));
 	double nbins = (mac_indices.n_elem > approximate) ? approximate : mac_indices.n_elem;
-	arma::uword stride = mac_indices.n_elem / nbins;
+	double bin_width = arma::max(mac_odds) / nbins;
+	final_bins = nbins;
 	for (arma::uword i = 0; i < nbins; i++) {
-	  arma::span cur(i * stride, std::min(i * stride + stride - 1, mac_indices.n_elem));
-	  arma::vec odds_spanned = odds(odds_sort(cur));
-	  spans.push_back(cur);
-	  // Set number in group
-	  m.push_back(odds_spanned.n_elem);
-	  // Set odds for group
-	  odds_.push_back(arma::mean(odds_spanned));
+	  arma::uvec odds_lower = arma::find(mac_odds > i * bin_width);
+	  arma::uvec odds_upper = arma::find(mac_odds <= (i + 1) * bin_width);
+	  arma::uvec odds_spanned = arma::intersect(odds_lower, odds_upper);
+	  if(odds_spanned.n_elem > 0) {
+		// Set number in group
+		m.push_back(odds_spanned.n_elem);
+		// Set odds for group
+		odds_.push_back(arma::mean(mac_odds(odds_spanned)));
+	  } else {
+	    final_bins--;
+	  }
 	}
+	double total = 0;
+	for(const auto &v : m) {
+	  total += v;
+	}
+	assert(total == mac_indices.n_elem);
   }
   // Maj bin
   double nbins = 1;
@@ -309,7 +320,7 @@ std::vector<std::vector<int32_t>> Permute::permutations_mac_bin(int nperm,
 	// Unpack bins
 	arma::uword filled = 0;
 	if (mac_indices.n_elem > binning_threshold) {
-	  for (int j = 0; j < spans.size(); j++) {
+	  for (int j = 0; j < final_bins; j++) {
 		arma::uvec r = unpack(tmp[j], m[j]);
 	    for (int k = 0; k < r.n_elem; k++) {
 	      ret[i][k + filled] = r(k);

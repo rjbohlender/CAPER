@@ -54,7 +54,8 @@ public:
   arma::vec &get_scores(const std::string &k);
   void set_scores(const std::string &k, arma::vec &scores);
 
-  std::string get_detail();
+  auto get_detail() -> std::string;
+  auto get_vaast() -> std::map<std::string, std::string>;
 
   auto is_skippable() -> bool;
   auto is_polymorphic(const std::string &k) -> bool;
@@ -62,6 +63,7 @@ public:
   auto is_testable() -> bool;
 
   auto generate_detail(Covariates &cov, std::unordered_map<std::string, Result> &results, TaskParams &tp) -> void;
+  auto generate_vaast(Covariates &cov) -> void;
   auto clear(Covariates &cov, std::unordered_map<std::string, Result> &results, TaskParams &tp) -> void;
 
 private:
@@ -87,6 +89,7 @@ private:
 
   std::string header_;
   std::string detail_;
+  std::map<std::string, std::string> vaast_;
 
   void parse(std::stringstream &ss);
   auto testable(const std::string &k, Covariates &cov, TaskParams &tp) -> bool;

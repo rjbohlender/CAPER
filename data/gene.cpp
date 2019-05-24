@@ -76,6 +76,9 @@ std::vector<std::string> &Gene::get_positions(const std::string &k) {
 void Gene::clear(Covariates &cov, std::unordered_map<std::string, Result> &results, TaskParams &tp) {
   if (!tp.nodetail)
 	generate_detail(cov, results, tp);
+  if (tp.method == "VAAST") {
+    generate_vaast(cov);
+  }
 
   // Set matrix size to 0x0 to free space.
   for (auto &v : genotypes_) {
@@ -436,9 +439,14 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
   detail_ = detail.str();
 }
 
-std::string Gene::get_detail() {
+auto Gene::get_detail() -> std::string {
   return detail_;
 }
+
+auto Gene::get_vaast() -> std::map<std::string, std::string> {
+  return vaast_;
+}
+
 
 std::vector<std::string> &Gene::get_samples() {
   return samples_;
@@ -486,6 +494,99 @@ auto Gene::is_polymorphic(const std::string &k) -> bool {
   return polymorphic_[k];
 }
 
+auto Gene::generate_vaast(Covariates &cov) -> void {
+  // One entry per transcript
+  for(const auto &ts : transcripts_) {
+	std::stringstream vaast_ss;
+	vaast_ss << ">" << ts << "\t" << gene_ << std::endl;
+
+	arma::mat X(genotypes_[ts]);
+	arma::vec Y(cov.get_original_phenotypes());
+
+	arma::uvec cases = arma::find(Y == 1);
+	arma::uvec controls = arma::find(Y == 0);
+	// Variant Format:
+	// Variants are nucleotide then amino acid
+	// R/U: variant_score position@chr nt|AA B/N|id1,id2...|ref:alt|ref:alt
+
+	// Skip exon positions for now
+
+	// Add target variants
+	for(int i = 0; i < positions_[ts].size(); i++) {
+	  double case_alt = arma::as_scalar(X.col(i).t() * Y);
+	  double case_ref = 2 * cases.n_elem - case_alt;
+	  double cont_alt = arma::as_scalar(X.col(i).t() * (1. - Y));
+	  double cont_ref = 2 * controls.n_elem - cont_alt;
+
+	  if(case_alt > 0 && cont_alt == 0) {
+	    vaast_ss << "TU:\t";
+	  } else if(case_alt > 0 && cont_alt > 0) {
+	    vaast_ss << "TR:\t";
+	  } else {
+	    continue;
+	  }
+	  vaast_ss << boost::format("%1$.2f") % variant_scores_[ts][i] << "\t";
+
+	  RJBUtil::Splitter<std::string> pos_splitter(positions_[ts][i], "-");
+	  vaast_ss << pos_splitter[1] << "@" << pos_splitter[0] << "\t";
+
+	  // Placeholder for Reference alleles
+	  vaast_ss << "N|N\t";
+
+	  if(case_alt > 0 && cont_alt == 0) {
+	    vaast_ss << "N|";
+	  } else if(case_alt > 0 && cont_alt > 0) {
+	    vaast_ss << "B|";
+	  }
+	  arma::uvec carriers = arma::find(X.col(i) % Y > 0);
+
+	  for (arma::uword j = 0; j < carriers.n_elem; j++) {
+	    if (j < carriers.n_elem - 1) {
+		  vaast_ss << carriers(j) << ",";
+	    } else {
+	      vaast_ss << carriers(j) << "|";
+	    }
+	  }
+	  // Placeholder
+	  vaast_ss << "N:N|N:N" << std::endl;
+	}
+	// Add background variants
+	for(int i = 0; i < positions_[ts].size(); i++) {
+	  double case_alt = arma::as_scalar(X.col(i).t() * Y);
+	  double case_ref = 2 * cases.n_elem - case_alt;
+	  double cont_alt = arma::as_scalar(X.col(i).t() * (1. - Y));
+	  double cont_ref = 2 * controls.n_elem - cont_alt;
+
+	  if(case_alt == 0 && cont_alt > 0) {
+		vaast_ss << "BU:\t";
+	  } else if(case_alt > 0 && cont_alt > 0) {
+		vaast_ss << "BR:\t";
+	  } else {
+		continue;
+	  }
+	  vaast_ss << boost::format("%1$.2f") % variant_scores_[ts][i] << "\t";
+
+	  RJBUtil::Splitter<std::string> pos_splitter(positions_[ts][i], "-");
+	  vaast_ss << pos_splitter[1] << "@" << pos_splitter[0] << "\t";
+
+	  // Placeholder for Reference alleles
+	  vaast_ss << "N|N\t";
+
+	  arma::uvec carriers = arma::find(X.col(i) % (1. - Y) > 0);
+
+	  for (arma::uword j = 0; j < carriers.n_elem; j++) {
+		if (j < carriers.n_elem - 1) {
+		  vaast_ss << carriers(j) << ",";
+		} else {
+		  vaast_ss << carriers(j) << "|";
+		}
+	  }
+	  // Placeholder
+	  vaast_ss << "N:N|N:N" << std::endl;
+	}
+	vaast_[ts] = vaast_ss.str();
+  }
+}
 void print_comma_sep(arma::uvec &x, std::ostream &os) {
   for (arma::uword i = 0; i < x.size(); i++) {
 	if (i == x.size() - 1) {

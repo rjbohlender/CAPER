@@ -32,10 +32,12 @@ public:
   auto report_detail(std::vector<TaskArgs> &res, TaskParams &tp) -> void;
   auto report_simple(TaskParams &tp) -> void;
   auto report_power(std::vector<TaskArgs> &resv, TaskParams &tp) -> void;
+  auto report_vaast(std::vector<TaskArgs> &res, TaskParams &tp) -> void;
 
   auto sync_write_simple(std::unordered_map<std::string, Result> &results, TaskParams &tp, bool top_only) -> void;
   auto sync_write_detail(const std::string &d, bool testable) -> void;
   auto sync_write_power(std::vector<PowerRes> &prv) -> void;
+  auto sync_write_vaast(std::unordered_map<std::string, Result> &results, TaskParams &tp) -> void;
 
   auto sort_simple(TaskParams &tp) -> void;
 
@@ -52,11 +54,13 @@ private:
   std::stringstream simple_path_ss;
   std::stringstream simple_path_tmp_ss;
   std::stringstream detail_path_ss;
+  std::stringstream vaast_path_ss;
 
   std::ofstream simple_file_tmp_;
   std::ofstream simple_file_;
   std::ofstream detail_file_;
   std::ofstream power_file_;
+  std::ofstream vaast_file_;
 
   const std::string method_;
   const bool gene_list_;
