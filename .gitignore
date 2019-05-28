@@ -67,3 +67,4 @@ bernoulli.R
 /venv/
 /runtime_debug/
 /test_glm.R
+/valgrind_notes

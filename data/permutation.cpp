@@ -266,13 +266,21 @@ std::vector<std::vector<int32_t>> Permute::permutations_mac_bin(int nperm,
    // subset bins
 	arma::vec mac_odds = arma::sort(odds(mac_indices));
 	double nbins = approximate;
-	double bin_width = (arma::max(mac_odds) - arma::min(mac_odds)) / nbins;
+	double bin_width = ((arma::max(mac_odds) + 0.5) - arma::min(mac_odds)) / nbins;
 	final_bins[transcript] = nbins;
 	double min_mac_odds = arma::min(mac_odds);
 	for (arma::uword i = 0; i < nbins; i++) {
-	  arma::uvec odds_lower = arma::find(mac_odds >= min_mac_odds + i * bin_width);
-	  arma::uvec odds_upper = arma::find(mac_odds <= min_mac_odds + (i + 1) * bin_width);
-	  arma::uvec odds_spanned = arma::intersect(odds_lower, odds_upper);
+	  std::vector<arma::uword> odds_in_range;
+	  for(arma::uword j = 0; j < mac_odds.n_elem; j++) { // sorted
+	    if(mac_odds(j) >= min_mac_odds + i * bin_width && mac_odds(j) < min_mac_odds + (i + 1) * bin_width) {
+	      odds_in_range.push_back(j);
+	    } else if(mac_odds(j) < min_mac_odds + i * bin_width) {
+	      continue;
+	    } else {
+	      break;
+	    }
+	  }
+	  arma::uvec odds_spanned = arma::conv_to<arma::uvec>::from(odds_in_range);
 	  if(odds_spanned.n_elem > 0) {
 		// Set number in group
 		m[transcript].push_back(odds_spanned.n_elem);
@@ -321,9 +329,9 @@ std::vector<std::vector<int32_t>> Permute::permutations_mac_bin(int nperm,
 	assert(tmp.size() == odds_[transcript].size() && tmp.size() == m[transcript].size());
 	// Unpack bins
 	arma::uword filled = 0;
-	for (int j = 0; j < final_bins[transcript]; j++) {
-	  arma::uvec r = unpack(tmp[j], m[transcript][j]);
-	  for (int k = 0; k < r.n_elem; k++) {
+	for (int j = 0; j < final_bins[transcript]; j++) { // for each bin
+	  arma::uvec r = unpack(tmp[j], m[transcript][j]); // unpack and randomize cases into a vector
+	  for (int k = 0; k < r.n_elem; k++) { //
 		ret[transcript][i][k + filled] = r(k);
 	  }
 	  filled += m[transcript][j];

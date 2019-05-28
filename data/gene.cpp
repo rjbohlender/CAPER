@@ -21,7 +21,9 @@ Gene::Gene(std::stringstream &ss,
 		   TaskParams tp)
 	: nsamples_(nsamples),
 	  nvariants_(nvariants),
-	  tp_(std::move(tp)) {
+	  tp_(std::move(tp)),
+	  testable_(false),
+	  skippable_(false) {
   parse(ss);
   if (!weight.empty()) {
 	for (const auto &k : transcripts_) {
