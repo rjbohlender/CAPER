@@ -195,10 +195,14 @@ std::vector<std::vector<int32_t>> Permute::permutations_maj_bin(int nperm,
 	}
 
 	odds_[transcript] = arma::conv_to<std::vector<double>>::from(odds(mac_indices));
+	sort_mac_idx[transcript] = mac_indices;
 	arma::uvec odds_sort = arma::sort_index(odds(maj_indices));
+	sort_maj_idx[transcript] = maj_indices(odds_sort);
 
 	// Create bins
 	double nbins = 1;
+	mac_bins[transcript] = mac_indices.n_elem;
+	maj_bins[transcript] = nbins;
 	arma::uword stride = maj_indices.n_elem / nbins;
 	m[transcript] = std::vector<int32_t>(odds_[transcript].size(), 1);
 	for (arma::uword i = 0; i < nbins; i++) {
@@ -214,7 +218,26 @@ std::vector<std::vector<int32_t>> Permute::permutations_maj_bin(int nperm,
 
   // Generate permutations
   for (int i = 0; i < nperm; i++) {
-	sto.MultiFishersNCHyp(&(ret[transcript][i][0]), &(m[transcript][0]), &(odds_[transcript][0]), ncases, odds_[transcript].size());
+	std::vector<int32_t> tmp(odds_[transcript].size(), 0);
+	sto.MultiFishersNCHyp(&tmp[0], &(m[transcript][0]), &(odds_[transcript][0]), ncases, odds_[transcript].size());
+
+	// Unpack bins
+	arma::uword filled = 0;
+	for (int j = 0; j < mac_bins[transcript]; j++) { // for each bin
+	  arma::uvec r = unpack(tmp[j], m[transcript][j], j < mac_bins[transcript]); // unpack and randomize cases into a vector
+	  for (int k = 0; k < r.n_elem; k++) { //
+		ret[transcript][i][sort_mac_idx[transcript][k + filled]] = r(k);
+	  }
+	  filled += m[transcript][j];
+	}
+	filled = 0;
+	for (int j = mac_bins[transcript]; j < mac_bins[transcript] + maj_bins[transcript]; j++) {
+	  arma::uvec r = unpack(tmp[j], m[transcript][j], j < mac_bins[transcript]); // Don't have to shuffle maj allele carriers
+	  for (int k = 0; k < r.n_elem; k++) {
+		ret[transcript][i][sort_maj_idx[transcript][k + filled]] = r(k);
+	  }
+	  filled += m[transcript][j];
+	}
   }
 
   return ret[transcript];
@@ -263,11 +286,12 @@ std::vector<std::vector<int32_t>> Permute::permutations_mac_bin(int nperm,
 
 	// Create minor bins
 	arma::uvec odds_sort = arma::sort_index(odds(mac_indices));
+	sort_mac_idx[transcript] = mac_indices(odds_sort);
    // subset bins
 	arma::vec mac_odds = arma::sort(odds(mac_indices));
 	double nbins = approximate;
 	double bin_width = ((arma::max(mac_odds) + 0.5) - arma::min(mac_odds)) / nbins;
-	final_bins[transcript] = nbins;
+	mac_bins[transcript] = nbins;
 	double min_mac_odds = arma::min(mac_odds);
 	for (arma::uword i = 0; i < nbins; i++) {
 	  std::vector<arma::uword> odds_in_range;
@@ -287,14 +311,16 @@ std::vector<std::vector<int32_t>> Permute::permutations_mac_bin(int nperm,
 		// Set odds for group
 		odds_[transcript].push_back(arma::mean(mac_odds(odds_spanned)));
 	  } else {
-	    final_bins[transcript]--;
+	    mac_bins[transcript]--;
 	  }
 	}
-	assert(final_bins[transcript] == odds_[transcript].size() && final_bins[transcript] == m[transcript].size());
+
 	// Maj bin
 	nbins = 1;
+	maj_bins[transcript] = nbins;
 	arma::uword stride = maj_indices.n_elem / nbins;
 	odds_sort = arma::sort_index(odds(maj_indices));
+	sort_maj_idx[transcript] = maj_indices(odds_sort);
 	for (arma::uword i = 0; i < nbins; i++) {
 	  arma::span cur(i * stride, std::min(i * stride + stride - 1, maj_indices.n_elem));
 	  arma::vec odds_spanned = odds(odds_sort(cur));
@@ -305,38 +331,29 @@ std::vector<std::vector<int32_t>> Permute::permutations_mac_bin(int nperm,
 	}
 	bins_built[transcript] = true;
   }
-  // successes, bin_size
-  auto unpack = [this](int n, int m){
-	arma::uvec r(m, arma::fill::zeros);
-	if (n > 0) {
-	  r(arma::span(0, n - 1)).fill(1);
-	}
-	// Fisher-Yates Shuffle
-	for(arma::sword i = r.n_elem - 1; i >= 1; --i) {
-	  auto j = static_cast<arma::sword>(sto.IRandom(0, i));
-	  arma::uword tmp = r[i];
-	  r[i] = r[j];
-	  r[j] = tmp;
-	}
-	return r;
-  };
 
   // Generate permutations
   for (int i = 0; i < nperm; i++) {
     std::vector<int32_t> tmp(odds_[transcript].size(), 0);
 	sto.MultiFishersNCHyp(&tmp[0], &(m[transcript][0]), &(odds_[transcript][0]), ncases, odds_[transcript].size());
 
-	assert(tmp.size() == odds_[transcript].size() && tmp.size() == m[transcript].size());
 	// Unpack bins
 	arma::uword filled = 0;
-	for (int j = 0; j < final_bins[transcript]; j++) { // for each bin
-	  arma::uvec r = unpack(tmp[j], m[transcript][j]); // unpack and randomize cases into a vector
+	for (int j = 0; j < mac_bins[transcript]; j++) { // for each bin
+	  arma::uvec r = unpack(tmp[j], m[transcript][j], j < mac_bins[transcript]); // unpack and randomize cases into a vector
 	  for (int k = 0; k < r.n_elem; k++) { //
-		ret[transcript][i][k + filled] = r(k);
+		ret[transcript][i][sort_mac_idx[transcript][k + filled]] = r(k);
 	  }
 	  filled += m[transcript][j];
 	}
-	ret[transcript][i][filled] = tmp.back();
+	filled = 0;
+	for (int j = mac_bins[transcript]; j < mac_bins[transcript] + maj_bins[transcript]; j++) {
+	  arma::uvec r = unpack(tmp[j], m[transcript][j], j < mac_bins[transcript]); // Don't have to shuffle major allele carriers
+	  for (int k = 0; k < r.n_elem; k++) {
+		ret[transcript][i][sort_maj_idx[transcript][k + filled]] = r(k);
+	  }
+	  filled += m[transcript][j];
+	}
   }
 
   return ret[transcript];
@@ -358,44 +375,37 @@ std::vector<std::vector<int32_t>> Permute::permutations_bin(int nperm,
 	  ret[transcript][i] = std::vector<int32_t>(odds.n_rows, 0);
 	}
 
-	// Create minor bins
-	arma::uvec odds_sort = arma::sort_index(odds);
+	// Create bins
+	sort_mac_idx[transcript] = arma::sort_index(odds); // Reuse sort_mac_idx for all bins
+	arma::vec odds_sorted = arma::sort(odds);
 	// subset bins
 	double nbins = approximate;
-	double bin_width = (arma::max(odds) - arma::min(odds)) / nbins;
-	final_bins[transcript] = nbins;
+	double bin_width = ((arma::max(odds) + 0.5) - arma::min(odds)) / nbins;
+	mac_bins[transcript] = nbins;
 	double min_odds = arma::min(odds);
 	for (arma::uword i = 0; i < nbins; i++) {
-	  arma::uvec odds_lower = arma::find(odds >= min_odds + i * bin_width);
-	  arma::uvec odds_upper = arma::find(odds <= min_odds + (i + 1) * bin_width);
-	  arma::uvec odds_spanned = arma::intersect(odds_lower, odds_upper);
+	  std::vector<arma::uword> odds_in_range;
+	  for(arma::uword j = 0; j < sort_mac_idx[transcript].n_elem; j++) { // sorted
+		if(odds_sorted(j) >= min_odds + i * bin_width && odds_sorted(j) < min_odds + (i + 1) * bin_width) {
+		  odds_in_range.push_back(j);
+		} else if(odds_sorted(j) < min_odds + i * bin_width) {
+		  continue;
+		} else {
+		  break;
+		}
+	  }
+	  arma::uvec odds_spanned = arma::conv_to<arma::uvec>::from(odds_in_range);
 	  if(odds_spanned.n_elem > 0) {
 		// Set number in group
 		m[transcript].push_back(odds_spanned.n_elem);
 		// Set odds for group
-		odds_[transcript].push_back(arma::mean(odds(odds_spanned)));
+		odds_[transcript].push_back(arma::mean(odds_sorted(odds_spanned)));
 	  } else {
-		final_bins[transcript]--;
+		mac_bins[transcript]--;
 	  }
 	}
 	bins_built[transcript] = true;
   }
-
-  // successes, bin_size
-  auto unpack = [this](int n, int m){
-	arma::uvec r(m, arma::fill::zeros);
-	if (n > 0) {
-	  r(arma::span(0, n - 1)).fill(1);
-	}
-	// Fisher-Yates Shuffle
-	for(arma::sword i = r.n_elem - 1; i >= 1; i--) {
-	  auto j = static_cast<arma::sword>(sto.IRandom(0, i));
-	  arma::uword tmp = r[i];
-	  r[i] = r[j];
-	  r[j] = tmp;
-	}
-	return r;
-  };
 
   for (int i = 0; i < nperm; i++) {
 	std::vector<int32_t> tmp(odds_[transcript].size(), 0);
@@ -403,14 +413,32 @@ std::vector<std::vector<int32_t>> Permute::permutations_bin(int nperm,
 
 	// Unpack bins
 	arma::uword filled = 0;
-	for (int j = 0; j < final_bins[transcript]; j++) {
-	  arma::uvec r = unpack(tmp[j], m[transcript][j]);
+	for (int j = 0; j < mac_bins[transcript]; j++) {
+	  arma::uvec r = unpack(tmp[j], m[transcript][j], true); // Always have to shuffle here
 	  for (int k = 0; k < r.n_elem; k++) {
-		  ret[transcript][i][k + filled] = r(k);
+		  ret[transcript][i][sort_mac_idx[transcript](k + filled)] = r(k);
 	  }
 	  filled += m[transcript][j];
 	}
   }
   return ret[transcript];
 }
+
+// successes, bin_size
+auto Permute::unpack(int x, int y, bool shuffle) -> arma::uvec {
+  arma::uvec r(y, arma::fill::zeros);
+  if (x > 0) {
+	r(arma::span(0, x - 1)).fill(1);
+  }
+  // Fisher-Yates Shuffle
+  if(shuffle) {
+	for(arma::sword i = r.n_elem - 1; i >= 1; --i) {
+	  auto j = static_cast<arma::sword>(sto.IRandom(0, i));
+	  arma::uword tmp = r[i];
+	  r[i] = r[j];
+	  r[j] = tmp;
+	}
+  }
+  return r;
+};
 

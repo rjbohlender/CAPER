@@ -69,12 +69,17 @@ struct Permute {
 										 int ncases,
 										 int n_maj_bins);
 
+  auto unpack(int x, int y, bool shuffle) -> arma::uvec;
+
   StochasticLib3 sto;
   // Preserve group info for transcript
   std::map<std::string, bool> bins_built;
   std::map<std::string, std::vector<double>> odds_;
   std::map<std::string, std::vector<int32_t>> m;
-  std::map<std::string, double> final_bins;
+  std::map<std::string, double> mac_bins;
+  std::map<std::string, double> maj_bins;
   std::map<std::string, std::vector<std::vector<int32_t>>> ret;
+  std::map<std::string, arma::uvec> sort_mac_idx;
+  std::map<std::string, arma::uvec> sort_maj_idx;
 };
 #endif //PERMUTE_ASSOCIATE_PERMUTATION_HPP

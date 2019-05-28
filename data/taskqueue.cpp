@@ -418,6 +418,7 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 																  maj_indices[k],
 																  k);
 		  }
+#if 0
 		  arma::uword total_cases = 0;
 		  for (int i = 0; i < mac_indices[k].n_elem; i++) {
 			phenotypes(mac_indices[k](i)) = permutations[0][i];
@@ -441,6 +442,8 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 			  arma::vec(ta.get_cov().get_ncases() - total_cases, arma::fill::ones);
 
 		  phenotypes(maj_indices[k]) = temp;
+#endif
+		  phenotypes = arma::conv_to<arma::vec>::from(permutations[0]);
 		}
 #if 0
 		permutations = get_permutations(1, mac_odds[k], mac_case_count[k][iter]);
