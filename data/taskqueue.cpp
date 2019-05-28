@@ -393,18 +393,30 @@ void TaskQueue::stage_2(TaskArgs &ta) {
 
 		} else {
 		  if (ta.get_tp().approximate) {
+#if 1
 			permutations = ta.get_permute(k).permutations_mac_bin(1,
 																  ta.get_cov().get_odds(),
 																  ta.get_cov().get_ncases(),
 																  mac_indices[k],
 																  maj_indices[k],
-																  *ta.get_tp().approximate);
+																  *ta.get_tp().approximate,
+																  k);
+#else
+			permutations = ta.get_permute(k).permutations_bin(1,
+															  ta.get_cov().get_odds(),
+															  ta.get_cov().get_ncases(),
+															  mac_indices[k],
+															  maj_indices[k],
+															  *ta.get_tp().approximate,
+															  k);
+#endif
 		  } else {
 			permutations = ta.get_permute(k).permutations_maj_bin(1,
 																  ta.get_cov().get_odds(),
 																  ta.get_cov().get_ncases(),
 																  mac_indices[k],
-																  maj_indices[k]);
+																  maj_indices[k],
+																  k);
 		  }
 		  arma::uword total_cases = 0;
 		  for (int i = 0; i < mac_indices[k].n_elem; i++) {

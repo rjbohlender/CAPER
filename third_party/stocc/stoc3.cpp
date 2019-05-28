@@ -1088,7 +1088,8 @@ int32_t * source, double * weights, int32_t n, int colors) {
    // check validity of array parameters
    for (i=0, msum=0; i < colors; i++) {
       m = source[i];  w = weights[i];
-      if (m < 0 || w < 0) FatalError("Parameter negative in function MultiFishersNCHyp");
+      if (m < 0 || w < 0)
+        FatalError("Parameter negative in function MultiFishersNCHyp");
       if (w) msum += m;
    }
 

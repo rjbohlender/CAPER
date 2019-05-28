@@ -60,7 +60,8 @@ Power::Power(Methods &method, Gene &gene, Covariates &cov, TaskParams &tp, arma:
 				bootstrapped_odds,
 				ncases,
 				mac_idx,
-				maj_idx);
+				maj_idx,
+				ts);
 
 			for (arma::uword j = 0; j < block; j++) {
 			  phenotypes_ = arma::conv_to<arma::vec>::from(permutations[j]);
@@ -122,7 +123,8 @@ Power::Power(Methods &method, Gene &gene, Covariates &cov, TaskParams &tp, arma:
 					bootstrapped_odds,
 					ncases,
 					mac_idx,
-					maj_idx);
+					maj_idx,
+					ts);
 
 				for (arma::uword j = 0; j < block; j++) {
 				  n++;

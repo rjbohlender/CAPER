@@ -36,13 +36,22 @@ struct Permute {
 														 arma::vec &odds,
 														 arma::uword ncases,
 														 arma::uvec &mac_indices,
-														 arma::uvec &maj_indices);
+														 arma::uvec &maj_indices,
+														 const std::string &transcript);
   std::vector<std::vector<int32_t>> permutations_mac_bin(int nperm,
 														 arma::vec &odds,
 														 arma::uword ncases,
 														 arma::uvec &mac_indices,
 														 arma::uvec &maj_indices,
-														 arma::uword &approximate);
+														 arma::uword &approximate,
+														 const std::string &transcript);
+  std::vector<std::vector<int32_t>> permutations_bin(int nperm,
+													 arma::vec &odds,
+													 arma::uword ncases,
+													 arma::uvec &mac_indices,
+													 arma::uvec &maj_indices,
+													 arma::uword &approximate,
+													 const std::string &transcript);
   arma::vec calculate_fisher_mean(int32_t n, arma::vec &odds);
   std::vector<std::vector<int32_t>> cases_in_bins(int nperm,
 												  arma::colvec &odds,
@@ -61,5 +70,11 @@ struct Permute {
 										 int n_maj_bins);
 
   StochasticLib3 sto;
+  // Preserve group info for transcript
+  std::map<std::string, bool> bins_built;
+  std::map<std::string, std::vector<double>> odds_;
+  std::map<std::string, std::vector<int32_t>> m;
+  std::map<std::string, double> final_bins;
+  std::map<std::string, std::vector<std::vector<int32_t>>> ret;
 };
 #endif //PERMUTE_ASSOCIATE_PERMUTATION_HPP
