@@ -334,8 +334,7 @@ std::vector<std::vector<int32_t>> Permute::permutations_mac_bin(int nperm,
   return ret[transcript];
 }
 
-std::vector<std::vector<int32_t>> Permute::permutations_bin(in
-nperm,
+std::vector<std::vector<int32_t>> Permute::permutations_bin(int nperm,
 															arma::vec &odds,
 															arma::uword ncases,
 															arma::uvec &mac_indices,
