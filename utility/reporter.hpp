@@ -8,7 +8,7 @@
 #include <set>
 #include <mutex>
 
-#include "../data/taskargs.hpp"
+#include "../carva/carvatask.hpp"
 #include "../statistics/power.hpp"
 
 struct ResultLine {

@@ -110,7 +110,6 @@ void TaskQueue::thread_handler() {
 	  q_.pop();
 
 	  // unlock, now that we're done with queue
-	  lock.unlock();
 
 	  Stage stage = op.get_stage();
 

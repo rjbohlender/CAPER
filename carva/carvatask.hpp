@@ -2,8 +2,8 @@
 // Created by Bohlender,Ryan James on 8/1/18.
 //
 
-#ifndef PERMUTE_ASSOCIATE_TASKARGS_HPP
-#define PERMUTE_ASSOCIATE_TASKARGS_HPP
+#ifndef PERMUTE_ASSOCIATE_CARVATASK_HPP
+#define PERMUTE_ASSOCIATE_CARVATASK_HPP
 
 #define ARMA_DONT_USE_WRAPPER
 
@@ -16,11 +16,11 @@
 
 #include <boost/optional.hpp>
 
-#include "gene.hpp"
-#include "covariates.hpp"
+#include "../data/gene.hpp"
+#include "../data/covariates.hpp"
 #include "../statistics/methods.hpp"
-#include "result.hpp"
-#include "permutation.hpp"
+#include "../data/result.hpp"
+#include "../data/permutation.hpp"
 #include "../statistics/power.hpp"
 
 enum class Stage {
@@ -99,4 +99,4 @@ private:
   int stage_2_permutations_;
 };
 
-#endif //PERMUTE_ASSOCIATE_TASKARGS_HPP
+#endif //PERMUTE_ASSOCIATE_CARVATASK_HPP

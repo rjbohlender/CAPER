@@ -12,7 +12,7 @@
 #include <random>
 #include <condition_variable>
 
-#include "taskargs.hpp"
+#include "../carva/carvatask.hpp"
 #include "permutation.hpp"
 #include "../utility/reporter.hpp"
 

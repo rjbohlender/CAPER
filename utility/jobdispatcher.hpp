@@ -11,11 +11,13 @@
 
 #include "reporter.hpp"
 #include "../data/covariates.hpp"
-#include "../data/taskargs.hpp"
+#include "../carva/carvatask.hpp"
 #include "../data/taskqueue.hpp"
 #include "../data/permutation.hpp"
 #include "../data/bed.hpp"
 #include "../data/weight.hpp"
+#include "../data/taskqueue2.hpp"
+#include "../carva/carvaop.hpp"
 
 #include <boost/iostreams/filtering_streambuf.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
@@ -47,7 +49,7 @@ private:
 
   // Member variables
   TaskParams tp_;
-  TaskQueue tq_;
+  TaskQueue2<CARVA_Op, TaskArgs, Reporter> tq_;
   Bed bed_;
   Weight weight_;
   Permute permute_;

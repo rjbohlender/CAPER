@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "../data/result.hpp"
-#include "../data/taskargs.hpp"
+#include "../carva/carvatask.hpp"
 #include "../data/taskqueue.hpp"
 #include "../data/covariates.hpp"
 

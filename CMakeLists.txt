@@ -44,7 +44,7 @@ set(PROJECT_SUPPORT_FILES
     statistics/methods.cpp
     statistics/methods.hpp
     data/gene.hpp
-    data/taskargs.hpp
+    carva/carvatask.hpp
     data/taskqueue.hpp
     third_party/stocc/stocc.h
     third_party/stocc/stoc1.cpp
@@ -73,7 +73,7 @@ set(PROJECT_SUPPORT_FILES
     data/weight.cpp
     third_party/QFC/qfc2.cpp
     third_party/QFC/qfc2.hpp
-    data/taskargs.cpp
+    carva/carvatask.cpp
     data/taskqueue.cpp
     statistics/skat.cpp
     statistics/skat.hpp
@@ -102,7 +102,12 @@ set(PROJECT_SUPPORT_FILES
     data/calccasm.cpp
     data/calccasm.hpp
     statistics/skatr.cpp
-    statistics/skatr.hpp statistics/power.cpp statistics/power.hpp)
+    statistics/skatr.hpp
+    statistics/power.cpp
+    statistics/power.hpp
+    data/taskqueue2.hpp
+    carva/carvaop.cpp
+    carva/carvaop.hpp)
 
 
 include_directories("${CMAKE_CURRENT_LIST_DIR}/third_party")
