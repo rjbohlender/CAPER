@@ -45,7 +45,7 @@ set(PROJECT_SUPPORT_FILES
     statistics/methods.hpp
     data/gene.hpp
     carva/carvatask.hpp
-    data/taskqueue.hpp
+    utility/taskqueue.hpp
     third_party/stocc/stocc.h
     third_party/stocc/stoc1.cpp
     third_party/stocc/stoc2.cpp
@@ -74,7 +74,7 @@ set(PROJECT_SUPPORT_FILES
     third_party/QFC/qfc2.cpp
     third_party/QFC/qfc2.hpp
     carva/carvatask.cpp
-    data/taskqueue.cpp
+    utility/taskqueue.cpp
     statistics/skat.cpp
     statistics/skat.hpp
     statistics/skat_adjust.cpp
@@ -87,7 +87,7 @@ set(PROJECT_SUPPORT_FILES
     utility/jobdispatcher.hpp
     utility/reporter.cpp
     utility/reporter.hpp
-    data/taskparams.hpp
+    utility/taskparams.hpp
     link/gaussian.cpp
     link/gaussian.hpp
     link/family.cpp
@@ -104,7 +104,7 @@ set(PROJECT_SUPPORT_FILES
     statistics/skatr.hpp
     statistics/power.cpp
     statistics/power.hpp
-    data/taskqueue2.hpp
+    utility/taskqueue2.hpp
     carva/carvaop.cpp
     carva/carvaop.hpp)
 
@@ -116,27 +116,17 @@ include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${LAPACK_INCLUDE_DIRS})
 include_directories(${BLAS_INCLUDE_DIRS})
 
-add_executable(Permute_Associate
-               main.cpp
+add_executable(carva
+               carva/carva.cpp
                ${PROJECT_SUPPORT_FILES})
 
 if(FALSE)
-	target_link_libraries(Permute_Associate nvblas)
+	target_link_libraries(carva nvblas)
 endif()
-target_link_libraries(Permute_Associate ${ARMADILLO_LIBRARIES})
-target_link_libraries(Permute_Associate ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(Permute_Associate ${Boost_LIBRARIES})
-target_link_libraries(Permute_Associate ${LAPACK_LIBRARIES})
-target_link_libraries(Permute_Associate ${BLAS_LIBRARIES})
+target_link_libraries(carva ${ARMADILLO_LIBRARIES})
+target_link_libraries(carva ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(carva ${Boost_LIBRARIES})
+target_link_libraries(carva ${LAPACK_LIBRARIES})
+target_link_libraries(carva ${BLAS_LIBRARIES})
 
-target_compile_definitions(Permute_Associate PRIVATE MAXCOLORS=10000000)
-
-add_executable(catch_test
-               catch_test/test.cpp
-               ${PROJECT_SUPPORT_FILES})
-
-target_include_directories(catch_test PRIVATE "${CMAKE_CURRENT_LIST_DIR}/third_party")
-target_include_directories(catch_test PRIVATE ${ARMADILLO_INCLUDE_DIR})
-
-target_link_libraries(catch_test ${ARMADILLO_LIBRARIES})
-target_link_libraries(catch_test ${CMAKE_THREAD_LIBS_INIT})
+target_compile_definitions(carva PRIVATE MAXCOLORS=10000000)

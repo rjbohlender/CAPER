@@ -19,7 +19,7 @@
 #include "weight.hpp"
 #include "covariates.hpp"
 #include "result.hpp"
-#include "taskparams.hpp"
+#include "../utility/taskparams.hpp"
 
 arma::uvec setdiff(arma::uvec x, arma::uvec y);
 void print_comma_sep(arma::uvec &x, std::ostream &os);

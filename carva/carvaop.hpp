@@ -7,7 +7,7 @@
 
 #include "carvatask.hpp"
 #include "../utility/reporter.hpp"
-#include "../data/taskqueue2.hpp"
+#include "../utility/taskqueue2.hpp"
 
 class CARVAOp {
 public:

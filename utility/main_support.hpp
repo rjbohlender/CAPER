@@ -10,7 +10,7 @@
 
 #include "../data/result.hpp"
 #include "../carva/carvatask.hpp"
-#include "../data/taskqueue.hpp"
+#include "taskqueue.hpp"
 #include "../data/covariates.hpp"
 
 void calc_mgit_pvalues(std::map<std::string, Result> &results,

@@ -13,8 +13,8 @@
 #include <condition_variable>
 
 #include "../carva/carvatask.hpp"
-#include "permutation.hpp"
-#include "../utility/reporter.hpp"
+#include "../data/permutation.hpp"
+#include "reporter.hpp"
 
 class TaskQueue {
 

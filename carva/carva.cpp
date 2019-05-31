@@ -1,4 +1,4 @@
-#include "utility/split.hpp"
+#include "../utility/split.hpp"
 
 #include <string>
 #include <vector>
@@ -12,15 +12,15 @@
 #include <boost/program_options.hpp>
 #include <boost/optional.hpp>
 
-#include "third_party/stocc/stocc.h"
-#include "third_party/stocc/randomc.h"
-#include "statistics/methods.hpp"
-#include "data/permutation.hpp"
-#include "utility/filesystem.hpp"
-#include "utility/main_support.hpp"
-#include "utility/jobdispatcher.hpp"
-#include "data/taskparams.hpp"
-#include "utility/reporter.hpp"
+#include "stocc/stocc.h"
+#include "stocc/randomc.h"
+#include "../statistics/methods.hpp"
+#include "../data/permutation.hpp"
+#include "../utility/filesystem.hpp"
+#include "../utility/main_support.hpp"
+#include "../utility/jobdispatcher.hpp"
+#include "../utility/taskparams.hpp"
+#include "../utility/reporter.hpp"
 
 namespace po = boost::program_options;
 

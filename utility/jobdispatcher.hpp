@@ -13,11 +13,11 @@
 #include "reporter.hpp"
 #include "../data/covariates.hpp"
 #include "../carva/carvatask.hpp"
-#include "../data/taskqueue.hpp"
+#include "taskqueue.hpp"
 #include "../data/permutation.hpp"
 #include "../data/bed.hpp"
 #include "../data/weight.hpp"
-#include "../data/taskqueue2.hpp"
+#include "taskqueue2.hpp"
 #include "../carva/carvaop.hpp"
 
 #include "main_support.hpp"
@@ -189,11 +189,11 @@ private:
   }
   void single_dispatch(Gene &gene) {
 	using namespace std::literals::chrono_literals;
-	CARVATask ta(stage_,
-				 gene,
-				 cov_,
-				 tp_,
-				 *permutation_ptr_);
+	Task_t ta(stage_,
+			  gene,
+			  cov_,
+			  tp_,
+			  *permutation_ptr_);
 	// Limit adding jobs to prevent excessive memory usage
 	while (tq_.size() > tp_.nthreads - 1) {
 	  std::this_thread::sleep_for(0.001s);
@@ -262,7 +262,6 @@ private:
 		multiple_dispatch(gene_data);
 	}
   }
-
   void multiple_dispatch(Gene &gene) {
 	using namespace std::literals::chrono_literals;
 	// Ensure we have at least one variant for a submitted gene
@@ -273,14 +272,14 @@ private:
 
 	  // Single dispatch of gene list items for power analysis
 	  if (tp_.power) {
-		CARVATask ta(stage_,
-					 gene,
-					 cov_,
-					 tp_,
-					 tp_.success_threshold,
-					 tp_.stage_1_permutations,
-					 tp_.stage_2_permutations,
-					 *permutation_ptr_);
+		Task_t ta(stage_,
+				  gene,
+				  cov_,
+				  tp_,
+				  tp_.success_threshold,
+				  tp_.stage_1_permutations,
+				  tp_.stage_2_permutations,
+				  *permutation_ptr_);
 		while (tq_.size() > tp_.nthreads - 1) {
 		  std::this_thread::sleep_for(0.001s);
 		}
@@ -291,14 +290,14 @@ private:
 
 	  for (int i = 0; i < tq_.get_nthreads(); i++) {
 		if (i == tq_.get_nthreads() - 1) {
-		  CARVATask ta(stage_,
-					   gene,
-					   cov_,
-					   tp_,
-					   tp_.success_threshold - total_success,
-					   tp_.stage_1_permutations - total_s1_perm,
-					   tp_.stage_2_permutations - total_s2_perm,
-					   *permutation_ptr_);
+		  Task_t ta(stage_,
+					gene,
+					cov_,
+					tp_,
+					tp_.success_threshold - total_success,
+					tp_.stage_1_permutations - total_s1_perm,
+					tp_.stage_2_permutations - total_s2_perm,
+					*permutation_ptr_);
 
 		  // Limit adding jobs to prevent excessive memory usage
 		  while (tq_.size() > tp_.nthreads - 1) {
@@ -306,14 +305,14 @@ private:
 		  }
 		  tq_.dispatch(ta);
 		} else {
-		  CARVATask ta(stage_,
-					   gene,
-					   cov_,
-					   tp_,
-					   tp_.success_threshold / static_cast<int>(tq_.get_nthreads()),
-					   tp_.stage_1_permutations / static_cast<int>(tq_.get_nthreads()),
-					   tp_.stage_2_permutations / static_cast<int>(tq_.get_nthreads()),
-					   *permutation_ptr_);
+		  Task_t ta(stage_,
+					gene,
+					cov_,
+					tp_,
+					tp_.success_threshold / static_cast<int>(tq_.get_nthreads()),
+					tp_.stage_1_permutations / static_cast<int>(tq_.get_nthreads()),
+					tp_.stage_2_permutations / static_cast<int>(tq_.get_nthreads()),
+					*permutation_ptr_);
 		  // Add current permutations
 		  total_s1_perm += tp_.stage_1_permutations / tq_.get_nthreads();
 		  total_s2_perm += tp_.stage_2_permutations / tq_.get_nthreads();

@@ -8,7 +8,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "taskparams.hpp"
+#include "../utility/taskparams.hpp"
 
 class CalcCASM {
   double ncase;
