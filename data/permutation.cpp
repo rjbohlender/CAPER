@@ -440,5 +440,16 @@ auto Permute::unpack(int x, int y, bool shuffle) -> arma::uvec {
 	}
   }
   return r;
+}
+
+auto Permute::reset() -> void {
+	bins_built.clear();
+	odds_.clear();
+	m.clear();
+	mac_bins.clear();
+	maj_bins.clear();
+	ret.clear();
+	sort_mac_idx.clear();
+	sort_maj_idx.clear();
 };
 

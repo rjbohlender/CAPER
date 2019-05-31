@@ -70,6 +70,7 @@ struct Permute {
 										 int n_maj_bins);
 
   auto unpack(int x, int y, bool shuffle) -> arma::uvec;
+  auto reset() -> void;
 
   StochasticLib3 sto;
   // Preserve group info for transcript

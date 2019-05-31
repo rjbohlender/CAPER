@@ -18,6 +18,7 @@ Power::Power(Methods &method, Gene &gene, Covariates &cov, TaskParams &tp, arma:
   for (const auto &ts : gene.get_transcripts()) {
 	if (tp.alpha.size() > 1) {
 	  for (arma::uword k = 0; k < tp.ncases.size(); k++) {
+	    permute_.reset();
 		// Alpha vector to track the successes
 		success_map_[ts].push_back(arma::vec(tp.alpha.size(), arma::fill::zeros));
 		arma::uword ncases = tp.ncases[k];
@@ -72,7 +73,7 @@ Power::Power(Methods &method, Gene &gene, Covariates &cov, TaskParams &tp, arma:
 			  }
 			}
 
-			p = (successes + 1.) / (block + 1.);
+			p = (successes + 2.) / (block + 4.); // Wilson Score estimate
 			success_map_[ts][k](arma::find(tp.alpha >= p)) += 1;
 		  }
 		}
@@ -107,7 +108,8 @@ Power::Power(Methods &method, Gene &gene, Covariates &cov, TaskParams &tp, arma:
 			  arma::uword n = 0;
 			  int block = 5; // Permutation block size
 			  double successes = 0;
-			  double p;
+			  double p, sp;
+			  double z, z2;
 			  double val;
 			  double ci;
 
@@ -136,11 +138,14 @@ Power::Power(Methods &method, Gene &gene, Covariates &cov, TaskParams &tp, arma:
 				  }
 				}
 				// Burn in 10 reps, then start checking the p-value confidence interval
-				p = (successes + 1.) / (n + 1.);
-				ci = 1.96 * std::sqrt(p * (1. - p) / n);
-			  } while (n < 10 || (a <= p + ci && a >= p - ci));
+				p = (successes + 2.) / (n + 4.); // Wilson Score estimate
+				z = 1.96;
+				z2 = z * z;
+				sp = (p + z2 / (2 * n)) / (1. + z2 / n);
+				ci = z / (1. + z2 / n) * std::sqrt(p * (1. - p) / n + z2 / (4 * n * n)); // Wilson score interval
+			  } while (n < 10 || (a <= sp + ci && a >= sp - ci));
 
-			  if (p + ci < a) {
+			  if (sp + ci < a) {
 				success_map_[ts][k]++;
 			  }
 			}

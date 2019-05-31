@@ -63,7 +63,9 @@ int main(int argc, char **argv) {
 
   try {
     required.add_options()
-				("input,i", po::value<std::string>()->required(), "Genotype matrix file path.")
+				("input,i",
+				 po::value<std::string>()->required(),
+				 "Genotype matrix file path.")
 				("covariates,c",
 				 po::value<std::string>()->required(),
 				 "The covariate matrix file, tab separated.\nFormat = sample_id cov1 ...")
@@ -78,7 +80,9 @@ int main(int argc, char **argv) {
 				("bed-file,b",
 				 po::value(&bed),
 				 "A bed file to be used as a filter. All specified regions will be excluded.")
-				("weight-file,w", po::value(&weight), "A file providing weights.")
+				("weight-file,w",
+				 po::value(&weight),
+				 "A file providing weights.")
 				("nthreads,t",
 				 po::value<size_t>()->default_value(std::thread::hardware_concurrency() / 2 + 1),
 				 "The number of threads. Minimum number of threads = 2. n + 1 threads, with one parent thread and n worker threads.")
@@ -93,7 +97,7 @@ int main(int argc, char **argv) {
 				 "The maximum number of permutations to be performed in the first stage permutation. A small number is recommended if your sample is large.")
 				("stage_2_max_perm,2",
 				 po::value<arma::uword>()->default_value(1000000),
-				 "The maximum number of permutations to be performed in the second stage.")
+				 "The maximum number of permutations to be performed in the second stage, the collapsing step.")
 				("mac",
 				 po::value<arma::uword>()->default_value(250),
 				 "Minor allele count cutoff.")
@@ -103,27 +107,35 @@ int main(int argc, char **argv) {
 				("pthresh,j",
 				 po::value(&pthresh),
 				 "The threshold to terminate permutation based on whether it is outside the p-value CI.")
-				("top_only", po::bool_switch(&top_only), "Output only the top transcript in the simple file.")
-				("successes,s", po::value<arma::uword>()->default_value(200), "Number of successes for early termination.")
-				("genes,l", po::value(&gene_list), "A comma-separated list of genes to analyze.")
+				("top_only",
+				 po::bool_switch(&top_only),
+				 "Output only the top transcript in the simple file.")
+				("successes,s",
+				 po::value<arma::uword>()->default_value(200),
+				 "Number of successes for early termination.")
+				("genes,l",
+				 po::value(&gene_list),
+				 "A comma-separated list of genes to analyze.")
 				("nodetail",
 				 po::bool_switch(&nodetail),
 				 "Don't produce detailed, variant level output.")
 				("approx,a",
 				 po::value(&approximate),
-				 "Group minor allele carriers with more than n carriers into n bins with shared average odds. This option is useful for very large data sets where the total number of minor allele carriers to be permuted can be very large, and result in extreme run times. May result in a small loss of power.")
+				 "Group minor allele carriers into n bins with shared average odds. This option is useful for very large data sets where the total number of minor allele carriers to be permuted can be very large, and result in extreme run times.")
 				 ;
     vaast.add_options()
 			 ("group_size,g",
 			  po::value<arma::uword>()->default_value(0),
 			  "Group size. VAAST can collapse variants into groups of variants with adjacent weights.")
-			 ("score_only_minor", po::bool_switch(&score_only_minor), "Score only minor alleles in VAAST.")
+			 ("score_only_minor",
+			  po::bool_switch(&score_only_minor),
+			  "Score only minor alleles in VAAST.")
 			 ("score_only_alternative",
 			  po::bool_switch(&score_only_alternative),
 			  "Score only alternative alleles in VAAST.")
 			 ("testable",
-			 	po::bool_switch(&testable),
-			 	"Return scores only for genes with at least scoreable variants in VAAST.")
+			  po::bool_switch(&testable),
+			  "Return scores only for genes with at least scoreable variants in VAAST.")
 			 ("biallelic",
 			  po::bool_switch(&biallelic),
 			  "Additional term for biallelic variants. For detecting potentially recessive variants.")
@@ -150,7 +162,9 @@ int main(int argc, char **argv) {
 			;
 	hidden.add_options()
 			// ("no_adjust,n", "Disable small sample size adjustment for SKATO.")
-			("permute_out", po::value(&permute_set), "Output permutations to the given file.")
+			("permute_out",
+			 po::value(&permute_set),
+			 "Output permutations to the given file.")
 			("power",
 			 po::value(&power)->multitoken(),
 			 "Run a bootstrap power analysis for the data provided. Takes four values, the number of bootstrap replicates, the alpha level as a comma-separated list, the number of cases as a comma-separated list, and the number of controls as a comma-separated list.")
