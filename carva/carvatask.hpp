@@ -30,7 +30,7 @@ enum class Stage {
   Power
 };
 
-class TaskArgs {
+class CARVATask {
 public:
   std::unordered_map<std::string, Result> results;
   std::vector<std::vector<int32_t>> &permutations;
@@ -41,7 +41,7 @@ public:
   bool adjust;
 
   // Constructors
-  TaskArgs(Stage stage,
+  CARVATask(Stage stage,
 		   Gene gene,
 		   const std::shared_ptr<Covariates> &cov,
 		   TaskParams &tp,
@@ -49,14 +49,14 @@ public:
 		   arma::uword s1_perm,
 		   arma::uword s2_perm,
 		   std::vector<std::vector<int32_t>> &perm);
-  TaskArgs(Stage stage,
+  CARVATask(Stage stage,
 		   Gene gene,
 		   const std::shared_ptr<Covariates> &cov,
 		   TaskParams &tp,
 		   std::vector<std::vector<int32_t>> &perm);
-  TaskArgs(const TaskArgs &ta);
-  TaskArgs(TaskArgs &&ta) noexcept;
-  TaskArgs &operator=(const TaskArgs &rhs);
+  CARVATask(const CARVATask &ta);
+  CARVATask(CARVATask &&ta) noexcept;
+  CARVATask &operator=(const CARVATask &rhs);
 
   // Free memory
   void cleanup();

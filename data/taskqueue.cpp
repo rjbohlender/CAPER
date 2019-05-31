@@ -68,7 +68,7 @@ void TaskQueue::join() {
   }
 }
 
-void TaskQueue::dispatch(TaskArgs &ta) {
+void TaskQueue::dispatch(CARVATask &ta) {
   std::unique_lock<std::mutex> lock(lock_);
 
   q_.push(ta);
@@ -78,7 +78,7 @@ void TaskQueue::dispatch(TaskArgs &ta) {
   cv_.notify_all();
 }
 
-void TaskQueue::dispatch(TaskArgs &&ta) {
+void TaskQueue::dispatch(CARVATask &&ta) {
   std::unique_lock<std::mutex> lock(lock_);
 
   q_.emplace(ta);
@@ -92,7 +92,7 @@ bool TaskQueue::empty() {
   return q_.empty();
 }
 
-std::vector<TaskArgs> &TaskQueue::get_results() {
+std::vector<CARVATask> &TaskQueue::get_results() {
   return results_;
 }
 
@@ -153,7 +153,7 @@ void TaskQueue::thread_handler() {
   } while (!quit_ || ntasks_ > 0);
 }
 
-void TaskQueue::stage_1(TaskArgs &ta) {
+void TaskQueue::stage_1(CARVATask &ta) {
   // Set original value
   for (auto &v : ta.results) {
 	v.second.original =
@@ -270,7 +270,7 @@ void TaskQueue::stage_1(TaskArgs &ta) {
   dispatch(ta);
 }
 
-void TaskQueue::stage_2(TaskArgs &ta) {
+void TaskQueue::stage_2(CARVATask &ta) {
   // Declare maps
   std::map<std::string, std::vector<int32_t>> mac_case_count;
   std::map<std::string, std::vector<int32_t>> maj_case_count;
@@ -605,7 +605,7 @@ void TaskQueue::duplicate() {
   results_detail_ = results_;
 }
 
-std::vector<TaskArgs> &TaskQueue::get_results_duplicate() {
+std::vector<CARVATask> &TaskQueue::get_results_duplicate() {
   return results_detail_;
 }
 
@@ -730,7 +730,7 @@ double TaskQueue::call_method(Methods &method,
   }
 }
 
-void TaskQueue::power(TaskArgs &ta) {
+void TaskQueue::power(CARVATask &ta) {
   // Conduct bootstrap power analysis
   // Resample indices to construct new sets of data, then run calculate test statistic / p-value
   // Report the number of successes for each transcript

@@ -401,7 +401,7 @@ int main(int argc, char **argv) {
   std::shared_ptr<Reporter> reporter = nullptr;
   reporter = std::make_shared<Reporter>(tp);
 
-  JobDispatcher jd(tp, reporter);
+  JobDispatcher<CARVAOp, CARVATask, Reporter> jd(tp, reporter);
 
   double n = timer.toc();
   std::cerr << "Elapsed time: " << n << std::endl;

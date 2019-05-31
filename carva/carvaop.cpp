@@ -4,7 +4,7 @@
 
 #include "carvaop.hpp"
 
-CARVA_Op::CARVA_Op(TaskArgs &ta, std::shared_ptr<Reporter> reporter, double seed, bool verbose)
+CARVAOp::CARVAOp(CARVATask &ta, std::shared_ptr<Reporter> reporter, double seed, bool verbose)
 : ta_(ta),
   gen_(seed),
   reporter_(reporter),
@@ -13,14 +13,14 @@ CARVA_Op::CARVA_Op(TaskArgs &ta, std::shared_ptr<Reporter> reporter, double seed
 
 }
 
-CARVA_Op::CARVA_Op(const CARVA_Op &op)
+CARVAOp::CARVAOp(const CARVAOp &op)
 : ta_(op.ta_),
   done_(op.done_),
   verbose_(op.verbose_),
   reporter_(op.reporter_) {
 }
 
-CARVA_Op::CARVA_Op(CARVA_Op &&op) noexcept
+CARVAOp::CARVAOp(CARVAOp &&op) noexcept
 : ta_(op.ta_),
   done_(op.done_),
   verbose_(op.verbose_),
@@ -28,14 +28,16 @@ CARVA_Op::CARVA_Op(CARVA_Op &&op) noexcept
 
 }
 
-CARVA_Op &CARVA_Op::operator=(const CARVA_Op &rhs) {
+CARVAOp &CARVAOp::operator=(const CARVAOp &rhs) {
   ta_ = rhs.ta_;
   done_ = rhs.done_;
   verbose_ = rhs.verbose_;
   reporter_ = rhs.reporter_;
+
+  return *this;
 }
 
-auto CARVA_Op::run() -> void {
+auto CARVAOp::run() -> void {
   Stage stage = ta_.get_stage();
 
   if (stage == Stage::Stage1) {
@@ -45,7 +47,7 @@ auto CARVA_Op::run() -> void {
   }
 }
 
-auto CARVA_Op::finish() -> void {
+auto CARVAOp::finish() -> void {
   ta_.calc_multitranscript_pvalues();
   // Finalize result calculations and free memory
   ta_.cleanup();
@@ -57,7 +59,7 @@ auto CARVA_Op::finish() -> void {
   }
 }
 
-auto CARVA_Op::stage1() -> void {
+auto CARVAOp::stage1() -> void {
   // Set original value
   for (auto &v : ta_.results) {
 	v.second.original =
@@ -174,7 +176,7 @@ auto CARVA_Op::stage1() -> void {
   }
 }
 
-auto CARVA_Op::stage2() -> void {
+auto CARVAOp::stage2() -> void {
   // Declare maps
   std::map<std::string, std::vector<int32_t>> mac_case_count;
   std::map<std::string, std::vector<int32_t>> maj_case_count;
@@ -365,11 +367,11 @@ auto CARVA_Op::stage2() -> void {
   done_ = true;
 }
 
-auto CARVA_Op::is_done() const -> bool {
+auto CARVAOp::is_done() const -> bool {
   return done_;
 }
 
-auto CARVA_Op::check_perm(const TaskParams &tp,
+auto CARVAOp::check_perm(const TaskParams &tp,
 						  double perm_val,
 						  int success_threshold,
 						  std::pair<const std::string, Result> &v) -> void {
@@ -449,7 +451,7 @@ auto CARVA_Op::check_perm(const TaskParams &tp,
   }
 }
 
-auto CARVA_Op::call_method(Methods &method,
+auto CARVAOp::call_method(Methods &method,
 						   Gene &gene,
 						   Covariates &cov,
 						   arma::vec &phenotypes,
@@ -490,7 +492,7 @@ auto CARVA_Op::call_method(Methods &method,
   }
 }
 
-auto CARVA_Op::get_args() -> TaskArgs {
+auto CARVAOp::get_args() -> CARVATask {
   return ta_;
 }
 

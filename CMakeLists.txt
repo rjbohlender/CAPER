@@ -84,7 +84,6 @@ set(PROJECT_SUPPORT_FILES
     utility/main_support.hpp
     statistics/vaast.cpp
     statistics/vaast.hpp
-    utility/jobdispatcher.cpp
     utility/jobdispatcher.hpp
     utility/reporter.cpp
     utility/reporter.hpp

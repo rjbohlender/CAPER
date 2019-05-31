@@ -17,16 +17,16 @@
 #include "taskparams.hpp"
 
 // Three templated arguments to facilitate different run modes
-template <typename Operation_t, typename Args_t, typename Reporter_t>
+template <typename Operation_t, typename Task_t, typename Reporter_t>
 class TaskQueue2 {
 
 public:
   // Construtors
-  TaskQueue2(size_t thread_cnt, std::shared_ptr<Reporter_t> reporter, TaskParams tp, bool verbose)
+  TaskQueue2(size_t thread_cnt, std::shared_ptr<Reporter_t> reporter, const TaskParams &tp, bool verbose)
   : threads_(thread_cnt),
     ntasks_(0),
     quit_(false),
-    verbose_(false),
+    verbose_(verbose),
     nthreads_(thread_cnt),
     reporter_(std::move(reporter)) {
 	for (size_t i = 0; i < threads_.size(); i++) {
@@ -66,7 +66,7 @@ public:
 	}
   }
 
-  void dispatch(Args_t &args) {
+  void dispatch(Task_t &args) {
 	std::unique_lock<std::mutex> lock(lock_);
 
 	Operation_t op(args, reporter_, rd_(), tp_.verbose);
@@ -77,7 +77,7 @@ public:
 	cv_.notify_all();
   }
 
-  void dispatch(Args_t &&args) {
+  void dispatch(Task_t &&args) {
 	std::unique_lock<std::mutex> lock(lock_);
 
 	Operation_t op(args, reporter_, rd_(), tp_.verbose);
@@ -117,7 +117,7 @@ public:
     return q_.size();
   }
 
-  auto get_results() -> std::vector<Args_t>& {
+  auto get_results() -> std::vector<Task_t>& {
 	return results_;
   }
 
@@ -148,7 +148,7 @@ private:
   std::atomic<int> ntasks_;
 
   // Result storage
-  std::vector<Args_t> results_;
+  std::vector<Task_t> results_;
 
   auto thread_handler() -> void {
 	std::unique_lock<std::mutex> lock(lock_);

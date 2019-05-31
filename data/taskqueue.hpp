@@ -28,8 +28,8 @@ public:
 
   // Job control
   void join();
-  void dispatch(TaskArgs &ta);
-  void dispatch(TaskArgs &&ta);
+  void dispatch(CARVATask &ta);
+  void dispatch(CARVATask &&ta);
 
   // Status
   bool empty();
@@ -38,8 +38,8 @@ public:
   // Detail output
   void duplicate();
 
-  std::vector<TaskArgs> &get_results();
-  std::vector<TaskArgs> &get_results_duplicate();
+  std::vector<CARVATask> &get_results();
+  std::vector<CARVATask> &get_results_duplicate();
   size_t get_nthreads();
 
 private:
@@ -55,7 +55,7 @@ private:
 
   // Threading
   std::mutex lock_;
-  std::queue<TaskArgs> q_;
+  std::queue<CARVATask> q_;
   std::condition_variable cv_;
   std::vector<std::thread> threads_;
   bool quit_;
@@ -65,8 +65,8 @@ private:
   std::atomic<int> ntasks_;
 
   // Result storage
-  std::vector<TaskArgs> results_;
-  std::vector<TaskArgs> results_detail_;
+  std::vector<CARVATask> results_;
+  std::vector<CARVATask> results_detail_;
 
   void thread_handler();
 
@@ -85,11 +85,11 @@ private:
 					   bool shuffle,
 					   bool detail);
 
-  void stage_1(TaskArgs &ta);
-  void stage_2(TaskArgs &ta);
+  void stage_1(CARVATask &ta);
+  void stage_2(CARVATask &ta);
 
   // Bootstrap power analysis
-  void power(TaskArgs &ta);
+  void power(CARVATask &ta);
 };
 
 #endif //PERMUTE_ASSOCIATE_TASKQUEUE_HPP

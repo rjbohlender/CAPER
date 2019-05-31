@@ -9,18 +9,18 @@
 #include "../utility/reporter.hpp"
 #include "../data/taskqueue2.hpp"
 
-class CARVA_Op {
+class CARVAOp {
 public:
-  CARVA_Op(TaskArgs &ta, std::shared_ptr<Reporter> reporter, double seed, bool verbose);
+  CARVAOp(CARVATask &ta, std::shared_ptr<Reporter> reporter, double seed, bool verbose);
 
-  CARVA_Op(const CARVA_Op &op);
-  CARVA_Op(CARVA_Op &&op) noexcept;
-  CARVA_Op &operator=(const CARVA_Op &rhs);
+  CARVAOp(const CARVAOp &op);
+  CARVAOp(CARVAOp &&op) noexcept;
+  CARVAOp &operator=(const CARVAOp &rhs);
 
   auto run() -> void;
   auto finish() -> void;
   auto is_done() const -> bool;
-  auto get_args() -> TaskArgs;
+  auto get_args() -> CARVATask;
 
 private:
   // PRNG
@@ -44,7 +44,7 @@ private:
 					 bool detail) -> double;
 
 
-  TaskArgs ta_;
+  CARVATask ta_;
   bool done_;
   bool verbose_;
   std::shared_ptr<Reporter> reporter_;

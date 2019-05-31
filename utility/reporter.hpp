@@ -26,13 +26,13 @@ struct ResultLine {
 class Reporter {
 public:
   explicit Reporter(TaskParams &tp);
-  Reporter(std::vector<TaskArgs> &res, TaskParams &tp);
+  Reporter(std::vector<CARVATask> &res, TaskParams &tp);
 
-  auto report(std::vector<TaskArgs> &res, TaskParams &tp) -> void;
-  auto report_detail(std::vector<TaskArgs> &res, TaskParams &tp) -> void;
+  auto report(std::vector<CARVATask> &res, TaskParams &tp) -> void;
+  auto report_detail(std::vector<CARVATask> &res, TaskParams &tp) -> void;
   auto report_simple(TaskParams &tp) -> void;
-  auto report_power(std::vector<TaskArgs> &resv, TaskParams &tp) -> void;
-  auto report_vaast(std::vector<TaskArgs> &res, TaskParams &tp) -> void;
+  auto report_power(std::vector<CARVATask> &resv, TaskParams &tp) -> void;
+  auto report_vaast(std::vector<CARVATask> &res, TaskParams &tp) -> void;
 
   auto sync_write_simple(std::unordered_map<std::string, Result> &results, TaskParams &tp, bool top_only) -> void;
   auto sync_write_detail(const std::string &d, bool testable) -> void;
@@ -72,7 +72,7 @@ private:
 
   static const std::set<std::string> pvalue_methods_;
 
-  auto extract_results(std::vector<TaskArgs> &tq_results, TaskParams &tp) -> void;
+  auto extract_results(std::vector<CARVATask> &tq_results, TaskParams &tp) -> void;
   auto write_to_stream(std::ostream &os, Result &res) -> void;
   auto recalculate_mgit(std::map<std::string, std::map<std::string, Result>> &results) -> void;
   auto recalculate_mgit(std::unordered_map<std::string, Result> &results) -> void;

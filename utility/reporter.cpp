@@ -96,7 +96,7 @@ Reporter::Reporter(TaskParams &tp)
   detail_file_ << header << std::endl;
 }
 
-Reporter::Reporter(std::vector<TaskArgs> &res, TaskParams &tp)
+Reporter::Reporter(std::vector<CARVATask> &res, TaskParams &tp)
 : method_(tp.method), gene_list_(tp.gene_list), testable_(tp.testable), ncases_(0), ncontrols_(0) {
   if(!check_directory_exists(tp.output_path)) {
     throw(std::runtime_error("Output path is invalid."));
@@ -179,7 +179,7 @@ Reporter::Reporter(std::vector<TaskArgs> &res, TaskParams &tp)
   }
 }
 
-auto Reporter::report(std::vector<TaskArgs> &res, TaskParams &tp) -> void {
+auto Reporter::report(std::vector<CARVATask> &res, TaskParams &tp) -> void {
   if (tp.power) {
 	if (tp.gene_list) {
 	  report_power(res, tp);
@@ -201,7 +201,7 @@ auto Reporter::report(std::vector<TaskArgs> &res, TaskParams &tp) -> void {
   }
 }
 
-auto Reporter::extract_results(std::vector<TaskArgs> &tq_results, TaskParams &tp) -> void {
+auto Reporter::extract_results(std::vector<CARVATask> &tq_results, TaskParams &tp) -> void {
   if(gene_list_) {
     // Combine results
     std::map<std::string, std::map<std::string, Result>> results;
@@ -430,7 +430,7 @@ auto Reporter::report_simple(TaskParams &tp) -> void {
   std::cerr << "Transcripts submitted: " << results_.size() << std::endl;
 }
 
-auto Reporter::report_detail(std::vector<TaskArgs> &res, TaskParams &tp) -> void {
+auto Reporter::report_detail(std::vector<CARVATask> &res, TaskParams &tp) -> void {
   std::string header;
 
   detail_file_ << header << std::endl;
@@ -451,7 +451,7 @@ auto Reporter::report_detail(std::vector<TaskArgs> &res, TaskParams &tp) -> void
   }
 }
 
-auto Reporter::report_vaast(std::vector<TaskArgs> &res, TaskParams &tp) -> void {
+auto Reporter::report_vaast(std::vector<CARVATask> &res, TaskParams &tp) -> void {
   // Header information
   vaast_file_ << "## PA_VERSION\t0.0" << std::endl;
   vaast_file_ << "## COMMAND\t" << tp.full_command << std::endl;
@@ -694,7 +694,7 @@ auto Reporter::sort_simple(TaskParams &tp) -> void {
   }
 }
 
-auto Reporter::report_power(std::vector<TaskArgs> &resv, TaskParams &tp) -> void {
+auto Reporter::report_power(std::vector<CARVATask> &resv, TaskParams &tp) -> void {
   for (const auto &res : resv) {
     for(const auto &pr : res.power_results) {
       power_file_ << std::setw(15) << pr.gene;

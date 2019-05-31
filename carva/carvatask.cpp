@@ -6,13 +6,13 @@
 #include "../statistics/bayesianglm.hpp"
 #include "../link/binomial.hpp"
 
-const std::set<std::string> TaskArgs::pvalue_methods_ {
+const std::set<std::string> CARVATask::pvalue_methods_ {
   "SKAT",
   "SKATO",
   "CMC"
 };
 
-TaskArgs::TaskArgs(Stage stage,
+CARVATask::CARVATask(Stage stage,
 				   Gene gene,
 				   const std::shared_ptr<Covariates> &cov,
 				   TaskParams &tp,
@@ -37,7 +37,7 @@ TaskArgs::TaskArgs(Stage stage,
   }
 }
 
-TaskArgs::TaskArgs(Stage stage,
+CARVATask::CARVATask(Stage stage,
 				   Gene gene,
 				   const std::shared_ptr<Covariates> &cov,
 				   TaskParams &tp,
@@ -58,7 +58,7 @@ TaskArgs::TaskArgs(Stage stage,
 	permute[k] = Permute();
   }
 }
-TaskArgs::TaskArgs(const TaskArgs &ta)
+CARVATask::CARVATask(const CARVATask &ta)
 	: results(ta.results),
 	  power_results(ta.power_results),
 	  permute(ta.permute),
@@ -74,7 +74,7 @@ TaskArgs::TaskArgs(const TaskArgs &ta)
 	  adjust(ta.adjust),
 	  tp_(ta.tp_) {}
 
-TaskArgs::TaskArgs(TaskArgs &&ta) noexcept
+CARVATask::CARVATask(CARVATask &&ta) noexcept
 	: results(std::move(ta.results)),
 	  power_results(std::move(ta.power_results)),
 	  permute(std::move(ta.permute)),
@@ -90,7 +90,7 @@ TaskArgs::TaskArgs(TaskArgs &&ta) noexcept
 	  adjust(ta.adjust),
 	  tp_(ta.tp_) {}
 
-TaskArgs &TaskArgs::operator=(const TaskArgs &rhs) {
+CARVATask &CARVATask::operator=(const CARVATask &rhs) {
   stage_ = rhs.stage_;
   gene_ = rhs.gene_;
   cov_ = rhs.cov_;
@@ -108,27 +108,27 @@ TaskArgs &TaskArgs::operator=(const TaskArgs &rhs) {
   return *this;
 }
 
-const Stage &TaskArgs::get_stage() const {
+const Stage &CARVATask::get_stage() const {
   return stage_;
 }
 
-void TaskArgs::set_stage(Stage stage) {
+void CARVATask::set_stage(Stage stage) {
   this->stage_ = stage;
 }
 
-Gene &TaskArgs::get_gene() {
+Gene &CARVATask::get_gene() {
   return gene_;
 }
 
-Covariates &TaskArgs::get_cov() {
+Covariates &CARVATask::get_cov() {
   return *cov_;
 }
 
-Methods &TaskArgs::get_methods() {
+Methods &CARVATask::get_methods() {
   return method_;
 }
 
-int TaskArgs::get_max_permutations() {
+int CARVATask::get_max_permutations() {
   auto res = std::max_element(results.cbegin(),
 							  results.cend(),
 							  [](const auto &v1, const auto &v2) {
@@ -137,7 +137,7 @@ int TaskArgs::get_max_permutations() {
   return (*res).second.permutations;
 }
 
-int TaskArgs::get_npermutations() {
+int CARVATask::get_npermutations() {
   if (stage_ == Stage::Stage1) {
 	return stage_1_permutations_;
   } else if (stage_ == Stage::Stage2) {
@@ -147,11 +147,11 @@ int TaskArgs::get_npermutations() {
   }
 }
 
-std::vector<std::vector<int32_t>> &TaskArgs::get_permutations() {
+std::vector<std::vector<int32_t>> &CARVATask::get_permutations() {
   return permutations;
 }
 
-void TaskArgs::cleanup() {
+void CARVATask::cleanup() {
   if(!tp_.linear) {
 	Binomial link("logit");
 	for(const auto &ts : gene_.get_transcripts()) {
@@ -170,7 +170,7 @@ void TaskArgs::cleanup() {
   method_.clear(gene_.get_transcripts());
 }
 
-Result &TaskArgs::max_original_statistic() {
+Result &CARVATask::max_original_statistic() {
   auto res = std::max_element(
 	  results.begin(),
 	  results.end(),
@@ -180,7 +180,7 @@ Result &TaskArgs::max_original_statistic() {
   return (*res).second;
 }
 
-Result &TaskArgs::min_empirical_pvalue() {
+Result &CARVATask::min_empirical_pvalue() {
   auto res = std::min_element(
 	  results.begin(),
 	  results.end(),
@@ -190,7 +190,7 @@ Result &TaskArgs::min_empirical_pvalue() {
   return (*res).second;
 }
 
-Result &TaskArgs::min_mgit_p() {
+Result &CARVATask::min_mgit_p() {
   auto res = std::min_element(
 	  results.begin(),
 	  results.end(),
@@ -200,7 +200,7 @@ Result &TaskArgs::min_mgit_p() {
   return (*res).second;
 }
 
-Result &TaskArgs::min_transcript_permutations() {
+Result &CARVATask::min_transcript_permutations() {
   auto res = std::min_element(
 	  results.begin(),
 	  results.end(),
@@ -210,7 +210,7 @@ Result &TaskArgs::min_transcript_permutations() {
   return (*res).second;
 }
 
-Result &TaskArgs::min_transcript_successes() {
+Result &CARVATask::min_transcript_successes() {
   auto res = std::min_element(
 	  results.begin(),
 	  results.end(),
@@ -220,7 +220,7 @@ Result &TaskArgs::min_transcript_successes() {
   return (*res).second;
 }
 
-double TaskArgs::get_mgit_pvalue(const std::string &k) {
+double CARVATask::get_mgit_pvalue(const std::string &k) {
   if (has_multiple_transcripts()) {
 	return results[k].mgit_p;
   } else {
@@ -228,7 +228,7 @@ double TaskArgs::get_mgit_pvalue(const std::string &k) {
   }
 }
 
-int TaskArgs::get_remaining() {
+int CARVATask::get_remaining() {
   if (stage_ == Stage::Stage1) {
 	return stage_2_permutations_ > 0 ? stage_2_permutations_ - stage_1_permutations_ : 0;
   } else {
@@ -236,7 +236,7 @@ int TaskArgs::get_remaining() {
   }
 }
 
-void TaskArgs::calc_multitranscript_pvalues() {
+void CARVATask::calc_multitranscript_pvalues() {
   // Skip MGIT if only a single transcript
   if (!has_multiple_transcripts()) {
 	for (auto &v : results) {
@@ -303,14 +303,14 @@ void TaskArgs::calc_multitranscript_pvalues() {
   }
 }
 
-bool TaskArgs::has_multiple_transcripts() {
+bool CARVATask::has_multiple_transcripts() {
   return gene_.get_transcripts().size() > 1;
 }
 
-Permute &TaskArgs::get_permute(const std::string &k) {
+Permute &CARVATask::get_permute(const std::string &k) {
   return permute[k];
 }
 
-TaskParams &TaskArgs::get_tp() {
+TaskParams &CARVATask::get_tp() {
   return tp_;
 }
