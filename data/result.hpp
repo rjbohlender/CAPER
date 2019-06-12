@@ -46,6 +46,11 @@ struct Result {
   bool testable;
   double odds;
   // std::map<double, double> permuted;
+
+  // Odds Ratio specific
+  double or_p;
+  double case_alt, case_ref;
+  double cont_alt, cont_ref;
 };
 
 

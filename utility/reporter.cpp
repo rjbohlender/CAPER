@@ -102,103 +102,70 @@ Reporter::Reporter(std::vector<CARVATask> &res, TaskParams &tp)
     throw(std::runtime_error("Output path is invalid."));
   }
 
-  // Handle power analysis setup and return
-  if (tp.power) {
-    std::stringstream power_path_ss;
+  // Normal execution
+  simple_path_ss << tp.output_path << "/" << tp.method;
+  if (tp.group_size > 0)
+	simple_path_ss << boost::format(".g%1$d") % tp.group_size;
+  if (tp.testable)
+	simple_path_ss << ".testable";
+  if (tp.biallelic)
+	simple_path_ss << ".biallelic";
+  if (tp.range_start && tp.range_end) {
+	simple_path_ss << "." << *tp.range_start;
+	simple_path_ss << "." << *tp.range_end;
+  }
+  simple_path_ss << ".simple";
 
-    if(tp.method == "VAAST" && tp.group_size > 0) {
-      power_path_ss << tp.output_path << "/" << tp.method << ".g" << tp.group_size << ".power";
-    } else {
-      power_path_ss << tp.output_path << "/" << tp.method << ".power";
-    }
-    power_file_ = std::ofstream(power_path_ss.str());
+  detail_path_ss << tp.output_path << "/" << tp.method;
+  if (tp.group_size > 0)
+	detail_path_ss << boost::format(".g%1$d") % tp.group_size;
+  if (tp.testable)
+	detail_path_ss << ".testable";
+  if (tp.biallelic)
+	detail_path_ss << ".biallelic";
+  if (tp.range_start && tp.range_end) {
+	detail_path_ss << "." << *tp.range_start;
+	detail_path_ss << "." << *tp.range_end;
+  }
+  detail_path_ss << ".detail";
 
-    // Initial header write
-    power_file_ << std::setw(15) << "Gene";
-    power_file_ << std::setw(15) << "Transcript";
-    power_file_ << std::setw(15) << "Method";
-    power_file_ << std::setw(15) << "Ncases";
-    power_file_ << std::setw(15) << "Ncontrols";
-    power_file_ << std::setw(15) << "Successes";
-    power_file_ << std::setw(15) << "Bootstraps";
-    power_file_ << std::setw(15) << "Ratio";
-    power_file_ << std::setw(15) << "Alpha";
-    power_file_ << std::endl;
+  simple_file_tmp_ = std::ofstream(simple_path_ss.str());
+  detail_file_ = std::ofstream(detail_path_ss.str());
 
-    if (tp.gene_list) {
-      report_power(res, tp);
-    }
-  } else {
-    // Normal execution
-    simple_path_ss << tp.output_path << "/" << tp.method;
-    if (tp.group_size > 0)
-      simple_path_ss << boost::format(".g%1$d") % tp.group_size;
-    if (tp.testable)
-      simple_path_ss << ".testable";
-	if (tp.biallelic)
-	  simple_path_ss << ".biallelic";
-	if (tp.range_start && tp.range_end) {
-	  simple_path_ss << "." << *tp.range_start;
-	  simple_path_ss << "." << *tp.range_end;
+  if (!simple_file_tmp_.good()) {
+	throw (std::runtime_error("Simple file failed to open for writing.\n"));
+  }
+  if (!detail_file_.good()) {
+	throw (std::runtime_error("Detail file failed to open for writing.\n"));
+  }
+  // Extract results
+  extract_results(res, tp);
+
+
+  // Write output
+  if (tp.gene_list) {
+	report_simple(tp);
+	if (!tp.nodetail) {
+	  report_detail(res, tp);
 	}
-    simple_path_ss << ".simple";
-
-    detail_path_ss << tp.output_path << "/" << tp.method;
-    if (tp.group_size > 0)
-      detail_path_ss << boost::format(".g%1$d") % tp.group_size;
-    if (tp.testable)
-      detail_path_ss << ".testable";
-	if (tp.biallelic)
-	  detail_path_ss << ".biallelic";
-	if (tp.range_start && tp.range_end) {
-	  detail_path_ss << "." << *tp.range_start;
-	  detail_path_ss << "." << *tp.range_end;
-	}
-    detail_path_ss << ".detail";
-
-    simple_file_tmp_ = std::ofstream(simple_path_ss.str());
-    detail_file_ = std::ofstream(detail_path_ss.str());
-
-    if (!simple_file_tmp_.good()) {
-      throw (std::runtime_error("Simple file failed to open for writing.\n"));
-    }
-    if (!detail_file_.good()) {
-      throw (std::runtime_error("Detail file failed to open for writing.\n"));
-    }
-    // Extract results
-    extract_results(res, tp);
-
-
-    // Write output
-    if (tp.gene_list) {
-      report_simple(tp);
-      if (!tp.nodetail) {
-        report_detail(res, tp);
-      }
-    }
   }
 }
 
 auto Reporter::report(std::vector<CARVATask> &res, TaskParams &tp) -> void {
-  if (tp.power) {
-	if (tp.gene_list) {
-	  report_power(res, tp);
-	}
-  } else {
-	// Extract results
-	extract_results(res, tp);
+  // Extract results
+  extract_results(res, tp);
 
-	// Write output
-	if (tp.gene_list) {
-	  report_simple(tp);
-	  if (!tp.nodetail) {
-		report_detail(res, tp);
-		if (tp.method == "VAAST") {
-		  report_vaast(res, tp);
-		}
+  // Write output
+  if (tp.gene_list) {
+	report_simple(tp);
+	if (!tp.nodetail) {
+	  report_detail(res, tp);
+	  if (tp.method == "VAAST") {
+		report_vaast(res, tp);
 	  }
 	}
   }
+  sort_simple(tp);
 }
 
 auto Reporter::extract_results(std::vector<CARVATask> &tq_results, TaskParams &tp) -> void {
@@ -486,7 +453,7 @@ auto Reporter::write_to_stream(std::ostream &os, Result &res) -> void {
 }
 
 auto Reporter::sync_write_simple(std::unordered_map<std::string, Result> &results, TaskParams &tp, bool top_only) -> void {
-  lock_.lock(); // Acquire lock
+  std::unique_lock<std::mutex> lock(lock_); // Acquire lock
 
   recalculate_mgit(results);
 
@@ -525,11 +492,11 @@ auto Reporter::sync_write_simple(std::unordered_map<std::string, Result> &result
 	}
   }
 
-  lock_.unlock();
+  lock.unlock();
 }
 
 auto Reporter::sync_write_detail(const std::string &d, bool testable) -> void {
-  lock_.lock(); // Acquire lock
+  std::unique_lock<std::mutex> lock(lock_); // Acquire lock
 
   if(testable_) {
     if(testable)
@@ -539,24 +506,7 @@ auto Reporter::sync_write_detail(const std::string &d, bool testable) -> void {
   }
 
   detail_file_.flush();
-  lock_.unlock();
-}
-
-auto Reporter::sync_write_power(std::vector<PowerRes> &prv) -> void {
-  lock_.lock(); // Acquire lock
-
-  for(const auto &pr : prv) {
-    power_file_ << std::setw(20) << pr.gene;
-    power_file_ << std::setw(20) << pr.transcript;
-    power_file_ << std::setw(20) << pr.method;
-    power_file_ << std::setw(20) << pr.successes;
-    power_file_ << std::setw(20) << pr.bootstraps;
-    power_file_ << std::setw(20) << pr.ratio;
-    power_file_ << std::setw(20) << pr.alpha;
-    power_file_ << std::endl;
-  }
-
-  lock_.unlock();
+  lock.unlock();
 }
 
 auto Reporter::sort_simple(TaskParams &tp) -> void {
@@ -694,29 +644,214 @@ auto Reporter::sort_simple(TaskParams &tp) -> void {
   }
 }
 
-auto Reporter::report_power(std::vector<CARVATask> &resv, TaskParams &tp) -> void {
-  for (const auto &res : resv) {
-    for(const auto &pr : res.power_results) {
-      power_file_ << std::setw(15) << pr.gene;
-      power_file_ << std::setw(15) << pr.transcript;
-      power_file_ << std::setw(15) << pr.method;
-      power_file_ << std::setw(15) << pr.ncases;
-      power_file_ << std::setw(15) << pr.ncontrols;
-      power_file_ << std::setw(15) << pr.successes;
-      power_file_ << std::setw(15) << pr.bootstraps;
-      power_file_ << std::setw(15) << pr.ratio;
-      power_file_ << std::setw(15) << pr.alpha;
-      power_file_ << std::endl;
-    }
-  }
-  power_file_.flush();
-  power_file_.close();
-}
-
 auto Reporter::set_ncases(int ncases) -> void {
   ncases_ = ncases;
 }
 
 auto Reporter::set_ncontrols(int ncontrols) -> void {
+  ncontrols_ = ncontrols;
+}
+
+PowerReporter::PowerReporter(TaskParams &tp) {
+  std::stringstream power_path_ss;
+
+  if(tp.method == "VAAST" && tp.group_size > 0) {
+	power_path_ss << tp.output_path << "/" << tp.method << ".g" << tp.group_size << ".power";
+  } else {
+	power_path_ss << tp.output_path << "/" << tp.method << ".power";
+  }
+  power_file_ = std::ofstream(power_path_ss.str());
+
+// Initial header write
+  power_file_ << std::setw(15) << "Gene";
+  power_file_ << std::setw(15) << "Transcript";
+  power_file_ << std::setw(15) << "Method";
+  power_file_ << std::setw(15) << "Ncases";
+  power_file_ << std::setw(15) << "Ncontrols";
+  power_file_ << std::setw(15) << "Successes";
+  power_file_ << std::setw(15) << "Bootstraps";
+  power_file_ << std::setw(15) << "Ratio";
+  power_file_ << std::setw(15) << "Alpha";
+  power_file_ << std::endl;
+}
+
+PowerReporter::PowerReporter(std::vector<PowerTask> &res, TaskParams &tp) {
+  std::stringstream power_path_ss;
+
+  if(tp.method == "VAAST" && tp.group_size > 0) {
+	power_path_ss << tp.output_path << "/" << tp.method << ".g" << tp.group_size << ".power";
+  } else {
+	power_path_ss << tp.output_path << "/" << tp.method << ".power";
+  }
+  power_file_ = std::ofstream(power_path_ss.str());
+
+// Initial header write
+  power_file_ << std::setw(15) << "Gene";
+  power_file_ << std::setw(15) << "Transcript";
+  power_file_ << std::setw(15) << "Method";
+  power_file_ << std::setw(15) << "Ncases";
+  power_file_ << std::setw(15) << "Ncontrols";
+  power_file_ << std::setw(15) << "Successes";
+  power_file_ << std::setw(15) << "Bootstraps";
+  power_file_ << std::setw(15) << "Ratio";
+  power_file_ << std::setw(15) << "Alpha";
+  power_file_ << std::endl;
+
+  if (tp.gene_list) {
+	report_power(res, tp);
+  }
+}
+
+auto PowerReporter::report(std::vector<PowerTask> &resv, TaskParams &tp) -> void {
+  report_power(resv, tp);
+}
+
+
+auto PowerReporter::report_power(std::vector<PowerTask> &resv, TaskParams &tp) -> void {
+  for (const auto &pt : resv) {
+    for (const auto &pr : pt.power_res_) {
+	  power_file_ << std::setw(20) << pr.gene;
+	  power_file_ << std::setw(20) << pr.transcript;
+	  power_file_ << std::setw(20) << pr.method;
+	  power_file_ << std::setw(20) << pr.successes;
+	  power_file_ << std::setw(20) << pr.bootstraps;
+	  power_file_ << std::setw(20) << pr.ratio;
+	  power_file_ << std::setw(20) << pr.alpha;
+	  power_file_ << std::endl;
+    }
+  }
+}
+
+auto PowerReporter::sync_write_power(std::vector<PowerRes> &prv) -> void {
+  std::unique_lock<std::mutex> lock(lock_); // Acquire lock
+
+  for(const auto &pr : prv) {
+	power_file_ << std::setw(20) << pr.gene;
+	power_file_ << std::setw(20) << pr.transcript;
+	power_file_ << std::setw(20) << pr.method;
+	power_file_ << std::setw(20) << pr.successes;
+	power_file_ << std::setw(20) << pr.bootstraps;
+	power_file_ << std::setw(20) << pr.ratio;
+	power_file_ << std::setw(20) << pr.alpha;
+	power_file_ << std::endl;
+  }
+
+  lock.unlock();
+}
+
+auto PowerReporter::set_ncases(int ncases) -> void {
+  ncases_ = ncases;
+}
+
+auto PowerReporter::set_ncontrols(int ncontrols) -> void {
+  ncontrols_ = ncontrols;
+}
+
+CAESEReporter::CAESEReporter(TaskParams &tp) {
+  std::stringstream caese_path_ss;
+
+  if(tp.method == "VAAST" && tp.group_size > 0) {
+	caese_path_ss << tp.output_path << "/" << tp.method << ".g" << tp.group_size << ".caese";
+  } else {
+	caese_path_ss << tp.output_path << "/" << tp.method << ".caese";
+  }
+  caese_file_ = std::ofstream(caese_path_ss.str());
+
+// Initial header write
+  caese_file_ << std::setw(20) << std::left << "Gene";
+  caese_file_ << std::setw(20) << std::left << "Transcript";
+  caese_file_ << std::setw(20) << std::left << "OR_estimate";
+  caese_file_ << std::setw(20) << std::left << "OR_CI_low";
+  caese_file_ << std::setw(20) << std::left << "OR_CI_high";
+  caese_file_ << std::setw(20) << std::left << "P_value";
+  caese_file_ << std::setw(25) << std::left << "case_carrier";
+  caese_file_ << std::setw(25) << std::left << "case_non_carrier";
+  caese_file_ << std::setw(25) << std::left << "control_carrier";
+  caese_file_ << std::setw(25) << std::left << "control_non_carrier";
+  caese_file_ << std::endl;
+}
+
+CAESEReporter::CAESEReporter(std::vector<CAESETask> &res, TaskParams &tp) {
+  std::stringstream caese_path_ss;
+
+  if(tp.method == "VAAST" && tp.group_size > 0) {
+	caese_path_ss << tp.output_path << "/" << tp.method << ".g" << tp.group_size << ".caese";
+  } else {
+	caese_path_ss << tp.output_path << "/" << tp.method << ".caese";
+  }
+  caese_file_ = std::ofstream(caese_path_ss.str());
+
+// Initial header write
+  caese_file_ << std::setw(20) << std::left << "Gene";
+  caese_file_ << std::setw(20) << std::left << "Transcript";
+  caese_file_ << std::setw(20) << std::left << "OR_estimate";
+  caese_file_ << std::setw(20) << std::left << "OR_CI_low";
+  caese_file_ << std::setw(20) << std::left << "OR_CI_high";
+  caese_file_ << std::setw(20) << std::left << "P_value";
+  caese_file_ << std::setw(25) << std::left << "case_carrier";
+  caese_file_ << std::setw(25) << std::left << "case_non_carrier";
+  caese_file_ << std::setw(25) << std::left << "control_carrier";
+  caese_file_ << std::setw(25) << std::left << "control_non_carrier";
+  caese_file_ << std::endl;
+
+  if (tp.gene_list) {
+	report_caese(res, tp);
+  }
+}
+
+auto CAESEReporter::report(std::vector<CAESETask> &resv, TaskParams &tp) -> void {
+  report_caese(resv, tp);
+}
+
+auto CAESEReporter::report_caese(std::vector<CAESETask> &resv, TaskParams &tp) -> void {
+  for (auto &ct : resv) {
+	for (auto &cr : ct.results) {
+	  std::sort(cr.second.permuted.begin(), cr.second.permuted.end());
+	  // TODO: interpolate when it isn't an integer
+	  int lo = cr.second.permuted.size() * 0.025;
+	  int hi = cr.second.permuted.size() * 0.975;
+	  caese_file_ << std::setw(20) << std::left << cr.second.gene;
+	  caese_file_ << std::setw(20) << std::left << cr.second.transcript;
+	  caese_file_ << std::setw(20) << std::left << cr.second.original;
+	  caese_file_ << std::setw(20) << std::left << cr.second.permuted[lo];
+	  caese_file_ << std::setw(20) << std::left << cr.second.permuted[hi];
+	  caese_file_ << std::setw(20) << std::left << cr.second.or_p;
+	  caese_file_ << std::setw(25) << std::left << cr.second.case_alt;
+	  caese_file_ << std::setw(25) << std::left << cr.second.case_ref;
+	  caese_file_ << std::setw(25) << std::left << cr.second.cont_alt;
+	  caese_file_ << std::setw(25) << std::left << cr.second.cont_ref;
+	  caese_file_ << std::endl;
+	}
+  }
+}
+
+auto CAESEReporter::sync_write_caese(std::map<std::string, Result> &crv) -> void {
+  std::unique_lock<std::mutex> lock(lock_); // Acquire lock
+
+  for (auto &cr : crv) {
+	std::sort(cr.second.permuted.begin(), cr.second.permuted.end());
+	// TODO: interpolate when it isn't an integer
+	int lo = cr.second.permuted.size() * 0.025;
+	int hi = cr.second.permuted.size() * 0.975;
+	caese_file_ << std::setw(20) << std::left << cr.second.gene;
+	caese_file_ << std::setw(20) << std::left << cr.second.transcript;
+	caese_file_ << std::setw(20) << std::left << cr.second.original;
+	caese_file_ << std::setw(20) << std::left << cr.second.permuted[lo];
+	caese_file_ << std::setw(20) << std::left << cr.second.permuted[hi];
+	caese_file_ << std::setw(20) << std::left << cr.second.or_p;
+	caese_file_ << std::setw(25) << std::left << cr.second.case_alt;
+	caese_file_ << std::setw(25) << std::left << cr.second.case_ref;
+	caese_file_ << std::setw(25) << std::left << cr.second.cont_alt;
+	caese_file_ << std::setw(25) << std::left << cr.second.cont_ref;
+	caese_file_ << std::endl;
+  }
+  lock.unlock();
+}
+
+auto CAESEReporter::set_ncases(int ncases) -> void {
+  ncases_ = ncases;
+}
+
+auto CAESEReporter::set_ncontrols(int ncontrols) -> void {
   ncontrols_ = ncontrols;
 }

@@ -31,7 +31,7 @@ template<typename Operation_t, typename Task_t, typename Reporter_t>
 class JobDispatcher {
 public:
   JobDispatcher(TaskParams &tp, std::shared_ptr<Reporter_t> reporter)
-	  : tp_(tp), tq_(tp_.nthreads - 1, reporter, tp, tp.verbose),
+	  : tp_(tp), tq_(tp_.nthreads - 1, reporter, tp),
 		cov_(std::make_shared<Covariates>(tp.covariates_path, tp.ped_path, tp.linear)) {
 	// Initialize bed and weights
 	if (tp.gene_list)
@@ -42,8 +42,10 @@ public:
 	  weight_ = Weight(*tp.weight);
 
 	// Update case/control count for reporter
-	reporter->set_ncases(cov_->get_ncases());
-	reporter->set_ncontrols(cov_->get_nsamples() - cov_->get_ncases());
+	if(!tp.power) {
+	  reporter->set_ncases(cov_->get_ncases());
+	  reporter->set_ncontrols(cov_->get_nsamples() - cov_->get_ncases());
+	}
 
 	// Set staging
 	if (tp_.power) {
@@ -130,9 +132,6 @@ public:
 	if (tp_.gene_list) {
 	  reporter->report(tq_.get_results(), tp_);
 	}
-
-	if (!tp_.power)
-	  reporter->sort_simple(tp_);
 
 	cov_.reset();
   }

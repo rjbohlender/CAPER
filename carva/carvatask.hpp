@@ -21,7 +21,6 @@
 #include "../statistics/methods.hpp"
 #include "../data/result.hpp"
 #include "../data/permutation.hpp"
-#include "../statistics/power.hpp"
 
 enum class Stage {
   Stage1,
@@ -35,7 +34,6 @@ public:
   std::unordered_map<std::string, Result> results;
   std::vector<std::vector<int32_t>> &permutations;
   std::unordered_map<std::string, Permute> permute;
-  std::vector<PowerRes> power_results;
   int success_threshold;
   int stop_check_threshold;
   bool adjust;

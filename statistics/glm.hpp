@@ -18,6 +18,7 @@ struct GLM {
   arma::vec mu_;   // fitted.values
   arma::vec eta_;  // linear.predictors
   double dev_;
+  arma::uvec indices_;
 
   GLM(arma::mat &X, arma::vec &Y, LinkT &link) {
     //try{
@@ -28,7 +29,7 @@ struct GLM {
       //std::cerr << e.what();
     //}
 
-    mu_ = link.linkinv(X, beta_);
+    mu_ = link.linkinv(X.cols(indices_), beta_);
     eta_ = link.link(mu_);
   }
   // Algorithms for finding the optimum
@@ -64,7 +65,7 @@ auto GLM<LinkT>::gradient_descent(arma::mat &X, arma::colvec &Y) -> arma::vec {
 template<typename LinkT>
 auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
   const auto tol = 1e-8;
-  const auto max_iter = 25;
+  const auto max_iter = 50;
   auto iter = 0;
 
   arma::uword m = X.n_rows;
@@ -89,8 +90,9 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
   arma::uvec tiny = (S / S(0) < tol);
   if(arma::sum(tiny) > 0) {
     std::cerr << "Dropping columns to correct for rank deficiency" << std::endl;
-	arma::uvec indices = svd_subset(X);
-	arma::svd(U, S, V, X.cols(indices));
+	indices_ = svd_subset(X);
+	std::cerr << "indices: " << indices_.t();
+	arma::svd_econ(U, S, V, X.cols(indices_));
   }
 
   dev_ = 0;
@@ -148,7 +150,7 @@ auto GLM<LinkT>::svd_subset(arma::mat &X) -> arma::uvec {
   arma::vec S;
   arma::mat A = X;
   // Rescale columns of X to unit variance
-  arma::rowvec sds = arma::sqrt(arma::pow(arma::sum(A - arma::mean(A), 1), 2));
+  arma::rowvec sds = arma::sqrt(arma::pow(arma::sum(A.each_row() - arma::mean(A), 0), 2));
 
   arma::svd_econ(U, S, Vt, A);
   arma::uvec n = arma::find(S < 2 * std::numeric_limits<double>::epsilon());

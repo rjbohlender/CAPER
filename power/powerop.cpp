@@ -2,41 +2,63 @@
 // Created by Bohlender,Ryan James on 2019-03-19.
 //
 
-#include "power.hpp"
+#include "powerop.hpp"
 #include <iostream>
 #include <iomanip>
 
-Power::Power(Methods &method, Gene &gene, Covariates &cov, TaskParams &tp, arma::uword nreps)
-	: tp_(tp), gen_(std::random_device{}()), bootstrapped_(gene), cov_(cov) {
+PowerOp::PowerOp(PowerTask &pt, std::shared_ptr<PowerReporter> reporter, double seed, bool verbose)
+	: pt_(pt), reporter_(reporter), gen_(seed), bootstrapped_(pt_.gene), done_(false) {
+}
+
+auto PowerOp::run() -> void {
+  power();
+}
+
+auto PowerOp::finish() -> void {
+  // cleanup
+  if (!pt_.tp.gene_list) {
+    reporter_->sync_write_power(pt_.power_res_);
+  }
+}
+
+auto PowerOp::is_done() const -> bool {
+  return done_;
+}
+
+auto PowerOp::get_task() -> PowerTask {
+  return pt_;
+}
+
+auto PowerOp::power() -> void {
   if (cases_.empty()) {
-	cases_ = arma::find(cov_.get_original_phenotypes() > 0);
+	cases_ = arma::find(pt_.cov->get_original_phenotypes() > 0);
   }
   if (controls_.empty()) {
-	controls_ = arma::find(cov_.get_original_phenotypes() == 0);
+	controls_ = arma::find(pt_.cov->get_original_phenotypes() == 0);
   }
 
-  for (const auto &ts : gene.get_transcripts()) {
-	if (tp.alpha.size() > 1) {
-	  for (arma::uword k = 0; k < tp.ncases.size(); k++) {
-	    permute_.reset();
+  for (const auto &ts : pt_.gene.get_transcripts()) {
+	if (pt_.tp.alpha.size() > 1) {
+	  for (arma::uword k = 0; k < pt_.tp.ncases.size(); k++) {
+		permute_.reset();
 		// Alpha vector to track the successes
-		success_map_[ts].push_back(arma::vec(tp.alpha.size(), arma::fill::zeros));
-		arma::uword ncases = tp.ncases[k];
-		arma::uword ncontrols = tp.ncontrols[k];
+		success_map_[ts].push_back(arma::vec(pt_.tp.alpha.size(), arma::fill::zeros));
+		arma::uword ncases = pt_.tp.ncases[k];
+		arma::uword ncontrols = pt_.tp.ncontrols[k];
 
 		phenotypes_.zeros(ncases + ncontrols);
 		phenotypes_(arma::span(0, ncases - 1)).fill(1);
 
-		arma::vec odds = cov_.get_odds();
-		for (arma::uword i = 0; i < nreps; i++) {
-		  bootstrapped_.set_matrix(ts, sample(gene.get_matrix(ts), ncases, ncontrols));
+		arma::vec odds = pt_.cov->get_odds();
+		for (arma::uword i = 0; i < pt_.nreps; i++) {
+		  bootstrapped_.set_matrix(ts, sample(pt_.gene.get_matrix(ts), ncases, ncontrols));
 		  // Original for this bootstrap replicate
-		  double original = call_method(method, bootstrapped_, cov_, phenotypes_, tp, ts);
+		  double original = call_method(pt_.method, bootstrapped_, *pt_.cov, phenotypes_, pt_.tp, ts);
 		  // Need to get a p-value via permutation for some methods
 		  // If the method returns a p-value
-		  if (tp_.method == "SKATO" || tp_.method == "SKAT" || tp_.method == "CMC" || tp_.method == "RVT1"
-			  || tp_.method == "RVT2") {
-			double val = call_method(method, bootstrapped_, cov_, phenotypes_, tp, ts);
+		  if (pt_.tp.method == "SKATO" || pt_.tp.method == "SKAT" || pt_.tp.method == "CMC" || pt_.tp.method == "RVT1"
+			  || pt_.tp.method == "RVT2") {
+			double val = call_method(pt_.method, bootstrapped_, *pt_.cov, phenotypes_, pt_.tp, ts);
 			if (val < original) {
 			  success_map_[ts][k]++;
 			}
@@ -44,7 +66,7 @@ Power::Power(Methods &method, Gene &gene, Covariates &cov, TaskParams &tp, arma:
 			// We need to permute to get a p-value
 			// Cease permutation if the p-value ci excludes alpha above or below
 			// If below, call it a success
-			int block = static_cast<int>(tp.stage_2_permutations); // Permutation block size
+			int block = static_cast<int>(pt_.tp.stage_2_permutations); // Permutation block size
 			double successes = 0;
 			double p;
 			double val;
@@ -66,38 +88,38 @@ Power::Power(Methods &method, Gene &gene, Covariates &cov, TaskParams &tp, arma:
 
 			for (arma::uword j = 0; j < block; j++) {
 			  phenotypes_ = arma::conv_to<arma::vec>::from(permutations[j]);
-			  cov_.set_phenotype_vector(phenotypes_);
-			  val = call_method(method, bootstrapped_, cov_, phenotypes_, tp, ts);
+			  pt_.cov->set_phenotype_vector(phenotypes_);
+			  val = call_method(pt_.method, bootstrapped_, *pt_.cov, phenotypes_, pt_.tp, ts);
 			  if (val >= original) {
 				successes++;
 			  }
 			}
 
 			p = (successes + 2.) / (block + 4.); // Wilson Score estimate
-			success_map_[ts][k](arma::find(tp.alpha >= p)) += 1;
+			success_map_[ts][k](arma::find(pt_.tp.alpha >= p)) += 1;
 		  }
 		}
 	  }
 	} else {
 	  // Single alpha value,
-	  for (const auto &a : tp.alpha) {
-		for (arma::uword k = 0; k < tp.ncases.size(); k++) {
-		  arma::uword ncases = tp.ncases[k];
-		  arma::uword ncontrols = tp.ncontrols[k];
+	  for (const auto &a : pt_.tp.alpha) {
+		for (arma::uword k = 0; k < pt_.tp.ncases.size(); k++) {
+		  arma::uword ncases = pt_.tp.ncases[k];
+		  arma::uword ncontrols = pt_.tp.ncontrols[k];
 
 		  phenotypes_.zeros(ncases + ncontrols);
 		  phenotypes_(arma::span(0, ncases - 1)).fill(1);
 
-		  arma::vec odds = cov_.get_odds();
-		  for (arma::uword i = 0; i < nreps; i++) {
-			bootstrapped_.set_matrix(ts, sample(gene.get_matrix(ts), ncases, ncontrols));
+		  arma::vec odds = pt_.cov->get_odds();
+		  for (arma::uword i = 0; i < pt_.nreps; i++) {
+			bootstrapped_.set_matrix(ts, sample(pt_.gene.get_matrix(ts), ncases, ncontrols));
 			// Original for this bootstrap replicate
-			double original = call_method(method, bootstrapped_, cov_, phenotypes_, tp, ts);
+			double original = call_method(pt_.method, bootstrapped_, *pt_.cov, phenotypes_, pt_.tp, ts);
 			// Need to get a p-value via permutation for some methods
 			// If the method returns a p-value
-			if (tp_.method == "SKATO" || tp_.method == "SKAT" || tp_.method == "CMC" || tp_.method == "RVT1"
-				|| tp_.method == "RVT2") {
-			  double val = call_method(method, bootstrapped_, cov_, phenotypes_, tp, ts);
+			if (pt_.tp.method == "SKATO" || pt_.tp.method == "SKAT" || pt_.tp.method == "CMC" || pt_.tp.method == "RVT1"
+				|| pt_.tp.method == "RVT2") {
+			  double val = call_method(pt_.method, bootstrapped_, *pt_.cov, phenotypes_, pt_.tp, ts);
 			  if (val < original) {
 				success_map_[ts][k]++;
 			  }
@@ -131,8 +153,8 @@ Power::Power(Methods &method, Gene &gene, Covariates &cov, TaskParams &tp, arma:
 				for (arma::uword j = 0; j < block; j++) {
 				  n++;
 				  phenotypes_ = arma::conv_to<arma::vec>::from(permutations[j]);
-				  cov_.set_phenotype_vector(phenotypes_);
-				  val = call_method(method, bootstrapped_, cov_, phenotypes_, tp, ts);
+				  pt_.cov->set_phenotype_vector(phenotypes_);
+				  val = call_method(pt_.method, bootstrapped_, *pt_.cov, phenotypes_, pt_.tp, ts);
 				  if (val >= original) {
 					successes++;
 				  }
@@ -154,28 +176,28 @@ Power::Power(Methods &method, Gene &gene, Covariates &cov, TaskParams &tp, arma:
 	  }
 	}
   }
-  for (const auto &ts : gene.get_transcripts()) {
-	for (arma::uword i = 0; i < tp.alpha.n_elem; i++) {
-	  for (arma::uword j = 0; j < tp.ncases.size(); j++) {
-		PowerRes pr{
-			gene.get_gene(),
-			ts,
-			tp_.method,
-			tp.ncases[j],
-			tp.ncontrols[j],
-			static_cast<double>(success_map_[ts][j](i)),
-			static_cast<double>(nreps),
-			static_cast<double>(success_map_[ts][j](i)) / nreps,
-			tp.alpha(i)
+  for (const auto &ts : pt_.gene.get_transcripts()) {
+	for (arma::uword i = 0; i < pt_.tp.alpha.n_elem; i++) {
+	  for (arma::uword j = 0; j < pt_.tp.ncases.size(); j++) {
+		PowerRes pr{pt_.gene.get_gene(),
+					ts,
+					pt_.tp.method,
+					pt_.tp.ncases[j],
+					pt_.tp.ncontrols[j],
+					static_cast<double>(success_map_[ts][j](i)),
+					static_cast<double>(pt_.nreps),
+					static_cast<double>(success_map_[ts][j](i)) / pt_.nreps,
+					pt_.tp.alpha(i)
 		};
-		power_res_.emplace_back(pr);
+		pt_.power_res_.emplace_back(pr);
 	  }
 	}
   }
-  std::cerr << "Finished: " << gene.get_gene() << std::endl;
+  std::cerr << "Finished: " << pt_.gene.get_gene() << std::endl;
+  done_ = true;
 }
 
-arma::sp_mat Power::sample(arma::sp_mat &X, arma::uword ncases, arma::uword ncontrols) {
+arma::sp_mat PowerOp::sample(arma::sp_mat &X, arma::uword ncases, arma::uword ncontrols) {
   arma::mat Xmat(X); // Convert to dense matrix for smarter subsetting
   case_idx_ = arma::uvec(ncases, arma::fill::zeros);
   control_idx_ = arma::uvec(ncontrols, arma::fill::zeros);
@@ -198,12 +220,13 @@ arma::sp_mat Power::sample(arma::sp_mat &X, arma::uword ncases, arma::uword ncon
 
   return ret;
 }
-double Power::call_method(Methods &method,
-						  Gene &gene,
-						  Covariates &cov,
-						  arma::vec &phenotypes,
-						  TaskParams &tp,
-						  const std::string &k) {
+
+double PowerOp::call_method(Methods &method,
+							Gene &gene,
+							Covariates &cov,
+							arma::vec &phenotypes,
+							TaskParams &tp,
+							const std::string &k) {
   bool shuffle = false; // Not needed here
   bool detail = false;
   if (tp.method == "BURDEN") {
@@ -230,8 +253,4 @@ double Power::call_method(Methods &method,
   } else {
 	throw (std::logic_error("Failed to find method."));
   }
-}
-
-std::vector<PowerRes> Power::get_results() {
-  return power_res_;
 }

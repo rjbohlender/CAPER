@@ -3,7 +3,7 @@
 //
 
 #include "taskqueue.hpp"
-#include "../statistics/power.hpp"
+#include "../power/powerop.hpp"
 #include <boost/math/special_functions/erf.hpp>
 
 TaskQueue::TaskQueue(size_t thread_cnt, std::shared_ptr<Reporter> reporter)
@@ -734,7 +734,7 @@ void TaskQueue::power(CARVATask &ta) {
   // Conduct bootstrap power analysis
   // Resample indices to construct new sets of data, then run calculate test statistic / p-value
   // Report the number of successes for each transcript
-  Power power(ta.get_methods(), ta.get_gene(), ta.get_cov(), ta.get_tp(), ta.get_tp().bootstrap_reps);
+  PowerOp power(ta.get_methods(), ta.get_gene(), ta.get_cov(), ta.get_tp(), ta.get_tp().bootstrap_reps);
 
   ta.power_results = power.get_results();
 }

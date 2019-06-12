@@ -1090,7 +1090,9 @@ int32_t * source, double * weights, int32_t n, int colors) {
       m = source[i];  w = weights[i];
       if (m < 0 || w < 0)
         FatalError("Parameter negative in function MultiFishersNCHyp");
-      if (w) msum += m;
+      if (w) {
+        msum += m;
+      }
    }
 
    // sort by weight, heaviest first

@@ -9,7 +9,8 @@
 #include <mutex>
 
 #include "../carva/carvatask.hpp"
-#include "../statistics/power.hpp"
+#include "../power/powertask.hpp"
+#include "../caese/caesetask.hpp"
 
 struct ResultLine {
   std::string gene;
@@ -31,12 +32,10 @@ public:
   auto report(std::vector<CARVATask> &res, TaskParams &tp) -> void;
   auto report_detail(std::vector<CARVATask> &res, TaskParams &tp) -> void;
   auto report_simple(TaskParams &tp) -> void;
-  auto report_power(std::vector<CARVATask> &resv, TaskParams &tp) -> void;
   auto report_vaast(std::vector<CARVATask> &res, TaskParams &tp) -> void;
 
   auto sync_write_simple(std::unordered_map<std::string, Result> &results, TaskParams &tp, bool top_only) -> void;
   auto sync_write_detail(const std::string &d, bool testable) -> void;
-  auto sync_write_power(std::vector<PowerRes> &prv) -> void;
   auto sync_write_vaast(std::unordered_map<std::string, Result> &results, TaskParams &tp) -> void;
 
   auto sort_simple(TaskParams &tp) -> void;
@@ -78,4 +77,63 @@ private:
   auto recalculate_mgit(std::unordered_map<std::string, Result> &results) -> void;
 };
 
+class PowerReporter {
+public:
+  explicit PowerReporter(TaskParams &tp);
+  PowerReporter(std::vector<PowerTask> &res, TaskParams &tp);
+
+  auto report(std::vector<PowerTask> &resv, TaskParams &tp) -> void;
+  auto report_power(std::vector<PowerTask> &resv, TaskParams &tp) -> void;
+
+  auto sync_write_power(std::vector<PowerRes> &prv) -> void;
+
+  auto set_ncases(int ncases) -> void;
+  auto set_ncontrols(int ncontrols) -> void;
+
+private:
+  // For thread-safe concurrent writing
+  std::mutex lock_;
+
+  int ncases_;
+  int ncontrols_;
+
+  std::ofstream power_file_;
+
+  const std::string method_;
+
+  std::vector<PowerRes> results_;
+  std::vector<std::string> details_;
+  // Holds unfinished genes
+  std::vector<std::string> unfinished_;
+};
+
+class CAESEReporter {
+public:
+  explicit CAESEReporter(TaskParams &tp);
+  CAESEReporter(std::vector<CAESETask> &res, TaskParams &tp);
+
+  auto report(std::vector<CAESETask> &resv, TaskParams &tp) -> void;
+  auto report_caese(std::vector<CAESETask> &resv, TaskParams &tp) -> void;
+
+  auto sync_write_caese(std::map<std::string, Result> &prv) -> void;
+
+  auto set_ncases(int ncases) -> void;
+  auto set_ncontrols(int ncontrols) -> void;
+
+private:
+  // For thread-safe concurrent writing
+  std::mutex lock_;
+
+  int ncases_;
+  int ncontrols_;
+
+  std::ofstream caese_file_;
+
+  const std::string method_;
+
+  std::vector<Result> results_;
+  std::vector<std::string> details_;
+  // Holds unfinished genes
+  std::vector<std::string> unfinished_;
+};
 #endif //PERMUTE_ASSOCIATE_REPORTER_HPP

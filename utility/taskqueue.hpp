@@ -17,7 +17,7 @@
 #include "reporter.hpp"
 
 class TaskQueue {
-
+// Some ideas from https://embeddedartistry.com/blog/2017/2/1/c11-implementing-a-dispatch-queue-using-stdfunction
 public:
   // Construtors
   explicit TaskQueue(size_t thread_cnt, std::shared_ptr<Reporter> reporter);

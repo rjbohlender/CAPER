@@ -4,6 +4,8 @@ library(Matrix)
 
 d <- "./test.sim/"
 
+print("Writing matrix.")
+
 sink(paste0(d, "test.matrix"))
 total <- 100000
 
@@ -18,7 +20,6 @@ freq <- list()
 for(i in 1:ngenes) {
   freq[[i]] <- runif(nsnps[i], 0.001, 0.01)
 }
-
 
 data = Matrix(0L, nrow = total, ncol = ngenes, sparse = T)
 location = 0
@@ -38,6 +39,8 @@ for(i in 1:ngenes) {
 }
 
 sink()
+
+print("Finished writing matrix.")
 
 # Find best val for noncausal genes
 func <- function(x) {
@@ -103,6 +106,7 @@ sink()
 ### TEST
 if(sys.nframe() == 0L) {
   library(lme4)
+  print("Running tests.")
   
   setwd("~/CLionProjects/Permute_Associate/")
   

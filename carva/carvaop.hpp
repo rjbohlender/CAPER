@@ -11,16 +11,12 @@
 
 class CARVAOp {
 public:
-  CARVAOp(CARVATask &ta, std::shared_ptr<Reporter> reporter, double seed, bool verbose);
-
-  CARVAOp(const CARVAOp &op);
-  CARVAOp(CARVAOp &&op) noexcept;
-  CARVAOp &operator=(const CARVAOp &rhs);
+  CARVAOp(CARVATask &ct, std::shared_ptr<Reporter> reporter, double seed, bool verbose);
 
   auto run() -> void;
   auto finish() -> void;
   auto is_done() const -> bool;
-  auto get_args() -> CARVATask;
+  auto get_task() -> CARVATask;
 
 private:
   // PRNG

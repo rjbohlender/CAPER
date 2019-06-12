@@ -1,6 +1,6 @@
-# Permute Associate #
+# Covariate Adjusted Rare Variant Association (CARVA) #
 
-Permute Associate is a tool for gene-based testing of rare variants in
+CARVA is a tool for gene-based testing of rare variants in
 sequencing studies of any size. We provide methods for the analysis of
 data provided in simple, plain text, array formats. Permutation and
 statistical computation is multithreaded.
@@ -128,14 +128,16 @@ Testing on a mid-2015 MacBook Pro, 2.2Ghz Core i7, 16GB 1600 Mhz DDR3 ram.
 | WSS   | 100000  | 1000  | 10000        |  3432.29    |
 | SKAT  | 100000  | 1000  | 10000        |  28293.36   |
 
+### Gzipped Data ###
+
 1049.7s with gzipped data, 1000 permutations of VAAST.
 1063.4s with unzipped data, 1000 permutations of VAAST.
 
-Overall, working with gzipped data has no significant impact on runtime.
+Working with gzipped data has no significant impact on runtime.
 
 ## File Formats ##
 
-The file formats used are simple, plain text formats.
+The file formats used are simple, plain text formats, which may be gzipped.
 
 ### Matrix ###
 
@@ -145,7 +147,7 @@ genotype file includes a header and is is as follows:
 
 	1) Gene (e.g., BRCA1)
 	2) Transcript (e.g., NM_700030) 
-	3) Location (e.g., chr1-123456-123456-SNV)
+	3) Location (e.g., chr17-41256266-41256266-SNV)
 	4+) Allele count (e.g., 0/1/2 - will be converted to minor allele count)
 
 Note that the annotation at the end of the location is used for
@@ -171,11 +173,29 @@ problematic variants. The .bed format for the mask file is as follows:
 	2) Start position of masked region
 	3) End position of masked region
 	
-XQC (in the Cross Platform Association Toolkit) will provide a mask
+XQC (in the Cross Platform Association Toolkit (XPAT)) will provide a mask
 file for those variants that fail QC if it is being used.
+
+### Covariates ###
+
+Covariates can be provided in a matrix format file. The file format is as follows:
+
+    1) Sample ID
+    2) First covariate
+    3) Second covariate
+    4) ...
+
+There is no limit on the number of covariates that can be provided but they are assumed
+to be numeric.
 
 ### Weights ###
 
-Essentially a bed format file, with the 4th column a weight that will
-be converted to a log scale. Weights will be used by VAAST, and SKAT /
+Essentially a bed format file, with the 4th column the variant annotation and 5th column 
+with the weight that will be converted to a log scale for VAAST. Weights will be used by VAAST, and SKAT /
 SKAT-O if the weighted linear kernel is used.
+
+    1) Chromosome
+    2) Start position
+    3) End position
+    4) Annotation (e.g. SNV, Deletion, Insertion, etc.)
+    5) Weight

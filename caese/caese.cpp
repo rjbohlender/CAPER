@@ -1,3 +1,6 @@
+//
+// Created by Bohlender,Ryan James on 2019-06-06.
+//
 #include "../utility/split.hpp"
 
 #include <string>
@@ -21,7 +24,9 @@
 #include "../utility/jobdispatcher.hpp"
 #include "../utility/taskparams.hpp"
 #include "../utility/reporter.hpp"
-#include "../power/powerop.hpp"
+
+#include "caeseop.hpp"
+#include "caesetask.hpp"
 
 namespace po = boost::program_options;
 
@@ -63,7 +68,7 @@ int main(int argc, char **argv) {
   boost::optional<arma::uword> approximate;
 
   try {
-    required.add_options()
+	required.add_options()
 				("input,i",
 				 po::value<std::string>()->required(),
 				 "Genotype matrix file path.")
@@ -76,8 +81,8 @@ int main(int argc, char **argv) {
 				("output,o",
 				 po::value<std::string>()->required(),
 				 "Path to output directory. Two files will be output: a simple transcript level results file, and a detailed variant level result file.")
-				 ;
-    optional.add_options()
+		;
+	optional.add_options()
 				("bed-file,b",
 				 po::value(&bed),
 				 "A bed file to be used as a filter. All specified regions will be excluded.")
@@ -123,8 +128,8 @@ int main(int argc, char **argv) {
 				("approx,a",
 				 po::value(&approximate),
 				 "Group minor allele carriers into n bins with shared average odds. This option is useful for very large data sets where the total number of minor allele carriers to be permuted can be very large, and result in extreme run times.")
-				 ;
-    vaast.add_options()
+		;
+	vaast.add_options()
 			 ("group_size,g",
 			  po::value<arma::uword>()->default_value(0),
 			  "Group size. VAAST can collapse variants into groups of variants with adjacent weights.")
@@ -140,8 +145,8 @@ int main(int argc, char **argv) {
 			 ("biallelic",
 			  po::bool_switch(&biallelic),
 			  "Additional term for biallelic variants. For detecting potentially recessive variants.")
-			  ;
-    skat.add_options()
+		;
+	skat.add_options()
 			("kernel,k",
 			 po::value<std::string>()->default_value("wLinear"),
 			 "Kernel for use with SKAT.\nOne of: {Linear, wLinear}.")
@@ -151,22 +156,22 @@ int main(int argc, char **argv) {
 			("beta_weights",
 			 po::value<std::string>()->default_value("1,25"),
 			 "Parameters for the beta distribution. Two values, comma separated corresponding to a,b.")
-			 ;
-    cmc.add_options()
+		;
+	cmc.add_options()
 		   ("cmcmaf",
-		   	po::value<double>()->default_value(0.005),
-		   	"Minor allele frequency cutoff for CMC collapsing.")
-		   ;
+			po::value<double>()->default_value(0.005),
+			"Minor allele frequency cutoff for CMC collapsing.")
+		;
 	all.add_options()
-			("help,h", "Print this help message.")
-			("quiet,q", "Don't print status messages.")
-			;
+		   ("help,h", "Print this help message.")
+		   ("quiet,q", "Don't print status messages.")
+		;
 	hidden.add_options()
-			// ("no_adjust,n", "Disable small sample size adjustment for SKATO.")
-			("permute_out",
-			 po::value(&permute_set),
-			 "Output permutations to the given file.")
-			;
+			  // ("no_adjust,n", "Disable small sample size adjustment for SKATO.")
+			  ("permute_out",
+			   po::value(&permute_set),
+			   "Output permutations to the given file.")
+		;
 	all.add(required).add(optional).add(vaast).add(skat).add(cmc).add(hidden);
 	visible.add(required).add(optional).add(vaast).add(skat).add(cmc);
 	po::store(po::parse_command_line(argc, argv, all), vm);
@@ -305,16 +310,16 @@ int main(int argc, char **argv) {
   // Power
   tp.power = !vm["power"].empty();
   if(tp.power) {
-    std::vector<std::string> power_ops = vm["power"].as<std::vector<std::string>>();
-    tp.bootstrap_reps = std::stoul(power_ops[0]);
-    RJBUtil::Splitter<std::string> alpha_splitter(power_ops[1], ",");
-    RJBUtil::Splitter<std::string> ncase_splitter(power_ops[2], ",");
-    RJBUtil::Splitter<std::string> ncontrol_splitter(power_ops[3], ",");
+	std::vector<std::string> power_ops = vm["power"].as<std::vector<std::string>>();
+	tp.bootstrap_reps = std::stoul(power_ops[0]);
+	RJBUtil::Splitter<std::string> alpha_splitter(power_ops[1], ",");
+	RJBUtil::Splitter<std::string> ncase_splitter(power_ops[2], ",");
+	RJBUtil::Splitter<std::string> ncontrol_splitter(power_ops[3], ",");
 
-    std::vector<double> alpha_tmp;
+	std::vector<double> alpha_tmp;
 
 	std::transform(alpha_splitter.begin(), alpha_splitter.end(), std::back_inserter(alpha_tmp), [](std::string &v) { return std::stod(v); });
-    std::transform(ncase_splitter.begin(), ncase_splitter.end(), std::back_inserter(tp.ncases), [](std::string &v) { return std::stoul(v); });
+	std::transform(ncase_splitter.begin(), ncase_splitter.end(), std::back_inserter(tp.ncases), [](std::string &v) { return std::stoul(v); });
 	std::transform(ncontrol_splitter.begin(), ncontrol_splitter.end(), std::back_inserter(tp.ncontrols), [](std::string &v) { return std::stoul(v); });
 
 	tp.alpha = arma::conv_to<arma::vec>::from(alpha_tmp);
@@ -327,27 +332,27 @@ int main(int argc, char **argv) {
   tp.alternate_permutation = tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN" || tp.method == "VT";
   tp.quantitative = tp.method == "RVT1" || tp.method == "RVT2" || tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN" || tp.method == "VT";
   if(tp.linear && !tp.quantitative) {
-    std::cerr << "Quantitative trait analysis is only supported for the RVT1, RVT2, SKATO, SKAT, and BURDEN methods." << std::endl;
-    std::exit(1);
+	std::cerr << "Quantitative trait analysis is only supported for the RVT1, RVT2, SKATO, SKAT, and BURDEN methods." << std::endl;
+	std::exit(1);
   }
 
   std::vector<int> range_opt;
   if(!vm["range"].empty() && (range_opt = vm["range"].as<std::vector<int>>()).size() == 2) {
-    tp.range_start = range_opt[0];
-    tp.range_end = range_opt[1];
+	tp.range_start = range_opt[0];
+	tp.range_end = range_opt[1];
   }
 
   if(tp.mac <= 0) {
-    std::cerr << "Minor allele count cutoff must be greater than zero." << std::endl;
-    std::exit(1);
+	std::cerr << "Minor allele count cutoff must be greater than zero." << std::endl;
+	std::exit(1);
   } else if(tp.mac > 500) {
-    std::cerr << "WARNING: This software is concerned with evaluating rare events. With a minor allele cutoff > 500, you should consider analyzing those variants using single marker tests." << std::endl;
+	std::cerr << "WARNING: This software is concerned with evaluating rare events. With a minor allele cutoff > 500, you should consider analyzing those variants using single marker tests." << std::endl;
   }
 
   assert(tp.nthreads > 1);
   if(tp.permute_set && tp.nthreads) {
-    std::cerr << "Restricting to a single worker thread. Permute set output is not threadsafe." << std::endl;
-    tp.nthreads = 2;
+	std::cerr << "Restricting to a single worker thread. Permute set output is not threadsafe." << std::endl;
+	tp.nthreads = 2;
   }
 
   if (tp.verbose) {
@@ -389,19 +394,19 @@ int main(int argc, char **argv) {
 	std::exit(1);
   }
   if (!check_directory_exists(tp.output_path)) {
-  	std::cerr << "Output path is invalid." << std::endl;
-  	std::cerr << visible << "\n";
-  	std::exit(1);
+	std::cerr << "Output path is invalid." << std::endl;
+	std::cerr << visible << "\n";
+	std::exit(1);
   }
   // Initialize randomization
   arma::arma_rng::set_seed_random();
 
-
-  std::shared_ptr<Reporter> reporter = nullptr;
-  reporter = std::make_shared<Reporter>(tp);
-  JobDispatcher<CARVAOp, CARVATask, Reporter> jd(tp, reporter);
+  std::shared_ptr<CAESEReporter> reporter = nullptr;
+  reporter = std::make_shared<CAESEReporter>(tp);
+  JobDispatcher<CAESEOp, CAESETask, CAESEReporter> jd(tp, reporter);
 
   double n = timer.toc();
   std::cerr << "Elapsed time: " << n << std::endl;
   return 0;
+
 }

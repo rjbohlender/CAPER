@@ -68,3 +68,4 @@ bernoulli.R
 /runtime_debug/
 /test_glm.R
 /valgrind_notes
+/test.100k/

@@ -45,7 +45,6 @@ set(PROJECT_SUPPORT_FILES
     statistics/methods.hpp
     data/gene.hpp
     carva/carvatask.hpp
-    utility/taskqueue.hpp
     third_party/stocc/stocc.h
     third_party/stocc/stoc1.cpp
     third_party/stocc/stoc2.cpp
@@ -74,14 +73,11 @@ set(PROJECT_SUPPORT_FILES
     third_party/QFC/qfc2.cpp
     third_party/QFC/qfc2.hpp
     carva/carvatask.cpp
-    utility/taskqueue.cpp
     statistics/skat.cpp
     statistics/skat.hpp
     statistics/skat_adjust.cpp
     statistics/skat_adjust.hpp
     data/covariates.cpp
-    utility/main_support.cpp
-    utility/main_support.hpp
     statistics/vaast.cpp
     statistics/vaast.hpp
     utility/jobdispatcher.hpp
@@ -102,11 +98,13 @@ set(PROJECT_SUPPORT_FILES
     data/calccasm.hpp
     statistics/skatr.cpp
     statistics/skatr.hpp
-    statistics/power.cpp
-    statistics/power.hpp
+    power/powerop.cpp
+    power/powerop.hpp
     utility/taskqueue2.hpp
     carva/carvaop.cpp
-    carva/carvaop.hpp)
+    carva/carvaop.hpp
+    power/powertask.cpp
+    power/powertask.hpp caese/caeseop.cpp caese/caeseop.hpp caese/caesetask.cpp caese/caesetask.hpp statistics/fishertest.cpp statistics/fishertest.hpp)
 
 
 include_directories("${CMAKE_CURRENT_LIST_DIR}/third_party")
@@ -130,3 +128,27 @@ target_link_libraries(carva ${LAPACK_LIBRARIES})
 target_link_libraries(carva ${BLAS_LIBRARIES})
 
 target_compile_definitions(carva PRIVATE MAXCOLORS=10000000)
+
+add_executable(power
+               power/power.cpp
+               ${PROJECT_SUPPORT_FILES})
+
+target_link_libraries(power ${ARMADILLO_LIBRARIES})
+target_link_libraries(power ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(power ${Boost_LIBRARIES})
+target_link_libraries(power ${LAPACK_LIBRARIES})
+target_link_libraries(power ${BLAS_LIBRARIES})
+
+target_compile_definitions(power PRIVATE MAXCOLORS=10000000)
+
+add_executable(caese
+               caese/caese.cpp
+               ${PROJECT_SUPPORT_FILES} caese/caese.cpp)
+
+target_link_libraries(caese ${ARMADILLO_LIBRARIES})
+target_link_libraries(caese ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(caese ${Boost_LIBRARIES})
+target_link_libraries(caese ${LAPACK_LIBRARIES})
+target_link_libraries(caese ${BLAS_LIBRARIES})
+
+target_compile_definitions(caese PRIVATE MAXCOLORS=10000000)

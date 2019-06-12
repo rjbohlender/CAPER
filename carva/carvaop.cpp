@@ -4,37 +4,13 @@
 
 #include "carvaop.hpp"
 
-CARVAOp::CARVAOp(CARVATask &ta, std::shared_ptr<Reporter> reporter, double seed, bool verbose)
-: ta_(ta),
-  gen_(seed),
-  reporter_(reporter),
+CARVAOp::CARVAOp(CARVATask &ct, std::shared_ptr<Reporter> reporter, double seed, bool verbose)
+: gen_(seed),
+  ta_(ct),
   done_(false),
-  verbose_(verbose) {
+  verbose_(verbose),
+  reporter_(reporter) {
 
-}
-
-CARVAOp::CARVAOp(const CARVAOp &op)
-: ta_(op.ta_),
-  done_(op.done_),
-  verbose_(op.verbose_),
-  reporter_(op.reporter_) {
-}
-
-CARVAOp::CARVAOp(CARVAOp &&op) noexcept
-: ta_(op.ta_),
-  done_(op.done_),
-  verbose_(op.verbose_),
-  reporter_(op.reporter_) {
-
-}
-
-CARVAOp &CARVAOp::operator=(const CARVAOp &rhs) {
-  ta_ = rhs.ta_;
-  done_ = rhs.done_;
-  verbose_ = rhs.verbose_;
-  reporter_ = rhs.reporter_;
-
-  return *this;
 }
 
 auto CARVAOp::run() -> void {
@@ -492,7 +468,7 @@ auto CARVAOp::call_method(Methods &method,
   }
 }
 
-auto CARVAOp::get_args() -> CARVATask {
+auto CARVAOp::get_task() -> CARVATask {
   return ta_;
 }
 

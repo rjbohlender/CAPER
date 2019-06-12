@@ -20,13 +20,14 @@
 template <typename Operation_t, typename Task_t, typename Reporter_t>
 class TaskQueue2 {
 
+	// Some ideas from https://embeddedartistry.com/blog/2017/2/1/c11-implementing-a-dispatch-queue-using-stdfunction
 public:
   // Construtors
-  TaskQueue2(size_t thread_cnt, std::shared_ptr<Reporter_t> reporter, const TaskParams &tp, bool verbose)
-  : threads_(thread_cnt),
+  TaskQueue2(size_t thread_cnt, std::shared_ptr<Reporter_t> reporter, TaskParams tp)
+  : tp_(tp),
+    threads_(thread_cnt),
     ntasks_(0),
     quit_(false),
-    verbose_(verbose),
     nthreads_(thread_cnt),
     reporter_(std::move(reporter)) {
 	for (size_t i = 0; i < threads_.size(); i++) {
@@ -133,7 +134,6 @@ private:
   std::random_device rd_;
 
   // Messages
-  bool verbose_;
   std::shared_ptr<Reporter_t> reporter_;
 
   // Threading
@@ -158,7 +158,6 @@ private:
 		return q_.size() || quit_;
 	  });
 
-	  std::thread::id this_id = std::this_thread::get_id();
 	  // After waiting, we have the lock
 	  if (q_.size() && !quit_) {
 		auto op = q_.front();
@@ -176,7 +175,7 @@ private:
 
 		  if(tp_.gene_list) {
 			lock.lock();
-			results_.emplace_back(op.get_args());
+			results_.emplace_back(op.get_task());
 			lock.unlock();
 		  }
 		}
