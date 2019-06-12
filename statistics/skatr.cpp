@@ -14,7 +14,7 @@ SKATR_Null::SKATR_Null(Covariates &cov)
 
   arma::mat U, V;
   arma::vec S;
-  arma::svd_econ(U, S, V, arma::diagmat(Yh) * X.t());
+  arma::svd_econ(U, S, V, arma::diagmat(Yh) * X);
 
   Ux = arma::diagmat(Yh) * U;
   U0 = Y - pi0;
@@ -35,7 +35,7 @@ auto SKATR_Null::shuffle(bool skip_svd) noexcept -> void{
   if(!skip_svd) {
     arma::mat U, V;
     arma::vec s;
-    arma::svd_econ(U, s, V, arma::diagmat(Yh(indices)) * X.t());
+    arma::svd_econ(U, s, V, arma::diagmat(Yh(indices)) * X);
 
     Ux = arma::diagmat(Yh) * U;
   }
