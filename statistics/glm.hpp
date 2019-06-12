@@ -21,6 +21,7 @@ struct GLM {
   arma::uvec indices_;
 
   GLM(arma::mat &X, arma::vec &Y, LinkT &link) {
+    indices_ = arma::regspace<arma::uvec>(0, X.n_cols - 1);
     //try{
       beta_ = irls_svdnewton(X, Y);
     //} catch(std::exception &e) {

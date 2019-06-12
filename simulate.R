@@ -55,7 +55,7 @@ func <- function(x) {
 odds_nc <- uniroot(func, c(0.001, 2))$root
 
 betas <- c(rep(lodds, ncausal), rep(log(odds_nc), ngenes - ncausal))
-case_control <- rbinom(total, 1, binomial()$linkinv(as.matrix(data %*% betas)))
+case_control <- rbinom(total, 1, 0.5)
 
 case_count = 0;
 control_count = 0;
