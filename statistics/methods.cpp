@@ -944,7 +944,11 @@ double Methods::SKATRO(Gene &gene, const std::string &k, bool shuffle, int a, in
 	}
 
 	double tol = 1e-20;
-	lamk[i] = arma::clamp(lamk[i], tol, lamk[i].max());
+	if(lamk[i].max() <= tol) {
+	  lamk[i] = arma::clamp(lamk[i], tol, tol + std::numeric_limits<double>::epsilon());
+	} else {
+	  lamk[i] = arma::clamp(lamk[i], tol, lamk[i].max());
+	}
 
 	pval[i] = SKAT_pval(Qw[i], lamk[i]);
   }
