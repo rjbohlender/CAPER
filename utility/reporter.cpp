@@ -564,7 +564,11 @@ auto Reporter::sort_simple(TaskParams &tp) -> void {
   ifs.close();
 
   // Sort results and write them out
-  std::sort(results.begin(), results.end(), [](ResultLine &a, ResultLine &b) { return a.empirical_p < b.empirical_p; });
+  if(tp.method == "SKATO") {
+	std::sort(results.begin(), results.end(), [](ResultLine &a, ResultLine &b) { return a.empirical_p < b.empirical_p; });
+  } else {
+	std::sort(results.begin(), results.end(), [](ResultLine &a, ResultLine &b) { return a.original < b.original; });
+  }
 
   for(const auto &rs : results) {
     simple_file_ << std::setw(20) << std::left <<  rank;
