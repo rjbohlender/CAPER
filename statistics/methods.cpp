@@ -966,7 +966,11 @@ double Methods::SKATRO(Gene &gene, const std::string &k, bool shuffle, int a, in
   arma::vec lam;
   arma::svd(lam, R - (Rs * Rs.t()) / R1);
 
-  lam = arma::clamp(lam, 0, lam.max());
+  if (lam.max() <= 0) {
+	lam = arma::clamp(lam, 0, std::numeric_limits<double>::epsilon());
+  } else {
+	lam = arma::clamp(lam, 0, lam.max());
+  }
 
   arma::vec tauk(K - 1);
   for (arma::uword i = 0; i < K - 1; i++) {
