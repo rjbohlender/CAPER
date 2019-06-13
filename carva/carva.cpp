@@ -361,9 +361,13 @@ int main(int argc, char **argv) {
 	std::cerr << "success threshold: " << tp.success_threshold << "\n";
 	std::cerr << "nthreads: " << tp.nthreads << "\n";
 	if (tp.method == "SKATO") {
-	  std::cerr << "adjust: " << tp.adjust << "\n";
-	  // tp.stage_1_permutations = 0;
-	  // tp.stage_2_permutations = 0;
+	  // Different defaults for SKATO
+	  if(vm["stage_1_max_perm"].defaulted() || vm["stage_1_max_perm"].as<int>() > 0) {
+		tp.stage_1_permutations = 0;
+	  }
+	  if(vm["stage_2_max_perm"].defaulted()) {
+		tp.stage_2_permutations = 0;
+	  }
 	}
 	std::cerr << "stage_1_max_perm: " << tp.stage_1_permutations << "\n";
 	std::cerr << "stage_2_max_perm: " << tp.stage_2_permutations << "\n";

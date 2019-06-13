@@ -104,11 +104,11 @@ Methods::Methods(TaskParams &tp, Covariates &cov)
   if ((tp.method == "SKAT" || tp.method == "SKATO" || tp.method == "BURDEN") && !tp.linear) {
 	obj_ = std::make_shared<SKATR_Null>(cov);
 	lin_obj_ = nullptr;
-  } else if((tp.method == "SKAT" || tp.method == "SKATO" || tp.method == "BURDEN") && tp.linear) {
-    obj_ = nullptr;
-    lin_obj_ = std::make_shared<SKATR_Linear_Null>(cov);
-  } else if(tp.method == "VT") {
-    vt_obj_ = std::make_shared<VT_Res>(cov);
+  } else if ((tp.method == "SKAT" || tp.method == "SKATO" || tp.method == "BURDEN") && tp.linear) {
+	obj_ = nullptr;
+	lin_obj_ = std::make_shared<SKATR_Linear_Null>(cov);
+  } else if (tp.method == "VT") {
+	vt_obj_ = std::make_shared<VT_Res>(cov);
   }
 }
 
@@ -149,19 +149,19 @@ double Methods::CALPHA(Gene &gene, arma::vec &Y, const std::string &k) {
   double p0 = nA / (nA + nU);
 
   arma::vec n(X.n_cols, arma::fill::zeros);
-  for(arma::uword i = 0; i < X.n_cols; i++) {
-    for(const auto &v: X.col(i)) {
-      if(v > 0)
-        n(i)++;
-    }
+  for (arma::uword i = 0; i < X.n_cols; i++) {
+	for (const auto &v: X.col(i)) {
+	  if (v > 0)
+		n(i)++;
+	}
   }
 
   arma::vec g(X.n_cols, arma::fill::zeros);
   arma::uvec case_idx = arma::find(Y == 1);
-  for(auto it = X.begin(); it != X.end(); ++it) {
-    if(arma::find(case_idx == it.row()).eval().n_elem > 0) {
-      g(it.col())++;
-    }
+  for (auto it = X.begin(); it != X.end(); ++it) {
+	if (arma::find(case_idx == it.row()).eval().n_elem > 0) {
+	  g(it.col())++;
+	}
   }
   // arma::vec g = arma::sum(X.rows(arma::find(Y == 1)) > 0, 0).t();
 
@@ -204,8 +204,8 @@ double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &k, double maf) 
 
   arma::mat COV = ((nA - 1.) * arma::cov(Xx) + (nU - 1.) * arma::cov(Yy)) / (N - 2.);
   arma::mat INV;
-  if(!arma::inv_sympd(INV, COV)) {
-    arma::pinv(INV, COV);
+  if (!arma::inv_sympd(INV, COV)) {
+	arma::pinv(INV, COV);
   }
 #if 0
   if (!arma::inv_sympd(INV, COV)) {
@@ -224,25 +224,25 @@ double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &k, double maf) 
   arma::mat ret = (Xxmean - Yymean) * INV * (Xxmean - Yymean).t() * nA * nU / N;
   auto p = static_cast<double>(Xxmean.n_elem);
   double stat = arma::as_scalar(ret) * (nA + nU - 1 - p) / (p * (nA + nU - 2)); // F(N, nA + nU - 1 - N) distributed
-  if(stat < 0)
-    stat = 0;
+  if (stat < 0)
+	stat = 0;
   boost::math::fisher_f fisher_f(p, nA + nU - 1 - p);
   double pval;
-  try{
+  try {
 	pval = boost::math::cdf(boost::math::complement(fisher_f, stat));
-  } catch(boost::exception &e) {
-    std::cerr << "COV: " << COV;
-    std::cerr << "INV: " << INV;
-    std::cerr << "Xxmean: " << Xxmean;
+  } catch (boost::exception &e) {
+	std::cerr << "COV: " << COV;
+	std::cerr << "INV: " << INV;
+	std::cerr << "Xxmean: " << Xxmean;
 	std::cerr << "Yymean: " << Yymean;
-    std::cerr << "ret: " << arma::as_scalar(ret);
-    throw;
+	std::cerr << "ret: " << arma::as_scalar(ret);
+	throw;
   }
   return pval;
 }
 
 double Methods::RVT1(Gene &gene, arma::vec &Y, arma::mat &design, const std::string &k, bool linear) {
-  if(linear) {
+  if (linear) {
 	// Quantitative trait
 	arma::sp_mat X = gene.get_matrix(k).t();
 	Gaussian link("identity");
@@ -254,10 +254,10 @@ double Methods::RVT1(Gene &gene, arma::vec &Y, arma::mat &design, const std::str
 
 	boost::math::chi_squared chisq(1);
 	// TODO: Should be rank not n_rows
- 	double stat = (fit1.dev_ - fit2.dev_) / (fit2.dev_ / (n - d2.n_rows));
+	double stat = (fit1.dev_ - fit2.dev_) / (fit2.dev_ / (n - d2.n_rows));
 	return boost::math::cdf(boost::math::complement(chisq, stat));
   } else {
-    // Binary trait
+	// Binary trait
 	arma::sp_mat X = gene.get_matrix(k).t();
 	Binomial link("logit");
 	GLM<Binomial> fit1(design, Y, link);
@@ -270,7 +270,7 @@ double Methods::RVT1(Gene &gene, arma::vec &Y, arma::mat &design, const std::str
 }
 
 double Methods::RVT2(Gene &gene, arma::vec &Y, arma::mat &design, const std::string &k, bool linear) {
-  if(linear) {
+  if (linear) {
 	// Quantitative trait
 	arma::sp_mat X = gene.get_matrix(k).t();
 	Gaussian link("identity");
@@ -605,8 +605,8 @@ double Methods::Vaast(Gene &gene,
 }
 
 double Methods::VT(Gene &gene, const std::string &k, bool shuffle) {
-  if(shuffle) {
-    vt_obj_->shuffle();
+  if (shuffle) {
+	vt_obj_->shuffle();
   }
   arma::sp_mat X(gene.get_matrix(k));
 
@@ -620,9 +620,9 @@ double Methods::VT(Gene &gene, const std::string &k, bool shuffle) {
   arma::vec zscores(hmaf.n_rows, arma::fill::zeros);
 
   for (arma::uword i = 0; i < hmaf.n_rows; i++) {
-    arma::uvec idx = arma::find(maf <= hmaf[i]);
-    double znum = 0, zden = 0;
-	for(const auto &j : idx) {
+	arma::uvec idx = arma::find(maf <= hmaf[i]);
+	double znum = 0, zden = 0;
+	for (const auto &j : idx) {
 	  // znum = arma::sum(arma::sum(arma::diagmat(res) * Xmat_subset, 0));
 	  znum += arma::accu(res % X.col(i));
 	  // zden += std::sqrt(arma::sum(arma::sum(arma::pow(X.cols(arma::find(maf < hmaf[i + 1])), 2))));
@@ -821,7 +821,7 @@ double Methods::SKATR(Gene &gene,
 	double Q = arma::accu(arma::pow(Z, 2));
 
 	return Q;
-    // We're not permuting, return asymptotic p-values
+	// We're not permuting, return asymptotic p-values
   } else {
 
 	arma::mat tmp;
@@ -876,16 +876,15 @@ double Methods::SKATRO(Gene &gene, const std::string &k, bool shuffle, int a, in
   arma::mat W = arma::diagmat(weights);
 
   arma::mat tmp;
-  if(linear) {
-    tmp = lin_obj_->get_Ux().t() * G;
+  if (linear) {
+	tmp = lin_obj_->get_Ux().t() * G;
   } else {
 	tmp = obj_->get_Ux().t() * G;
   }
 
-
   arma::mat Gs;
   arma::rowvec Zs;
-  if(linear) {
+  if (linear) {
 	Gs = G.t() * G - tmp.t() * tmp;
 	Zs = arma::sum(arma::diagmat(lin_obj_->get_U0()) * G) / std::sqrt(lin_obj_->get_s2());
   } else {
@@ -928,7 +927,7 @@ double Methods::SKATRO(Gene &gene, const std::string &k, bool shuffle, int a, in
 	  boost::math::chi_squared chisq(1); // 1-df chisq
 	  double stat = Qb / R1;
 	  if (!std::isfinite(stat)) {
-	    pval[i] = 1.;
+		pval[i] = 1.;
 	  } else {
 		pval[i] = boost::math::cdf(boost::math::complement(chisq, stat));
 	  }
@@ -943,12 +942,12 @@ double Methods::SKATRO(Gene &gene, const std::string &k, bool shuffle, int a, in
 
 	arma::mat Utmp, Vtmp;
 	bool svd_success = arma::svd_econ(Utmp, lamk[i], Vtmp, mk);
-	if(!svd_success) {
+	if (!svd_success) {
 	  lamk[i] = arma::svd(mk);
 	}
 
 	double tol = 1e-20;
-	if(lamk[i].max() <= tol) {
+	if (lamk[i].max() <= tol) {
 	  lamk[i] = arma::clamp(lamk[i], tol, tol + std::numeric_limits<double>::epsilon());
 	} else {
 	  lamk[i] = arma::clamp(lamk[i], tol, lamk[i].max());
@@ -1004,16 +1003,16 @@ double Methods::SKATRO(Gene &gene, const std::string &k, bool shuffle, int a, in
   double tolerance = 1e-25;
   double p_value = 1;
   // Can't calculate p-value, return alternate
-  if(q1 < std::numeric_limits<double>::min() * 10) {
-    return pmin * K;
+  if (q1 < std::numeric_limits<double>::min() * 10) {
+	return std::max(std::numeric_limits<double>::min(), pmin * K);
   }
   p_value = T0 + boost::math::quadrature::gauss_kronrod<double, 21>::integrate(katint,
-																					  std::numeric_limits<double>::min()
-																						  * 10,
-																					  q1,
-																					  max_depth,
-																					  tolerance,
-																					  &error_estimate);
+																			   std::numeric_limits<double>::min()
+																				   * 10,
+																			   q1,
+																			   max_depth,
+																			   tolerance,
+																			   &error_estimate);
 
   if (p_value >= 1 || pmin >= 1) {
 	std::cerr << "p_value: " << p_value << " pmin: " << pmin << "\n";
