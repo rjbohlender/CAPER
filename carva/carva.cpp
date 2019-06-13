@@ -183,12 +183,6 @@ int main(int argc, char **argv) {
 	  return 1;
 	}
 
-	std::vector<std::string> power_opt;
-	if (!vm["power"].empty() && ((power_opt = vm["power"].as<std::vector<std::string>>()).size() != 4)) {
-	  std::cerr << "--power takes four arguments, the first an integer argument for bootstrap replicates, the second a floating point value for alpha, the third and fourth are comma-separated lists of cases and control count pairs. The case-control count pairs are expected to be the same length.\n";
-	  std::cerr << all << "\n";
-	  return 1;
-	}
 	po::notify(vm);
 
 	if (vm.count("quiet")) {
@@ -302,27 +296,6 @@ int main(int argc, char **argv) {
   // Testability
   tp.testable = testable;
   tp.biallelic = biallelic;
-  // Power
-  tp.power = !vm["power"].empty();
-  if(tp.power) {
-    std::vector<std::string> power_ops = vm["power"].as<std::vector<std::string>>();
-    tp.bootstrap_reps = std::stoul(power_ops[0]);
-    RJBUtil::Splitter<std::string> alpha_splitter(power_ops[1], ",");
-    RJBUtil::Splitter<std::string> ncase_splitter(power_ops[2], ",");
-    RJBUtil::Splitter<std::string> ncontrol_splitter(power_ops[3], ",");
-
-    std::vector<double> alpha_tmp;
-
-	std::transform(alpha_splitter.begin(), alpha_splitter.end(), std::back_inserter(alpha_tmp), [](std::string &v) { return std::stod(v); });
-    std::transform(ncase_splitter.begin(), ncase_splitter.end(), std::back_inserter(tp.ncases), [](std::string &v) { return std::stoul(v); });
-	std::transform(ncontrol_splitter.begin(), ncontrol_splitter.end(), std::back_inserter(tp.ncontrols), [](std::string &v) { return std::stoul(v); });
-
-	tp.alpha = arma::conv_to<arma::vec>::from(alpha_tmp);
-
-	if (tp.ncases.size() != tp.ncontrols.size()) {
-	  throw std::runtime_error("ncases and ncontrols must have the same number of entries.");
-	}
-  }
 
   tp.alternate_permutation = tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN" || tp.method == "VT";
   tp.quantitative = tp.method == "RVT1" || tp.method == "RVT2" || tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN" || tp.method == "VT";
@@ -350,25 +323,28 @@ int main(int argc, char **argv) {
     tp.nthreads = 2;
   }
 
+  if (tp.method == "SKATO") {
+	// Different defaults for SKATO
+	if(vm["stage_1_max_perm"].defaulted() || vm["stage_1_max_perm"].as<int>() > 0) {
+	  tp.stage_1_permutations = 0;
+	}
+	if(vm["stage_2_max_perm"].defaulted()) {
+	  tp.stage_2_permutations = 0;
+	}
+  }
+
   if (tp.verbose) {
 	std::cerr << "genotypes: " << tp.genotypes_path << "\n";
 	std::cerr << "covariates: " << tp.covariates_path << "\n";
+	std::cerr << "ped: " << tp.ped_path << "\n";
 	if(tp.bed)
 	  std::cerr << "bed_file: " << *tp.bed << "\n";
 	if(tp.weight)
 	  std::cerr << "weight_file: " << *tp.weight << "\n";
+	std::cerr << "output: " << tp.output_path << "\n";
 	std::cerr << "method: " << tp.method << "\n";
 	std::cerr << "success threshold: " << tp.success_threshold << "\n";
 	std::cerr << "nthreads: " << tp.nthreads << "\n";
-	if (tp.method == "SKATO") {
-	  // Different defaults for SKATO
-	  if(vm["stage_1_max_perm"].defaulted() || vm["stage_1_max_perm"].as<int>() > 0) {
-		tp.stage_1_permutations = 0;
-	  }
-	  if(vm["stage_2_max_perm"].defaulted()) {
-		tp.stage_2_permutations = 0;
-	  }
-	}
 	std::cerr << "stage_1_max_perm: " << tp.stage_1_permutations << "\n";
 	std::cerr << "stage_2_max_perm: " << tp.stage_2_permutations << "\n";
   }
