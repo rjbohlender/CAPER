@@ -1002,7 +1002,12 @@ double Methods::SKATRO(Gene &gene, const std::string &k, bool shuffle, int a, in
   double error_estimate;
   unsigned int max_depth = 5;
   double tolerance = 1e-25;
-  double p_value = T0 + boost::math::quadrature::gauss_kronrod<double, 21>::integrate(katint,
+  double p_value = 1;
+  // Can't calculate p-value, return alternate
+  if(q1 < std::numeric_limits<double>::min() * 10) {
+    return pmin * K;
+  }
+  p_value = T0 + boost::math::quadrature::gauss_kronrod<double, 21>::integrate(katint,
 																					  std::numeric_limits<double>::min()
 																						  * 10,
 																					  q1,
