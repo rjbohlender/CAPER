@@ -328,7 +328,7 @@ int main(int argc, char **argv) {
 
   if (tp.method == "SKATO") {
 	// Different defaults for SKATO
-	if(vm["stage_1_max_perm"].defaulted() || vm["stage_1_max_perm"].as<int>() > 0) {
+	if(vm["stage_1_max_perm"].defaulted() || vm["stage_1_max_perm"].as<arma::uword>() > 0) {
 	  tp.stage_1_permutations = 0;
 	}
 	if(vm["stage_2_max_perm"].defaulted()) {
