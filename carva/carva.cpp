@@ -360,6 +360,11 @@ int main(int argc, char **argv) {
 	std::cerr << visible << "\n";
 	std::exit(1);
   }
+  if (!check_file_exists(tp.ped_path)) {
+	std::cerr << "Incorrect file path for ped." << std::endl;
+	std::cerr << visible << "\n";
+	std::exit(1);
+  }
   if (tp.bed && !check_file_exists(*tp.bed)) {
 	std::cerr << "Incorrect file path for bed_file." << std::endl;
 	std::cerr << visible << "\n";
