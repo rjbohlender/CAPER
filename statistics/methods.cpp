@@ -1004,7 +1004,7 @@ double Methods::SKATRO(Gene &gene, const std::string &k, bool shuffle, int a, in
   double p_value = 1;
   // Can't calculate p-value, return alternate
   if (q1 < std::numeric_limits<double>::min() * 10) {
-	return std::max(std::numeric_limits<double>::min(), pmin * K);
+	return std::max(std::numeric_limits<double>::min(), std::min(p_value, pmin * K));
   }
   p_value = T0 + boost::math::quadrature::gauss_kronrod<double, 21>::integrate(katint,
 																			   std::numeric_limits<double>::min()

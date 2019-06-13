@@ -317,7 +317,10 @@ int main(int argc, char **argv) {
     std::cerr << "WARNING: This software is concerned with evaluating rare events. With a minor allele cutoff > 500, you should consider analyzing those variants using single marker tests." << std::endl;
   }
 
-  assert(tp.nthreads > 1);
+  if (tp.nthreads < 2) {
+    std::cerr << "Thread count must be >= 2." << std::endl;
+    std::cerr << visible << std::endl;
+  }
   if(tp.permute_set && tp.nthreads) {
     std::cerr << "Restricting to a single worker thread. Permute set output is not threadsafe." << std::endl;
     tp.nthreads = 2;
@@ -382,7 +385,6 @@ int main(int argc, char **argv) {
   }
   // Initialize randomization
   arma::arma_rng::set_seed_random();
-
 
   std::shared_ptr<Reporter> reporter = nullptr;
   reporter = std::make_shared<Reporter>(tp);
