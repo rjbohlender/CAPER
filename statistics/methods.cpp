@@ -927,7 +927,11 @@ double Methods::SKATRO(Gene &gene, const std::string &k, bool shuffle, int a, in
 	if (rho_[i] == 1) {
 	  boost::math::chi_squared chisq(1); // 1-df chisq
 	  double stat = Qb / R1;
-	  pval[i] = boost::math::cdf(boost::math::complement(chisq, stat));
+	  if (!std::isfinite(stat)) {
+	    pval[i] = 1.;
+	  } else {
+		pval[i] = boost::math::cdf(boost::math::complement(chisq, stat));
+	  }
 	  continue;
 	}
 
@@ -962,7 +966,7 @@ double Methods::SKATRO(Gene &gene, const std::string &k, bool shuffle, int a, in
   arma::vec lam;
   arma::svd(lam, R - (Rs * Rs.t()) / R1);
 
-  lam = arma::clamp(lam, 0, lam.max()).eval()(arma::span(0, lam.n_rows - 1), arma::span::all);
+  lam = arma::clamp(lam, 0, lam.max());
 
   arma::vec tauk(K - 1);
   for (arma::uword i = 0; i < K - 1; i++) {
