@@ -5,11 +5,11 @@
 #include "carvaop.hpp"
 
 CARVAOp::CARVAOp(CARVATask &ct, std::shared_ptr<Reporter> reporter, double seed, bool verbose)
-: gen_(seed),
-  ta_(ct),
-  done_(false),
-  verbose_(verbose),
-  reporter_(reporter) {
+	: gen_(seed),
+	  ta_(ct),
+	  done_(false),
+	  verbose_(verbose),
+	  reporter_(reporter) {
 
 }
 
@@ -229,9 +229,9 @@ auto CARVAOp::stage2() -> void {
 
 	  // SKAT corrects for covariates so we don't use this permutation approach
 	  if (!ta_.get_tp().alternate_permutation) {
-		if(ta_.get_tp().linear) {
+		if (ta_.get_tp().linear) {
 		  // Fisher-Yates Shuffle
-		  for(arma::sword i = phenotypes.n_elem - 1; i > 0; --i) {
+		  for (arma::sword i = phenotypes.n_elem - 1; i > 0; --i) {
 			std::uniform_int_distribution<> dis(0, i);
 			auto j = static_cast<arma::uword>(dis(gen_));
 			double tmp = phenotypes(i);
@@ -242,19 +242,19 @@ auto CARVAOp::stage2() -> void {
 		} else {
 		  if (ta_.get_tp().approximate) {
 			permutations = ta_.get_permute(k).permutations_mac_bin(1,
-																  ta_.get_cov().get_odds(),
-																  ta_.get_cov().get_ncases(),
-																  mac_indices[k],
-																  maj_indices[k],
-																  *ta_.get_tp().approximate,
-																  k);
+																   ta_.get_cov().get_odds(),
+																   ta_.get_cov().get_ncases(),
+																   mac_indices[k],
+																   maj_indices[k],
+																   *ta_.get_tp().approximate,
+																   k);
 		  } else {
 			permutations = ta_.get_permute(k).permutations_maj_bin(1,
-																  ta_.get_cov().get_odds(),
-																  ta_.get_cov().get_ncases(),
-																  mac_indices[k],
-																  maj_indices[k],
-																  k);
+																   ta_.get_cov().get_odds(),
+																   ta_.get_cov().get_ncases(),
+																   mac_indices[k],
+																   maj_indices[k],
+																   k);
 		  }
 		  phenotypes = arma::conv_to<arma::vec>::from(permutations[0]);
 		}
@@ -348,11 +348,12 @@ auto CARVAOp::is_done() const -> bool {
 }
 
 auto CARVAOp::check_perm(const TaskParams &tp,
-						  double perm_val,
-						  int success_threshold,
-						  std::pair<const std::string, Result> &v) -> void {
+						 double perm_val,
+						 int success_threshold,
+						 std::pair<const std::string, Result> &v) -> void {
   // SKATO returns a pvalue so we need to reverse the successes
-  if (tp.method == "SKATO" || (tp.method == "SKAT" && tp.total_permutations == 0) || tp.method == "CMC" || tp.method == "RVT1" || tp.method == "RVT2") {
+  if (tp.method == "SKATO" || (tp.method == "SKAT" && tp.total_permutations == 0) || tp.method == "CMC"
+	  || tp.method == "RVT1" || tp.method == "RVT2") {
 	if (perm_val <= v.second.original) {
 	  if (tp.pthresh) {
 		v.second.successes++;
@@ -428,13 +429,13 @@ auto CARVAOp::check_perm(const TaskParams &tp,
 }
 
 auto CARVAOp::call_method(Methods &method,
-						   Gene &gene,
-						   Covariates &cov,
-						   arma::vec &phenotypes,
-						   TaskParams &tp,
-						   const std::string &k,
-						   bool shuffle,
-						   bool detail) -> double {
+						  Gene &gene,
+						  Covariates &cov,
+						  arma::vec &phenotypes,
+						  TaskParams &tp,
+						  const std::string &k,
+						  bool shuffle,
+						  bool detail) -> double {
   if (tp.method == "BURDEN") {
 	return method.BURDEN(gene, k, shuffle, tp.a, tp.b);
   } else if (tp.method == "CALPHA") {
@@ -464,7 +465,7 @@ auto CARVAOp::call_method(Methods &method,
   } else if (tp.method == "WSS") {
 	return method.WSS(gene, phenotypes, k);
   } else {
-	throw(std::logic_error("Failed to find method."));
+	throw (std::logic_error("Failed to find method."));
   }
 }
 

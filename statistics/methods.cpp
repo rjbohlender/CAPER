@@ -247,7 +247,7 @@ double Methods::RVT1(Gene &gene, arma::vec &Y, arma::mat &design, const std::str
 	arma::sp_mat X = gene.get_matrix(k).t();
 	Gaussian link("identity");
 	GLM<Gaussian> fit1(design, Y, link);
-	arma::mat d2 = arma::join_vert(design, arma::rowvec(arma::sum(X) / X.n_rows));
+	arma::mat d2 = arma::join_horiz(design, arma::rowvec(arma::sum(X) / X.n_rows).t());
 	GLM<Gaussian> fit2(d2, Y, link);
 
 	double n = Y.n_elem;
@@ -255,17 +255,24 @@ double Methods::RVT1(Gene &gene, arma::vec &Y, arma::mat &design, const std::str
 	boost::math::chi_squared chisq(1);
 	// TODO: Should be rank not n_rows
 	double stat = (fit1.dev_ - fit2.dev_) / (fit2.dev_ / (n - d2.n_rows));
+	if(stat < 0) {
+	  stat = std::numeric_limits<double>::epsilon();
+	}
 	return boost::math::cdf(boost::math::complement(chisq, stat));
   } else {
 	// Binary trait
 	arma::sp_mat X = gene.get_matrix(k).t();
 	Binomial link("logit");
 	GLM<Binomial> fit1(design, Y, link);
-	arma::mat d2 = arma::join_vert(design, arma::rowvec(arma::sum(X) / X.n_rows));
+	arma::mat d2 = arma::join_horiz(design, arma::rowvec(arma::sum(X) / X.n_rows).t());
 	GLM<Binomial> fit2(d2, Y, link);
 
 	boost::math::chi_squared chisq(1);
-	return boost::math::cdf(boost::math::complement(chisq, fit1.dev_ - fit2.dev_));
+	double stat = fit1.dev_ - fit2.dev_;
+	if(stat < 0) {
+	  stat = std::numeric_limits<double>::epsilon();
+	}
+	return boost::math::cdf(boost::math::complement(chisq, stat));
   }
 }
 
@@ -276,13 +283,16 @@ double Methods::RVT2(Gene &gene, arma::vec &Y, arma::mat &design, const std::str
 	Gaussian link("identity");
 	GLM<Gaussian> fit1(design, Y, link);
 	arma::rowvec r = arma::conv_to<arma::rowvec>::from(arma::rowvec(arma::sum(X)) > 0);
-	arma::mat d2 = arma::join_vert(design, r);
+	arma::mat d2 = arma::join_horiz(design, r.t());
 	GLM<Gaussian> fit2(d2, Y, link);
 
 	double n = Y.n_elem;
 
 	boost::math::chi_squared chisq(1);
 	double stat = (fit1.dev_ - fit2.dev_) / (fit2.dev_ / (n - d2.n_rows));
+	if(stat < 0) {
+	  stat = std::numeric_limits<double>::epsilon();
+	}
 	return boost::math::cdf(boost::math::complement(chisq, stat));
   } else {
 	// Binary trait
@@ -290,11 +300,15 @@ double Methods::RVT2(Gene &gene, arma::vec &Y, arma::mat &design, const std::str
 	Binomial link("logit");
 	GLM<Binomial> fit1(design, Y, link);
 	arma::rowvec r = arma::conv_to<arma::rowvec>::from(arma::rowvec(arma::sum(X)) > 0);
-	arma::mat d2 = arma::join_vert(design, r);
+	arma::mat d2 = arma::join_horiz(design, r.t());
 	GLM<Binomial> fit2(d2, Y, link);
 
 	boost::math::chi_squared chisq(1);
-	return boost::math::cdf(boost::math::complement(chisq, fit1.dev_ - fit2.dev_));
+	double stat = fit1.dev_ - fit2.dev_;
+	if(stat < 0) {
+	  stat = std::numeric_limits<double>::epsilon();
+	}
+	return boost::math::cdf(boost::math::complement(chisq, stat));
   }
 }
 

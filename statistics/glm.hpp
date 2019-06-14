@@ -22,13 +22,18 @@ struct GLM {
 
   GLM(arma::mat &X, arma::vec &Y, LinkT &link) {
     indices_ = arma::regspace<arma::uvec>(0, X.n_cols - 1);
-    //try{
+    try{
       beta_ = irls_svdnewton(X, Y);
-    //} catch(std::exception &e) {
+    } catch(std::exception &e) {
       //std::cerr << "IRLS failed; Using gradient descent." << std::endl;
       //beta_ = gradient_descent(X, Y);
       //std::cerr << e.what();
-    //}
+      try {
+		beta_ = irls_qr(X, Y);
+      } catch(std::exception &e) {
+        beta_ = irls(X, Y);
+      }
+    }
 
     mu_ = link.linkinv(X.cols(indices_), beta_);
     eta_ = link.link(mu_);
@@ -115,14 +120,13 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
     arma::mat C;
     arma::mat UWU = U.t() * (U.each_col() % W);
     success = arma::chol(C, UWU);
-    arma::vec scale = UWU.diag();
-    arma::uword tries = 0;
-    while(!success && tries < 10) {
-      UWU.diag() += arma::mean(scale) + 1e-5;
+    double jitter = 1e-9;
+    while(!success && jitter < 1.) {
+      UWU.diag() += jitter;
       success = arma::chol(C, UWU);
-      tries++;
+      jitter *= 10;
     }
-    if (!success && tries == 10) {
+    if (!success) {
       throw(std::runtime_error("Cholesky decomposition of UWU matrix failed."));
     }
 
@@ -175,13 +179,13 @@ auto GLM<LinkT>::irls_qr(arma::mat &X, arma::colvec &Y) -> arma::vec {
   const auto max_iter = 25;
   auto iter = 0;
 
-  arma::uword m = X.n_cols;
-  arma::uword n = X.n_rows;
+  arma::uword m = X.n_rows;
+  arma::uword n = X.n_cols;
 
   // SVD
   arma::mat Q, R;
 
-  bool success = arma::qr_econ(Q, R, X.t());
+  bool success = arma::qr_econ(Q, R, X);
 
   // Matrices and Vectors
   arma::vec eta(m, arma::fill::randn);
@@ -207,6 +211,15 @@ auto GLM<LinkT>::irls_qr(arma::mat &X, arma::colvec &Y) -> arma::vec {
 	arma::mat C;
 	arma::mat QWQ = Q.t() * (Q.each_col() % W);
 	success = arma::chol(C, QWQ);
+	double jitter = 1e-9;
+	while(!success && jitter < 1.) {
+	  QWQ.diag() += jitter;
+	  success = arma::chol(C, QWQ);
+	  jitter *= 10;
+	}
+	if (!success) {
+	  throw(std::runtime_error("Cholesky decomposition of UWU matrix failed."));
+	}
 
 	s = arma::solve(arma::trimatl(C.t()), Q.t() * (W % z));
 	s = arma::solve(arma::trimatu(C), s);
@@ -246,7 +259,6 @@ auto GLM<LinkT>::irls(arma::mat &X, arma::colvec &Y) -> arma::vec {
 	  break;
 	}
   }
-  std::cerr << x.t();
   return x;
 }
 

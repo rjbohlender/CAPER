@@ -34,6 +34,8 @@ public:
   auto report_simple(TaskParams &tp) -> void;
   auto report_vaast(std::vector<CARVATask> &res, TaskParams &tp) -> void;
 
+  auto cleanup(TaskParams &tp) -> void;
+
   auto sync_write_simple(std::unordered_map<std::string, Result> &results, TaskParams &tp, bool top_only) -> void;
   auto sync_write_detail(const std::string &d, bool testable) -> void;
   auto sync_write_vaast(std::unordered_map<std::string, Result> &results, TaskParams &tp) -> void;
@@ -85,6 +87,8 @@ public:
   auto report(std::vector<PowerTask> &resv, TaskParams &tp) -> void;
   auto report_power(std::vector<PowerTask> &resv, TaskParams &tp) -> void;
 
+  auto cleanup(TaskParams &tp) -> void;
+
   auto sync_write_power(std::vector<PowerRes> &prv) -> void;
 
   auto set_ncases(int ncases) -> void;
@@ -114,6 +118,8 @@ public:
 
   auto report(std::vector<CAESETask> &resv, TaskParams &tp) -> void;
   auto report_caese(std::vector<CAESETask> &resv, TaskParams &tp) -> void;
+
+  auto cleanup(TaskParams &tp) -> void;
 
   auto sync_write_caese(std::map<std::string, Result> &prv) -> void;
 

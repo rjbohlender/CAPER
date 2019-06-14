@@ -165,6 +165,9 @@ auto Reporter::report(std::vector<CARVATask> &res, TaskParams &tp) -> void {
 	  }
 	}
   }
+}
+
+auto Reporter::cleanup(TaskParams &tp) -> void {
   sort_simple(tp);
 }
 
@@ -751,6 +754,10 @@ auto PowerReporter::set_ncontrols(int ncontrols) -> void {
   ncontrols_ = ncontrols;
 }
 
+auto PowerReporter::cleanup(TaskParams &tp) -> void {
+  return;
+}
+
 CAESEReporter::CAESEReporter(TaskParams &tp) {
   std::stringstream caese_path_ss;
 
@@ -858,4 +865,8 @@ auto CAESEReporter::set_ncases(int ncases) -> void {
 
 auto CAESEReporter::set_ncontrols(int ncontrols) -> void {
   ncontrols_ = ncontrols;
+}
+
+auto CAESEReporter::cleanup(TaskParams &tp) -> void {
+  return;
 }

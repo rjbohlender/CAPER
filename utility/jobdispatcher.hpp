@@ -133,6 +133,8 @@ public:
 	  reporter->report(tq_.get_results(), tp_);
 	}
 
+	reporter->cleanup(tp_);
+
 	cov_.reset();
   }
 
