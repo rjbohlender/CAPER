@@ -146,12 +146,12 @@ void Result::update_ci() {
   double ci = z / (1. + z2 / permutations) * std::sqrt(empirical_p * (1. - empirical_p) / permutations + z2 / (4 * permutations * permutations)); // Wilson score interval
   double ci_low = (sp - ci > 0) ? sp - ci : 0;
   double ci_hi = (sp + ci > 1) ? 1 : sp + ci;
-  empirical_ci = std::tie(ci_low, ci_hi);
+  empirical_ci = std::make_pair(ci_low, ci_hi);
 
   sp = (empirical_midp + z2 / (2 * permutations)) / (1. + z2 / permutations);
   ci = z / (1. + z2 / permutations) * std::sqrt(empirical_midp * (1. - empirical_midp) / permutations + z2 / (4 * permutations * permutations)); // Wilson score interval
   ci_low = (sp - ci > 0) ? sp - ci : 0;
   ci_hi = (sp + ci > 1) ? 1 : sp + ci;
-  empirical_midci = std::tie(ci_low, ci_hi);
+  empirical_midci = std::make_pair(ci_low, ci_hi);
 }
 
