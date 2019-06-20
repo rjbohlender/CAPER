@@ -61,6 +61,7 @@ Reporter::Reporter(TaskParams &tp)
   simple_file_tmp_ << std::setw(20) << std::left << "Gene";
   simple_file_tmp_ << std::setw(20) << "Transcript";
   simple_file_tmp_ << std::setw(20) << "Test_Statistic";
+  simple_file_tmp_ << std::setw(20) << "Exact_P";
   simple_file_tmp_ << std::setw(20) << "Empirical_P";
   simple_file_tmp_ << std::setw(20) << "Empirical_P_CI";
   simple_file_tmp_ << std::setw(20) << "Empirical_MidP";
@@ -531,6 +532,7 @@ auto Reporter::sort_simple(TaskParams &tp) -> void {
   simple_file_ << std::setw(20) << "Gene";
   simple_file_ << std::setw(20) << "Transcript";
   simple_file_ << std::setw(20) << "Test_Statistic";
+  simple_file_ << std::setw(20) << "Exact_P";
   simple_file_ << std::setw(20) << "Empirical_P";
   simple_file_ << std::setw(20) << "Empirical_P_CI";
   simple_file_ << std::setw(20) << "Empirical_MidP";
@@ -549,21 +551,22 @@ auto Reporter::sort_simple(TaskParams &tp) -> void {
       continue;
     }
     RJBUtil::Splitter<std::string> splitter(line, " \t");
-    RJBUtil::Splitter<std::string> emp_ci_splitter(splitter[4], ",");
-	RJBUtil::Splitter<std::string> emp_midci_splitter(splitter[6], ",");
+    RJBUtil::Splitter<std::string> emp_ci_splitter(splitter[5], ",");
+	RJBUtil::Splitter<std::string> emp_midci_splitter(splitter[7], ",");
 
     ResultLine rs = ResultLine {
       .gene = splitter[0],
       .transcript = splitter[1],
       .original = std::stod(splitter[2]),
-      .empirical_p = std::stod(splitter[3]),
+      .exact_p = std::stod(splitter[3]),
+      .empirical_p = std::stod(splitter[4]),
       .empirical_p_ci = std::make_pair(std::stod(emp_ci_splitter[0]), std::stod(emp_ci_splitter[1])),
-      .empirical_midp = std::stod(splitter[5]),
+      .empirical_midp = std::stod(splitter[6]),
       .empirical_midp_ci = std::make_pair(std::stod(emp_midci_splitter[0]), std::stod(emp_midci_splitter[1])),
-      .mgit = std::stod(splitter[7]),
-      .successes = std::stoul(splitter[8]),
-      .mgit_successes = std::stoul(splitter[9]),
-      .permutations = std::stoul(splitter[10])
+      .mgit = std::stod(splitter[8]),
+      .successes = std::stoul(splitter[9]),
+      .mgit_successes = std::stoul(splitter[10]),
+      .permutations = std::stoul(splitter[11])
     };
 
     results.push_back(rs);
@@ -591,6 +594,7 @@ auto Reporter::sort_simple(TaskParams &tp) -> void {
     simple_file_ << std::setw(20) << rs.gene;
     simple_file_ << std::setw(20) << rs.transcript;
     simple_file_ << std::setw(20) << rs.original;
+	simple_file_ << std::setw(20) << rs.exact_p;
     simple_file_ << std::setw(20) << rs.empirical_p;
     simple_file_ << std::setw(20) << ci.str();
     simple_file_ << std::setw(20) << rs.empirical_midp;

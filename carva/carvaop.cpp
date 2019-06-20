@@ -150,6 +150,12 @@ auto CARVAOp::stage1() -> void {
 	  v.second.empirical_p = empirical;
 	  v.second.empirical_midp = midp;
 	  v.second.update_ci();
+
+	  double n = ta_.get_gene().get_samples().size();
+	  double nmac = arma::sum(arma::sum(arma::mat(ta_.get_gene().get_matrix(v.second.transcript)), 1) > 0);
+	  double nmaj = n - nmac;
+
+	  v.second.calc_exact_p(nmac, nmaj);
 	}
   }
 }
@@ -322,8 +328,11 @@ auto CARVAOp::stage2() -> void {
 	if (v.second.min_success_at > 0 && v.second.successes == ta_.success_threshold + 1) {
 	  std::uniform_int_distribution<> dis(v.second.min_success_at, v.second.permutations);
 
-	  empirical = v.second.successes / (1. + dis(gen_));
-	  midp = v.second.mid_successes / (1 + dis(gen_));
+	  int rand_perms = dis(gen_);
+	  v.second.rand_perms = rand_perms;
+
+	  empirical = v.second.successes / (1. + rand_perms);
+	  midp = v.second.mid_successes / (1 + rand_perms);
 	} else {
 	  empirical = (1. + v.second.successes) / (1. + v.second.permutations);
 	  midp = (1. + v.second.mid_successes) / (1. + v.second.permutations);
@@ -341,6 +350,12 @@ auto CARVAOp::stage2() -> void {
 	v.second.empirical_p = empirical;
 	v.second.empirical_midp = midp;
 	v.second.update_ci();
+
+	double n = ta_.get_gene().get_samples().size();
+	double nmac = arma::sum(arma::sum(arma::mat(ta_.get_gene().get_matrix(v.second.transcript)), 1) > 0);
+	double nmaj = n - nmac;
+
+	v.second.calc_exact_p(nmac, nmaj);
   }
   ta_.set_stage(Stage::Done);
   done_ = true;

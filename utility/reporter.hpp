@@ -16,6 +16,7 @@ struct ResultLine {
   std::string gene;
   std::string transcript;
   double original;
+  double exact_p;
   double empirical_p;
   std::pair<double, double> empirical_p_ci;
   double empirical_midp;

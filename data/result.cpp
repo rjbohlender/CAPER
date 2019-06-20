@@ -4,6 +4,10 @@
 
 #include "result.hpp"
 
+#include <boost/math/special_functions/binomial.hpp>
+#include <boost/math/distributions/binomial.hpp>
+#include <boost/math/quadrature/trapezoidal.hpp>
+
 Result::Result()
 	: gene(),
 	  transcript(),
@@ -20,8 +24,12 @@ Result::Result()
 	  permuted(),
 	  testable(true),
 	  odds(NAN),
+	  exact_p(NAN),
 	  empirical_ci(NAN, NAN),
-	  empirical_midci(NAN, NAN) {
+	  empirical_midci(NAN, NAN),
+	  nmac(NAN),
+	  nmaj(NAN),
+	  rand_perms(NAN) {
 }
 
 Result::Result(const std::string &gene, const std::string &transcript)
@@ -40,8 +48,12 @@ Result::Result(const std::string &gene, const std::string &transcript)
 	  mgit_successes(0),
 	  testable(true),
 	  odds(NAN),
+	  exact_p(NAN),
 	  empirical_ci(NAN, NAN),
-	  empirical_midci(NAN, NAN) {
+	  empirical_midci(NAN, NAN),
+	  nmac(NAN),
+	  nmaj(NAN),
+	  rand_perms(NAN) {
 }
 
 Result::Result(Result &&res) noexcept
@@ -60,8 +72,12 @@ Result::Result(Result &&res) noexcept
 	  mgit_successes(res.mgit_successes),
 	  testable(res.testable),
 	  odds(res.odds),
+	  exact_p(res.exact_p),
 	  empirical_ci(res.empirical_ci),
-	  empirical_midci(res.empirical_midci) {}
+	  empirical_midci(res.empirical_midci),
+	  nmac(res.nmac),
+	  nmaj(res.nmaj),
+	  rand_perms(res.rand_perms) {}
 
 Result &Result::operator=(Result &&rhs) noexcept {
   gene = std::move(rhs.gene);
@@ -79,6 +95,10 @@ Result &Result::operator=(Result &&rhs) noexcept {
   mgit_successes = rhs.mgit_successes;
   testable = rhs.testable;
   odds = rhs.odds;
+  exact_p = rhs.exact_p;
+  nmac = rhs.nmac;
+  nmaj = rhs.nmaj;
+  rand_perms = rhs.rand_perms;
 
   update_ci();
 
@@ -87,15 +107,16 @@ Result &Result::operator=(Result &&rhs) noexcept {
 
 std::ostream &operator<<(std::ostream &stream, const Result &rhs) {
   std::stringstream ci;
-  ci << std::setprecision(5) << rhs.empirical_ci.first << "," << std::setprecision(5) << rhs.empirical_ci.second;
+  ci << std::defaultfloat << std::setprecision(3) << rhs.empirical_ci.first << "," << std::setprecision(3) << rhs.empirical_ci.second;
   std::stringstream midci;
-  midci << std::setprecision(5) << rhs.empirical_midci.first << "," << std::setprecision(5) << rhs.empirical_midci.second;
+  midci << std::defaultfloat << std::setprecision(3) << rhs.empirical_midci.first << "," << std::setprecision(3) << rhs.empirical_midci.second;
   stream << std::setw(20) << std::defaultfloat << std::left << rhs.gene;
   stream << std::setw(20) << rhs.transcript;
-  stream << std::setw(20) << std::defaultfloat << std::setprecision(10) << rhs.original;
-  stream << std::setw(20) << std::setprecision(10) << rhs.empirical_p;
+  stream << std::setw(20) << std::setprecision(8) << rhs.original;
+  stream << std::setw(20) << std::setprecision(8) << rhs.exact_p;
+  stream << std::setw(20) << std::setprecision(8) << rhs.empirical_p;
   stream << std::setw(20) << ci.str();
-  stream << std::setw(20) << std::setprecision(10) << rhs.empirical_midp;
+  stream << std::setw(20) << std::setprecision(8) << rhs.empirical_midp;
   stream << std::setw(20) << midci.str();
   stream << std::setw(20) << rhs.mgit_p;
   stream << std::setw(20) << rhs.successes;
@@ -118,10 +139,16 @@ Result &Result::combine(const Result &res) {
 
   // Update empirical p and empirical midp
   // TODO Include randomized permutations
-  empirical_p = (1. + successes) / (1. + permutations);
-  empirical_midp = (1. + mid_successes) / (1. + permutations);
+  if (std::isfinite(rand_perms)) {
+	empirical_p = (1. + successes) / (1. + rand_perms);
+	empirical_midp = (1. + mid_successes) / (1. + rand_perms);
+  } else {
+	empirical_p = (1. + successes) / (1. + permutations);
+	empirical_midp = (1. + mid_successes) / (1. + permutations);
+  }
 
   update_ci();
+  calc_exact_p();
 
   // Extend permuted values
   permuted.reserve(permuted.size() + res.permuted.size());
@@ -154,4 +181,62 @@ void Result::update_ci() {
   ci_hi = (sp + ci > 1) ? 1 : sp + ci;
   empirical_midci = std::make_pair(ci_low, ci_hi);
 }
+
+void Result::calc_exact_p(double nmac, double nmaj) {
+  double m = permutations;
+  double n1 = nmac, n2 = nmaj;
+  auto b = static_cast<double>(successes);
+  double mt;
+  try {
+     mt = boost::math::binomial_coefficient<double>(n1 + n2, n1);
+  } catch(std::overflow_error &e) {
+    exact_p = (b + 1.) / (m + 1.);
+    return;
+  }
+
+  if (!std::isfinite(mt)) {
+    exact_p = (b + 1.) / (m + 1.);
+    return;
+  }
+
+  if (n1 == n2) {
+    mt /= 2;
+  }
+
+  auto f = [&](double pt) -> double {
+	boost::math::binomial dist(m, pt);
+	return boost::math::cdf(dist, b);
+  };
+
+  double tol = 1e-8;
+  double error_estimate;
+  double L1;
+  size_t max_refinements = 15;
+  double I = boost::math::quadrature::trapezoidal(f, 0., 0.5 / (mt + 1), tol, max_refinements, &error_estimate, &L1);
+  exact_p = (b + 1.) / (m + 1.) - I;
+}
+
+void Result::calc_exact_p() {
+  double m = permutations;
+  double n1 = nmac, n2 = nmaj;
+  auto mt = boost::math::binomial_coefficient<double>(n1 + n2, n1);
+  auto b = static_cast<double>(successes);
+
+  if (n1 == n2) {
+	mt /= 2;
+  }
+
+  auto f = [&](double pt) -> double {
+	boost::math::binomial dist(m, pt);
+	return boost::math::cdf(dist, b);
+  };
+
+  double tol = 1e-8;
+  double error_estimate;
+  double L1;
+  size_t max_refinements = 15;
+  exact_p = boost::math::quadrature::trapezoidal(f, 0., 0.5 / (mt + 1), tol, max_refinements, &error_estimate, &L1);
+}
+
+
 

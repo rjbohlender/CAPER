@@ -29,6 +29,8 @@ struct Result {
   void set_rank(int rank);
   void set_odds(double odds);
   void update_ci();
+  void calc_exact_p();
+  void calc_exact_p(double nmac, double nmaj);
 
   std::string gene;
   std::string transcript;
@@ -38,9 +40,11 @@ struct Result {
   double mid_successes;
   int permutations;
   int min_success_at;
+  int rand_perms;
   double original;
   double empirical_p;
   double empirical_midp;
+  double exact_p;
   double mgit_p;
   int mgit_successes;
   bool done;
@@ -48,6 +52,7 @@ struct Result {
   int rank;
   bool testable;
   double odds;
+  double nmac, nmaj;
   // std::map<double, double> permuted;
 
   // Odds Ratio specific
