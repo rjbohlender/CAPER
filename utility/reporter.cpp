@@ -62,7 +62,9 @@ Reporter::Reporter(TaskParams &tp)
   simple_file_tmp_ << std::setw(20) << "Transcript";
   simple_file_tmp_ << std::setw(20) << "Test_Statistic";
   simple_file_tmp_ << std::setw(20) << "Empirical_P";
+  simple_file_tmp_ << std::setw(20) << "Empirical_P_CI";
   simple_file_tmp_ << std::setw(20) << "Empirical_MidP";
+  simple_file_tmp_ << std::setw(20) << "Empirical_MidP_CI";
   simple_file_tmp_ << std::setw(20) << "MGIT_P";
   simple_file_tmp_ << std::setw(20) << "Successes";
   simple_file_tmp_ << std::setw(20) << "MGIT_Successes";
@@ -456,7 +458,7 @@ auto Reporter::write_to_stream(std::ostream &os, Result &res) -> void {
 }
 
 auto Reporter::sync_write_simple(std::unordered_map<std::string, Result> &results, TaskParams &tp, bool top_only) -> void {
-  std::unique_lock<std::mutex> lock(lock_); // Acquire lock
+  std::lock_guard<std::mutex> lock(lock_); // Acquire lock
 
   recalculate_mgit(results);
 
@@ -479,7 +481,6 @@ auto Reporter::sync_write_simple(std::unordered_map<std::string, Result> &result
 	  }
 	}
 	simple_file_tmp_ << *topres;
-    lock_.unlock();
     return;
   }
 
@@ -495,11 +496,11 @@ auto Reporter::sync_write_simple(std::unordered_map<std::string, Result> &result
 	}
   }
 
-  lock.unlock();
+  simple_file_tmp_.flush();
 }
 
 auto Reporter::sync_write_detail(const std::string &d, bool testable) -> void {
-  std::unique_lock<std::mutex> lock(lock_); // Acquire lock
+  std::lock_guard<std::mutex> lock(lock_); // Acquire lock
 
   if(testable_) {
     if(testable)
@@ -509,10 +510,10 @@ auto Reporter::sync_write_detail(const std::string &d, bool testable) -> void {
   }
 
   detail_file_.flush();
-  lock.unlock();
 }
 
 auto Reporter::sort_simple(TaskParams &tp) -> void {
+  std::lock_guard<std::mutex> lock(lock_);
   simple_file_ = std::ofstream(simple_path_ss.str());
   if(!simple_file_.good()) {
     throw(std::runtime_error("Simple file failed to open for writing.\n"));
@@ -531,7 +532,9 @@ auto Reporter::sort_simple(TaskParams &tp) -> void {
   simple_file_ << std::setw(20) << "Transcript";
   simple_file_ << std::setw(20) << "Test_Statistic";
   simple_file_ << std::setw(20) << "Empirical_P";
+  simple_file_ << std::setw(20) << "Empirical_P_CI";
   simple_file_ << std::setw(20) << "Empirical_MidP";
+  simple_file_ << std::setw(20) << "Empirical_MidP_CI";
   simple_file_ << std::setw(20) << "MGIT_P";
   simple_file_ << std::setw(20) << "Successes";
   simple_file_ << std::setw(20) << "MGIT_Successes";
@@ -546,17 +549,21 @@ auto Reporter::sort_simple(TaskParams &tp) -> void {
       continue;
     }
     RJBUtil::Splitter<std::string> splitter(line, " \t");
+    RJBUtil::Splitter<std::string> emp_ci_splitter(splitter[4], ",");
+	RJBUtil::Splitter<std::string> emp_midci_splitter(splitter[6], ",");
 
     ResultLine rs = ResultLine {
       .gene = splitter[0],
       .transcript = splitter[1],
       .original = std::stod(splitter[2]),
       .empirical_p = std::stod(splitter[3]),
-      .empirical_midp = std::stod(splitter[4]),
-      .mgit = std::stod(splitter[5]),
-      .successes = std::stoul(splitter[6]),
-      .mgit_successes = std::stoul(splitter[7]),
-      .permutations = std::stoul(splitter[8])
+      .empirical_p_ci = std::make_pair(std::stod(emp_ci_splitter[0]), std::stod(emp_ci_splitter[1])),
+      .empirical_midp = std::stod(splitter[5]),
+      .empirical_midp_ci = std::make_pair(std::stod(emp_midci_splitter[0]), std::stod(emp_midci_splitter[1])),
+      .mgit = std::stod(splitter[7]),
+      .successes = std::stoul(splitter[8]),
+      .mgit_successes = std::stoul(splitter[9]),
+      .permutations = std::stoul(splitter[10])
     };
 
     results.push_back(rs);
@@ -567,19 +574,27 @@ auto Reporter::sort_simple(TaskParams &tp) -> void {
   ifs.close();
 
   // Sort results and write them out
-  if(tp.method == "SKATO") {
+  if(!tp.analytic) {
 	std::sort(results.begin(), results.end(), [](ResultLine &a, ResultLine &b) { return a.empirical_p < b.empirical_p; });
   } else {
 	std::sort(results.begin(), results.end(), [](ResultLine &a, ResultLine &b) { return a.original < b.original; });
   }
 
   for(const auto &rs : results) {
+	std::stringstream ci;
+	std::stringstream midci;
+
+	ci << rs.empirical_p_ci.first << "," << rs.empirical_p_ci.second;
+	midci << rs.empirical_midp_ci.first << "," << rs.empirical_midp_ci.second;
+
     simple_file_ << std::setw(20) << std::left <<  rank;
     simple_file_ << std::setw(20) << rs.gene;
     simple_file_ << std::setw(20) << rs.transcript;
     simple_file_ << std::setw(20) << rs.original;
     simple_file_ << std::setw(20) << rs.empirical_p;
+    simple_file_ << std::setw(20) << ci.str();
     simple_file_ << std::setw(20) << rs.empirical_midp;
+	simple_file_ << std::setw(20) << midci.str();
 	simple_file_ << std::setw(20) << rs.mgit;
     simple_file_ << std::setw(20) << rs.successes;
     simple_file_ << std::setw(20) << rs.mgit_successes;
@@ -657,6 +672,31 @@ auto Reporter::set_ncases(int ncases) -> void {
 
 auto Reporter::set_ncontrols(int ncontrols) -> void {
   ncontrols_ = ncontrols;
+}
+
+auto Reporter::sync_write_vaast(CARVATask &ct, TaskParams &tp) -> void {
+  std::lock_guard<std::mutex> lock(lock_); // Acquire lock
+  if (tp.method != "VAAST") {
+    return;
+  }
+
+  for(auto &ts : ct.get_gene().get_vaast()) {
+	double z2 = std::pow(1.96, 2);
+	double n = ct.results[ts.first].permutations;
+	double ns = ct.results[ts.first].successes;
+	double nf = ct.results[ts.first].permutations - ct.results[ts.first].successes;
+	double p = (ns + 1.) / (n + 1.);
+	double sp = (p + z2 / (2 * (n + 1.))) / (1. + z2 / (n + 1.));
+	double ci = 1.96 / (1. + z2 / n) * std::sqrt((p * (1 - p) / (n + 1.) + z2 / (4 * n * n)));
+	vaast_file_ << ts.second;
+	vaast_file_ << "SCORE: " << boost::format("%1$.2f") % ct.results[ts.first].original << std::endl;
+	vaast_file_ << "genome_permutation_p: " << p << std::endl;
+	vaast_file_ << "genome_permutation_p_ci: " << ((sp - ci > 0) ? sp - ci : 0) << "," << ((sp + ci > 1 ) ? 1 : sp + ci) << std::endl;
+	vaast_file_ << "num_permutations: " << ct.results[ts.first].permutations << std::endl;
+	vaast_file_ << "total_success: " << ct.results[ts.first].successes << std::endl;
+  }
+
+  vaast_file_.flush();
 }
 
 PowerReporter::PowerReporter(TaskParams &tp) {

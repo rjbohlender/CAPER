@@ -9,7 +9,7 @@ CARVAOp::CARVAOp(CARVATask &ct, std::shared_ptr<Reporter> reporter, double seed,
 	  ta_(ct),
 	  done_(false),
 	  verbose_(verbose),
-	  reporter_(reporter) {
+	  reporter_(std::move(reporter)) {
 
 }
 
@@ -32,6 +32,7 @@ auto CARVAOp::finish() -> void {
   if (!ta_.get_tp().gene_list) {
 	reporter_->sync_write_simple(ta_.results, ta_.get_tp(), ta_.get_tp().top_only);
 	reporter_->sync_write_detail(ta_.get_gene().get_detail(), ta_.get_gene().is_testable());
+	reporter_->sync_write_vaast(ta_, ta_.get_tp());
   }
 }
 
@@ -148,6 +149,7 @@ auto CARVAOp::stage1() -> void {
 	  done_ = true;
 	  v.second.empirical_p = empirical;
 	  v.second.empirical_midp = midp;
+	  v.second.update_ci();
 	}
   }
 }
@@ -338,6 +340,7 @@ auto CARVAOp::stage2() -> void {
 
 	v.second.empirical_p = empirical;
 	v.second.empirical_midp = midp;
+	v.second.update_ci();
   }
   ta_.set_stage(Stage::Done);
   done_ = true;

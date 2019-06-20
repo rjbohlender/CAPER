@@ -17,7 +17,9 @@ struct ResultLine {
   std::string transcript;
   double original;
   double empirical_p;
+  std::pair<double, double> empirical_p_ci;
   double empirical_midp;
+  std::pair<double, double> empirical_midp_ci;
   double mgit;
   unsigned long successes;
   unsigned long mgit_successes;
@@ -38,7 +40,7 @@ public:
 
   auto sync_write_simple(std::unordered_map<std::string, Result> &results, TaskParams &tp, bool top_only) -> void;
   auto sync_write_detail(const std::string &d, bool testable) -> void;
-  auto sync_write_vaast(std::unordered_map<std::string, Result> &results, TaskParams &tp) -> void;
+  auto sync_write_vaast(CARVATask &ct, TaskParams &tp) -> void;
 
   auto sort_simple(TaskParams &tp) -> void;
 

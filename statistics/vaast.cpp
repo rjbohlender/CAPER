@@ -278,27 +278,6 @@ VAAST::VAAST(arma::sp_mat X,
 	      Xnew.col(i - 1) = X.col(i - 1);
 	      Wnew(i - 1) = weights(i - 1);
 	    }
-#if 0
-		for(auto it = X.begin(); it != X.end(); it++) {
-		  if(it.col() == i) {
-		    continue;
-		  } else if(it.col() < i && *it > 0) {
-		    Xnew(it.row(), it.col()) = *it;
-		  } else if(it.col() > i && *it > 0) {
-		    Xnew(it.row(), it.col() - 1) = *it;
-		  }
-		}
-		for(auto it = weights.begin(); it != weights.end(); it++) {
-		  auto j = std::distance(weights.begin(), it);
-		  if(i == j) {
-		    continue;
-		  } else if(j < i) {
-		    Wnew(j) = *it;
-		  } else if(j > i) {
-		    Wnew(j - 1) = *it;
-		  }
-		}
-#endif
 
 		Score(Xnew, Y, Wnew); // Do normal individual variant scoring
 		variant_grouping(Xnew, Y, Wnew, positions); // Redo grouping

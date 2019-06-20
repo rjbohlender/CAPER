@@ -28,9 +28,12 @@ struct Result {
   Result &combine(const Result& res);
   void set_rank(int rank);
   void set_odds(double odds);
+  void update_ci();
 
   std::string gene;
   std::string transcript;
+  std::pair<double, double> empirical_ci;
+  std::pair<double, double> empirical_midci;
   int successes;
   double mid_successes;
   int permutations;

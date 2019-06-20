@@ -6,20 +6,20 @@
 #include "../statistics/bayesianglm.hpp"
 #include "../link/binomial.hpp"
 
-const std::set<std::string> CARVATask::pvalue_methods_ {
-  "SKAT",
-  "SKATO",
-  "CMC"
+const std::set<std::string> CARVATask::pvalue_methods_{
+	"SKAT",
+	"SKATO",
+	"CMC"
 };
 
 CARVATask::CARVATask(Stage stage,
-				   Gene gene,
-				   const std::shared_ptr<Covariates> &cov,
-				   TaskParams &tp,
-				   arma::uword succ_thresh,
-				   arma::uword s1_perm,
-				   arma::uword s2_perm,
-				   std::vector<std::vector<int32_t>> &perm)
+					 Gene gene,
+					 const std::shared_ptr<Covariates> &cov,
+					 TaskParams &tp,
+					 arma::uword succ_thresh,
+					 arma::uword s1_perm,
+					 arma::uword s2_perm,
+					 std::vector<std::vector<int32_t>> &perm)
 	: stage_(stage),
 	  gene_(std::move(gene)),
 	  cov_(cov),
@@ -38,10 +38,10 @@ CARVATask::CARVATask(Stage stage,
 }
 
 CARVATask::CARVATask(Stage stage,
-				   Gene gene,
-				   const std::shared_ptr<Covariates> &cov,
-				   TaskParams &tp,
-				   std::vector<std::vector<int32_t>> &perm)
+					 Gene gene,
+					 const std::shared_ptr<Covariates> &cov,
+					 TaskParams &tp,
+					 std::vector<std::vector<int32_t>> &perm)
 	: stage_(stage),
 	  gene_(std::move(gene)),
 	  cov_(cov),
@@ -149,16 +149,16 @@ std::vector<std::vector<int32_t>> &CARVATask::get_permutations() {
 }
 
 void CARVATask::cleanup() {
-  if(!tp_.linear) {
+  if (!tp_.linear) {
 	Binomial link("logit");
-	for(const auto &ts : gene_.get_transcripts()) {
+	for (const auto &ts : gene_.get_transcripts()) {
 	  arma::mat X = arma::mat(arma::sum(gene_.get_matrix(ts).t(), 0).t());
 	  arma::mat D = arma::join_horiz(cov_->get_covariate_matrix(), X);
 	  BayesianGLM<Binomial> fit(D, cov_->get_original_phenotypes(), link);
 	  results[ts].set_odds(std::exp(fit.beta_(fit.beta_.n_elem - 1)));
 	}
   } else {
-	for(const auto &ts : gene_.get_transcripts()) {
+	for (const auto &ts : gene_.get_transcripts()) {
 	  results[ts].set_odds(1); // default
 	}
   }

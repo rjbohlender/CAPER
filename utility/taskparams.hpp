@@ -24,6 +24,7 @@ struct TaskParams {
 
   // For SKATO, SKAT, BURDEN
   bool alternate_permutation;
+  bool analytic;
   bool linear;
   bool quantitative;
 
