@@ -40,7 +40,7 @@ struct Result {
   double mid_successes;
   int permutations;
   int min_success_at;
-  int rand_perms;
+  double rand_perms;
   double original;
   double empirical_p;
   double empirical_midp;

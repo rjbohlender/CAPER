@@ -54,7 +54,7 @@ CARVATask::CARVATask(Stage stage,
 	  adjust(tp.adjust),
 	  tp_(tp) {
   for (const auto &k : gene_.get_transcripts()) {
-	results[k] = Result(gene_.get_gene(), k);
+	results.emplace(std::make_pair(k, Result(gene_.get_gene(), k)));
 	permute[k] = Permute();
   }
 }

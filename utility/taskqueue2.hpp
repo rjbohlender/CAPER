@@ -133,9 +133,6 @@ private:
   // PRNG
   std::random_device rd_;
 
-  // Messages
-  std::shared_ptr<Reporter_t> reporter_;
-
   // Threading
   std::mutex lock_;
   std::queue<Operation_t> q_;
@@ -146,6 +143,9 @@ private:
 
   // Ensuring all jobs are finished
   std::atomic<int> ntasks_;
+
+  // Messages
+  std::shared_ptr<Reporter_t> reporter_;
 
   // Result storage
   std::vector<Task_t> results_;

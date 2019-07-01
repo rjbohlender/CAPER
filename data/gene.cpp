@@ -112,7 +112,7 @@ void Gene::parse(std::stringstream &ss) {
 	  // Transcript not found -- add
 	  transcripts_.push_back(splitter[1]);
 	  // Start with matrix transposed
-	  genotypes_[transcripts_.back()] = arma::sp_mat(nsamples_, nvariants_[transcripts_.back()]);
+	  genotypes_.emplace(std::make_pair(transcripts_.back(), arma::sp_mat(nsamples_, nvariants_[transcripts_.back()])));
 	  // Reset counter on new transcript
 	  i = 1;
 	}

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(Permute_Associate CXX)
+project(Permute_Associate C CXX)
 
 set(CMAKE_CXX_STANDARD 14)
 
@@ -21,7 +21,8 @@ find_package(Boost 1.66.0 COMPONENTS program_options iostreams REQUIRED)
 
 if (APPLE)
     # -fsanitize=address -fsanitize=undefined -Wall -pedantic
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+    # set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O1 -fsanitize=address -fsanitize-blacklist=/Users/rjbohlender/CLionProjects/Permute_Associate/Asan.supp -Wall -pedantic")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=undefined -Wall -pedantic")
 endif ()
 
 if (UNIX)
@@ -104,12 +105,17 @@ set(PROJECT_SUPPORT_FILES
     carva/carvaop.cpp
     carva/carvaop.hpp
     power/powertask.cpp
-    power/powertask.hpp caese/caeseop.cpp caese/caeseop.hpp caese/caesetask.cpp caese/caesetask.hpp statistics/fishertest.cpp statistics/fishertest.hpp)
+    power/powertask.hpp
+    caese/caeseop.cpp
+    caese/caeseop.hpp
+    caese/caesetask.cpp
+    caese/caesetask.hpp
+    statistics/fishertest.cpp
+    statistics/fishertest.hpp)
 
 
 include_directories("${CMAKE_CURRENT_LIST_DIR}/third_party")
 include_directories(${ARMADILLO_INCLUDE_DIRS})
-message(${ARMADILLO_INCLUDE_DIRS})
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${LAPACK_INCLUDE_DIRS})
 include_directories(${BLAS_INCLUDE_DIRS})
