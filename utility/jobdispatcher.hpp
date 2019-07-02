@@ -220,6 +220,7 @@ private:
 	  if (split[0] == gene_) {
 		add_line(current, line, split, vsplit);
 	  } else {
+	    ntranscripts_ = nvariants_.size();
 		// Have we read a gene yet?
 		if (!gene_.empty()) {
 		  if (std::any_of(nvariants_.cbegin(), nvariants_.cend(), [&](const auto &v) { return v.second > 0; })) {
@@ -346,9 +347,6 @@ private:
 	ss << header_ << "\n";
 	add_line(ss, line, split, vsplit);
 
-	// New transcript
-	ntranscripts_++;
-
 	// Add gene name
 	gene_ = split[0];
   }
@@ -374,12 +372,10 @@ private:
 	  // Variant not masked
 	  ss << line << "\n";
 	  // Track number of variants in each transcript
-	  if (split[1] == transcript_) {
-		nvariants_[transcript_]++;
+	  if (nvariants_.find(split[1]) == nvariants_.end()) {
+	    nvariants_[split[1]] = 1;
 	  } else {
-		transcript_ = split[1];
-		nvariants_[transcript_] = 1;
-		ntranscripts_++;
+	    nvariants_[split[1]]++;
 	  }
 	}
   }
