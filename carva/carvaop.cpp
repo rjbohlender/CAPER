@@ -237,7 +237,7 @@ auto CARVAOp::stage2() -> void {
 
 	  // SKAT corrects for covariates so we don't use this permutation approach
 	  if (!ta_.get_tp().alternate_permutation) {
-		if (ta_.get_tp().linear) {
+		if (ta_.get_tp().linear || !ta_.get_tp().covadj) {
 		  // Fisher-Yates Shuffle
 		  for (arma::sword i = phenotypes.n_elem - 1; i > 0; --i) {
 			std::uniform_int_distribution<> dis(0, i);
@@ -246,7 +246,6 @@ auto CARVAOp::stage2() -> void {
 			phenotypes(i) = phenotypes(j);
 			phenotypes(j) = tmp;
 		  }
-
 		} else {
 		  if (ta_.get_tp().approximate) {
 			permutations = ta_.get_permute(k).permutations_mac_bin(1,

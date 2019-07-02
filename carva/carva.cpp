@@ -53,6 +53,7 @@ int main(int argc, char **argv) {
   bool nodetail = false;
   bool top_only = false;
   bool biallelic = false;
+  bool covadj = true;
   std::vector<int> gene_range;
   std::vector<std::string> power;
   boost::optional<std::string> bed;
@@ -166,6 +167,9 @@ int main(int argc, char **argv) {
 			("permute_out",
 			 po::value(&permute_set),
 			 "Output permutations to the given file.")
+			("nocovadj",
+			 po::bool_switch(&covadj),
+			 "Do Fisher-Yates shuffling instead of covariate adjusted permutation.")
 			;
 	all.add(required).add(optional).add(vaast).add(skat).add(cmc).add(hidden);
 	visible.add(required).add(optional).add(vaast).add(skat).add(cmc);
@@ -296,6 +300,8 @@ int main(int argc, char **argv) {
   // Testability
   tp.testable = testable;
   tp.biallelic = biallelic;
+
+  tp.covadj = covadj;
 
   tp.alternate_permutation = tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN" || tp.method == "VT";
   tp.quantitative = tp.method == "RVT1" || tp.method == "RVT2" || tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN" || tp.method == "VT";

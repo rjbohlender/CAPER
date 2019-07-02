@@ -108,18 +108,19 @@ void Gene::parse(std::stringstream &ss) {
 	  gene_ = splitter[0];
 	}
 	auto found = std::find(std::begin(transcripts_), std::end(transcripts_), splitter[1]);
+	std::string transcript = splitter[1];
 	if (found == std::end(transcripts_)) {
 	  // Transcript not found -- add
 	  transcripts_.push_back(splitter[1]);
 	  // Start with matrix transposed
-	  genotypes_.emplace(std::make_pair(transcripts_.back(), arma::sp_mat(nsamples_, nvariants_[transcripts_.back()])));
+	  genotypes_.emplace(std::make_pair(transcript, arma::sp_mat(nsamples_, nvariants_[transcript])));
 	  // Reset counter on new transcript
 	  i = 1;
 	}
-	if (positions_.find(transcripts_.back()) == positions_.end()) {
-	  positions_[transcripts_.back()] = std::vector<std::string>();
+	if (positions_.find(transcript) == positions_.end()) {
+	  positions_[transcript] = std::vector<std::string>();
 	}
-	positions_[transcripts_.back()].push_back(splitter[2]);
+	positions_[transcript].push_back(splitter[2]);
 
 	for (arma::uword j = 3; j < splitter.size(); j++) {
 	  auto val = -1.;
@@ -143,7 +144,7 @@ void Gene::parse(std::stringstream &ss) {
 	  }
 	  if (val != 0) {
 		try {
-		  genotypes_[transcripts_.back()](j - 3, i - 1) = val;
+		  genotypes_[transcript](j - 3, i - 1) = val;
 		}
 		catch (std::exception &e) {
 		  std::cerr << "Failed to set value for: row = " << j - 3 << " col = " << i - 1

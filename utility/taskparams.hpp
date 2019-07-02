@@ -38,6 +38,7 @@ struct TaskParams {
   std::string ped_path;
   arma::uword mac;
   double maf;
+  bool covadj;
 
   boost::optional<arma::uword> approximate;
   boost::optional<int> range_start;
