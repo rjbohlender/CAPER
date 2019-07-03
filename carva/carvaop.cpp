@@ -152,7 +152,7 @@ auto CARVAOp::stage1() -> void {
 	  v.second.update_ci();
 
 	  double n = ta_.get_gene().get_samples().size();
-	  double nmac = arma::sum(arma::sum(arma::mat(ta_.get_gene().get_matrix(v.second.transcript)), 1) > 0);
+	  double nmac = arma::accu(arma::sum(arma::mat(ta_.get_gene().get_matrix(v.second.transcript)), 1) > 0);
 	  double nmaj = n - nmac;
 
 	  v.second.calc_exact_p(nmac, nmaj);
@@ -351,7 +351,7 @@ auto CARVAOp::stage2() -> void {
 	v.second.update_ci();
 
 	double n = ta_.get_gene().get_samples().size();
-	double nmac = arma::sum(arma::sum(arma::mat(ta_.get_gene().get_matrix(v.second.transcript)), 1) > 0);
+	double nmac = arma::accu(arma::sum(arma::mat(ta_.get_gene().get_matrix(v.second.transcript)), 1) > 0);
 	double nmaj = n - nmac;
 
 	v.second.calc_exact_p(nmac, nmaj);
