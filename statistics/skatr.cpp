@@ -24,7 +24,7 @@ SKATR_Null::SKATR_Null(Covariates &cov)
 
 auto SKATR_Null::shuffle(bool skip_svd) noexcept -> void{
   // Fisher-Yates shuffle
-  for(arma::sword i = indices.n_elem - 1; i >= 0; i--) {
+  for(arma::sword i = indices.n_elem - 1; i >= 1; i--) {
 	auto j = static_cast<arma::sword>(crand.IRandom(0, i));
 	// Swap
 	arma::uword tmp = indices[j];

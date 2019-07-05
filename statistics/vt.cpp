@@ -13,7 +13,7 @@ VT_Res::VT_Res(const Covariates &cov)
 
 auto VT_Res::shuffle() -> void {
   // Fisher-Yates shuffle
-  for(arma::sword i = indices_.n_elem - 1; i >= 0; i--) {
+  for(arma::sword i = indices_.n_elem - 1; i >= 1; i--) {
 	auto j = static_cast<arma::sword>(crand_.IRandom(0, i));
 	// Swap
 	arma::uword tmp = indices_[j];
