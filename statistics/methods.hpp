@@ -41,7 +41,7 @@ public:
   void clear(std::vector<std::string> &v);
 
   // Wu, Guan, and Pankow 2016
-  double BURDEN(Gene &gene, const std::string &k, bool shuffle, int a, int b);
+  double BURDEN(Gene &gene, const std::string &k, arma::vec &phenotypes, int a, int b);
   double CALPHA(Gene &gene, arma::vec &Y, const std::string &k);
   // Li and Leal 2008
   double CMC(Gene &gene, arma::vec &Y, const std::string &k, double maf = 0.005);
@@ -51,14 +51,20 @@ public:
   // Wu, Guan, and Pankow 2016
   double SKATR(Gene &gene,
 			   const std::string &k,
-			   bool shuffle,
+			   arma::vec &phenotypes,
 			   int a,
 			   int b,
 			   bool detail,
 			   bool linear,
 			   bool permute);
   // Wu, Guan, and Pankow 2016
-  double SKATRO(Gene &gene, const std::string &k, bool shuffle, int a, int b, bool detail = false, bool linear = false);
+  double SKATRO(Gene &gene,
+				const std::string &k,
+				arma::vec &phenotypes,
+				int a,
+				int b,
+				bool detail = false,
+				bool linear = false);
   double Vaast(Gene &gene,
 			   arma::vec &Y,
 			   const std::string &k,
@@ -68,7 +74,7 @@ public:
 			   arma::uword group_threshold = 4,
 			   bool detail = false,
 			   bool biallelic = false);
-  double VT(Gene &gene, const std::string &k, bool shuffle);
+  double VT(Gene &gene, const std::string &k, arma::vec &phenotypes);
   // Madsen, Browning 2009
   double WSS(Gene &gene, arma::vec &Y, const std::string &k);
 

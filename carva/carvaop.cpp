@@ -266,23 +266,82 @@ auto CARVAOp::stage2() -> void {
 		  phenotypes = arma::conv_to<arma::vec>::from(permutations[0]);
 		}
 
-		perm_val = call_method(ta_.get_methods(),
-							   ta_.get_gene(),
-							   ta_.get_cov(),
-							   phenotypes,
-							   ta_.get_tp(),
-							   k,
-							   false,
-							   false);
+		try {
+		  perm_val = call_method(ta_.get_methods(),
+								 ta_.get_gene(),
+								 ta_.get_cov(),
+								 phenotypes,
+								 ta_.get_tp(),
+								 k,
+								 false,
+								 false);
+		} catch(std::exception &e) {
+		  std::cerr << "Failed permutation." << std::endl;
+		  if (ta_.get_tp().approximate) {
+			permutations = ta_.get_permute(k).permutations_mac_bin(1,
+																   ta_.get_cov().get_odds(),
+																   ta_.get_cov().get_ncases(),
+																   mac_indices[k],
+																   maj_indices[k],
+																   *ta_.get_tp().approximate,
+																   k);
+		  } else {
+			permutations = ta_.get_permute(k).permutations_maj_bin(1,
+																   ta_.get_cov().get_odds(),
+																   ta_.get_cov().get_ncases(),
+																   mac_indices[k],
+																   maj_indices[k],
+																   k);
+		  }
+		  phenotypes = arma::conv_to<arma::vec>::from(permutations[0]);
+		  perm_val = call_method(ta_.get_methods(),
+								 ta_.get_gene(),
+								 ta_.get_cov(),
+								 phenotypes,
+								 ta_.get_tp(),
+								 k,
+								 false,
+								 false);
+		}
 	  } else {
-		perm_val = call_method(ta_.get_methods(),
-							   ta_.get_gene(),
-							   ta_.get_cov(),
-							   phenotypes,
-							   ta_.get_tp(),
-							   k,
-							   transcript_no == 0,
-							   false);
+	    phenotypes = ta_.get_cov().get_phenotype_vector();
+		// Fisher-Yates Shuffle
+		for (arma::sword i = phenotypes.n_elem - 1; i > 0; --i) {
+		  std::uniform_int_distribution<> dis(0, i);
+		  auto j = static_cast<arma::uword>(dis(gen_));
+		  double tmp = phenotypes(i);
+		  phenotypes(i) = phenotypes(j);
+		  phenotypes(j) = tmp;
+		}
+
+		try {
+		  perm_val = call_method(ta_.get_methods(),
+								 ta_.get_gene(),
+								 ta_.get_cov(),
+								 phenotypes,
+								 ta_.get_tp(),
+								 k,
+								 transcript_no == 0,
+								 false);
+		} catch(std::exception &e) {
+		  std::cerr << "Failed permutation." << std::endl;
+		  // Fisher-Yates Shuffle
+		  for (arma::sword i = phenotypes.n_elem - 1; i > 0; --i) {
+			std::uniform_int_distribution<> dis(0, i);
+			auto j = static_cast<arma::uword>(dis(gen_));
+			double tmp = phenotypes(i);
+			phenotypes(i) = phenotypes(j);
+			phenotypes(j) = tmp;
+		  }
+		  perm_val = call_method(ta_.get_methods(),
+								 ta_.get_gene(),
+								 ta_.get_cov(),
+								 phenotypes,
+								 ta_.get_tp(),
+								 k,
+								 transcript_no == 0,
+								 false);
+		}
 	  }
 
 	  // ta.increment_permuted(v.second.transcript, perm_val);
@@ -454,7 +513,7 @@ auto CARVAOp::call_method(Methods &method,
 						  bool shuffle,
 						  bool detail) -> double {
   if (tp.method == "BURDEN") {
-	return method.BURDEN(gene, k, shuffle, tp.a, tp.b);
+	return method.BURDEN(gene, k, phenotypes, tp.a, tp.b);
   } else if (tp.method == "CALPHA") {
 	return method.CALPHA(gene, phenotypes, k);
   } else if (tp.method == "CMC") {
@@ -464,9 +523,9 @@ auto CARVAOp::call_method(Methods &method,
   } else if (tp.method == "RVT2") {
 	return method.RVT2(gene, phenotypes, cov.get_covariate_matrix(), k, tp.linear);
   } else if (tp.method == "SKAT") {
-	return method.SKATR(gene, k, shuffle, tp.a, tp.b, detail, tp.linear, tp.total_permutations > 0);
+	return method.SKATR(gene, k, phenotypes, tp.a, tp.b, detail, tp.linear, tp.total_permutations > 0);
   } else if (tp.method == "SKATO") {
-	return method.SKATRO(gene, k, shuffle, tp.a, tp.b, detail, tp.linear);
+	return method.SKATRO(gene, k, phenotypes, tp.a, tp.b, detail, tp.linear);
   } else if (tp.method == "VAAST") {
 	return method.Vaast(gene,
 						phenotypes,
@@ -478,7 +537,7 @@ auto CARVAOp::call_method(Methods &method,
 						detail,
 						tp.biallelic);
   } else if (tp.method == "VT") {
-	return method.VT(gene, k, shuffle);
+	return method.VT(gene, k, phenotypes);
   } else if (tp.method == "WSS") {
 	return method.WSS(gene, phenotypes, k);
   } else {

@@ -39,16 +39,15 @@ public:
   arma::uword get_ncases() const;
 
   arma::mat &get_covariate_matrix();
-  arma::colvec &get_odds();
-  arma::colvec &get_original_phenotypes();
+  arma::vec &get_odds();
+  arma::vec &get_original_phenotypes();
   arma::vec &get_fitted();
-  arma::uvec &get_indices();
   arma::vec get_residuals() const;
   arma::vec &get_mean();
   arma::rowvec &get_coef();
 
   // Permute
-  void shuffle();
+  void refit_permuted();
 
   // Free memory
   void clear();
@@ -63,12 +62,17 @@ private:
   arma::colvec phenotypes_; // Possibly permuted phenotype vector
   arma::colvec original_; // Original phenotype vector
   arma::mat design_; // Design matrix
-  arma::colvec odds_;
+  arma::vec odds_;
   arma::vec fitted_;
-  arma::uvec indices_;
   arma::vec mean_; // Mean of MFNCH
   arma::vec eta_;
   arma::rowvec coef_;
+
+  // Permutation
+  arma::vec p_odds_;
+  arma::vec p_fitted_;
+  arma::vec p_eta_;
+  arma::rowvec p_coef_;
 
   bool sorted_;
   bool linear_;

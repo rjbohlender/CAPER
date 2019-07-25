@@ -19,7 +19,6 @@ Covariates::Covariates(const std::string& ifile, const std::string& pedfile, boo
 	  crand((int)time(nullptr)),
 	  linear_(linear) {
   parse(ifile, pedfile);
-  indices_ = arma::regspace<arma::uvec>(0, nsamples_ - 1);
   sorted_ = false;
 }
 
@@ -30,8 +29,6 @@ Covariates::Covariates(std::stringstream &ss)
 	  linear_(false) {
   parse(ss);
   fit_null();
-
-  indices_ = arma::regspace<arma::uvec>(0, nsamples_ - 1);
 }
 
 void Covariates::print() {
@@ -68,33 +65,62 @@ arma::mat &Covariates::get_covariate_matrix() {
   return design_;
 }
 
-arma::colvec &Covariates::get_odds() {
+arma::vec &Covariates::get_odds() {
   return odds_;
 }
 
-arma::colvec &Covariates::get_original_phenotypes() {
+arma::vec &Covariates::get_original_phenotypes() {
   return original_;
 }
 
 arma::vec &Covariates::get_fitted() {
-  return fitted_;
-}
-
-arma::uvec &Covariates::get_indices() {
-  return indices_;
+  return p_fitted_;
 }
 
 arma::vec &Covariates::get_mean() {
   return mean_;
 }
 
-void Covariates::shuffle() {
-  // Fisher-Yates shuffle is 3-7x faster than armadillo's shuffle
-  for(arma::sword i = indices_.n_elem - 1; i >= 0; i--) {
-    arma::sword j = static_cast<arma::sword>(crand.IRandom(0, i));
-    arma::uword tmp = indices_[i];
-    indices_[i] = indices_[j];
-    indices_[j] = tmp;
+void Covariates::refit_permuted() {
+  bool success;
+  if(linear_) {
+	Gaussian link("identity");
+	GLM<Gaussian> fit(design_, phenotypes_, link);
+	success = fit.success;
+	p_fitted_ = fit.mu_;
+	p_eta_ = fit.eta_;
+	p_coef_ = fit.beta_.t();
+	// From Moser and Coombs (2004) -- Get Logistic Regression params without dichotomizing
+	double lambda = arma::datum::pi / std::sqrt(3);
+	Binomial alt_link("logit");
+	arma::vec temp_mu = alt_link.linkinv(((lambda * coef_ / std::sqrt(fit.dev_)) * design_).t());
+	p_odds_ = temp_mu / (1. - temp_mu); // Individual odds, as if the data were dichotomized
+  } else {
+	Binomial link("logit");
+	GLM<Binomial> fit(design_, phenotypes_, link);
+	success = fit.success;
+	p_odds_ = fit.mu_ / (1. - fit.mu_);
+	p_fitted_ = fit.mu_;
+	p_eta_ = fit.eta_;
+	p_coef_ = fit.beta_.t();
+  }
+
+  // Use BayesianGLM to overcome perfect separation
+  if (!success) {
+	if(linear_) {
+	  Gaussian link("identity");
+	  BayesianGLM<Gaussian> fit(design_, phenotypes_, link);
+	  p_fitted_ = fit.mu_;
+	  p_eta_ = fit.eta_;
+	  p_coef_ = fit.beta_.t();
+	} else {
+	  Binomial link("logit");
+	  BayesianGLM<Binomial> fit(design_, phenotypes_, link);
+	  p_odds_ = fit.mu_ / (1. - fit.mu_);
+	  p_fitted_ = fit.mu_;
+	  p_eta_ = fit.eta_;
+	  p_coef_ = fit.beta_.t();
+	}
   }
 }
 
@@ -265,6 +291,12 @@ void Covariates::fit_null() {
     Binomial alt_link("logit");
     arma::vec temp_mu = alt_link.linkinv(((lambda * coef_ / std::sqrt(fit.dev_)) * design_).t());
     odds_ = temp_mu / (1. - temp_mu); // Individual odds, as if the data were dichotomized
+
+	// Initially, permuted values are equal to the first fit.
+	p_odds_ = odds_;
+	p_fitted_ = fitted_;
+	p_eta_ = eta_;
+	p_coef_ = coef_;
   } else {
 	Binomial link("logit");
 	GLM<Binomial> fit(design_, phenotypes_, link);
@@ -272,6 +304,12 @@ void Covariates::fit_null() {
 	fitted_ = fit.mu_;
 	eta_ = fit.eta_;
 	coef_ = fit.beta_.t();
+
+	// Initially, permuted values are equal to the first fit.
+	p_odds_ = odds_;
+	p_fitted_ = fitted_;
+	p_eta_ = eta_;
+	p_coef_ = coef_;
   }
 }
 
@@ -307,10 +345,10 @@ bool Covariates::is_sorted() {
 }
 
 arma::rowvec &Covariates::get_coef() {
-  return coef_;
+  return p_coef_;
 }
 
 arma::vec Covariates::get_residuals() const {
-  return phenotypes_ - fitted_;
+  return phenotypes_ - p_fitted_;
 }
 

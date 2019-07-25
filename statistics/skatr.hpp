@@ -12,7 +12,7 @@ public:
   explicit SKATR_Null(Covariates &cov);
 
   // Handle permutation
-  auto shuffle(bool skip_svd = false) noexcept -> void;
+  auto shuffle(arma::vec &phenotypes) -> void;
 
   auto get_U0() noexcept -> arma::vec;
   auto get_pi0() noexcept -> arma::vec;
@@ -33,7 +33,7 @@ private:
   arma::rowvec coef;     // model coefficients -- theta_
   arma::vec Y;           // Case-control status
   arma::mat X;           // Design matrix
-  arma::uvec indices;    // Index vector
+  Covariates cov_;
 };
 
 class SKATR_Linear_Null {
@@ -41,7 +41,7 @@ public:
   explicit SKATR_Linear_Null(Covariates &cov);
 
   // Handle permutation
-  auto shuffle() noexcept -> void;
+  auto shuffle(arma::vec &phenotypes) -> void;
 
   auto get_U0() noexcept -> arma::vec;
   auto get_s2() noexcept -> double;
@@ -51,14 +51,13 @@ public:
   auto get_X() noexcept -> const arma::mat &;
 
 private:
-  CRandomMersenne crand;
   arma::vec U0;          // Residuals
   double s2;             // The residual variance
   arma::mat Ux;          // ;
   arma::rowvec coef;     // model coefficients -- theta_
   arma::vec Y;           // Phenotype
   arma::mat X;           // Design matrix
-  arma::uvec indices;    // Index vector
+  Covariates cov_;
 };
 
 #endif //PERMUTE_ASSOCIATE_SKATR_HPP

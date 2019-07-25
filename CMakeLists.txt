@@ -22,7 +22,7 @@ find_package(Boost 1.66.0 COMPONENTS program_options iostreams REQUIRED)
 if (APPLE)
     # -fsanitize=address -fsanitize=undefined -Wall -pedantic
     # set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O1 -fsanitize=address -fsanitize-blacklist=/Users/rjbohlender/CLionProjects/Permute_Associate/Asan.supp -Wall -pedantic")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=undefined -Wall -pedantic")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -pedantic")
 endif ()
 
 if (UNIX)

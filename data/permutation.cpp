@@ -9,7 +9,7 @@
 #include "permutation.hpp"
 
 Permute::Permute()
-	: sto((int32_t) time(nullptr)) {}
+	: sto(std::random_device{}()) {}
 
 void Permute::get_permutations(std::shared_ptr<std::vector<std::vector<int32_t>>> permutations,
 							   arma::colvec &odds,

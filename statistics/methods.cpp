@@ -126,10 +126,8 @@ void Methods::clear(std::vector<std::string> &v) {
   lin_obj_.reset();
 }
 
-double Methods::BURDEN(Gene &gene, const std::string &k, bool shuffle, int a, int b) {
-  if (shuffle) {
-	obj_->shuffle(false);
-  }
+double Methods::BURDEN(Gene &gene, const std::string &k, arma::vec &phenotypes, int a, int b) {
+  obj_->shuffle(phenotypes);
 
   arma::sp_mat G(gene.get_matrix(k));
 
@@ -618,10 +616,9 @@ double Methods::Vaast(Gene &gene,
 #endif
 }
 
-double Methods::VT(Gene &gene, const std::string &k, bool shuffle) {
-  if (shuffle) {
-	vt_obj_->shuffle();
-  }
+double Methods::VT(Gene &gene, const std::string &k, arma::vec &phenotypes) {
+  vt_obj_->shuffle(phenotypes);
+
   arma::sp_mat X(gene.get_matrix(k));
 
   arma::vec res = vt_obj_->get_residuals();
@@ -795,14 +792,14 @@ arma::mat Methods::kernel_twoWayX(arma::mat &Xmat, arma::uword n, arma::uword p)
  * @param cov
  * @param weights
  * @param k
- * @param shuffle
+ * @param phenotypes
  * @param a
  * @param b
  * @return
  */
 double Methods::SKATR(Gene &gene,
 					  const std::string &k,
-					  bool shuffle,
+					  arma::vec &phenotypes,
 					  int a,
 					  int b,
 					  bool detail,
@@ -810,12 +807,10 @@ double Methods::SKATR(Gene &gene,
 					  bool permute) {
   arma::sp_mat G(gene.get_matrix(k));
 
-  if (shuffle) {
-	if (linear) {
-	  lin_obj_->shuffle();
-	} else {
-	  obj_->shuffle(permute);
-	}
+  if (linear) {
+	lin_obj_->shuffle(phenotypes);
+  } else {
+	obj_->shuffle(phenotypes);
   }
 
   check_weights(gene, k, a, b);
@@ -872,13 +867,11 @@ double Methods::SKATR(Gene &gene,
   }
 }
 
-double Methods::SKATRO(Gene &gene, const std::string &k, bool shuffle, int a, int b, bool detail, bool linear) {
-  if (shuffle) {
-	if (linear) {
-	  lin_obj_->shuffle();
-	} else {
-	  obj_->shuffle(false);
-	}
+double Methods::SKATRO(Gene &gene, const std::string &k, arma::vec &phenotypes, int a, int b, bool detail, bool linear) {
+  if (linear) {
+	lin_obj_->shuffle(phenotypes);
+  } else {
+	obj_->shuffle(phenotypes);
   }
 
   arma::sp_mat G(gene.get_matrix(k));

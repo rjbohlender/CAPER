@@ -11,14 +11,13 @@ class VT_Res {
 public:
   explicit VT_Res(const Covariates &cov);
 
-  auto shuffle() -> void;
+  auto shuffle(arma::vec &phenotypes) -> void;
 
   auto get_residuals() -> arma::vec;
 
 private:
-  CRandomMersenne crand_;
-  arma::vec residuals_;
   arma::uvec indices_;
+  Covariates cov_;
 };
 
 #endif //PERMUTE_ASSOCIATE_VT_HPP

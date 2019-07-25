@@ -230,7 +230,7 @@ double PowerOp::call_method(Methods &method,
   bool shuffle = false; // Not needed here
   bool detail = false;
   if (tp.method == "BURDEN") {
-	return method.BURDEN(gene, k, shuffle, tp.a, tp.b);
+	return method.BURDEN(gene, k, phenotypes, tp.a, tp.b);
   } else if (tp.method == "CALPHA") {
 	return method.CALPHA(gene, phenotypes, k);
   } else if (tp.method == "CMC") {
@@ -240,14 +240,14 @@ double PowerOp::call_method(Methods &method,
   } else if (tp.method == "RVT2") {
 	return method.RVT2(gene, phenotypes, cov.get_covariate_matrix(), k, tp.linear);
   } else if (tp.method == "SKAT") {
-	return method.SKATR(gene, k, shuffle, tp.a, tp.b, detail, tp.linear, false);
+	return method.SKATR(gene, k, phenotypes, tp.a, tp.b, detail, tp.linear, false);
   } else if (tp.method == "SKATO") {
-	return method.SKATRO(gene, k, shuffle, tp.a, tp.b, detail, tp.linear);
+	return method.SKATRO(gene, k, phenotypes, tp.a, tp.b, detail, tp.linear);
   } else if (tp.method == "VAAST") {
 	return method
 		.Vaast(gene, phenotypes, k, tp.score_only_minor, tp.score_only_alternative, 2.0, tp.group_size, detail, false);
   } else if (tp.method == "VT") {
-	return method.VT(gene, k, shuffle);
+	return method.VT(gene, k, phenotypes);
   } else if (tp.method == "WSS") {
 	return method.WSS(gene, phenotypes, k);
   } else {

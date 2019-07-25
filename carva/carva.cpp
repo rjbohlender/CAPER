@@ -303,7 +303,8 @@ int main(int argc, char **argv) {
 
   tp.covadj = covadj;
 
-  tp.alternate_permutation = tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN" || tp.method == "VT";
+  // tp.alternate_permutation = tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN";
+  tp.alternate_permutation = false;
   tp.quantitative = tp.method == "RVT1" || tp.method == "RVT2" || tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN" || tp.method == "VT";
   tp.analytic = tp.method == "SKATO" || (tp.method == "SKAT" && tp.total_permutations == 0) || tp.method == "RVT1" || tp.method == "RVT2" || tp.method == "CMC";
   if(tp.linear && !tp.quantitative) {

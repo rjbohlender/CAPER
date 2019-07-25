@@ -58,7 +58,7 @@ SKAT_Residuals_Logistic::SKAT_Residuals_Logistic(Covariates &cov, int nresamplin
   arma::mat covt = cov.get_covariate_matrix().t();
   calcX1(covt);
 
-  res = cov.get_phenotype_vector()(cov.get_indices()) - cov.get_fitted()(cov.get_indices());
+  res = cov.get_residuals();
 
   if(nResampling > 0) {
 	res_out.reshape(res.n_rows, nResampling);
@@ -67,7 +67,7 @@ SKAT_Residuals_Logistic::SKAT_Residuals_Logistic(Covariates &cov, int nresamplin
 	}
   }
 
-  mu = cov.get_fitted()(cov.get_indices());
+  mu = cov.get_fitted();
   pi_1 = arma::diagmat(mu) * (1 - mu);
 }
 
@@ -90,8 +90,8 @@ SKAT_Adjust::SKAT_Adjust(Gene &gene,
 	}
   }
 
-  arma::vec phen_vec = cov.get_phenotype_vector()(cov.get_indices());
-  arma::vec prob_vec = cov.get_fitted()(cov.get_indices());
+  arma::vec phen_vec = cov.get_phenotype_vector();
+  arma::vec prob_vec = cov.get_fitted();
 
   // Residuals
   re1 = SKAT_Residuals_Logistic(cov.get_covariate_matrix(), prob_vec, phen_vec, 0);

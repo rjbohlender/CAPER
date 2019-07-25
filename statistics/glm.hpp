@@ -19,6 +19,7 @@ struct GLM {
   arma::vec eta_;  // linear.predictors
   double dev_;
   arma::uvec indices_;
+  bool success;
 
   GLM(arma::mat &X, arma::vec &Y, LinkT &link) {
     indices_ = arma::regspace<arma::uvec>(0, X.n_cols - 1);
@@ -37,6 +38,12 @@ struct GLM {
 
     mu_ = link.linkinv(X.cols(indices_), beta_);
     eta_ = link.link(mu_);
+
+    if(mu_.has_nan() || eta_.has_nan()) {
+      success = false;
+    } else {
+      success = true;
+    }
   }
   // Algorithms for finding the optimum
   auto gradient_descent(arma::mat &X, arma::colvec &Y) -> arma::vec;
