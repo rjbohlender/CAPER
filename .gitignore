@@ -72,3 +72,5 @@ bernoulli.R
 /ibd_alg.R
 /Asan.supp
 /tools/vcf2matrix/test/
+/tools/vcf2matrix/cmake-build-release/
+/tools/vcf2matrix/cmake-build-debug/
