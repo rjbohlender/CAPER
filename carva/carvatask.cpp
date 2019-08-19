@@ -257,6 +257,9 @@ void CARVATask::calc_multitranscript_pvalues() {
   for (i = 0; i < n; i++) {
 	// For each statistic
 	const std::string &ts = transcripts[i];
+	if (!gene_.is_polymorphic(ts)) {
+	  continue;
+	}
 	int m = static_cast<int>(results[ts].permuted.size());  // Total permutations
 
 	assert(m == get_max_permutations()); // Sanity check - All equal

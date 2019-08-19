@@ -227,12 +227,16 @@ double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &k, double maf) 
   boost::math::fisher_f fisher_f(p, nA + nU - 1 - p);
   double pval;
   try {
+    if (isnan(stat)) {
+      return 1.;
+    }
 	pval = boost::math::cdf(boost::math::complement(fisher_f, stat));
   } catch (boost::exception &e) {
 	std::cerr << "COV: " << COV;
 	std::cerr << "INV: " << INV;
 	std::cerr << "Xxmean: " << Xxmean;
 	std::cerr << "Yymean: " << Yymean;
+	std::cerr << "stat: " << stat << std::endl;
 	std::cerr << "ret: " << arma::as_scalar(ret);
 	throw;
   }

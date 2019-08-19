@@ -36,6 +36,8 @@ else()
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
 endif ()
 
+add_subdirectory(tools/vcf2matrix)
+
 message(${CMAKE_CXX_FLAGS_DEBUG})
 message(${CMAKE_CXX_FLAGS_RELEASE})
 

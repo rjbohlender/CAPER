@@ -325,7 +325,7 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
 		  pos_contalt_map[pos] = cont_alt(i);
 		}
 		// Get indices
-		arma::uvec carriers = arma::find(arma::rowvec(X.row(i)) > 0);
+		arma::uvec carriers = arma::find(arma::rowvec(X.col(i).t()) > 0);
 		if (pos_caseidx_map.find(pos) == pos_caseidx_map.end()) {
 		  pos_caseidx_map[pos] = arma::intersect(cases, carriers);
 		}

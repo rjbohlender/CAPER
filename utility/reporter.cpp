@@ -58,7 +58,7 @@ Reporter::Reporter(TaskParams &tp)
   if(!simple_file_tmp_.good()) {
     throw(std::runtime_error("Simple file failed to open for writing.\n"));
   }
-  simple_file_tmp_ << std::setw(20) << std::left << "Gene";
+  simple_file_tmp_ << std::setw(25) << std::left << "Gene" << " ";
   simple_file_tmp_ << std::setw(20) << "Transcript";
   simple_file_tmp_ << std::setw(20) << "Test_Statistic";
   simple_file_tmp_ << std::setw(20) << "Exact_P";
@@ -329,8 +329,11 @@ auto Reporter::recalculate_mgit(std::unordered_map<std::string, Result> &results
   i = 0;
   for(auto &tr : results) {
 	int m = tr.second.permuted.size();
+	if (m == 0) {
+	  continue;
+	}
 
-	tr.second.permuted.push_back(tr.second.original);
+	  tr.second.permuted.push_back(tr.second.original);
 	arma::vec permuted = arma::conv_to<arma::vec>::from(tr.second.permuted);
 	arma::vec pvals;
 
@@ -529,7 +532,7 @@ auto Reporter::sort_simple(TaskParams &tp) -> void {
   simple_file_ << "# Cases: " << ncases_ << std::endl;
   simple_file_ << "# Controls: " << ncontrols_ << std::endl;
   simple_file_ << std::setw(20) << std::left << "Rank";
-  simple_file_ << std::setw(20) << "Gene";
+  simple_file_ << std::setw(25) << "Gene" << " ";
   simple_file_ << std::setw(20) << "Transcript";
   simple_file_ << std::setw(20) << "Test_Statistic";
   simple_file_ << std::setw(20) << "Exact_P";
@@ -591,7 +594,7 @@ auto Reporter::sort_simple(TaskParams &tp) -> void {
 	midci << rs.empirical_midp_ci.first << "," << rs.empirical_midp_ci.second;
 
     simple_file_ << std::setw(20) << std::left <<  rank;
-    simple_file_ << std::setw(20) << rs.gene;
+    simple_file_ << std::setw(25) << rs.gene << " ";
     simple_file_ << std::setw(20) << rs.transcript;
     simple_file_ << std::setw(20) << rs.original;
 	simple_file_ << std::setw(20) << rs.exact_p;
@@ -714,7 +717,7 @@ PowerReporter::PowerReporter(TaskParams &tp) {
   power_file_ = std::ofstream(power_path_ss.str());
 
 // Initial header write
-  power_file_ << std::setw(15) << "Gene";
+  power_file_ << std::setw(15) << "Gene" << " ";
   power_file_ << std::setw(15) << "Transcript";
   power_file_ << std::setw(15) << "Method";
   power_file_ << std::setw(15) << "Ncases";
@@ -737,7 +740,7 @@ PowerReporter::PowerReporter(std::vector<PowerTask> &res, TaskParams &tp) {
   power_file_ = std::ofstream(power_path_ss.str());
 
 // Initial header write
-  power_file_ << std::setw(15) << "Gene";
+  power_file_ << std::setw(15) << "Gene" << " ";
   power_file_ << std::setw(15) << "Transcript";
   power_file_ << std::setw(15) << "Method";
   power_file_ << std::setw(15) << "Ncases";
@@ -761,7 +764,7 @@ auto PowerReporter::report(std::vector<PowerTask> &resv, TaskParams &tp) -> void
 auto PowerReporter::report_power(std::vector<PowerTask> &resv, TaskParams &tp) -> void {
   for (const auto &pt : resv) {
     for (const auto &pr : pt.power_res_) {
-	  power_file_ << std::setw(20) << pr.gene;
+	  power_file_ << std::setw(25) << pr.gene << " ";
 	  power_file_ << std::setw(20) << pr.transcript;
 	  power_file_ << std::setw(20) << pr.method;
 	  power_file_ << std::setw(20) << pr.successes;
@@ -777,7 +780,7 @@ auto PowerReporter::sync_write_power(std::vector<PowerRes> &prv) -> void {
   std::unique_lock<std::mutex> lock(lock_); // Acquire lock
 
   for(const auto &pr : prv) {
-	power_file_ << std::setw(20) << pr.gene;
+	power_file_ << std::setw(25) << pr.gene << " ";
 	power_file_ << std::setw(20) << pr.transcript;
 	power_file_ << std::setw(20) << pr.method;
 	power_file_ << std::setw(20) << pr.successes;
@@ -813,7 +816,7 @@ CAESEReporter::CAESEReporter(TaskParams &tp) {
   caese_file_ = std::ofstream(caese_path_ss.str());
 
 // Initial header write
-  caese_file_ << std::setw(20) << std::left << "Gene";
+  caese_file_ << std::setw(25) << std::left << "Gene" << " ";
   caese_file_ << std::setw(20) << std::left << "Transcript";
   caese_file_ << std::setw(20) << std::left << "OR_estimate";
   caese_file_ << std::setw(20) << std::left << "OR_CI_low";
@@ -837,7 +840,7 @@ CAESEReporter::CAESEReporter(std::vector<CAESETask> &res, TaskParams &tp) {
   caese_file_ = std::ofstream(caese_path_ss.str());
 
 // Initial header write
-  caese_file_ << std::setw(20) << std::left << "Gene";
+  caese_file_ << std::setw(25) << std::left << "Gene" << " ";
   caese_file_ << std::setw(20) << std::left << "Transcript";
   caese_file_ << std::setw(20) << std::left << "OR_estimate";
   caese_file_ << std::setw(20) << std::left << "OR_CI_low";
@@ -865,7 +868,7 @@ auto CAESEReporter::report_caese(std::vector<CAESETask> &resv, TaskParams &tp) -
 	  // TODO: interpolate when it isn't an integer
 	  int lo = cr.second.permuted.size() * 0.025;
 	  int hi = cr.second.permuted.size() * 0.975;
-	  caese_file_ << std::setw(20) << std::left << cr.second.gene;
+	  caese_file_ << std::setw(25) << std::left << cr.second.gene << " ";
 	  caese_file_ << std::setw(20) << std::left << cr.second.transcript;
 	  caese_file_ << std::setw(20) << std::left << cr.second.original;
 	  caese_file_ << std::setw(20) << std::left << cr.second.permuted[lo];
@@ -888,7 +891,7 @@ auto CAESEReporter::sync_write_caese(std::map<std::string, Result> &crv) -> void
 	// TODO: interpolate when it isn't an integer
 	int lo = cr.second.permuted.size() * 0.025;
 	int hi = cr.second.permuted.size() * 0.975;
-	caese_file_ << std::setw(20) << std::left << cr.second.gene;
+	caese_file_ << std::setw(25) << std::left << cr.second.gene << " ";
 	caese_file_ << std::setw(20) << std::left << cr.second.transcript;
 	caese_file_ << std::setw(20) << std::left << cr.second.original;
 	caese_file_ << std::setw(20) << std::left << cr.second.permuted[lo];

@@ -103,7 +103,7 @@ auto CARVAOp::stage1() -> void {
 	  // ta_.increment_permuted(v.second.transcript, perm_val);
 	  v.second.permuted.push_back(perm_val);
 
-	  // Update tota_l number of permuta_tions
+	  // Update total number of permutations
 	  v.second.permutations++;
 
 	  check_perm(ta_.get_tp(), perm_val, ta_.success_threshold, v);

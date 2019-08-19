@@ -7,9 +7,9 @@ eprintf <- function(...) {
   flush.console()
 }
 
-# args = commandArgs(trailingOnly = T)
+args = commandArgs(trailingOnly = T)
 setwd("~/CLionProjects/Permute_Associate/")
-args = c("test.sim/test_data.txt", "test.sim/test_data.cov", "test.sim/test_data.ped")
+# args = c("test.sim/test_data.txt", "test.sim/test_data.cov", "test.sim/test_data.ped")
 
 run_analysis <- function(args) {
 

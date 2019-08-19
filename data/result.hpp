@@ -23,7 +23,7 @@ struct Result {
   Result &operator=(const Result &rhs) = default;
   Result &operator=(Result &&rhs) noexcept;
 
-  friend std::ostream &operator<<(std::ostream &stream, const Result &rhs);
+  friend std::ostream &operator<<(std::ostream &stream, Result &rhs);
 
   Result &combine(const Result& res);
   void set_rank(int rank);

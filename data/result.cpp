@@ -105,14 +105,14 @@ Result &Result::operator=(Result &&rhs) noexcept {
   return *this;
 }
 
-std::ostream &operator<<(std::ostream &stream, const Result &rhs) {
+std::ostream &operator<<(std::ostream &stream, Result &rhs) {
   std::stringstream ci;
   ci << std::defaultfloat << std::setprecision(3) << rhs.empirical_ci.first << "," << std::setprecision(3)
 	 << rhs.empirical_ci.second;
   std::stringstream midci;
   midci << std::defaultfloat << std::setprecision(3) << rhs.empirical_midci.first << "," << std::setprecision(3)
 		<< rhs.empirical_midci.second;
-  stream << std::setw(20) << std::defaultfloat << std::left << rhs.gene;
+  stream << std::setw(25) << std::defaultfloat << std::left << rhs.gene << " ";
   stream << std::setw(20) << rhs.transcript;
   stream << std::setw(20) << std::setprecision(8) << rhs.original;
   stream << std::setw(20) << std::setprecision(8) << rhs.exact_p;
@@ -172,15 +172,14 @@ void Result::update_ci() {
   double z2 = z * z;
 
   double sp = (empirical_p + z2 / (2 * permutations)) / (1. + z2 / permutations);
-  double ci = z / (1. + z2 / permutations) * std::sqrt(empirical_p * (1. - empirical_p) / permutations + z2
-	  / (4 * permutations * permutations)); // Wilson score interval
+  double ci = z / (1. + z2 / permutations) * std::sqrt(empirical_p * (1. - empirical_p) / permutations + z2 / std::pow(2 * permutations, 2)); // Wilson score interval
   double ci_low = (sp - ci > 0) ? sp - ci : 0;
   double ci_hi = (sp + ci > 1) ? 1 : sp + ci;
   empirical_ci = std::make_pair(ci_low, ci_hi);
 
   sp = (empirical_midp + z2 / (2 * permutations)) / (1. + z2 / permutations);
   ci = z / (1. + z2 / permutations) * std::sqrt(empirical_midp * (1. - empirical_midp) / permutations
-													+ z2 / (4 * permutations * permutations)); // Wilson score interval
+													+ z2 / std::pow(2 * permutations, 2)); // Wilson score interval
   ci_low = (sp - ci > 0) ? sp - ci : 0;
   ci_hi = (sp + ci > 1) ? 1 : sp + ci;
   empirical_midci = std::make_pair(ci_low, ci_hi);

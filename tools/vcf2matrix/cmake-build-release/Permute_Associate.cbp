@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6"/>
+	<Project>
+		<Option title="Permute_Associate"/>
+		<Option makefile_is_custom="1"/>
+		<Option compiler="clang"/>
+		<Option virtualFolders="CMake Files\;"/>
+		<Build>
+			<Target title="all">
+				<Option working_dir="/Users/rjbohlender/CLionProjects/Permute_Associate/tools/vcf2matrix/cmake-build-release"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/rjbohlender/CLionProjects/Permute_Associate/tools/vcf2matrix/cmake-build-release/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/rjbohlender/CLionProjects/Permute_Associate/tools/vcf2matrix/cmake-build-release/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/rjbohlender/CLionProjects/Permute_Associate/tools/vcf2matrix/cmake-build-release/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/rjbohlender/CLionProjects/Permute_Associate/tools/vcf2matrix/cmake-build-release/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="rebuild_cache">
+				<Option working_dir="/Users/rjbohlender/CLionProjects/Permute_Associate/tools/vcf2matrix/cmake-build-release"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/rjbohlender/CLionProjects/Permute_Associate/tools/vcf2matrix/cmake-build-release/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/rjbohlender/CLionProjects/Permute_Associate/tools/vcf2matrix/cmake-build-release/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/rjbohlender/CLionProjects/Permute_Associate/tools/vcf2matrix/cmake-build-release/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/rjbohlender/CLionProjects/Permute_Associate/tools/vcf2matrix/cmake-build-release/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="edit_cache">
+				<Option working_dir="/Users/rjbohlender/CLionProjects/Permute_Associate/tools/vcf2matrix/cmake-build-release"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/rjbohlender/CLionProjects/Permute_Associate/tools/vcf2matrix/cmake-build-release/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/rjbohlender/CLionProjects/Permute_Associate/tools/vcf2matrix/cmake-build-release/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/rjbohlender/CLionProjects/Permute_Associate/tools/vcf2matrix/cmake-build-release/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/rjbohlender/CLionProjects/Permute_Associate/tools/vcf2matrix/cmake-build-release/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="vcf2matrix">
+				<Option output="/Users/rjbohlender/CLionProjects/Permute_Associate/tools/vcf2matrix/cmake-build-release/vcf2matrix" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/rjbohlender/CLionProjects/Permute_Associate/tools/vcf2matrix/cmake-build-release"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="clang"/>
+				<Compiler>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/local/Cellar/llvm/8.0.0_1/bin/../include/c++/v1"/>
+					<Add directory="/usr/local/Cellar/llvm/8.0.0_1/lib/clang/8.0.0/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/rjbohlender/CLionProjects/Permute_Associate/tools/vcf2matrix/cmake-build-release/Makefile&quot;  VERBOSE=1 vcf2matrix"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/rjbohlender/CLionProjects/Permute_Associate/tools/vcf2matrix/cmake-build-release/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/rjbohlender/CLionProjects/Permute_Associate/tools/vcf2matrix/cmake-build-release/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/rjbohlender/CLionProjects/Permute_Associate/tools/vcf2matrix/cmake-build-release/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="vcf2matrix/fast">
+				<Option output="/Users/rjbohlender/CLionProjects/Permute_Associate/tools/vcf2matrix/cmake-build-release/vcf2matrix" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/rjbohlender/CLionProjects/Permute_Associate/tools/vcf2matrix/cmake-build-release"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="clang"/>
+				<Compiler>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/local/Cellar/llvm/8.0.0_1/bin/../include/c++/v1"/>
+					<Add directory="/usr/local/Cellar/llvm/8.0.0_1/lib/clang/8.0.0/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/rjbohlender/CLionProjects/Permute_Associate/tools/vcf2matrix/cmake-build-release/Makefile&quot;  VERBOSE=1 vcf2matrix/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/rjbohlender/CLionProjects/Permute_Associate/tools/vcf2matrix/cmake-build-release/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/rjbohlender/CLionProjects/Permute_Associate/tools/vcf2matrix/cmake-build-release/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/rjbohlender/CLionProjects/Permute_Associate/tools/vcf2matrix/cmake-build-release/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="/Users/rjbohlender/CLionProjects/Permute_Associate/tools/vcf2matrix/vcf2matrix.cpp">
+			<Option target="vcf2matrix"/>
+		</Unit>
+		<Unit filename="/Users/rjbohlender/CLionProjects/Permute_Associate/tools/vcf2matrix/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+	</Project>
+</CodeBlocks_project_file>

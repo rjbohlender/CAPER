@@ -8,6 +8,7 @@
 #define ARMA_DONT_USE_WRAPPER
 
 #include <armadillo>
+#include <cmath>
 
 #include <boost/math/distributions/normal.hpp>
 
@@ -49,8 +50,8 @@ auto BayesianGLM<LinkT>::irls(arma::mat &X, arma::colvec &Y) -> arma::vec {
   arma::uword nvars = A.n_cols;
 
   if(nobs < nvars) {
-    std::cerr << "WARNING: More variables than observations in regression. Returning ones." << std::endl;
-    throw(std::runtime_error("Too many variables."));
+    std::cerr << "WARNING: More variables than observations in regression. Returning nans." << std::endl;
+    //throw(std::runtime_error("Too many variables."));
     arma::vec ret(nvars);
     ret.fill(arma::datum::nan);
     return ret;
@@ -114,7 +115,7 @@ auto BayesianGLM<LinkT>::irls(arma::mat &X, arma::colvec &Y) -> arma::vec {
     arma::mat Astar = arma::join_vert(A, arma::eye(nvars, nvars));
     Astar(nobs, arma::span::all) = arma::mean(A);
     arma::vec zstar = arma::join_vert(z, prior_mean);
-    arma::vec wstar = arma::join_vert(w, sqrt(dispersion) / prior_sd);
+    arma::vec wstar = arma::join_vert(w, std::sqrt(dispersion) / prior_sd);
 
     // Solve Astar * x = Y
     arma::mat Q, R;
