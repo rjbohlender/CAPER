@@ -303,7 +303,9 @@ auto CARVAOp::stage2() -> void {
 								 false,
 								 false);
 		}
-	  } else {
+	  }
+#if 0
+	  else {
 	    phenotypes = ta_.get_cov().get_phenotype_vector();
 		// Fisher-Yates Shuffle
 		for (arma::sword i = phenotypes.n_elem - 1; i > 0; --i) {
@@ -343,6 +345,7 @@ auto CARVAOp::stage2() -> void {
 								 false);
 		}
 	  }
+#endif
 
 	  // ta.increment_permuted(v.second.transcript, perm_val);
 	  v.second.permuted.push_back(perm_val);

@@ -42,7 +42,7 @@ run_analysis <- function(args) {
     }
   }
   
-  nperm <- 10000
+  nperm <- 0
 
   cov$V1 = case_control
   null_formula <- paste(c("V1 ~ 1", colnames(cov)[3:ncol(cov) - 1]), sep = " + ", collapse = " + ")
@@ -56,7 +56,7 @@ run_analysis <- function(args) {
     for(ts in levels(s$Transcript)) {
       Z = t(as.matrix(s[s$Transcript == ts,4:ncol(s)]))
       Z[Z > 2] = 0
-      res <- SKAT(Z, obj, kernel="linear", method="davies")
+      res <- SKAT(Z, obj, kernel="linear", method="optimal")
       eprintf("%s %s %6.5f", gene, ts, res$p.value)
     }
   }
