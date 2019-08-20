@@ -206,7 +206,7 @@ VAAST::VAAST(Gene &gene,
   }
 
   if (detail) {
-	if (group_threshold == 0) {
+	if (group_threshold == 0 || X.n_cols == 1) {
 	  gene.set_scores(k, vaast_site_scores);
 	} else {
 	  expanded_scores.reshape(X.n_cols, 1);
@@ -262,7 +262,7 @@ VAAST::VAAST(arma::sp_mat X,
 
   }
 
-  if(group_threshold > 0) {
+  if(group_threshold > 0 && X.n_cols > 1) {
 	expanded_scores.reshape(X.n_cols, 1);
 	if (X.n_cols > 1) {
 	  arma::sp_mat Xnew(X);
@@ -386,7 +386,7 @@ void VAAST::variant_grouping(const arma::sp_mat &X,
 							 const arma::vec &w,
 							 std::vector<std::string> &positions) {
   groups.clear();
-  if (group_threshold == 0) {
+  if (group_threshold == 0 || X.n_cols == 1) {
 	groups.emplace_back(VariantGroup(X, Y, w, 0, site_penalty, som, soa));
 	return;
   }
