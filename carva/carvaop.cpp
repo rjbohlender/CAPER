@@ -168,6 +168,7 @@ auto CARVAOp::stage2() -> void {
   std::map<std::string, arma::colvec> maj_odds;
   std::map<std::string, arma::uvec> mac_indices;
   std::map<std::string, arma::uvec> maj_indices;
+  std::map<std::string, arma::vec> af;
 
   double perm_val;
   int transcript_no;
@@ -194,6 +195,12 @@ auto CARVAOp::stage2() -> void {
 	  mac_indices[k] = arma::find(arma::sum(arma::mat(ta_.get_gene().get_matrix(k)), 1) > 0);
 	  maj_indices[k] = arma::find(arma::sum(arma::mat(ta_.get_gene().get_matrix(k)), 1) == 0);
 	  assert(mac_indices[k].n_rows + maj_indices[k].n_rows == ta_.get_cov().get_nsamples());
+
+#if 0
+	  // Calculated to test for bugs with no polymorphic variants
+	  af[k] = arma::sum(arma::mat(ta_.get_gene().get_matrix(k)), 0).t() / ta_.get_gene().get_matrix(k).n_rows;
+	  std::cerr << "k: " << k << " " << af[k].t();
+#endif
 
 	  mac_odds[k] = ta_.get_cov().get_odds()(mac_indices[k]);
 	  maj_odds[k] = ta_.get_cov().get_odds()(maj_indices[k]);

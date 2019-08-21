@@ -198,6 +198,7 @@ void Gene::parse(std::stringstream &ss) {
 		} else if(tp_.verbose && bmaf) {
 		  std::cerr << "Removing: " << gene_ << " " << ts << " " << positions_[ts][i] << " | frequency: " << maf[i] << " due to MAF filter." << std::endl;
 		}
+		sums.shed_col(i);
 		genotypes_[ts].shed_col(i);
 		positions_[ts].erase(positions_[ts].begin() + i);
 		nvariants_[ts]--;

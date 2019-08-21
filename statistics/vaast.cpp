@@ -429,9 +429,13 @@ void VAAST::variant_grouping(const arma::sp_mat &X,
 
 	arma::sp_mat Xnew(X.n_rows, idx.n_elem);
 	i = 0;
-	for(const auto &v : idx) {
-	  Xnew.col(i) = X.col(v);
-	  i++;
+	if (Xnew.n_cols == X.n_cols) {
+	  Xnew = X;
+	} else {
+	  for(const auto &v : idx) {
+		Xnew.col(i) = X.col(v);
+		i++;
+	  }
 	}
 	arma::vec Wvec = w(idx);
 	arma::uvec indices = arma::regspace<arma::uvec>(0, Xnew.n_cols - 1);
