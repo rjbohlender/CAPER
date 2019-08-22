@@ -221,7 +221,8 @@ VAAST::VAAST(Gene &gene,
 			Wnew.shed_row(i);
 		  } else {
 			positions[i - 1] = gene.get_positions(k)[i - 1];
-			Xnew.col(i - 1) = X.col(i - 1);
+			Xnew = X;
+			Xnew.shed_col(i);
 			Wnew(i - 1) = weights(i - 1);
 		  }
 
