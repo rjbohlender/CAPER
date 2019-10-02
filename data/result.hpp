@@ -55,6 +55,9 @@ struct Result {
   double nmac, nmaj;
   // std::map<double, double> permuted;
 
+  // Output permuted statistics
+  bool output_stats;
+
   // Odds Ratio specific
   double or_p;
   double case_alt, case_ref;

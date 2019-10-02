@@ -571,6 +571,9 @@ auto Reporter::sort_simple(TaskParams &tp) -> void {
       .mgit_successes = std::stoul(splitter[10]),
       .permutations = std::stoul(splitter[11])
     };
+	for(int i = 12; i < splitter.size(); i++) {
+	  rs.stats.push_back(splitter[i]);
+	}
 
     results.push_back(rs);
 
@@ -605,7 +608,11 @@ auto Reporter::sort_simple(TaskParams &tp) -> void {
 	simple_file_ << std::setw(20) << rs.mgit;
     simple_file_ << std::setw(20) << rs.successes;
     simple_file_ << std::setw(20) << rs.mgit_successes;
-	simple_file_ << std::setw(20) << rs.permutations << std::endl;
+	simple_file_ << std::setw(20) << rs.permutations;
+	for(const auto &v : rs.stats) {
+	  simple_file_ << std::setw(20) << v;
+	}
+	simple_file_ << std::endl;
 
     rank++;
   }

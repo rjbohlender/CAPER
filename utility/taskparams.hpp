@@ -25,6 +25,7 @@ struct TaskParams {
   // For external permutations
   bool external;
   std::string external_path;
+  bool output_stats;
 
   // For SKATO, SKAT, BURDEN
   bool alternate_permutation;

@@ -25,6 +25,7 @@ struct ResultLine {
   unsigned long successes;
   unsigned long mgit_successes;
   unsigned long permutations;
+  std::vector<std::string> stats;
 };
 
 class Reporter {

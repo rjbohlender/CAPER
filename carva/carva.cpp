@@ -54,6 +54,7 @@ int main(int argc, char **argv) {
   bool top_only = false;
   bool biallelic = false;
   bool nocovadj = false;
+  bool stats = false;
   std::vector<int> gene_range;
   std::vector<std::string> power;
   boost::optional<std::string> bed;
@@ -124,6 +125,9 @@ int main(int argc, char **argv) {
 				("approx,a",
 				 po::value(&approximate),
 				 "Group minor allele carriers into n bins with shared average odds. This option is useful for very large data sets where the total number of minor allele carriers to be permuted can be very large, and result in extreme run times.")
+				("output_stats",
+				 po::bool_switch(&stats),
+				 "Write permuted statistics to .simple file following default output.")
 				 ;
     vaast.add_options()
 			 ("group_size,g",
@@ -274,6 +278,7 @@ int main(int argc, char **argv) {
   } else {
     tp.external = false;
   }
+  tp.output_stats = stats;
 
   tp.method = vm["method"].as<std::string>();
   // File paths and option status

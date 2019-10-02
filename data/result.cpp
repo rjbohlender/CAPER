@@ -29,7 +29,8 @@ Result::Result()
 	  empirical_midci(NAN, NAN),
 	  nmac(NAN),
 	  nmaj(NAN),
-	  rand_perms(NAN) {
+	  rand_perms(NAN),
+	  output_stats(false) {
 }
 
 Result::Result(const std::string &gene, const std::string &transcript)
@@ -53,7 +54,8 @@ Result::Result(const std::string &gene, const std::string &transcript)
 	  empirical_midci(NAN, NAN),
 	  nmac(NAN),
 	  nmaj(NAN),
-	  rand_perms(NAN) {
+	  rand_perms(NAN),
+	  output_stats(false) {
 }
 
 Result::Result(Result &&res) noexcept
@@ -77,7 +79,8 @@ Result::Result(Result &&res) noexcept
 	  empirical_midci(res.empirical_midci),
 	  nmac(res.nmac),
 	  nmaj(res.nmaj),
-	  rand_perms(res.rand_perms) {}
+	  rand_perms(res.rand_perms),
+	  output_stats(res.output_stats) {}
 
 Result &Result::operator=(Result &&rhs) noexcept {
   gene = std::move(rhs.gene);
@@ -99,6 +102,7 @@ Result &Result::operator=(Result &&rhs) noexcept {
   nmac = rhs.nmac;
   nmaj = rhs.nmaj;
   rand_perms = rhs.rand_perms;
+  output_stats = rhs.output_stats;
 
   update_ci();
 
@@ -123,7 +127,13 @@ std::ostream &operator<<(std::ostream &stream, Result &rhs) {
   stream << std::setw(20) << rhs.mgit_p;
   stream << std::setw(20) << rhs.successes;
   stream << std::setw(20) << rhs.mgit_successes;
-  stream << std::setw(20) << rhs.permutations << std::endl;
+  stream << std::setw(20) << rhs.permutations;
+  if(rhs.output_stats) {
+    for(const auto &v : rhs.permuted) {
+      stream << std::setw(20) << std::setprecision(5) << v;
+    }
+  }
+  stream << std::endl;
   return stream;
 }
 
