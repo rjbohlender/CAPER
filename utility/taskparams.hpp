@@ -22,6 +22,10 @@ struct TaskParams {
   arma::uword stage_2_permutations;
   arma::uword total_permutations;
 
+  // For external permutations
+  bool external;
+  std::string external_path;
+
   // For SKATO, SKAT, BURDEN
   bool alternate_permutation;
   bool analytic;

@@ -18,5 +18,5 @@ pdf(args[2], 6.5, 6.5)
 pvals <- df$Empirical_MidP
 names(pvals) <- df$Gene
 
-pQQ(pvals[!duplicated(df$Gene)])
+pQQ(pvals[!duplicated(df$Gene)], nlabs=0)
 dev.off()

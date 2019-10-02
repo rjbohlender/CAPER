@@ -159,6 +159,7 @@ int main(int argc, char **argv) {
 		   	"Minor allele frequency cutoff for CMC collapsing.")
 		   ;
 	all.add_options()
+		    ("external", po::value<std::string>(), "Use external permutations.")
 			("help,h", "Print this help message.")
 			("quiet,q", "Don't print status messages.")
 			;
@@ -265,6 +266,15 @@ int main(int argc, char **argv) {
   tp.stage_1_permutations = vm["stage_1_max_perm"].as<arma::uword>();
   tp.stage_2_permutations = vm["stage_2_max_perm"].as<arma::uword>();
   tp.total_permutations = std::max(tp.stage_1_permutations, tp.stage_2_permutations);
+
+  // External permutations for Yao -- XMAT
+  if (vm.count("external") > 0) {
+    tp.external = true;
+    tp.external_path = vm["external"].as<std::string>();
+  } else {
+    tp.external = false;
+  }
+
   tp.method = vm["method"].as<std::string>();
   // File paths and option status
   tp.program_path = argv[0];
@@ -329,10 +339,12 @@ int main(int argc, char **argv) {
     std::cerr << "Thread count must be >= 2." << std::endl;
     std::cerr << visible << std::endl;
   }
+#if 0
   if(tp.permute_set && tp.nthreads) {
     std::cerr << "Restricting to a single worker thread. Permute set output is not threadsafe." << std::endl;
     tp.nthreads = 2;
   }
+#endif
 
   if (tp.method == "SKATO") {
 	// Different defaults for SKATO

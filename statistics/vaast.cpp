@@ -221,6 +221,7 @@ VAAST::VAAST(Gene &gene,
 			Wnew.shed_row(i);
 		  } else {
 			positions[i - 1] = gene.get_positions(k)[i - 1];
+			// TODO Find a way to avoid this copy, the old way gave a spontaneous seg fault
 			Xnew = X;
 			Xnew.shed_col(i);
 			Wnew(i - 1) = weights(i - 1);

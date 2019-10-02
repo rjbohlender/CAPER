@@ -113,7 +113,7 @@ set(PROJECT_SUPPORT_FILES
     caese/caesetask.cpp
     caese/caesetask.hpp
     statistics/fishertest.cpp
-    statistics/fishertest.hpp)
+    statistics/fishertest.hpp utility/jointhreads.hpp)
 
 
 include_directories("${CMAKE_CURRENT_LIST_DIR}/third_party")
@@ -124,7 +124,7 @@ include_directories(${BLAS_INCLUDE_DIRS})
 
 add_executable(carva
                carva/carva.cpp
-               ${PROJECT_SUPPORT_FILES})
+               ${PROJECT_SUPPORT_FILES} utility/jointhreads.hpp)
 
 if(FALSE)
 	target_link_libraries(carva nvblas)
@@ -139,7 +139,7 @@ target_compile_definitions(carva PRIVATE MAXCOLORS=10000000)
 
 add_executable(power
                power/power.cpp
-               ${PROJECT_SUPPORT_FILES})
+               ${PROJECT_SUPPORT_FILES} utility/jointhreads.hpp)
 
 target_link_libraries(power ${ARMADILLO_LIBRARIES})
 target_link_libraries(power ${CMAKE_THREAD_LIBS_INIT})
@@ -151,7 +151,7 @@ target_compile_definitions(power PRIVATE MAXCOLORS=10000000)
 
 add_executable(caese
                caese/caese.cpp
-               ${PROJECT_SUPPORT_FILES} caese/caese.cpp)
+               ${PROJECT_SUPPORT_FILES} caese/caese.cpp utility/jointhreads.hpp)
 
 target_link_libraries(caese ${ARMADILLO_LIBRARIES})
 target_link_libraries(caese ${CMAKE_THREAD_LIBS_INIT})

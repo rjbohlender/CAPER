@@ -73,20 +73,38 @@ public:
 	cov_->sort_covariates(header_);
 
 	permutation_ptr_ = std::make_shared<std::vector<std::vector<int32_t>>>();
-	// Generate permutations for stage 1
-	arma::wall_clock timer;
-	timer.tic();
-	if (tp.stage_1_permutations > 0 && !tp.alternate_permutation) {
-	  permute_.get_permutations(permutation_ptr_,
-								cov_->get_odds(),
-								cov_->get_ncases(),
-								tp.stage_1_permutations,
-								tp.nthreads - 1);
-	}
-	if (tp.stage_1_permutations > 0) {
-	  std::cerr << "Time spent generating stage 1 permutations: " << timer.toc() << std::endl;
+	if (tp.external) { // Read in external stage 1 permutations
+	  if(!check_file_exists(tp.external_path)) {
+	    throw(std::runtime_error("ERROR: External permutation file doesn't exist."));
+	  }
+	  std::ifstream ifs(tp.external_path);
+	  std::string line;
+	  while(std::getline(ifs, line)) {
+	    permutation_ptr_->push_back({});
+	    RJBUtil::Splitter<std::string> splitter(line, " \t");
+		permutation_ptr_->back().reserve(splitter.size());
+		for (const auto &v : splitter) {
+		  permutation_ptr_->back().emplace_back(std::stoi(v));
+	    }
+	  }
+	  std::cerr << permutation_ptr_->size() << " external stage 1 permutations read in." << std::endl;
+	  tp.stage_1_permutations = permutation_ptr_->size();
 	} else {
-	  timer.toc();
+	  // Generate permutations for stage 1
+	  arma::wall_clock timer;
+	  timer.tic();
+	  if (tp.stage_1_permutations > 0 && !tp.alternate_permutation) {
+		permute_.get_permutations(permutation_ptr_,
+								  cov_->get_odds(),
+								  cov_->get_ncases(),
+								  tp.stage_1_permutations,
+								  tp.nthreads - 1);
+	  }
+	  if (tp.stage_1_permutations > 0) {
+		std::cerr << "Time spent generating stage 1 permutations: " << timer.toc() << std::endl;
+	  } else {
+		timer.toc();
+	  }
 	}
 	// Time for 1000 permutations, 1000 samples -> 0.5s, 10000 samples-> 30s, 100000 samples 3300s
 
