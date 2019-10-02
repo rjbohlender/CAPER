@@ -90,6 +90,7 @@ auto CARVAOp::stage1() -> void {
 						false,
 						false);
 	  } else {
+		phenotypes = arma::conv_to<arma::vec>::from(ta_.get_permutations()[iter]);
 		perm_val = call_method(ta_.get_methods(),
 							   ta_.get_gene(),
 							   ta_.get_cov(),
