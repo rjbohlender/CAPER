@@ -658,7 +658,15 @@ double Methods::VT(Gene &gene, const std::string &k, arma::vec &phenotypes) {
 double Methods::VTfix(Gene &gene, const std::string &k, arma::vec &phenotypes) {
   // Convert data to match their format
   arma::sp_mat X(gene.get_matrix(k));
+#if 1
+  arma::vec geno(X.n_elem, arma::fill::zeros);
+  for(arma::uword i = 0; i < X.n_cols; i++) {
+    arma::span span(i * X.n_rows, std::min((i + 1) * X.n_rows - 1, geno.n_elem - 1));
+    geno(span) = arma::vec(X.col(i));
+  }
+#else
   arma::vec geno(X.as_col());
+#endif
   arma::vec pheno = arma::repmat(phenotypes, X.n_cols, 1);
   arma::uvec snpid(X.n_elem);
   for(arma::uword i = 0; i < X.n_cols; i++) {
