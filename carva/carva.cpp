@@ -312,6 +312,8 @@ int main(int argc, char **argv) {
 
   tp.covadj = !nocovadj;
 
+  tp.power = false;
+
   // tp.alternate_permutation = tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN";
   tp.alternate_permutation = false;
   tp.quantitative =

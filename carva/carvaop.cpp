@@ -20,6 +20,10 @@ auto CARVAOp::run() -> void {
 	stage1();
   } else if (stage == Stage::Stage2) {
 	stage2();
+  } else if (stage == Stage::Done) {
+    return;
+  } else {
+    throw(std::runtime_error("Incorrect stage in CARVAOp::run()"));
   }
 }
 
