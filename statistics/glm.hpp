@@ -32,7 +32,16 @@ struct GLM {
       try {
 		beta_ = irls_qr(X, Y);
       } catch(std::exception &e) {
-        beta_ = irls(X, Y);
+        try{
+		  beta_ = irls(X, Y);
+		} catch(std::exception &e) {
+          beta_ = arma::vec(X.n_cols);
+          mu_ = arma::vec(X.n_rows);
+          eta_ = arma::vec(X.n_rows);
+          beta_.fill(arma::datum::nan);
+          mu_.fill(arma::datum::nan);
+		  eta_.fill(arma::datum::nan);
+		}
       }
     }
 

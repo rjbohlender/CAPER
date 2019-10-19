@@ -126,7 +126,10 @@ int main(int argc, char **argv) {
 				 "Group minor allele carriers into n bins with shared average odds. This option is useful for very large data sets where the total number of minor allele carriers to be permuted can be very large, and result in extreme run times.")
 				("output_stats",
 				 po::bool_switch(&stats),
-				 "Write permuted statistics to .simple file following default output.");
+				 "Write permuted statistics to .simple file following default output.")
+				("permute_out",
+				 po::value(&permute_set),
+				 "Output permutations to the given file.");
 	vaast.add_options()
 			 ("group_size,g",
 			  po::value<arma::uword>()->default_value(0),
@@ -163,9 +166,6 @@ int main(int argc, char **argv) {
 		   ("quiet,q", "Don't print status messages.");
 	hidden.add_options()
 			  // ("no_adjust,n", "Disable small sample size adjustment for SKATO.")
-			  ("permute_out",
-			   po::value(&permute_set),
-			   "Output permutations to the given file.")
 			  ("nocovadj",
 			   po::bool_switch(&nocovadj),
 			   "Do Fisher-Yates shuffling instead of covariate adjusted permutation.");

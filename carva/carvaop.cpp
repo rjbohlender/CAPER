@@ -548,7 +548,7 @@ auto CARVAOp::call_method(Methods &method,
 						detail,
 						tp.biallelic);
   } else if (tp.method == "VT") {
-	return method.VT(gene, k, phenotypes);
+	return method.VTfix(gene, k, phenotypes);
   } else if (tp.method == "WSS") {
 	return method.WSS(gene, phenotypes, k);
   } else {
