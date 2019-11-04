@@ -15,7 +15,7 @@ message(${CMAKE_CXX_FLAGS_RELEASE}) # print "-O3 -DNDEBUG"
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
-find_package(Armadillo REQUIRED)
+find_package(Armadillo 8.6 REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Boost 1.66.0 COMPONENTS program_options iostreams REQUIRED)
 
@@ -160,3 +160,7 @@ target_link_libraries(caese ${LAPACK_LIBRARIES})
 target_link_libraries(caese ${BLAS_LIBRARIES})
 
 target_compile_definitions(caese PRIVATE MAXCOLORS=10000000)
+
+if(${ARMADILLO_VERSION_MAJOR} GREATER_EQUAL 9 AND ${ARMADILLO_VERSION_MINOR} GREATER_EQUAL 6)
+    add_compile_definitions(RECENT_ARMA)
+endif()

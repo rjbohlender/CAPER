@@ -12,7 +12,7 @@ VT_Res::VT_Res() {
 
 auto VT_Res::initialize(Gene &gene, arma::vec &pheno, const std::string &k) -> void{
   arma::sp_mat X(gene.get_matrix(k));
-#if ARMA_VERSION_MAJOR >= 9 && ARMA_VERSION_MINOR >= 6
+#ifdef RECENT_ARMA
   geno_[k] = arma::vec(X.as_col());
 #else
   geno_[k] = arma::vec(X.n_elem, arma::fill::zeros);
