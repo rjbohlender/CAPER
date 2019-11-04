@@ -15,7 +15,7 @@ auto VT_Res::initialize(Gene &gene, arma::vec &pheno, const std::string &k) -> v
 
   geno_[k] = arma::vec(X.n_elem, arma::fill::zeros);
   for(arma::uword i = 0; i < X.n_cols; i++) {
-	arma::span span(i * X.n_rows, std::min((i + 1) * X.n_rows - 1, geno.n_elem - 1));
+	arma::span span(i * X.n_rows, std::min((i + 1) * X.n_rows - 1, geno_[k].n_elem - 1));
 	geno_[k](span) = arma::vec(X.col(i));
   }
 
