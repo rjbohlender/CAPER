@@ -9,7 +9,7 @@
 
 class SKATR_Null {
 public:
-  explicit SKATR_Null(Covariates &cov);
+  explicit SKATR_Null(Covariates cov);
 
   // Handle permutation
   auto shuffle(arma::vec &phenotypes) -> void;
@@ -38,7 +38,7 @@ private:
 
 class SKATR_Linear_Null {
 public:
-  explicit SKATR_Linear_Null(Covariates &cov);
+  explicit SKATR_Linear_Null(Covariates cov);
 
   // Handle permutation
   auto shuffle(arma::vec &phenotypes) -> void;

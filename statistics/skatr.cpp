@@ -4,7 +4,7 @@
 
 #include "skatr.hpp"
 
-SKATR_Null::SKATR_Null(Covariates &cov)
+SKATR_Null::SKATR_Null(Covariates cov)
 : crand(std::random_device{}()), cov_(cov) {
   X = cov_.get_covariate_matrix();
   Y = cov_.get_phenotype_vector();
@@ -81,7 +81,7 @@ auto SKATR_Null::get_X() noexcept -> const arma::mat & {
   return X;
 }
 
-SKATR_Linear_Null::SKATR_Linear_Null(Covariates &cov)
+SKATR_Linear_Null::SKATR_Linear_Null(Covariates cov)
 : cov_(cov) {
   X = cov_.get_covariate_matrix();
   Y = cov_.get_phenotype_vector();

@@ -91,7 +91,7 @@ auto CARVAOp::stage1() -> void {
 						phenotypes,
 						ta_.get_tp(),
 						v.second.transcript,
-						false,
+						transcript_no == 0,
 						false);
 	  } else {
 		phenotypes = arma::conv_to<arma::vec>::from(ta_.get_permutations()[iter]);

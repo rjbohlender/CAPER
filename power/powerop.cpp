@@ -247,7 +247,7 @@ double PowerOp::call_method(Methods &method,
 	return method
 		.Vaast(gene, phenotypes, k, tp.score_only_minor, tp.score_only_alternative, 2.0, tp.group_size, detail, false);
   } else if (tp.method == "VT") {
-	return method.VT(gene, k, phenotypes);
+	return method.VTfix(gene, k, phenotypes);
   } else if (tp.method == "WSS") {
 	return method.WSS(gene, phenotypes, k);
   } else {

@@ -75,3 +75,4 @@ bernoulli.R
 /tools/vcf2matrix/cmake-build-release/
 /tools/vcf2matrix/cmake-build-debug/
 /test-sim/
+/carva.img.tar.gz

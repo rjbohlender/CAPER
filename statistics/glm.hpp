@@ -23,9 +23,9 @@ struct GLM {
 
   GLM(arma::mat &X, arma::vec &Y, LinkT &link) {
     indices_ = arma::regspace<arma::uvec>(0, X.n_cols - 1);
-    try{
+	try{
       beta_ = irls_svdnewton(X, Y);
-    } catch(std::exception &e) {
+	} catch(std::exception &e) {
       //std::cerr << "IRLS failed; Using gradient descent." << std::endl;
       //beta_ = gradient_descent(X, Y);
       //std::cerr << e.what();
@@ -35,14 +35,18 @@ struct GLM {
         try{
 		  beta_ = irls(X, Y);
 		} catch(std::exception &e) {
-          beta_ = arma::vec(X.n_cols);
-          mu_ = arma::vec(X.n_rows);
-          eta_ = arma::vec(X.n_rows);
-          beta_.fill(arma::datum::nan);
-          mu_.fill(arma::datum::nan);
-		  eta_.fill(arma::datum::nan);
+          try{
+			beta_ = gradient_descent(X, Y);
+		  } catch(std::exception &e) {
+			beta_ = arma::vec(X.n_cols);
+			mu_ = arma::vec(X.n_rows);
+			eta_ = arma::vec(X.n_rows);
+			beta_.fill(arma::datum::nan);
+			mu_.fill(arma::datum::nan);
+			eta_.fill(arma::datum::nan);
+		  }
 		}
-      }
+	  }
     }
 
     mu_ = link.linkinv(X.cols(indices_), beta_);
@@ -67,17 +71,16 @@ auto GLM<LinkT>::gradient_descent(arma::mat &X, arma::colvec &Y) -> arma::vec {
   std::cerr << "Running gradient descent.\n";
   auto iterations = 0ull;
   const auto max_iter = 1000000ull;
-  auto alpha = 0.005; // Learning rate
+  auto alpha = 0.0005; // Learning rate
   auto tol = 1e-10;
   auto m = static_cast<double>(X.n_cols);
-  arma::mat A = X.t();
+  arma::mat A = X;
   auto b = arma::vec(A.n_cols, arma::fill::randn);
   auto grad = b;
   do {
     // Vectorized update
     grad = alpha * (A.t() * (link.linkinv(A, b) - Y)) / m;
     b -= grad;
-
 
     iterations++;
   } while(iterations < max_iter && arma::norm(grad) > tol);
@@ -87,7 +90,7 @@ auto GLM<LinkT>::gradient_descent(arma::mat &X, arma::colvec &Y) -> arma::vec {
 template<typename LinkT>
 auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
   const auto tol = 1e-8;
-  const auto max_iter = 50;
+  const auto max_iter = 25;
   auto iter = 0;
 
   arma::uword m = X.n_rows;
@@ -106,7 +109,10 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
   arma::vec eta(m, arma::fill::randn);
   arma::vec s(n, arma::fill::randn);
   arma::vec weights(m, arma::fill::ones);
-  arma::vec s_old;
+  arma::vec s_old = s;
+  arma::uvec good;
+  arma::mat Ugood;
+  arma::mat Wgood;
 
   // Handle rank deficiency
   arma::uvec tiny = (S / S(0) < tol);
@@ -117,52 +123,60 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
 	arma::svd_econ(U, S, V, X.cols(indices_));
   }
 
-  dev_ = 0;
-  double devold;
+  good = arma::find(weights > arma::datum::eps * 2);
+  arma::vec diff = s - s_old;
 
   do {
-    devold = dev_;
 
-    arma::vec g = link.linkinv(eta);
+    arma::vec g = link.linkinv(eta(good));
     arma::vec varg = link.variance(g);
-    arma::vec gprime = link.mueta(eta);
+    arma::vec gprime = link.mueta(eta(good));
 
     arma::vec z(m);
     arma::vec W(m);
 
-    z = eta + (Y - g) / gprime;
-    W = weights % arma::pow(gprime, 2) / varg;
+    z(good) = eta(good) + (Y(good) - g) / gprime;
+    W(good) = weights(good) % arma::pow(gprime, 2) / varg;
 
-    arma::mat C;
-    arma::mat UWU = U.t() * (U.each_col() % W);
+	good = arma::find(W > arma::datum::eps * 2);
+	if(sum(W > arma::datum::eps * 2) < m)
+	  std::cerr << "Warning: Encountered tiny weights in IRLS.\n";
+
+	arma::mat C;
+	Ugood = U.rows(good);
+	Wgood = W(good);
+    arma::mat UWU = Ugood.t() * (Ugood.each_col() % Wgood);
     success = arma::chol(C, UWU);
+#if 0
     double jitter = 1e-9;
     while(!success && jitter < 1.) {
       UWU.diag() += jitter;
       success = arma::chol(C, UWU);
       jitter *= 10;
     }
+#endif
     if (!success) {
       throw(std::runtime_error("Cholesky decomposition of UWU matrix failed."));
     }
 
     s_old = s;
-    s = solve(arma::trimatl(C.t()), U.t() * (W % z));
-    s = solve(arma::trimatu(C), s);
+    s = solve(arma::trimatl(C.t()), Ugood.t() * (Wgood % z));
+	s = solve(arma::trimatu(C), s);
 
-    eta = U * s;
+    eta = Ugood * s;
 
     iter++;
 
     dev_ = arma::sum(link.dev_resids(Y, g, weights));
 
-  } while(iter < max_iter && std::abs(dev_ - devold) / (0.1 + std::abs(dev_)) > tol);
+  // } while(iter < max_iter && std::abs(dev_ - devold) / (0.1 + std::abs(dev_)) > tol);
+  } while(iter < max_iter && arma::accu(arma::sqrt(diff.t() * diff)) > tol);
 
-  if(std::abs(dev_ - devold) / (0.1 + std::abs(dev_)) > tol) {
+  if(arma::accu(arma::sqrt(diff.t() * diff)) > tol) {
     std::cerr << "IRLS failed to converge." << std::endl;
   }
 
-  return (V * (arma::diagmat(1. / S) * (U.t() * eta)));
+  return (V * (arma::diagmat(1. / S) * (Ugood.t() * eta(good))));
 }
 template<typename LinkT>
 

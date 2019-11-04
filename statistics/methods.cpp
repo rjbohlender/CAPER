@@ -108,7 +108,7 @@ Methods::Methods(TaskParams &tp, Covariates &cov)
 	obj_ = nullptr;
 	lin_obj_ = std::make_shared<SKATR_Linear_Null>(cov);
   } else if (tp.method == "VT") {
-	vt_obj_ = std::make_shared<VT_Res>(cov);
+	vt_obj_ = std::make_shared<VT_Res>();
   }
 }
 
@@ -620,6 +620,7 @@ double Methods::Vaast(Gene &gene,
 #endif
 }
 
+#if 0
 double Methods::VT(Gene &gene, const std::string &k, arma::vec &phenotypes) {
   vt_obj_->shuffle(phenotypes);
 
@@ -654,88 +655,19 @@ double Methods::VT(Gene &gene, const std::string &k, arma::vec &phenotypes) {
 	return 0;
   }
 }
+#endif
 
 double Methods::VTfix(Gene &gene, const std::string &k, arma::vec &phenotypes) {
   // Convert data to match their format
-  arma::sp_mat X(gene.get_matrix(k));
-#if 1
-  arma::vec geno(X.n_elem, arma::fill::zeros);
-  for(arma::uword i = 0; i < X.n_cols; i++) {
-    arma::span span(i * X.n_rows, std::min((i + 1) * X.n_rows - 1, geno.n_elem - 1));
-    geno(span) = arma::vec(X.col(i));
+  arma::vec pheno = arma::repmat(phenotypes, gene.get_matrix(k).n_cols, 1);
+  if (!vt_obj_->is_initialized(k)) {
+    vt_obj_->initialize(gene, pheno, k);
   }
-#else
-  arma::vec geno(X.as_col());
-#endif
-  arma::vec pheno = arma::repmat(phenotypes, X.n_cols, 1);
-  arma::uvec snpid(X.n_elem);
-  for(arma::uword i = 0; i < X.n_cols; i++) {
-    arma::span snp(i * X.n_rows, (i + 1) * X.n_rows - 1);
-    snpid(snp).fill(i);
-  }
-  // Subset to carriers
-  arma::uvec subset = arma::find(geno > 0);
-  geno = geno(subset);
-  pheno = pheno(subset);
-  snpid = snpid(subset);
+  pheno = pheno(vt_obj_->get_subset(k));
+  arma::vec phenoCount = pheno % vt_obj_->get_mCount(k); // Changes under permutation
+  arma::vec csPhenoCount = arma::cumsum(vt_obj_->sum_groups(phenoCount, vt_obj_->get_oneToLen(k), k)); // Changes under permutation
 
-  double meanpheno = arma::mean(phenotypes);
-  double N = X.n_rows;
-
-  // Values that don't change in permutation -- TODO move to VT class
-  arma::vec count(geno.n_elem, arma::fill::zeros);
-  arma::vec nCount(X.n_cols, arma::fill::zeros);
-  for(arma::uword i = 0; i < geno.n_elem; i++) {
-    nCount(snpid(i))++;
-  }
-  for(arma::uword i = 0; i < geno.n_elem; i++) {
-	count(i) = nCount(snpid(i));
-  }
-  arma::vec mCount = count;
-  arma::vec countg(count.n_elem, arma::fill::zeros);
-  arma::uword elem = 0;
-  for(const auto &v : count) {
-    countg(elem) = arma::accu(arma::unique(count) < v);
-    elem++;
-  }
-  arma::vec countSquare = arma::pow(count, 2);
-  arma::vec f = (1 + count) / std::sqrt(2 + 2 * N);
-  arma::vec weight = 1 / arma::sqrt(f % (1. - f));
-  arma::vec countWeight = count % weight;
-
-  // For group
-  double nx = countg.n_elem;
-  arma::vec group = arma::vec(nx, arma::fill::ones) + (countg - 1.0);
-  arma::vec ugroup = arma::unique(group);
-  double len = ugroup.n_elem;
-  arma::vec arr(len, arma::fill::zeros);
-  arma::uvec oneToLen = arma::conv_to<arma::uvec>::from(arma::regspace(0, len-1));
-  std::vector<arma::uvec> whiches;
-  for(arma::uword i = 0; i < len; i++) {
-    whiches.push_back(arma::find(group == i));
-  }
-
-  auto sum_groups = [&](arma::vec &X, arma::uvec &range) -> arma::vec {
-	arma::vec ret(range.n_elem, arma::fill::zeros);
-	for(const auto &i : range) {
-	  ret(i) = arma::sum(X(whiches[i]));
-	}
-	return ret;
-  };
-
-  count = sum_groups(count, oneToLen);
-  countSquare = sum_groups(countSquare, oneToLen);
-
-  // Insensitive to permutation -- TODO move to VT class
-  arma::vec csCount = arma::cumsum(count);
-  arma::vec csCountSquare = arma::cumsum(countSquare);
-  arma::vec csCountMeanpheno = csCount * meanpheno;
-  arma::vec sqrtCsCountSquare = arma::sqrt(csCountSquare);
-
-  arma::vec phenoCount = pheno % mCount; // Changes under permutation
-  arma::vec csPhenoCount = arma::cumsum(sum_groups(phenoCount, oneToLen)); // Changes under permutation
-
-  return arma::max((csPhenoCount - csCountMeanpheno) / sqrtCsCountSquare);
+  return arma::max((csPhenoCount - vt_obj_->get_csCountMeanpheno(k)) / vt_obj_->get_sqrtCsCountSquare(k));
 }
 
 double Methods::WSS(Gene &gene, arma::vec &Y, const std::string &k) {

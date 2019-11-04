@@ -74,7 +74,7 @@ public:
 			   arma::uword group_threshold = 4,
 			   bool detail = false,
 			   bool biallelic = false);
-  double VT(Gene &gene, const std::string &k, arma::vec &phenotypes);
+  //double VT(Gene &gene, const std::string &k, arma::vec &phenotypes);
   double VTfix(Gene &gene, const std::string &k, arma::vec &phenotypes);
 
   // Madsen, Browning 2009
