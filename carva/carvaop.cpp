@@ -284,7 +284,7 @@ auto CARVAOp::stage2() -> void {
 								 ta_.get_cov(),
 								 phenotypes,
 								 ta_.get_tp(),
-								 k,
+								  k,
 								 false,
 								 false);
 		} catch(std::exception &e) {
@@ -537,10 +537,14 @@ auto CARVAOp::call_method(Methods &method,
 	return method.RVT1(gene, phenotypes, cov.get_covariate_matrix(), k, tp.linear);
   } else if (tp.method == "RVT2") {
 	return method.RVT2(gene, phenotypes, cov.get_covariate_matrix(), k, tp.linear);
-  } else if (tp.method == "SKAT") {
+  } else if (tp.method == "SKATR") {
 	return method.SKATR(gene, k, phenotypes, tp.a, tp.b, detail, tp.linear, tp.total_permutations > 0);
-  } else if (tp.method == "SKATO") {
+  } else if (tp.method == "SKATRO") {
 	return method.SKATRO(gene, k, phenotypes, tp.a, tp.b, detail, tp.linear);
+  } else if (tp.method == "SKAT") {
+	return method.SKAT(gene, phenotypes, cov, k, tp.a, tp.b, shuffle, detail);
+  } else if (tp.method == "SKATO") {
+	return method.SKATO(gene, phenotypes, cov, k, tp.a, tp.b, shuffle, tp.adjust);
   } else if (tp.method == "VAAST") {
 	return method.Vaast(gene,
 						phenotypes,

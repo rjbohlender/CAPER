@@ -314,20 +314,22 @@ double Methods::RVT2(Gene &gene, arma::vec &Y, arma::mat &design, const std::str
   }
 }
 
-#if 0
-double Methods::SKAT(arma::mat &Xmat,
-					 Covariates &cov,
-					 arma::vec &weights,
+#if 1
+double Methods::SKAT(Gene &gene,
+					 arma::vec &Y,
+					 Covariates cov,
 					 const std::string &k,
-					 bool shuffle,
 					 int a,
-					 int b) {
-  arma::vec &Yvec = cov.get_phenotype_vector();
+					 int b,
+					 bool shuffle,
+					 bool detail) {
+  arma::sp_mat Xmat = gene.get_matrix(k);
+  arma::vec &weights = gene.get_weights(k);
 
   // Randomize indices
   if (shuffle) {
-	// arma::uvec ma_carriers = arma::find( arma::sum(Xmat) > 0 );
-	cov.shuffle();
+	cov.set_phenotype_vector(Y);
+	cov.refit_permuted();
   }
 
   // Check for weighted kernel
@@ -335,7 +337,7 @@ double Methods::SKAT(arma::mat &Xmat,
 	// Check for weights if kernel hasn't been generated
 	if (K_[k].n_rows == 0) {
 	  weights.reshape(Xmat.n_cols, 1);
-	  arma::vec maf = arma::mean(Xmat, 0).t() / 2.;
+	  arma::vec maf(arma::mean(Xmat, 0).t() / 2.);
 
 	  for (arma::uword i = 0; i < Xmat.n_cols; i++) {
 		weights(i) = std::pow(maf(i), a - 1) * std::pow(1 - maf(i), b - 1) / boost::math::beta(a, b);
@@ -377,26 +379,26 @@ double Methods::SKAT(arma::mat &Xmat,
 	}
   }
 
-  arma::vec Z = Yvec(cov.get_indices()) - cov.get_probability()(cov.get_indices());
+  arma::vec Z = Y - cov.get_fitted();
   arma::mat ret = Z.t() * K_[k] * Z / 2;
   return ret(0, 0);
 }
 
 double Methods::SKATO(Gene &gene,
-					  Covariates &cov,
-					  arma::vec &weights,
+					  arma::vec &Y,
+					  Covariates cov,
 					  const std::string &k,
-					  bool shuffle,
 					  int a,
 					  int b,
+					  bool shuffle,
 					  bool adjust) {
   // Randomize indices
   if (shuffle) {
-	// arma::uvec ma_carriers = arma::find( arma::sum(Z) > 0 );
-	cov.shuffle();
+	cov.set_phenotype_vector(Y);
+	cov.refit_permuted();
   }
 
-  arma::mat &Z = gene.get_matrix(k);
+  arma::sp_mat &Z = gene.get_matrix(k);
 
   if (Z.n_rows < 2000 && adjust) {
 	// SKAT_Adjust(Gene &gene, Covariates &cov, const std::string &k, const std::string &kernel, int a, int b);
@@ -425,10 +427,10 @@ double Methods::SKATO(Gene &gene,
   }
 
   // SKAT_Optimal_Logistic
-  arma::vec res = cov.get_phenotype_vector()(cov.get_indices()) - cov.get_probability()(cov.get_indices());
+  arma::vec res = Y - cov.get_fitted();
   arma::mat X1 = cov.get_covariate_matrix().t();
 
-  arma::vec pi_1 = cov.get_probability()(cov.get_indices()) % (1 - cov.get_probability()(cov.get_indices()));
+  arma::vec pi_1 = cov.get_fitted() % (1 - cov.get_fitted());
 #if 1
   arma::mat Z1 = (arma::diagmat(arma::sqrt(pi_1)) * Z
 	  - (arma::diagmat(arma::sqrt(pi_1)) * X1) * arma::inv_sympd(X1.t() * (arma::diagmat(pi_1) * X1))
@@ -701,11 +703,11 @@ std::string Methods::str() {
  * Kernel Member Functions
  */
 
-arma::mat Methods::kernel_Linear(arma::mat &Xmat) {
-  return Xmat * Xmat.t();
+arma::mat Methods::kernel_Linear(arma::sp_mat &Xmat) {
+  return arma::mat(Xmat * Xmat.t());
 }
 
-arma::mat Methods::kernel_wLinear(arma::mat &Xmat, arma::vec &weights) {
+arma::mat Methods::kernel_wLinear(arma::sp_mat &Xmat, arma::vec &weights) {
   return Xmat * arma::diagmat(weights) * arma::diagmat(weights) * Xmat.t();
 }
 
@@ -767,8 +769,8 @@ arma::mat Methods::kernel_wIBS(arma::mat &Xmat, arma::uword &n, arma::uword &p, 
  * @param Xmat The genotype matrix.
  * @return Quadratic kernel as matrix.
  */
-arma::mat Methods::kernel_Quadratic(arma::mat &Xmat) {
-  return arma::pow(Xmat * Xmat.t() + 1, 2);
+arma::mat Methods::kernel_Quadratic(arma::sp_mat &Xmat) {
+  return arma::mat(arma::pow(Xmat * Xmat.t() + 1, 2));
 }
 
 /**

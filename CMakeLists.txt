@@ -160,7 +160,3 @@ target_link_libraries(caese ${LAPACK_LIBRARIES})
 target_link_libraries(caese ${BLAS_LIBRARIES})
 
 target_compile_definitions(caese PRIVATE MAXCOLORS=10000000)
-
-if(${ARMADILLO_VERSION_MAJOR} GREATER_EQUAL 9 AND ${ARMADILLO_VERSION_MINOR} GREATER_EQUAL 6)
-    add_compile_definitions(RECENT_ARMA)
-endif()

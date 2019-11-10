@@ -78,11 +78,11 @@ struct SKAT_Logistic_VarMatching_Param {
 struct SKAT_Optimal_Logistic_VarMatching {
   SKAT_Optimal_Logistic_VarMatching() = default;
   SKAT_Optimal_Logistic_VarMatching(SKAT_Residuals_Logistic &re1,
-                                      SKAT_Residuals_Logistic &re2,
-                                      std::shared_ptr<SKAT_Optimal_GetQ> &Q_sim_all,
-                                      arma::mat &Z,
-                                      const std::string &kernel,
-                                      arma::vec &weights);
+									SKAT_Residuals_Logistic &re2,
+									std::shared_ptr<SKAT_Optimal_GetQ> &Q_sim_all,
+									arma::sp_mat &Z,
+									const std::string &kernel,
+									arma::vec &weights);
 
   arma::vec pval_each;
   arma::vec qval_each;

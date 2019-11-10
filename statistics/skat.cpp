@@ -17,7 +17,7 @@
 
 constexpr double SKATParam::rho_[];
 
-SKAT_Optimal_GetQ::SKAT_Optimal_GetQ(arma::mat &Z,
+SKAT_Optimal_GetQ::SKAT_Optimal_GetQ(arma::sp_mat &Z,
 									 arma::vec &res,
 									 arma::vec &rall,
 									 arma::mat &res_out,

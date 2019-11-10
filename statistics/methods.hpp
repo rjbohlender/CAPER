@@ -48,6 +48,28 @@ public:
   // Morris and Zeggini 2010
   double RVT1(Gene &gene, arma::vec &Y, arma::mat &design, const std::string &k, bool linear);
   double RVT2(Gene &gene, arma::vec &Y, arma::mat &design, const std::string &k, bool linear);
+#if 1
+  // Wu et al. 2011
+  double SKAT(Gene &gene,
+			  arma::vec &Y,
+			  Covariates cov,
+			  const std::string &k,
+			  int a = 1,
+			  int b = 25,
+			  bool shuffle = false,
+			  bool detail = false);
+#endif
+#if 1
+  // Lee et al. 2012
+  double SKATO(Gene &gene,
+			   arma::vec &Y,
+			   Covariates cov,
+			   const std::string &k,
+			   int a = 1,
+			   int b = 25,
+			   bool shuffle = false,
+			   bool adjust = true);
+#endif
   // Wu, Guan, and Pankow 2016
   double SKATR(Gene &gene,
 			   const std::string &k,
@@ -89,37 +111,15 @@ private:
   // Weights for SKAT-O
   static constexpr double rho_[8] = {0, 0.01, 0.04, 0.09, 0.16, 0.25, 0.5, 1};
 
-#if 0
-  // Wu et al. 2011
-  double SKAT(arma::mat &Xmat,
-			  Covariates &cov,
-			  arma::vec &weights,
-			  const std::string &k,
-			  bool shuffle = false,
-			  int a = 1,
-			  int b = 25);
-#endif
-#if 0
-  // Lee et al. 2012
-  double SKATO(Gene &gene,
-			   Covariates &cov,
-			   arma::vec &weights,
-			   const std::string &k,
-			   bool shuffle = false,
-			   int a = 1,
-			   int b = 25,
-			   bool adjust = true);
-#endif
-
   // Check weighting
   void check_weights(Gene &gene, const std::string &k, int a = 1, int b = 25, bool no_weight = false);
 
   // Kernel member functions
-  arma::mat kernel_Linear(arma::mat &Xmat);
-  arma::mat kernel_wLinear(arma::mat &Xmat, arma::vec &weights);
+  arma::mat kernel_Linear(arma::sp_mat &Xmat);
+  arma::mat kernel_wLinear(arma::sp_mat &Xmat, arma::vec &weights);
   arma::mat kernel_IBS(arma::mat &Xmat, arma::uword &n, arma::uword &p);
   arma::mat kernel_wIBS(arma::mat &Xmat, arma::uword &n, arma::uword &p, arma::vec &weights);
-  arma::mat kernel_Quadratic(arma::mat &Xmat);
+  arma::mat kernel_Quadratic(arma::sp_mat &Xmat);
   arma::mat kernel_twoWayX(arma::mat &Xmat, arma::uword n, arma::uword p);
 
   // SKATO Support

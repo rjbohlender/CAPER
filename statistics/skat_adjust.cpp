@@ -79,11 +79,11 @@ SKAT_Adjust::SKAT_Adjust(Gene &gene,
 						 int b,
 						 std::shared_ptr<SKAT_Residuals_Logistic> &re2_,
 						 std::map<std::string, std::shared_ptr<SKAT_Optimal_GetQ>> &Q_sim_all) {
-  arma::mat Z(gene.get_matrix(k));
+  arma::sp_mat Z(gene.get_matrix(k));
 
   if (gene.get_weights(k).n_rows == 0) {
 	weights.reshape(Z.n_cols, 1);
-	arma::vec maf = arma::mean(Z, 0).t() / 2.;
+	arma::vec maf(arma::mean(Z, 0).t() / 2.);
 
 	for (arma::uword i = 0; i < Z.n_cols; i++) {
 	  weights(i) = std::pow(maf(i), a - 1) * std::pow(1 - maf(i), b - 1) / boost::math::beta(a, b);
@@ -121,7 +121,7 @@ SKAT_Adjust::SKAT_Adjust(Gene &gene,
 SKAT_Optimal_Logistic_VarMatching::SKAT_Optimal_Logistic_VarMatching(SKAT_Residuals_Logistic &re1,
 																	 SKAT_Residuals_Logistic &re2,
 																	 std::shared_ptr<SKAT_Optimal_GetQ> &Q_sim_all,
-																	 arma::mat &Z,
+																	 arma::sp_mat &Z,
 																	 const std::string &kernel,
 																	 arma::vec &weights) {
   arma::uword n = Z.n_rows;
