@@ -119,7 +119,7 @@ private:
   arma::mat kernel_wLinear(arma::sp_mat &Xmat, arma::vec &weights);
   arma::mat kernel_IBS(arma::mat &Xmat, arma::uword &n, arma::uword &p);
   arma::mat kernel_wIBS(arma::mat &Xmat, arma::uword &n, arma::uword &p, arma::vec &weights);
-  arma::mat kernel_Quadratic(arma::sp_mat &Xmat);
+  arma::mat kernel_Quadratic(arma::mat &&Xmat);
   arma::mat kernel_twoWayX(arma::mat &Xmat, arma::uword n, arma::uword p);
 
   // SKATO Support

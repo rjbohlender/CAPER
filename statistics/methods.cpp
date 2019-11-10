@@ -370,7 +370,7 @@ double Methods::SKAT(Gene &gene,
 	case Kernel::wIBS:tXmat = Xmat.t();
 	  K_[k] = kernel_wIBS(tXmat, n, p, weights);
 	  break;
-	case Kernel::Quadratic:K_[k] = kernel_Quadratic(Xmat);
+	case Kernel::Quadratic:K_[k] = kernel_Quadratic(arma::mat(Xmat));
 	  break;
 	case Kernel::twoWayX:tXmat = Xmat.t();
 	  K_[k] = kernel_twoWayX(tXmat, n, p);
@@ -769,7 +769,7 @@ arma::mat Methods::kernel_wIBS(arma::mat &Xmat, arma::uword &n, arma::uword &p, 
  * @param Xmat The genotype matrix.
  * @return Quadratic kernel as matrix.
  */
-arma::mat Methods::kernel_Quadratic(arma::sp_mat &Xmat) {
+arma::mat Methods::kernel_Quadratic(arma::mat &&Xmat) {
   return arma::mat(arma::pow(Xmat * Xmat.t() + 1, 2));
 }
 
