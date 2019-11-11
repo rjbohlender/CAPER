@@ -323,7 +323,7 @@ double Methods::SKAT(Gene &gene,
 					 int b,
 					 bool shuffle,
 					 bool detail) {
-  arma::sp_mat Xmat = gene.get_matrix(k);
+  arma::sp_mat &Xmat = gene.get_matrix(k);
   arma::vec &weights = gene.get_weights(k);
 
   // Randomize indices
@@ -428,7 +428,7 @@ double Methods::SKATO(Gene &gene,
 
   // SKAT_Optimal_Logistic
   arma::vec res = Y - cov.get_fitted();
-  arma::mat X1 = cov.get_covariate_matrix().t();
+  arma::mat X1 = cov.get_covariate_matrix();
 
   arma::vec pi_1 = cov.get_fitted() % (1 - cov.get_fitted());
 #if 1
@@ -703,12 +703,27 @@ std::string Methods::str() {
  * Kernel Member Functions
  */
 
-arma::mat Methods::kernel_Linear(arma::sp_mat &Xmat) {
-  return arma::mat(Xmat * Xmat.t());
+arma::sp_mat Methods::kernel_Linear(arma::sp_mat &Xmat) {
+  arma::sp_mat Xt = Xmat.t();
+  arma::sp_mat XXt(Xmat.n_rows, Xmat.n_rows);
+  for(arma::sword i = 0; i < Xmat.n_rows; i++) {
+	for (arma::sword j = 0; j < Xmat.n_rows; j++) {
+	  XXt(i, j) = arma::accu(Xmat.row(i) * Xt.col(j));
+	}
+  }
+  return XXt;
 }
 
-arma::mat Methods::kernel_wLinear(arma::sp_mat &Xmat, arma::vec &weights) {
-  return Xmat * arma::diagmat(weights) * arma::diagmat(weights) * Xmat.t();
+arma::sp_mat Methods::kernel_wLinear(arma::sp_mat &Xmat, arma::vec &weights) {
+  arma::sp_mat Xt = Xmat.t();
+  arma::sp_mat XXt(Xmat.n_rows, Xmat.n_rows);
+  for(arma::sword i = 0; i < Xmat.n_rows; i++) {
+	for (arma::sword j = 0; j < Xmat.n_rows; j++) {
+	  XXt(i, j) = arma::accu(Xt.col(i).t() * (weights % weights % Xt.col(j)));
+	}
+  }
+  return XXt;
+  // return Xmat * arma::diagmat(weights % weights) * Xmat.t();
 }
 
 /**

@@ -212,7 +212,9 @@ int main(int argc, char **argv) {
 	  "RVT1",
 	  "RVT2",
 	  "SKAT",
+	  "SKATR",
 	  "SKATO",
+	  "SKATRO",
 	  "VAAST"
   };
 

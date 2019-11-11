@@ -107,7 +107,7 @@ private:
 
   // SKAT support fields
   Kernel kernel_;
-  std::map<std::string, arma::mat> K_;
+  std::map<std::string, arma::sp_mat> K_;
   // Weights for SKAT-O
   static constexpr double rho_[8] = {0, 0.01, 0.04, 0.09, 0.16, 0.25, 0.5, 1};
 
@@ -115,8 +115,8 @@ private:
   void check_weights(Gene &gene, const std::string &k, int a = 1, int b = 25, bool no_weight = false);
 
   // Kernel member functions
-  arma::mat kernel_Linear(arma::sp_mat &Xmat);
-  arma::mat kernel_wLinear(arma::sp_mat &Xmat, arma::vec &weights);
+  arma::sp_mat kernel_Linear(arma::sp_mat &Xmat);
+  arma::sp_mat kernel_wLinear(arma::sp_mat &Xmat, arma::vec &weights);
   arma::mat kernel_IBS(arma::mat &Xmat, arma::uword &n, arma::uword &p);
   arma::mat kernel_wIBS(arma::mat &Xmat, arma::uword &n, arma::uword &p, arma::vec &weights);
   arma::mat kernel_Quadratic(arma::mat &&Xmat);
