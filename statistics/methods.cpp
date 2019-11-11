@@ -705,24 +705,14 @@ std::string Methods::str() {
 
 arma::sp_mat Methods::kernel_Linear(arma::sp_mat &Xmat) {
   arma::sp_mat Xt = Xmat.t();
-  arma::sp_mat XXt(Xmat.n_rows, Xmat.n_rows);
-  for(arma::sword i = 0; i < Xmat.n_rows; i++) {
-	for (arma::sword j = 0; j < Xmat.n_rows; j++) {
-	  XXt(i, j) = arma::accu(Xmat.row(i) * Xt.col(j));
-	}
-  }
-  return XXt;
+  return Xmat * Xt;
 }
 
 arma::sp_mat Methods::kernel_wLinear(arma::sp_mat &Xmat, arma::vec &weights) {
   arma::sp_mat Xt = Xmat.t();
-  arma::sp_mat XXt(Xmat.n_rows, Xmat.n_rows);
-  for(arma::sword i = 0; i < Xmat.n_rows; i++) {
-	for (arma::sword j = 0; j < Xmat.n_rows; j++) {
-	  XXt(i, j) = arma::accu(Xt.col(i).t() * (weights % weights % Xt.col(j)));
-	}
-  }
-  return XXt;
+  arma::sp_mat W(Xmat.n_cols, Xmat.n_cols);
+  W.diag() = weights % weights;
+  return Xmat * W * Xt;
   // return Xmat * arma::diagmat(weights % weights) * Xmat.t();
 }
 
