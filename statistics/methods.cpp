@@ -101,10 +101,10 @@ Methods::Methods(TaskParams &tp, Covariates &cov)
 	kernel_ = Kernel::twoWayX;
   }
 
-  if ((tp.method == "SKAT" || tp.method == "SKATO" || tp.method == "BURDEN") && !tp.linear) {
+  if ((tp.method == "SKATR" || tp.method == "SKATRO" || tp.method == "BURDEN") && !tp.linear) {
 	obj_ = std::make_shared<SKATR_Null>(cov);
 	lin_obj_ = nullptr;
-  } else if ((tp.method == "SKAT" || tp.method == "SKATO" || tp.method == "BURDEN") && tp.linear) {
+  } else if ((tp.method == "SKATR" || tp.method == "SKATRO" || tp.method == "BURDEN") && tp.linear) {
 	obj_ = nullptr;
 	lin_obj_ = std::make_shared<SKATR_Linear_Null>(cov);
   } else if (tp.method == "VT") {

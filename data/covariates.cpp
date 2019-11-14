@@ -45,11 +45,12 @@ arma::colvec &Covariates::get_phenotype_vector() {
   return phenotypes_;
 }
 
-void Covariates::set_phenotype_vector(arma::colvec &vec) {
+void Covariates::set_phenotype_vector(arma::vec vec) {
+  phenotypes_.set_size(vec.n_rows, vec.n_cols);
   phenotypes_ = vec;
 }
 
-void Covariates::set_phenotype_vector(std::vector<int32_t> &vec) {
+void Covariates::set_phenotype_vector(std::vector<int32_t> vec) {
   phenotypes_ = arma::conv_to<arma::colvec>::from(vec);
 }
 

@@ -32,8 +32,8 @@ public:
 
   // Getters and Setters
   arma::colvec &get_phenotype_vector();
-  void set_phenotype_vector(arma::colvec &vec);
-  void set_phenotype_vector(std::vector<int32_t> &vec);
+  void set_phenotype_vector(arma::vec vec);
+  void set_phenotype_vector(std::vector<int32_t> vec);
 
   arma::uword get_nsamples() const;
   arma::uword get_ncases() const;
@@ -59,8 +59,8 @@ public:
 private:
   CRandomMersenne crand;
   std::vector<std::string> samples_;
-  arma::colvec phenotypes_; // Possibly permuted phenotype vector
-  arma::colvec original_; // Original phenotype vector
+  arma::vec phenotypes_; // Possibly permuted phenotype vector
+  arma::vec original_; // Original phenotype vector
   arma::mat design_; // Design matrix
   arma::vec odds_;
   arma::vec fitted_;
