@@ -85,7 +85,7 @@ Methods::Methods(std::string method)
 	  kernel_(Kernel::Linear) {
 }
 
-Methods::Methods(TaskParams &tp, Covariates &cov)
+Methods::Methods(TaskParams &tp, const std::shared_ptr<Covariates> &cov)
 	: method_(tp.method) {
   if (tp.kernel == "Linear") {
 	kernel_ = Kernel::Linear;
@@ -106,7 +106,7 @@ Methods::Methods(TaskParams &tp, Covariates &cov)
 	lin_obj_ = nullptr;
   } else if ((tp.method == "SKATR" || tp.method == "SKATRO" || tp.method == "BURDEN") && tp.linear) {
 	obj_ = nullptr;
-	lin_obj_ = std::make_shared<SKATR_Linear_Null>(cov);
+	lin_obj_ = std::make_shared<SKATR_Linear_Null>(*cov);
   } else if (tp.method == "VT") {
 	vt_obj_ = std::make_shared<VT_Res>();
   }
@@ -317,19 +317,33 @@ double Methods::RVT2(Gene &gene, arma::vec &Y, arma::mat &design, const std::str
 #if 1
 double Methods::SKAT(Gene &gene,
 					 arma::vec &Y,
-					 Covariates cov,
+					 Covariates &cov,
 					 const std::string &k,
 					 int a,
 					 int b,
 					 bool shuffle,
-					 bool detail) {
+					 bool detail,
+					 bool linear) {
   arma::sp_mat &Xmat = gene.get_matrix(k);
   arma::vec &weights = gene.get_weights(k);
+  arma::vec fitted;
 
   // Randomize indices
   if (shuffle) {
-	cov.set_phenotype_vector(Y);
-	cov.refit_permuted();
+    bool success;
+	if(linear) {
+	  Gaussian link("identity");
+	  GLM<Gaussian> fit(cov.get_covariate_matrix(), Y, link);
+	  success = fit.success;
+	  fitted = fit.mu_;
+	} else {
+	  Binomial link("logit");
+	  GLM<Binomial> fit(cov.get_covariate_matrix(), Y, link);
+	  success = fit.success;
+	  fitted = fit.mu_;
+	}
+  } else {
+    fitted = cov.get_fitted();
   }
 
   // Check for weighted kernel
@@ -341,10 +355,6 @@ double Methods::SKAT(Gene &gene,
 
 	  for (arma::uword i = 0; i < Xmat.n_cols; i++) {
 		weights(i) = std::pow(maf(i), a - 1) * std::pow(1 - maf(i), b - 1) / boost::math::beta(a, b);
-#if 0
-		std::cerr << "a: " << a << " b: " << b << " ";
-		std::cerr << "maf(i) = " << maf(i) << " weights(i) = " << weights(i) << "\n";
-#endif
 	  }
 	}
   } else {
@@ -353,7 +363,7 @@ double Methods::SKAT(Gene &gene,
 	}
   }
 
-  arma::mat tXmat;
+  arma::sp_mat tXmat;
   arma::uword n = Xmat.n_cols; // Number of samples
   arma::uword p = Xmat.n_rows; // Number of variants
 
@@ -370,7 +380,7 @@ double Methods::SKAT(Gene &gene,
 	case Kernel::wIBS:tXmat = Xmat.t();
 	  K_[k] = kernel_wIBS(tXmat, n, p, weights);
 	  break;
-	case Kernel::Quadratic:K_[k] = kernel_Quadratic(arma::mat(Xmat));
+	case Kernel::Quadratic:K_[k] = kernel_Quadratic(Xmat);
 	  break;
 	case Kernel::twoWayX:tXmat = Xmat.t();
 	  K_[k] = kernel_twoWayX(tXmat, n, p);
@@ -379,9 +389,9 @@ double Methods::SKAT(Gene &gene,
 	}
   }
 
-  arma::vec Z = Y - cov.get_fitted();
-  arma::mat ret = Z.t() * K_[k] * Z / 2;
-  return ret(0, 0);
+  arma::vec Z = Y - fitted;
+  double ret = arma::accu(Z.t() * K_[k] * Z / 2);
+  return ret;
 }
 
 double Methods::SKATO(Gene &gene,
@@ -723,8 +733,8 @@ arma::sp_mat Methods::kernel_wLinear(arma::sp_mat &Xmat, arma::vec &weights) {
  * @param p The number of variants.
  * @return Kernel as matrix.
  */
-arma::mat Methods::kernel_IBS(arma::mat &Xmat, arma::uword &n, arma::uword &p) {
-  arma::mat K = arma::eye(n, n);
+arma::sp_mat Methods::kernel_IBS(arma::sp_mat &Xmat, arma::uword &n, arma::uword &p) {
+  arma::sp_mat K = arma::sp_mat(arma::eye(n, n));
 
   // For kernel calculation
   double temp, diff;
@@ -750,10 +760,10 @@ arma::mat Methods::kernel_IBS(arma::mat &Xmat, arma::uword &n, arma::uword &p) {
  * @param weights The weights for each variant.
  * @return Kernel as matrix.
  */
-arma::mat Methods::kernel_wIBS(arma::mat &Xmat, arma::uword &n, arma::uword &p, arma::vec &weights) {
+arma::sp_mat Methods::kernel_wIBS(arma::sp_mat &Xmat, arma::uword &n, arma::uword &p, arma::vec &weights) {
   double diff, temp;
 
-  arma::mat K = arma::eye(n, n);
+  arma::sp_mat K = arma::sp_mat(arma::eye(n, n));
   double w_total = arma::sum(weights);
 
   for (int i = 0; i < n - 1; i++) {
@@ -774,8 +784,8 @@ arma::mat Methods::kernel_wIBS(arma::mat &Xmat, arma::uword &n, arma::uword &p, 
  * @param Xmat The genotype matrix.
  * @return Quadratic kernel as matrix.
  */
-arma::mat Methods::kernel_Quadratic(arma::mat &&Xmat) {
-  return arma::mat(arma::pow(Xmat * Xmat.t() + 1, 2));
+arma::sp_mat Methods::kernel_Quadratic(arma::sp_mat &Xmat) {
+  return arma::sp_mat(arma::pow(Xmat * Xmat.t() + 1, 2));
 }
 
 /**
@@ -785,8 +795,8 @@ arma::mat Methods::kernel_Quadratic(arma::mat &&Xmat) {
  * @param p The number of variants.
  * @return Two way kernel as matrix.
  */
-arma::mat Methods::kernel_twoWayX(arma::mat &Xmat, arma::uword n, arma::uword p) {
-  arma::mat K = arma::zeros(n, n);
+arma::sp_mat Methods::kernel_twoWayX(arma::sp_mat &Xmat, arma::uword n, arma::uword p) {
+  arma::sp_mat K(n, n);
 
   double temp, temp1, temp2;
 
@@ -830,13 +840,16 @@ double Methods::SKATR(Gene &gene,
 					  int b,
 					  bool detail,
 					  bool linear,
-					  bool permute) {
+					  bool permute,
+					  bool shuffle) {
   arma::sp_mat G(gene.get_matrix(k));
 
-  if (linear) {
-	lin_obj_->shuffle(phenotypes);
-  } else {
-	obj_->shuffle(phenotypes);
+  if(shuffle) {
+	if (linear) {
+	  lin_obj_->shuffle(phenotypes);
+	} else {
+	  obj_->shuffle(phenotypes);
+	}
   }
 
   check_weights(gene, k, a, b);

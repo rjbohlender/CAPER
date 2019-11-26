@@ -137,7 +137,10 @@ void Covariates::clear() {
  * @param ifile
  */
 void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
-  std::ifstream ifs(ifile);
+  std::ifstream ifs;
+  if(!ifile.empty()) {
+    ifs = std::ifstream(ifile);
+  }
   std::ifstream pfs(pedfile);
   std::string line;
 
@@ -153,6 +156,11 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
     RJBUtil::Splitter<std::string> splitter(line, "\t");
 
     std::string sample_id = splitter[1];
+    if(ifile.empty()) {
+	  samples_.push_back(sample_id);
+	  phenotypes.push_back(std::stod(splitter[6]));
+	}
+    nsamples_++;
     if(linear_) {
       try {
 		sample_phen_map[sample_id] = std::stod(splitter[6]);
@@ -171,8 +179,10 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
     }
   }
 
+
+
   // Parse the PCA matrix file
-  while (std::getline(ifs, line)) {
+  while (ifs.good() && std::getline(ifs, line)) {
 	RJBUtil::Splitter<std::string> splitter(line, " \t");
 	covariates.emplace_back(std::vector<double>());
 
@@ -186,7 +196,6 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
 
 		if (phen == 1)
 		  ncases_++;
-		nsamples_++;
 
 		phenotypes.push_back(phen);
 	  } else {
@@ -202,17 +211,21 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
   original_ = arma::conv_to<arma::colvec>::from(phenotypes);
 
   // Features are j, samples are i
-  design_ = arma::mat(covariates.size(), covariates[0].size() + 1, arma::fill::zeros);
-  for (arma::uword i = 0; i < covariates.size(); i++) {
-	for (arma::uword j = 0; j < covariates[0].size() + 1; j++) {
-	  if (j == 0) {
-		// First feature is just 1s, intercept
-		// Do this here
-		design_(i, j) = 1;
-	  } else {
-		design_(i, j) = covariates[i][j - 1];
+  if(!covariates.empty()) {
+	design_ = arma::mat(covariates.size(), covariates[0].size() + 1, arma::fill::zeros);
+	for (arma::uword i = 0; i < covariates.size(); i++) {
+	  for (arma::uword j = 0; j < covariates[0].size() + 1; j++) {
+		if (j == 0) {
+		  // First feature is just 1s, intercept
+		  // Do this here
+		  design_(i, j) = 1;
+		} else {
+		  design_(i, j) = covariates[i][j - 1];
+		}
 	  }
 	}
+  } else {
+    design_ = arma::mat(nsamples_, 1, arma::fill::ones);
   }
 #ifndef NDEBUG
   std::cerr << "Covariates_ n_rows = " << design_.n_rows << " Covariates_ n_cols = " << design_.n_cols << "\n";
@@ -326,7 +339,7 @@ void Covariates::sort_covariates(std::string &header) {
     header_map[*it] = std::distance(splitter.begin() + 3, it);
   }
 
-  arma::uvec indices(phenotypes_.n_rows, arma::fill::zeros);
+  arma::uvec indices(design_.n_rows, arma::fill::zeros);
 
   for(arma::uword i = 0; i < phenotypes_.n_rows; i++) {
     indices(i) = header_map[samples_[i]];

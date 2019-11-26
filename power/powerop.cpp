@@ -240,7 +240,7 @@ double PowerOp::call_method(Methods &method,
   } else if (tp.method == "RVT2") {
 	return method.RVT2(gene, phenotypes, cov.get_covariate_matrix(), k, tp.linear);
   } else if (tp.method == "SKAT") {
-	return method.SKATR(gene, k, phenotypes, tp.a, tp.b, detail, tp.linear, false);
+	return method.SKATR(gene, k, phenotypes, tp.a, tp.b, detail, tp.linear, false, false);
   } else if (tp.method == "SKATO") {
 	return method.SKATRO(gene, k, phenotypes, tp.a, tp.b, detail, tp.linear);
   } else if (tp.method == "VAAST") {

@@ -57,6 +57,9 @@ public:
   bool is_sorted();
 
 private:
+  unsigned long nsamples_;
+  unsigned long ncases_;
+
   CRandomMersenne crand;
   std::vector<std::string> samples_;
   arma::vec phenotypes_; // Possibly permuted phenotype vector
@@ -76,9 +79,6 @@ private:
 
   bool sorted_;
   bool linear_;
-
-  unsigned long nsamples_;
-  unsigned long ncases_;
 
   void parse(const std::string& ifile, const std::string& pedfile);
   void parse(std::stringstream& ss);

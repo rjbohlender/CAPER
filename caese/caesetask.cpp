@@ -12,7 +12,7 @@ CAESETask::CAESETask(Stage stage,
 					 arma::uword s1_perm,
 					 arma::uword s2_perm,
 					 std::vector<std::vector<int32_t>> &perm)
-  : gene_(gene), cov_(cov), methods_(tp, *cov), tp_(tp), permutations_(tp.total_permutations) {
+  : gene_(gene), cov_(cov), methods_(tp, cov), tp_(tp), permutations_(tp.total_permutations) {
   for (const auto &k : gene_.get_transcripts()) {
 	results[k] = Result(gene_.get_gene(), k);
 	permute_[k] = Permute();
@@ -23,7 +23,7 @@ CAESETask::CAESETask(Stage stage,
 					 const std::shared_ptr<Covariates> &cov,
 					 TaskParams &tp,
 					 std::vector<std::vector<int32_t>> &perm)
-	: gene_(gene), cov_(cov), methods_(tp, *cov), tp_(tp), permutations_(tp.total_permutations) {
+	: gene_(gene), cov_(cov), methods_(tp, cov), tp_(tp), permutations_(tp.total_permutations) {
   for (const auto &k : gene_.get_transcripts()) {
 	results[k] = Result(gene_.get_gene(), k);
 	permute_[k] = Permute();

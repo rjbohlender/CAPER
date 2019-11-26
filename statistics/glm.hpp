@@ -30,33 +30,22 @@ struct GLM {
       //beta_ = gradient_descent(X, Y);
       //std::cerr << e.what();
       try {
-		beta_ = irls_qr(X, Y);
-      } catch(std::exception &e) {
-        try{
-		  beta_ = irls(X, Y);
-		} catch(std::exception &e) {
-          try{
-			beta_ = gradient_descent(X, Y);
-		  } catch(std::exception &e) {
-			beta_ = arma::vec(X.n_cols);
-			mu_ = arma::vec(X.n_rows);
-			eta_ = arma::vec(X.n_rows);
-			beta_.fill(arma::datum::nan);
-			mu_.fill(arma::datum::nan);
-			eta_.fill(arma::datum::nan);
-		  }
-		}
+		beta_ = gradient_descent(X, Y);
+		std::cerr << beta_;
+	  } catch(std::exception &e) {
+		beta_ = arma::vec(X.n_cols);
+		mu_ = arma::vec(X.n_rows);
+		eta_ = arma::vec(X.n_rows);
+		beta_.fill(arma::datum::nan);
+		mu_.fill(arma::datum::nan);
+		eta_.fill(arma::datum::nan);
 	  }
     }
 
     mu_ = link.linkinv(X.cols(indices_), beta_);
     eta_ = link.link(mu_);
 
-    if(mu_.has_nan() || eta_.has_nan()) {
-      success = false;
-    } else {
-      success = true;
-    }
+	success = !(mu_.has_nan() || eta_.has_nan());
   }
   // Algorithms for finding the optimum
   auto gradient_descent(arma::mat &X, arma::colvec &Y) -> arma::vec;

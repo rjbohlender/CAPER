@@ -194,6 +194,9 @@ private:
 			// Reset for next gene
 			gene_no++;
 			new_gene(current, line, split, vsplit);
+		  } else {
+              gene_no++;
+              new_gene(current, line, split, vsplit);
 		  }
 		} else {
 		  // Setup initial gene

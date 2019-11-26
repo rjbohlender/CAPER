@@ -12,6 +12,7 @@
 class CARVAOp {
 public:
   CARVAOp(CARVATask &ct, std::shared_ptr<Reporter> reporter, double seed, bool verbose);
+  CARVAOp(CARVATask &&ct, std::shared_ptr<Reporter> reporter, double seed, bool verbose);
 
   auto run() -> void;
   auto finish() -> void;

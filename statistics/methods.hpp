@@ -34,7 +34,7 @@ enum class Kernel {
 class Methods {
 public:
   explicit Methods(std::string method);
-  Methods(TaskParams &tp, Covariates &cov);
+  Methods(TaskParams &tp, const std::shared_ptr<Covariates> &cov);
 
   std::string str();
 
@@ -52,12 +52,13 @@ public:
   // Wu et al. 2011
   double SKAT(Gene &gene,
 			  arma::vec &Y,
-			  Covariates cov,
+			  Covariates &cov,
 			  const std::string &k,
 			  int a = 1,
 			  int b = 25,
 			  bool shuffle = false,
-			  bool detail = false);
+			  bool detail = false,
+			  bool linear = false);
 #endif
 #if 1
   // Lee et al. 2012
@@ -78,7 +79,8 @@ public:
 			   int b,
 			   bool detail,
 			   bool linear,
-			   bool permute);
+			   bool permute,
+			   bool shuffle);
   // Wu, Guan, and Pankow 2016
   double SKATRO(Gene &gene,
 				const std::string &k,
@@ -117,10 +119,10 @@ private:
   // Kernel member functions
   arma::sp_mat kernel_Linear(arma::sp_mat &Xmat);
   arma::sp_mat kernel_wLinear(arma::sp_mat &Xmat, arma::vec &weights);
-  arma::mat kernel_IBS(arma::mat &Xmat, arma::uword &n, arma::uword &p);
-  arma::mat kernel_wIBS(arma::mat &Xmat, arma::uword &n, arma::uword &p, arma::vec &weights);
-  arma::mat kernel_Quadratic(arma::mat &&Xmat);
-  arma::mat kernel_twoWayX(arma::mat &Xmat, arma::uword n, arma::uword p);
+  arma::sp_mat kernel_IBS(arma::sp_mat &Xmat, arma::uword &n, arma::uword &p);
+  arma::sp_mat kernel_wIBS(arma::sp_mat &Xmat, arma::uword &n, arma::uword &p, arma::vec &weights);
+  arma::sp_mat kernel_Quadratic(arma::sp_mat &Xmat);
+  arma::sp_mat kernel_twoWayX(arma::sp_mat &Xmat, arma::uword n, arma::uword p);
 
   // SKATO Support
   std::shared_ptr<SKAT_Residuals_Logistic> re2;

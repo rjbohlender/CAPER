@@ -13,6 +13,15 @@ CARVAOp::CARVAOp(CARVATask &ct, std::shared_ptr<Reporter> reporter, double seed,
 
 }
 
+CARVAOp::CARVAOp(CARVATask &&ct, std::shared_ptr<Reporter> reporter, double seed, bool verbose)
+	: gen_(seed),
+	  ta_(std::move(ct)),
+	  done_(false),
+	  verbose_(verbose),
+	  reporter_(std::move(reporter)) {
+
+}
+
 auto CARVAOp::run() -> void {
   Stage stage = ta_.get_stage();
 
@@ -21,6 +30,8 @@ auto CARVAOp::run() -> void {
   } else if (stage == Stage::Stage2) {
 	stage2();
   } else if (stage == Stage::Done) {
+    ta_.get_methods().clear(ta_.get_gene().get_transcripts());
+    ta_.get_cov().clear();
     return;
   } else {
     throw(std::runtime_error("Incorrect stage in CARVAOp::run()"));
@@ -196,7 +207,7 @@ auto CARVAOp::stage2() -> void {
 										false,
 										true);
 	  }
-	  // Minor allele carrier indices
+	  // Minor and major allele carrier indices
 	  mac_indices[k] = arma::find(arma::sum(arma::mat(ta_.get_gene().get_matrix(k)), 1) > 0);
 	  maj_indices[k] = arma::find(arma::sum(arma::mat(ta_.get_gene().get_matrix(k)), 1) == 0);
 	  assert(mac_indices[k].n_rows + maj_indices[k].n_rows == ta_.get_cov().get_nsamples());
@@ -285,7 +296,7 @@ auto CARVAOp::stage2() -> void {
 								 phenotypes,
 								 ta_.get_tp(),
 								  k,
-								 false,
+								 true,
 								 false);
 		} catch(std::exception &e) {
 		  std::cerr << "Failed permutation." << std::endl;
@@ -315,9 +326,7 @@ auto CARVAOp::stage2() -> void {
 								 false,
 								 false);
 		}
-	  }
-#if 0
-	  else {
+	  } else {
 	    phenotypes = ta_.get_cov().get_phenotype_vector();
 		// Fisher-Yates Shuffle
 		for (arma::sword i = phenotypes.n_elem - 1; i > 0; --i) {
@@ -357,7 +366,6 @@ auto CARVAOp::stage2() -> void {
 								 false);
 		}
 	  }
-#endif
 
 	  // ta.increment_permuted(v.second.transcript, perm_val);
 	  v.second.permuted.push_back(perm_val);
@@ -443,8 +451,7 @@ auto CARVAOp::check_perm(const TaskParams &tp,
 						 int success_threshold,
 						 std::pair<const std::string, Result> &v) -> void {
   // SKATO returns a pvalue so we need to reverse the successes
-  if (tp.method == "SKATO" || (tp.method == "SKAT" && tp.total_permutations == 0) || tp.method == "CMC"
-	  || tp.method == "RVT1" || tp.method == "RVT2") {
+  if (tp.analytic) {
 	if (perm_val <= v.second.original) {
 	  if (tp.pthresh) {
 		v.second.successes++;
@@ -538,11 +545,11 @@ auto CARVAOp::call_method(Methods &method,
   } else if (tp.method == "RVT2") {
 	return method.RVT2(gene, phenotypes, cov.get_covariate_matrix(), k, tp.linear);
   } else if (tp.method == "SKATR") {
-	return method.SKATR(gene, k, phenotypes, tp.a, tp.b, detail, tp.linear, tp.total_permutations > 0);
+	return method.SKATR(gene, k, phenotypes, tp.a, tp.b, detail, tp.linear, tp.total_permutations > 0, true);
   } else if (tp.method == "SKATRO") {
 	return method.SKATRO(gene, k, phenotypes, tp.a, tp.b, detail, tp.linear);
   } else if (tp.method == "SKAT") {
-	return method.SKAT(gene, phenotypes, cov, k, tp.a, tp.b, shuffle, detail);
+	return method.SKAT(gene, phenotypes, cov, k, tp.a, tp.b, shuffle, detail, tp.linear);
   } else if (tp.method == "SKATO") {
 	return method.SKATO(gene, phenotypes, cov, k, tp.a, tp.b, shuffle, tp.adjust);
   } else if (tp.method == "VAAST") {

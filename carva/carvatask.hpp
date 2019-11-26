@@ -40,18 +40,18 @@ public:
 
   // Constructors
   CARVATask(Stage stage,
-		   Gene gene,
-		   const std::shared_ptr<Covariates> &cov,
-		   TaskParams &tp,
-		   arma::uword succ_thresh,
-		   arma::uword s1_perm,
-		   arma::uword s2_perm,
-		   std::vector<std::vector<int32_t>> &perm);
+			Gene gene,
+			const std::shared_ptr<Covariates> &cov,
+			TaskParams &tp,
+			arma::uword succ_thresh,
+			arma::uword s1_perm,
+			arma::uword s2_perm,
+			std::vector<std::vector<int32_t>> &perm);
   CARVATask(Stage stage,
-		   Gene gene,
-		   const std::shared_ptr<Covariates> &cov,
-		   TaskParams &tp,
-		   std::vector<std::vector<int32_t>> &perm);
+			Gene &gene,
+			const std::shared_ptr<Covariates> &cov,
+			TaskParams &tp,
+			std::vector<std::vector<int32_t>> &perm);
   CARVATask(const CARVATask &ta);
   CARVATask(CARVATask &&ta) noexcept;
   CARVATask &operator=(const CARVATask &rhs);
@@ -89,12 +89,13 @@ private:
   Gene gene_;
   std::shared_ptr<Covariates> cov_;
   Methods method_;
-  TaskParams tp_;
-
-  static const std::set<std::string> pvalue_methods_;
 
   int stage_1_permutations_;
   int stage_2_permutations_;
+
+  TaskParams tp_;
+
+  static const std::set<std::string> pvalue_methods_;
 };
 
 #endif //PERMUTE_ASSOCIATE_CARVATASK_HPP

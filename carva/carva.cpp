@@ -69,9 +69,6 @@ int main(int argc, char **argv) {
 				("input,i",
 				 po::value<std::string>()->required(),
 				 "Genotype matrix file path.")
-				("covariates,c",
-				 po::value<std::string>()->required(),
-				 "The covariate matrix file, tab separated.\nFormat = sample_id cov1 ...")
 				("ped,p",
 				 po::value<std::string>()->required(),
 				 "Path to the .ped file containing the sample phenotypes.")
@@ -79,6 +76,9 @@ int main(int argc, char **argv) {
 				 po::value<std::string>()->required(),
 				 "Path to output directory. Two files will be output: a simple transcript level results file, and a detailed variant level result file.");
 	optional.add_options()
+				("covariates,c",
+				 po::value<std::string>(),
+				 "The covariate matrix file, tab separated.\nFormat = sample_id cov1 ...")
 				("bed-file,b",
 				 po::value(&bed),
 				 "A bed file to be used as a filter. All specified regions will be excluded.")
@@ -229,7 +229,7 @@ int main(int argc, char **argv) {
 
   if (method_choices.count(vm["method"].as<std::string>()) == 0) {
 	// Method not among choices
-	std::cerr << "Method must be one of {BURDEN, CALPHA, CMC, RVT1, RVT2, SKAT, SKATO, VAAST, VT, WSS}.\n";
+	std::cerr << "Method must be one of {BURDEN, CALPHA, CMC, RVT1, RVT2, SKAT, SKATR, SKATO, SKATRO, VAAST, VT, WSS}.\n";
 	std::cerr << visible << "\n";
 	return 1;
   }
@@ -280,7 +280,11 @@ int main(int argc, char **argv) {
   // File paths and option status
   tp.program_path = argv[0];
   tp.genotypes_path = vm["input"].as<std::string>();
-  tp.covariates_path = vm["covariates"].as<std::string>();
+  if(vm.count("covariates") > 0) {
+	tp.covariates_path = vm["covariates"].as<std::string>();
+  } else {
+    tp.covariates_path = "";
+  }
   tp.ped_path = vm["ped"].as<std::string>();
   tp.output_path = vm["output"].as<std::string>();
   tp.maf = vm["maf"].as<double>();
@@ -312,17 +316,17 @@ int main(int argc, char **argv) {
   tp.testable = testable;
   tp.biallelic = biallelic;
 
-  tp.covadj = !nocovadj;
+  tp.covadj = !nocovadj || vm.count("covariates") != 0;
 
   tp.power = false;
 
   // tp.alternate_permutation = tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN";
-  tp.alternate_permutation = false;
+  tp.alternate_permutation = !tp.covadj || tp.covariates_path == "";
   tp.quantitative =
 	  tp.method == "RVT1" || tp.method == "RVT2" || tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN"
-		  || tp.method == "VT";
-  tp.analytic = tp.method == "SKATO" || (tp.method == "SKAT" && tp.total_permutations == 0) || tp.method == "RVT1"
-	  || tp.method == "RVT2" || tp.method == "CMC";
+		  || tp.method == "VT" || tp.method == "SKATR" || tp.method == "SKATRO";
+  tp.analytic = tp.method == "SKATO" || (tp.method == "SKATR" && tp.total_permutations == 0) || tp.method == "RVT1"
+	  || tp.method == "RVT2" || tp.method == "CMC" || tp.method == "SKATRO";
   if (tp.linear && !tp.quantitative) {
 	std::cerr << "Quantitative trait analysis is only supported for the RVT1, RVT2, SKATO, SKAT, and BURDEN methods."
 			  << std::endl;
@@ -355,7 +359,7 @@ int main(int argc, char **argv) {
   }
 #endif
 
-  if (tp.method == "SKATO") {
+  if (tp.method == "SKATO" || tp.method == "SKATRO") {
 	// Different defaults for SKATO
 #if 0
 	if(vm["stage_1_max_perm"].defaulted() || vm["stage_1_max_perm"].as<arma::uword>() > 0) {
@@ -392,7 +396,7 @@ int main(int argc, char **argv) {
 	std::cerr << visible << "\n";
 	std::exit(1);
   }
-  if (!check_file_exists(tp.covariates_path)) {
+  if (vm.count("covariates") != 0 && !check_file_exists(tp.covariates_path)) {
 	std::cerr << "Incorrect file path for covariates." << std::endl;
 	std::cerr << visible << "\n";
 	std::exit(1);

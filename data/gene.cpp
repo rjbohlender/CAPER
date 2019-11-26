@@ -194,7 +194,7 @@ void Gene::parse(std::stringstream &ss) {
 	  bool bmaf = maf[i] > tp_.maf;
 	  if (bmac || bmaf) {
 		if (tp_.verbose && bmac) {
-		  // std::cerr << "Removing: " << gene_ << " " << ts << " " << positions_[ts][i] << " | count: " << sums[i] << " due to MAC filter." << std::endl;
+		  std::cerr << "Removing: " << gene_ << " " << ts << " " << positions_[ts][i] << " | count: " << sums[i] << " due to MAC filter." << std::endl;
 		} else if(tp_.verbose && bmaf) {
 		  std::cerr << "Removing: " << gene_ << " " << ts << " " << positions_[ts][i] << " | frequency: " << maf[i] << " due to MAF filter." << std::endl;
 		}
