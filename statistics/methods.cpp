@@ -785,7 +785,7 @@ arma::sp_mat Methods::kernel_wIBS(arma::sp_mat &Xmat, arma::uword &n, arma::uwor
  * @return Quadratic kernel as matrix.
  */
 arma::sp_mat Methods::kernel_Quadratic(arma::sp_mat &Xmat) {
-  return arma::sp_mat(arma::pow(Xmat * Xmat.t() + 1, 2));
+  return arma::sp_mat(arma::pow(arma::mat(Xmat * Xmat.t()) + 1, 2));
 }
 
 /**
