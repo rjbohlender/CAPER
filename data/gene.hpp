@@ -27,13 +27,13 @@ void print_comma_sep(std::vector<std::string> &x, std::ostream &os);
 void print_comma_sep(const std::vector<std::string> &x, std::ostream &os);
 void print_semicolon_sep(arma::uvec &x, std::ostream &os);
 
+/**
+ * @brief Container for single gene multiple transcript data
+ */
 class Gene {
 public:
-  Gene(std::stringstream &ss,
-	   unsigned long nsamples,
-	   std::map<std::string, arma::uword> &nvariants,
-	   const Weight &weight,
-	   TaskParams tp);
+  Gene(std::stringstream &ss, unsigned long nsamples, std::map<std::string, arma::uword> &nvariants,
+       const Weight &weight, TaskParams tp, arma::vec &phenotypes);
 
   void print();
 
@@ -91,7 +91,7 @@ private:
   std::string detail_;
   std::map<std::string, std::string> vaast_;
 
-  void parse(std::stringstream &ss);
+  void parse(std::stringstream &ss, arma::vec &phenotypes);
   auto testable(const std::string &k, Covariates &cov, TaskParams &tp) -> bool;
 };
 
