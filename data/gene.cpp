@@ -115,7 +115,8 @@ void Gene::parse(std::stringstream &ss, arma::vec &phenotypes) {
             transcripts_.push_back(splitter[1]);
             // Start with matrix transposed
             genotypes_.emplace(std::make_pair(transcript, arma::sp_mat(nsamples_, nvariants_[transcript])));
-            // Reset counter on new transcript
+            missing_variant_carriers_.emplace(std::make_pair(transcript, arma::sp_mat(nsamples_, nvariants_[transcript])));
+          // Reset counter on new transcript
             i = 1;
         }
         if (positions_.find(transcript) == positions_.end()) {
@@ -141,6 +142,7 @@ void Gene::parse(std::stringstream &ss, arma::vec &phenotypes) {
                 val = -9;
 #else
                 val = 0;
+                missing_variant_carriers_[transcript](j - 3, i - 1) = 1;
 #endif
             }
             if (val != 0) {
@@ -211,6 +213,7 @@ void Gene::parse(std::stringstream &ss, arma::vec &phenotypes) {
                 }
                 sums.shed_col(i);
                 genotypes_[ts].shed_col(i);
+                missing_variant_carriers_[ts].shed_col(i);
                 positions_[ts].erase(positions_[ts].begin() + i);
                 nvariants_[ts]--;
             }
@@ -417,13 +420,13 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
             print_comma_sep(v.second, detail);
             detail << "\t";
             detail << boost::format("%1$s\t%2$.2f\t%3$.2f\t%4$.2f\t%5$.4f\t%6$.4f\t%7$d")
-                      % v.first
-                      % pos_score_map[v.first]
-                      % pos_weight_map[v.first]
-                      % std::exp(pos_odds_map[v.first])
-                      % pos_serr_map[v.first]
-                      % pos_odds_pval_map[v.first]
-                      % pos_freq_map[v.first];
+                    % v.first
+                    % pos_score_map[v.first]
+                    % pos_weight_map[v.first]
+                    % std::exp(pos_odds_map[v.first])
+                    % pos_serr_map[v.first]
+                    % pos_odds_pval_map[v.first]
+                    % pos_freq_map[v.first];
             detail << std::endl;
         }
     } else {
@@ -433,17 +436,17 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
             print_comma_sep(v.second, detail);
             detail << "\t";
             detail << boost::format("%1$s\t%2$.2f\t%3$.2f\t%4$.2f\t%5$.4f\t%6$.4f\t%7$d\t%8$d\t%9$d\t%10$d\t%11$d")
-                      % v.first
-                      % pos_score_map[v.first]
-                      % pos_weight_map[v.first]
-                      % std::exp(pos_odds_map[v.first])
-                      % pos_serr_map[v.first]
-                      % pos_odds_pval_map[v.first]
-                      % pos_freq_map[v.first]
-                      % pos_caseref_map[v.first]
-                      % pos_casealt_map[v.first]
-                      % pos_contref_map[v.first]
-                      % pos_contalt_map[v.first];
+                    % v.first
+                    % pos_score_map[v.first]
+                    % pos_weight_map[v.first]
+                    % std::exp(pos_odds_map[v.first])
+                    % pos_serr_map[v.first]
+                    % pos_odds_pval_map[v.first]
+                    % pos_freq_map[v.first]
+                    % pos_caseref_map[v.first]
+                    % pos_casealt_map[v.first]
+                    % pos_contref_map[v.first]
+                    % pos_contalt_map[v.first];
             detail << "\t";
             print_semicolon_sep(pos_caseidx_map[v.first], detail);
             detail << "\t";
@@ -461,7 +464,6 @@ auto Gene::get_detail() -> std::string {
 auto Gene::get_vaast() -> std::map<std::string, std::string> {
     return vaast_;
 }
-
 
 std::vector<std::string> &Gene::get_samples() {
     return samples_;
@@ -601,6 +603,10 @@ auto Gene::generate_vaast(Covariates &cov) -> void {
         }
         vaast_[ts] = vaast_ss.str();
     }
+}
+
+arma::sp_mat &Gene::get_missing(const std::string &k) {
+    return missing_variant_carriers_[k];
 }
 
 void print_comma_sep(arma::uvec &x, std::ostream &os) {

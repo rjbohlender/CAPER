@@ -54,6 +54,9 @@ auto CARVAOp::finish() -> void {
 auto CARVAOp::stage1() -> void {
   // Set original value
   for (auto &v : ta_.results) {
+    if(!ta_.get_gene().is_polymorphic(v.first)) {
+      continue;
+    }
 	v.second.original =
 		call_method(ta_.get_methods(),
 					ta_.get_gene(),
@@ -86,6 +89,10 @@ auto CARVAOp::stage1() -> void {
 	for (auto &v : ta_.results) {
 	  transcript_no++;
 	  const std::string &k = v.second.transcript;
+      if(!ta_.get_gene().is_polymorphic(k)) {
+        continue;
+      }
+
 	  double perm_val;
 
 	  // Skip transcripts with no variants
@@ -196,6 +203,9 @@ auto CARVAOp::stage2() -> void {
   if (!ta_.get_tp().alternate_permutation) {
 	for (auto &v : ta_.results) {
 	  const std::string &k = v.second.transcript;
+	  if(!ta_.get_gene().is_polymorphic(k)) {
+	    continue;
+	  }
 
 	  if (std::isnan(v.second.original)) {
 		v.second.original = call_method(ta_.get_methods(),
@@ -208,9 +218,9 @@ auto CARVAOp::stage2() -> void {
 										true);
 	  }
 	  // Minor and major allele carrier indices
-	  mac_indices[k] = arma::find(arma::sum(arma::mat(ta_.get_gene().get_matrix(k)), 1) > 0);
+	  mac_indices[k] = arma::find(arma::sum(arma::mat(ta_.get_gene().get_matrix(k) + ta_.get_gene().get_missing(k)), 1) > 0);
 	  maj_indices[k] = arma::find(arma::sum(arma::mat(ta_.get_gene().get_matrix(k)), 1) == 0);
-	  assert(mac_indices[k].n_rows + maj_indices[k].n_rows == ta_.get_cov().get_nsamples());
+	  // No longer true for Yao's fix assert(mac_indices[k].n_rows + maj_indices[k].n_rows == ta_.get_cov().get_nsamples());
 
 #if 0
 	  // Calculated to test for bugs with no polymorphic variants
@@ -251,6 +261,10 @@ auto CARVAOp::stage2() -> void {
 	for (auto &v : ta_.results) {
 	  std::vector<std::vector<int32_t>> permutations;
 	  const std::string &k = v.second.transcript;
+
+      if(!ta_.get_gene().is_polymorphic(k)) {
+        continue;
+      }
 
 	  transcript_no++;
 

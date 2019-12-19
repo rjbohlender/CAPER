@@ -94,7 +94,7 @@ Reporter::Reporter(TaskParams &tp)
         "Gene\tTranscripts\tVariant\tScore\tOR\tOR_SE\tOR_P\tAF";
   } else {
     header =
-        "Gene\tTranscripts\tVariant\tScore\tOR\tOR_SE\tOR_P\tAF\tcase_ref\tcase_alt\tcontrol_ref\tcontrol_alt\tcase_list\tcontrol_list";
+        "Gene\tTranscripts\tVariant\tScore\tWeight\tOR\tOR_SE\tOR_P\tAF\tcase_ref\tcase_alt\tcontrol_ref\tcontrol_alt\tcase_list\tcontrol_list";
   }
   detail_file_ << header << std::endl;
 }
