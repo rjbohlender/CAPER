@@ -24,9 +24,12 @@ struct GLM {
   GLM(arma::mat &X, arma::vec &Y, LinkT &link) {
     indices_ = arma::regspace<arma::uvec>(0, X.n_cols - 1);
 	try{
-      beta_ = irls_svdnewton(X, Y);
+      // beta_ = gradient_descent(X, Y);
+      // beta_ = irls_svdnewton(X, Y);
+      // beta_ = irls_qr(X, Y);
+      beta_ = irls(X, Y);
 	} catch(std::exception &e) {
-      //std::cerr << "IRLS failed; Using gradient descent." << std::endl;
+      std::cerr << "IRLS failed; Using gradient descent." << std::endl;
       //beta_ = gradient_descent(X, Y);
       //std::cerr << e.what();
       try {
@@ -57,7 +60,7 @@ struct GLM {
 
 template<typename LinkT>
 auto GLM<LinkT>::gradient_descent(arma::mat &X, arma::colvec &Y) -> arma::vec {
-  std::cerr << "Running gradient descent.\n";
+  // std::cerr << "Running gradient descent.\n";
   auto iterations = 0ull;
   const auto max_iter = 1000000ull;
   auto alpha = 0.0005; // Learning rate
@@ -73,13 +76,16 @@ auto GLM<LinkT>::gradient_descent(arma::mat &X, arma::colvec &Y) -> arma::vec {
 
     iterations++;
   } while(iterations < max_iter && arma::norm(grad) > tol);
+
+  dev_ = arma::sum(link.dev_resids(Y, link.linkinv(A, b), arma::vec(A.n_rows, arma::fill::ones)));
+
   return b;
 }
 
 template<typename LinkT>
 auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
-  const auto tol = 1e-8;
-  const auto max_iter = 25;
+  const auto tol = 1e-25;
+  const auto max_iter = 50;
   auto iter = 0;
 
   arma::uword m = X.n_rows;
@@ -278,6 +284,7 @@ auto GLM<LinkT>::irls(arma::mat &X, arma::colvec &Y) -> arma::vec {
 	  break;
 	}
   }
+  dev_ = arma::sum(link.dev_resids(Y, link.linkinv(X * x), arma::vec(X.n_rows, arma::fill::ones)));
   return x;
 }
 

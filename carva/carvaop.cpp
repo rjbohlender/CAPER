@@ -218,8 +218,14 @@ auto CARVAOp::stage2() -> void {
 										true);
 	  }
 	  // Minor and major allele carrier indices
-	  mac_indices[k] = arma::find(arma::sum(arma::mat(ta_.get_gene().get_matrix(k) + ta_.get_gene().get_missing(k)), 1) > 0);
-	  maj_indices[k] = arma::find(arma::sum(arma::mat(ta_.get_gene().get_matrix(k)), 1) == 0);
+	  if (!ta_.get_tp().cov_adjusted) {
+        mac_indices[k] = arma::find(arma::sum(arma::mat(ta_.get_gene().get_matrix(k) + ta_.get_gene().get_missing(k)), 1) > 0);
+        // mac_indices[k] = arma::find(arma::sum(arma::mat(ta_.get_gene().get_matrix(k)), 1) > 0);
+        maj_indices[k] = arma::find(arma::sum(arma::mat(ta_.get_gene().get_matrix(k)), 1) == 0);
+	  } else {
+	    mac_indices[k] = arma::find(arma::sum(arma::mat(ta_.get_gene().get_matrix(k)), 1) >= 0);
+	    maj_indices[k] = arma::uvec();
+	  }
 	  // No longer true for Yao's fix assert(mac_indices[k].n_rows + maj_indices[k].n_rows == ta_.get_cov().get_nsamples());
 
 #if 0

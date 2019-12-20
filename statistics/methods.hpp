@@ -46,8 +46,8 @@ public:
   // Li and Leal 2008
   double CMC(Gene &gene, arma::vec &Y, const std::string &k, double maf = 0.005);
   // Morris and Zeggini 2010
-  double RVT1(Gene &gene, arma::vec &Y, arma::mat &design, const std::string &k, bool linear);
-  double RVT2(Gene &gene, arma::vec &Y, arma::mat &design, const std::string &k, bool linear);
+  double RVT1(Gene &gene, arma::vec &Y, arma::mat design, const std::string &k, bool linear);
+  double RVT2(Gene &gene, arma::vec &Y, arma::mat design, const std::string &k, bool linear);
 #if 1
   // Wu et al. 2011
   double SKAT(Gene &gene,

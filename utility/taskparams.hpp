@@ -44,6 +44,7 @@ struct TaskParams {
   arma::uword mac;
   double maf;
   bool covadj;
+  bool cov_adjusted; // Methods that cannot be permute a subset
 
   boost::optional<arma::uword> approximate;
   boost::optional<int> range_start;

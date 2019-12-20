@@ -148,6 +148,7 @@ Result &Result::combine(const Result &res) {
   successes += res.successes;
   mid_successes += res.mid_successes;
   permutations += res.permutations;
+  rand_perms += res.rand_perms;
 
   // Update empirical p and empirical midp
   // TODO Include randomized permutations

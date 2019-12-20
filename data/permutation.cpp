@@ -316,18 +316,20 @@ std::vector<std::vector<int32_t>> Permute::permutations_mac_bin(int nperm,
 	}
 
 	// Maj bin
-	nbins = 1;
-	maj_bins[transcript] = nbins;
-	arma::uword stride = maj_indices.n_elem / nbins;
-	odds_sort = arma::sort_index(odds(maj_indices));
-	sort_maj_idx[transcript] = maj_indices(odds_sort);
-	for (arma::uword i = 0; i < nbins; i++) {
-	  arma::span cur(i * stride, std::min(i * stride + stride - 1, maj_indices.n_elem));
-	  arma::vec odds_spanned = odds(odds_sort(cur));
-	  // Set number in group
-	  m[transcript].push_back(odds_spanned.n_elem);
-	  // Set odds for group
-	  odds_[transcript].push_back(arma::mean(odds_spanned));
+	if(maj_indices.n_elem > 0) {
+      nbins = 1;
+      maj_bins[transcript] = nbins;
+      arma::uword stride = maj_indices.n_elem / nbins;
+      odds_sort = arma::sort_index(odds(maj_indices));
+      sort_maj_idx[transcript] = maj_indices(odds_sort);
+      for (arma::uword i = 0; i < nbins; i++) {
+        arma::span cur(i * stride, std::min(i * stride + stride - 1, maj_indices.n_elem));
+        arma::vec odds_spanned = odds(odds_sort(cur));
+        // Set number in group
+        m[transcript].push_back(odds_spanned.n_elem);
+        // Set odds for group
+        odds_[transcript].push_back(arma::mean(odds_spanned));
+      }
 	}
 	bins_built[transcript] = true;
   }

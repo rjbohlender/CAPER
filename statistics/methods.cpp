@@ -243,7 +243,7 @@ double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &k, double maf) 
   return pval;
 }
 
-double Methods::RVT1(Gene &gene, arma::vec &Y, arma::mat &design, const std::string &k, bool linear) {
+double Methods::RVT1(Gene &gene, arma::vec &Y, arma::mat design, const std::string &k, bool linear) {
   if (linear) {
 	// Quantitative trait
 	arma::sp_mat X = gene.get_matrix(k).t();
@@ -278,7 +278,7 @@ double Methods::RVT1(Gene &gene, arma::vec &Y, arma::mat &design, const std::str
   }
 }
 
-double Methods::RVT2(Gene &gene, arma::vec &Y, arma::mat &design, const std::string &k, bool linear) {
+double Methods::RVT2(Gene &gene, arma::vec &Y, arma::mat design, const std::string &k, bool linear) {
   if (linear) {
 	// Quantitative trait
 	arma::sp_mat X = gene.get_matrix(k).t();
