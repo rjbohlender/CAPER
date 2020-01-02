@@ -61,7 +61,8 @@ private:
   unsigned long ncases_;
 
   CRandomMersenne crand;
-  std::vector<std::string> samples_;
+  std::vector<std::string> cov_samples_;
+  std::vector<std::string> ped_samples_;
   arma::vec phenotypes_; // Possibly permuted phenotype vector
   arma::vec original_; // Original phenotype vector
   arma::mat design_; // Design matrix

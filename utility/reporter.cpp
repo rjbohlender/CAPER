@@ -91,10 +91,10 @@ Reporter::Reporter(TaskParams &tp)
 
   if(tp.linear) {
     header =
-        "Gene\tTranscripts\tVariant\tScore\tOR\tOR_SE\tOR_P\tAF";
+        "Gene\tTranscripts\tVariant\tScore\tAF";
   } else {
     header =
-        "Gene\tTranscripts\tVariant\tScore\tWeight\tOR\tOR_SE\tOR_P\tAF\tcase_ref\tcase_alt\tcontrol_ref\tcontrol_alt\tcase_list\tcontrol_list";
+        "Gene\tTranscripts\tVariant\tScore\tWeight\tAF\tcase_ref\tcase_alt\tcontrol_ref\tcontrol_alt\tcase_list\tcontrol_list";
   }
   detail_file_ << header << std::endl;
 }
@@ -448,6 +448,13 @@ auto Reporter::report_vaast(std::vector<CARVATask> &res, TaskParams &tp) -> void
 	  vaast_file_ << "num_permutations: " << ta.results[ts.first].permutations << std::endl;
 	  vaast_file_ << "total_success: " << ta.results[ts.first].successes << std::endl;
 	}
+  }
+  // Print sample / index map at the end
+  vaast_file_ << "## Sample Index Map" << std::endl;
+  int j = 0;
+  for (auto &s : res[0].get_gene().get_samples()) {
+    detail_file_ << "#\t" << s << "\t" << j << std::endl;
+    j++;
   }
 }
 

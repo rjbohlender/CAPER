@@ -113,7 +113,7 @@ set(PROJECT_SUPPORT_FILES
     caese/caesetask.cpp
     caese/caesetask.hpp
     statistics/fishertest.cpp
-    statistics/fishertest.hpp utility/jointhreads.hpp)
+    statistics/fishertest.hpp utility/jointhreads.hpp utility/indexsort.hpp)
 
 
 include_directories("${CMAKE_CURRENT_LIST_DIR}/third_party")

@@ -419,13 +419,10 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
             detail << gene_ << "\t";
             print_comma_sep(v.second, detail);
             detail << "\t";
-            detail << boost::format("%1$s\t%2$.2f\t%3$.2f\t%4$.2f\t%5$.4f\t%6$.4f\t%7$d")
+            detail << boost::format("%1$s\t%2$.2f\t%3$.2f\t%4$d")
                     % v.first
                     % pos_score_map[v.first]
                     % pos_weight_map[v.first]
-                    % std::exp(pos_odds_map[v.first])
-                    % pos_serr_map[v.first]
-                    % pos_odds_pval_map[v.first]
                     % pos_freq_map[v.first];
             detail << std::endl;
         }
@@ -435,13 +432,10 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
             detail << gene_ << "\t";
             print_comma_sep(v.second, detail);
             detail << "\t";
-            detail << boost::format("%1$s\t%2$.2f\t%3$.2f\t%4$.2f\t%5$.4f\t%6$.4f\t%7$d\t%8$d\t%9$d\t%10$d\t%11$d")
+            detail << boost::format("%1$s\t%2$.2f\t%3$.2f\t%4$d\t%5$d\t%6$d\t%7$d\t%8$d")
                     % v.first
                     % pos_score_map[v.first]
                     % pos_weight_map[v.first]
-                    % std::exp(pos_odds_map[v.first])
-                    % pos_serr_map[v.first]
-                    % pos_odds_pval_map[v.first]
                     % pos_freq_map[v.first]
                     % pos_caseref_map[v.first]
                     % pos_casealt_map[v.first]

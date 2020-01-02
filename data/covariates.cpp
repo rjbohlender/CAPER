@@ -10,6 +10,7 @@
 #include "../link/gaussian.hpp"
 #include "../statistics/glm.hpp"
 #include "../statistics/bayesianglm.hpp"
+#include "../utility/indexsort.hpp"
 
 
 
@@ -156,8 +157,8 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
     RJBUtil::Splitter<std::string> splitter(line, "\t");
 
     std::string sample_id = splitter[1];
+    ped_samples_.push_back(sample_id);
     if(ifile.empty()) {
-	  samples_.push_back(sample_id);
 	  phenotypes.push_back(std::stod(splitter[6]));
 	}
     nsamples_++;
@@ -192,7 +193,7 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
 	    // Get phenotype of current sample
 	    auto phen = sample_phen_map[v];
 
-		samples_.push_back(v);
+		cov_samples_.push_back(v);
 
 		if (phen == 1)
 		  ncases_++;
@@ -330,24 +331,42 @@ void Covariates::fit_null() {
 /**
  * @brief Uses the header of the matrix to sort the covariates
  * @param header Header of the matrix file
+ *
+ * If cov_samples_ is empty, covariates weren't provided, phenotypes are in ped file order.
+ * Otherwise, phenotypes are in covariate file order.
  */
 void Covariates::sort_covariates(std::string &header) {
   RJBUtil::Splitter<std::string> splitter(header, " \t");
 
   std::map<std::string, arma::uword> header_map;
-  for(auto it = splitter.begin() + 3; it != splitter.end(); it++) {
-    header_map[*it] = std::distance(splitter.begin() + 3, it);
+  arma::uvec indices = arma::uvec(cov_samples_.size(), arma::fill::zeros);
+
+  // Cov order
+  if(!cov_samples_.empty()) {
+    for(auto it = cov_samples_.begin(); it != cov_samples_.end(); it++) {
+      header_map[*it] = std::distance(cov_samples_.begin(), it);
+    }
+    for(arma::uword i = 0; i < phenotypes_.n_rows; i++) {
+      indices(i) = header_map[splitter[i + 3]];
+    }
+
+    // Sort the phenotypes and covariates according to the order in the matrix file.
+    original_ = phenotypes_(indices);
+    phenotypes_ = phenotypes_(indices);
+    design_ = design_.rows(indices);
+  } else {
+    for(auto it = ped_samples_.begin(); it != ped_samples_.end(); it++) {
+      header_map[*it] = std::distance(ped_samples_.begin(), it);
+    }
+    for(arma::uword i = 0; i < phenotypes_.n_rows; i++) {
+      indices(i) = header_map[splitter[i + 3]];
+    }
+
+    // Sort the phenotypes and covariates according to the order in the matrix file.
+    original_ = phenotypes_(indices);
+    phenotypes_ = phenotypes_(indices);
+    design_ = design_.rows(indices);
   }
-
-  arma::uvec indices(design_.n_rows, arma::fill::zeros);
-
-  for(arma::uword i = 0; i < phenotypes_.n_rows; i++) {
-    indices(i) = header_map[samples_[i]];
-  }
-
-  // Sort the phenotypes and covariates according to the order in the matrix file.
-  phenotypes_ = phenotypes_(indices);
-  design_ = design_.rows(indices);
 
   fit_null();
 
