@@ -167,6 +167,10 @@ void Gene::parse(std::stringstream &ss, arma::vec &phenotypes) {
                     << " Location: " << splitter[2] << std::endl;
           throw (e);
         }
+      } else {
+        if(phenotypes(j - 3) == 1) {
+          ncases++;
+        }
       }
     }
     i++;
