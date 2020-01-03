@@ -182,7 +182,7 @@ private:
 			// Dispatch gene
 			Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_, tp_, cov_->get_original_phenotypes());
 
-			if (tp_.range_start && tp_.range_end) {
+            if (tp_.range_start && tp_.range_end) {
 			  if (gene_no >= *tp_.range_start && gene_no <= *tp_.range_end) {
 				single_dispatch(gene_data);
 			  } else if (gene_no > *tp_.range_end) {

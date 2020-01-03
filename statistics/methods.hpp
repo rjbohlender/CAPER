@@ -136,12 +136,12 @@ private:
   std::shared_ptr<VT_Res> vt_obj_;
 
   // Davies method
-  double SKAT_pval(double Q, arma::vec lambda);
+  double SKAT_pval(double Q, const arma::vec& lambda);
 
   // Liu Method
-  double Liu_qval_mod(double pval, arma::vec lambda);
-  double Liu_pval(double Q, arma::vec lambda);
-  double Saddlepoint(double Q, arma::vec lambda);
+  double Liu_qval_mod(double pval, const arma::vec& lambda);
+  double Liu_pval(double Q, const arma::vec& lambda);
+  double Saddlepoint(double Q, const arma::vec& lambda);
 
   template<class T>
   int sgn(T x);

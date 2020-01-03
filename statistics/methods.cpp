@@ -18,6 +18,7 @@
 #include <boost/math/quadrature/gauss_kronrod.hpp>
 #include <boost/math/tools/roots.hpp>
 #include <boost/math/quadrature/tanh_sinh.hpp>
+#include <boost/math/tools/toms748_solve.hpp>
 
 #include <boost/format.hpp>
 
@@ -1067,7 +1068,7 @@ double Methods::SKATRO(Gene &gene, const std::string &k, arma::vec &phenotypes, 
   return std::max(std::numeric_limits<double>::min(), std::min(p_value, pmin * K));
 }
 
-double Methods::Liu_qval_mod(double pval, arma::vec lambda) {
+double Methods::Liu_qval_mod(double pval, const arma::vec& lambda) {
   arma::vec c1{
 	  arma::accu(lambda),
 	  arma::accu(arma::pow(lambda, 2)),
@@ -1106,7 +1107,7 @@ double Methods::Liu_qval_mod(double pval, arma::vec lambda) {
   return (q - df) / std::sqrt(2 * df) * sigmaQ + muQ;
 }
 
-double Methods::Saddlepoint(double Q, arma::vec lambda) {
+double Methods::Saddlepoint(double Q, const arma::vec& lambda) {
   // Check for valid input
   if (Q <= 0) {
 	return 1;
@@ -1132,7 +1133,7 @@ double Methods::Saddlepoint(double Q, arma::vec lambda) {
   auto kpprime0 = [&](double &zeta) -> double {
 	return 2 * arma::accu(arma::pow(ulambda, 2) / arma::pow(1 - 2 * (zeta * ulambda), 2));
   };
-#if 0
+#if 1
   auto hatzetafn = [&](double zeta) -> double {
 	return kprime0(zeta) - Q;
   };
@@ -1160,8 +1161,8 @@ double Methods::Saddlepoint(double Q, arma::vec lambda) {
   boost::math::tools::eps_tolerance<double> tol(digits);
   boost::uintmax_t max_iter = 1000;
   std::pair<double, double>
-	  tmp = boost::math::tools::toms748_solve(hatzetafn, lmin, lmax, tol, max_iter);
-#elif 0
+	  tmp = boost::math::tools::bisect(hatzetafn, lmin, lmax, tol, max_iter);
+#elif 1
   int digits = std::numeric_limits<double>::digits - 3;
   boost::math::tools::eps_tolerance<double> tol(digits);
   boost::uintmax_t max_iter = 1000;
@@ -1178,7 +1179,7 @@ double Methods::Saddlepoint(double Q, arma::vec lambda) {
 
 #endif
 
-  //double hatzeta = tmp.first + (tmp.second - tmp.first) / 2.;
+  double hatzeta = tmp.first + (tmp.second - tmp.first) / 2.;
 
   double w = sgn(hatzeta) * std::sqrt(2 * (hatzeta * Q - k0(hatzeta)));
   double v = hatzeta * std::sqrt(kpprime0(hatzeta));
@@ -1196,7 +1197,7 @@ int Methods::sgn(T x) {
   return (T(0) < x) - (x < T(0));
 }
 
-double Methods::Liu_pval(double Q, arma::vec lambda) {
+double Methods::Liu_pval(double Q, const arma::vec& lambda) {
   arma::vec c1{
 	  arma::accu(lambda),
 	  arma::accu(arma::pow(lambda, 2)),
@@ -1233,7 +1234,7 @@ double Methods::Liu_pval(double Q, arma::vec lambda) {
   }
 }
 
-double Methods::SKAT_pval(double Q, arma::vec lambda) {
+double Methods::SKAT_pval(double Q, const arma::vec& lambda) {
   if (std::isnan(Q)) {
 	return 1;
   }
