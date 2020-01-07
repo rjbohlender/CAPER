@@ -112,7 +112,7 @@ struct VAAST {
 						  std::vector<std::string> &positions);
   void variant_bitmask(const arma::sp_mat &X, const arma::vec &Y, const arma::vec &w);
 
-  arma::uvec setdiff(arma::uvec x, arma::uvec y);
+  static arma::uvec setdiff(arma::uvec x, arma::uvec y);
 };
 
 #endif //PERMUTE_ASSOCIATE_VAAST_HPP

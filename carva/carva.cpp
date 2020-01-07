@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
     optional.add_options()
         ("covariates,c",
          po::value<std::string>(),
-         "The covariate matrix file, tab separated.\nFormat = sample_id cov1 ...")
+         "The covariate matrix file, tab or space separated.\nFormat = sample_id cov1 ...")
         ("bed-file,b",
          po::value(&bed),
          "A bed file to be used as a filter. All specified regions will be excluded.")
@@ -87,16 +87,23 @@ int main(int argc, char **argv) {
          "A file providing weights.")
         ("nthreads,t",
          po::value<size_t>()->default_value(std::thread::hardware_concurrency() / 2 + 1),
-         "The number of threads. Minimum number of threads = 2. n + 1 threads, with one parent thread and n worker threads.")
+         "The number of threads. Minimum number of threads = 2. n + 1 threads, with one parent thread and n threads processing genes.")
         ("method,m",
          po::value<std::string>()->default_value("VAAST"),
-         "The statistical method to be used.\nOptions: {BURDEN, CALPHA, CMC, SKAT, WSS, VAAST, VT}.")
+         "The statistical method to be used.\n"
+         "Options: {BURDEN, CALPHA, CMC, RVT1, RVT2, SKAT, SKATO, SKATR, SKATRO, VAAST, VT, WSS}.")
         ("range",
          po::value(&gene_range)->multitoken(),
-         "A range of genes to analyze from the matrix file. Takes two values, a start gene number, and end gene number.\nThe program will only provide results for the values in that range. Gene count starts at 1.\nUseful for starting multiple jobs on a cluster each processing part of a file.")
+         "A range of genes to analyze from the matrix file. "
+         "Takes two values, a start gene number, and end gene number.\n"
+         "The program will only provide results for the values in that range. "
+         "Gene count starts at 1.\n"
+         "Useful for starting multiple jobs on a cluster each processing part of a file.\n"
+         "Note: Somewhat slower than splitting the input matrix file.")
         ("stage_1_max_perm,1",
          po::value<arma::uword>()->default_value(0),
-         "The maximum number of permutations to be performed in the first stage permutation. A small number is recommended if your sample is large.")
+         "The maximum number of permutations to be performed in "
+         "the first stage permutation. A small number is recommended if your sample is large.")
         ("stage_2_max_perm,2",
          po::value<arma::uword>()->default_value(1000000),
          "The maximum number of permutations to be performed in the second stage, the collapsing step.")
@@ -133,7 +140,7 @@ int main(int argc, char **argv) {
     vaast.add_options()
         ("group_size,g",
          po::value<arma::uword>()->default_value(0),
-         "Group size. VAAST can collapse variants into groups of variants with adjacent weights.")
+         "Group size. VAAST can collapse variants into groups of variants, dependent upon the collapse having a higher total VAAST score.")
         ("score_only_minor",
          po::bool_switch(&score_only_minor),
          "Score only minor alleles in VAAST.")
@@ -334,8 +341,8 @@ int main(int argc, char **argv) {
     std::exit(1);
   }
   tp.cov_adjusted =
-  tp.method == "RVT1" || tp.method == "RVT2" || tp.method == "SKATO" || tp.method == "SKAT" || tp.method ==
-      "BURDEN" || tp.method == "SKATR" || tp.method == "SKATRO";
+      tp.method == "RVT1" || tp.method == "RVT2" || tp.method == "SKATO" || tp.method == "SKAT" || tp.method ==
+          "BURDEN" || tp.method == "SKATR" || tp.method == "SKATRO";
 
   std::vector<int> range_opt;
   if (!vm["range"].empty() && (range_opt = vm["range"].as<std::vector<int>>()).size() == 2) {

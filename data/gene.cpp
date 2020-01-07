@@ -486,8 +486,8 @@ auto Gene::testable(const std::string &k, Covariates &cov, TaskParams &tp) -> bo
   arma::uword nmac = std::min(ncase, arma::accu(mac_carriers));
   arma::uword nmaj = (ncase - nmac >= 0) ? ncase - nmac : 0;
 
-  mac_carriers = arma::find(arma::vec(arma::sum(Xmat, 1)) > 0);
-  maj_carriers = arma::find(arma::vec(arma::sum(Xmat, 1)) == 0);
+  mac_carriers = arma::find(mac_carriers > 0);
+  maj_carriers = arma::find(mac_carriers == 0);
 
   arma::vec extreme_phen(Yvec.n_elem, arma::fill::zeros);
   extreme_phen(mac_carriers(arma::span(0, nmac - 1))).ones();
