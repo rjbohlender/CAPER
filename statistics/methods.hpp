@@ -51,14 +51,14 @@ public:
 #if 1
   // Wu et al. 2011
   double SKAT(Gene &gene,
-			  arma::vec &Y,
-			  Covariates &cov,
-			  const std::string &k,
-			  int a = 1,
-			  int b = 25,
-			  bool shuffle = false,
-			  bool detail = false,
-			  bool linear = false);
+              arma::vec &Y,
+              Covariates cov,
+              const std::string &k,
+              int a = 1,
+              int b = 25,
+              bool shuffle = false,
+              bool detail = false,
+              bool linear = false);
 #endif
 #if 1
   // Lee et al. 2012
@@ -134,6 +134,9 @@ private:
 
   // VT Helper
   std::shared_ptr<VT_Res> vt_obj_;
+
+  // TaskParams
+  TaskParams tp_;
 
   // Davies method
   double SKAT_pval(double Q, const arma::vec& lambda);

@@ -315,22 +315,33 @@ auto CARVAOp::stage2() -> void {
 								 false);
 		} catch(std::exception &e) {
 		  std::cerr << "Failed permutation." << std::endl;
-		  if (ta_.get_tp().approximate) {
-			permutations = ta_.get_permute(k).permutations_mac_bin(1,
-																   ta_.get_cov().get_odds(),
-																   ta_.get_cov().get_ncases(),
-																   mac_indices[k],
-																   maj_indices[k],
-																   *ta_.get_tp().approximate,
-																   k);
-		  } else {
-			permutations = ta_.get_permute(k).permutations_maj_bin(1,
-																   ta_.get_cov().get_odds(),
-																   ta_.get_cov().get_ncases(),
-																   mac_indices[k],
-																   maj_indices[k],
-																   k);
-		  }
+          if (ta_.get_tp().linear || !ta_.get_tp().covadj) {
+            // Fisher-Yates Shuffle
+            for (arma::sword i = phenotypes.n_elem - 1; i > 0; --i) {
+              std::uniform_int_distribution<> dis(0, i);
+              auto j = static_cast<arma::uword>(dis(gen_));
+              double tmp = phenotypes(i);
+              phenotypes(i) = phenotypes(j);
+              phenotypes(j) = tmp;
+            }
+          } else {
+            if (ta_.get_tp().approximate) {
+              permutations = ta_.get_permute(k).permutations_mac_bin(1,
+                                                                     ta_.get_cov().get_odds(),
+                                                                     ta_.get_cov().get_ncases(),
+                                                                     mac_indices[k],
+                                                                     maj_indices[k],
+                                                                     *ta_.get_tp().approximate,
+                                                                     k);
+            } else {
+              permutations = ta_.get_permute(k).permutations_maj_bin(1,
+                                                                     ta_.get_cov().get_odds(),
+                                                                     ta_.get_cov().get_ncases(),
+                                                                     mac_indices[k],
+                                                                     maj_indices[k],
+                                                                     k);
+            }
+          }
 		  phenotypes = arma::conv_to<arma::vec>::from(permutations[0]);
 		  perm_val = call_method(ta_.get_methods(),
 								 ta_.get_gene(),

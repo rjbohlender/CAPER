@@ -18,9 +18,9 @@ Gene::Gene(std::stringstream &ss, unsigned long nsamples, std::map<std::string, 
            const Weight &weight, TaskParams tp, arma::vec &phenotypes)
     : nsamples_(nsamples),
       nvariants_(nvariants),
-      tp_(std::move(tp)),
       testable_(false),
-      skippable_(false) {
+      skippable_(false),
+      tp_(std::move(tp)) {
   parse(ss, phenotypes);
   if (!weight.empty()) {
     for (const auto &k : transcripts_) {

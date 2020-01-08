@@ -87,7 +87,7 @@ Methods::Methods(std::string method)
 }
 
 Methods::Methods(TaskParams &tp, const std::shared_ptr<Covariates> &cov)
-	: method_(tp.method) {
+	: method_(tp.method), tp_(tp) {
   if (tp.kernel == "Linear") {
 	kernel_ = Kernel::Linear;
   } else if (tp.kernel == "wLinear") {
@@ -317,52 +317,28 @@ double Methods::RVT2(Gene &gene, arma::vec &Y, arma::mat design, const std::stri
 
 #if 1
 double Methods::SKAT(Gene &gene,
-					 arma::vec &Y,
-					 Covariates &cov,
-					 const std::string &k,
-					 int a,
-					 int b,
-					 bool shuffle,
-					 bool detail,
-					 bool linear) {
+                     arma::vec &Y,
+                     Covariates cov,
+                     const std::string &k,
+                     int a,
+                     int b,
+                     bool shuffle,
+                     bool detail,
+                     bool linear) {
   arma::sp_mat &Xmat = gene.get_matrix(k);
+  check_weights(gene, k, a, b);
   arma::vec &weights = gene.get_weights(k);
   arma::vec fitted;
 
   // Randomize indices
   if (shuffle) {
-    bool success;
-	if(linear) {
-	  Gaussian link("identity");
-	  GLM<Gaussian> fit(cov.get_covariate_matrix(), Y, link);
-	  success = fit.success;
-	  fitted = fit.mu_;
-	} else {
-	  Binomial link("logit");
-	  GLM<Binomial> fit(cov.get_covariate_matrix(), Y, link);
-	  success = fit.success;
-	  fitted = fit.mu_;
-	}
+    cov.set_phenotype_vector(Y);
+    cov.refit_permuted();
+    fitted = cov.get_fitted();
   } else {
     fitted = cov.get_fitted();
   }
 
-  // Check for weighted kernel
-  if (kernel_ == Kernel::wIBS || kernel_ == Kernel::wLinear) {
-	// Check for weights if kernel hasn't been generated
-	if (K_[k].n_rows == 0) {
-	  weights.reshape(Xmat.n_cols, 1);
-	  arma::vec maf(arma::mean(Xmat, 0).t() / 2.);
-
-	  for (arma::uword i = 0; i < Xmat.n_cols; i++) {
-		weights(i) = std::pow(maf(i), a - 1) * std::pow(1 - maf(i), b - 1) / boost::math::beta(a, b);
-	  }
-	}
-  } else {
-	if (K_[k].n_rows == 0) {
-	  weights.ones(Xmat.n_cols, 1);
-	}
-  }
 
   arma::sp_mat tXmat;
   arma::uword n = Xmat.n_cols; // Number of samples
@@ -409,6 +385,7 @@ double Methods::SKATO(Gene &gene,
 	cov.refit_permuted();
   }
 
+  check_weights(gene, k, a, b);
   arma::sp_mat &Z = gene.get_matrix(k);
 
   if (Z.n_rows < 2000 && adjust) {
