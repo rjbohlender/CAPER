@@ -196,9 +196,8 @@ void Result::update_ci() {
   empirical_midci = std::make_pair(ci_low, ci_hi);
 }
 
-void Result::calc_exact_p(double nmac, double nmaj) {
+void Result::calc_exact_p(double n1, double n2) {
   double m = permutations;
-  double n1 = nmac, n2 = nmaj;
   auto b = static_cast<double>(successes);
   double mt;
   try {

@@ -367,8 +367,78 @@ double Methods::SKAT(Gene &gene,
   }
 
   arma::vec Z = Y - fitted;
-  double ret = arma::accu(Z.t() * K_[k] * Z / 2);
-  return ret;
+  // double Q = arma::accu(Z.t() * K_[k] * Z / 2);
+  double Q = arma::accu(Z.t() * K_[k] * Z);  // Removing factor of 2 division -- doesn't appear in texts
+  if(tp_.total_permutations > 0) {
+    return Q;
+  } else { // Calculate analytic p-values
+    arma::sp_mat V0(fitted.n_elem, fitted.n_elem);
+    V0.diag() = fitted % (1 - fitted);
+    arma::mat X0 = cov.get_covariate_matrix();
+
+    // Cov matrix of Y - pi_hat
+    arma::mat P = V0 - V0 * X0 * arma::inv(X0.t() * V0 * X0) * X0.t() * V0;
+    arma::sp_mat W(weights.n_elem, weights.n_elem);
+    W.diag() = weights;
+
+    arma::vec lambda;
+
+    arma::eig_sym(lambda, W * Xmat.t() * P * Xmat * W);
+
+    return SKAT_pval(Q, lambda);
+  }
+}
+
+double Methods::SKATO_clean(Gene &gene,
+                            arma::vec &Y,
+                            Covariates cov,
+                            const std::string &k,
+                            int a,
+                            int b,
+                            bool shuffle,
+                            bool adjust) {
+  arma::vec pi0;
+  if (shuffle) {
+    cov.set_phenotype_vector(Y);
+    cov.refit_permuted();
+    pi0 = cov.get_fitted();
+  }
+  check_weights(gene, k, a, b);
+  arma::vec &weights = gene.get_weights(k);
+
+  std::array<double, 8> pvals{};
+  arma::mat J(gene.get_nvariants(k), gene.get_nvariants(k), arma::fill::ones);
+  arma::mat I = arma::eye(gene.get_nvariants(k), gene.get_nvariants(k));
+  arma::sp_mat G = gene.get_matrix(k);
+  int i = 0;
+  for(const auto &rho : rho_) {
+    arma::mat R = (1 - rho) * I + rho * J;
+
+    arma::sp_mat V0(pi0.n_elem, pi0.n_elem);
+    V0.diag() = pi0 % (1 - pi0);
+    arma::mat X0 = cov.get_covariate_matrix();
+
+    // Cov matrix of Y - pi_hat
+    arma::mat P = V0 - V0 * X0 * arma::inv(X0.t() * V0 * X0) * X0.t() * V0;
+    arma::mat P12 = arma::real(arma::sqrtmat(P));
+
+    // Sparse weight matrix
+    arma::sp_mat W(weights.n_elem, weights.n_elem);
+    W.diag() = weights;
+
+    // Weighted linear kernel for SKAT-O
+    arma::mat K = G * W * R * W * G.t();
+
+    double Q = arma::accu((Y - pi0).t() * K * (Y - pi0));
+
+    arma::vec lambda;
+    arma::eig_sym(lambda, P12.t() * K * P12);
+
+    pvals[i] = SKAT_pval(Q, lambda);
+
+    i++;
+  }
+  return 0;
 }
 
 double Methods::SKATO(Gene &gene,
@@ -937,7 +1007,8 @@ double Methods::SKATRO(Gene &gene, const std::string &k, arma::vec &phenotypes, 
   arma::vec Rs = arma::sum(R, 1);
   double R1 = arma::accu(Rs);
   double R2 = arma::accu(arma::pow(Rs, 2));
-  double R3 = arma::accu(Rs % arma::sum(R.each_col() % Rs).t());
+  // double R3 = arma::accu(Rs % arma::sum(R.each_col() % Rs).t());
+  double R3 = arma::accu(Rs.t() * R * Rs);
 
   arma::mat RJ2(Rs.n_rows, Rs.n_rows, arma::fill::zeros);
   for (arma::uword i = 0; i < Rs.n_rows; i++) {
@@ -1110,13 +1181,16 @@ double Methods::Saddlepoint(double Q, const arma::vec& lambda) {
   auto kpprime0 = [&](double &zeta) -> double {
 	return 2 * arma::accu(arma::pow(ulambda, 2) / arma::pow(1 - 2 * (zeta * ulambda), 2));
   };
-#if 1
+  auto kppprime0 = [&](double &zeta) -> double {
+    return 8 * arma::accu(arma::pow(ulambda, 3) / arma::pow(1 - 2 * (zeta * ulambda), 3));
+  };
+#if 0
   auto hatzetafn = [&](double zeta) -> double {
 	return kprime0(zeta) - Q;
   };
 #else
-  auto hatzetafn = [&](double zeta) -> std::pair<double, double> {
-	return std::make_pair(kprime0(zeta) - Q, kpprime0(zeta));
+  auto hatzetafn = [&](double zeta) -> std::tuple<double, double, double> {
+	return std::make_tuple(kprime0(zeta) - Q, kpprime0(zeta), kppprime0(zeta));
   };
 #endif
 
@@ -1139,7 +1213,7 @@ double Methods::Saddlepoint(double Q, const arma::vec& lambda) {
   boost::uintmax_t max_iter = 1000;
   std::pair<double, double>
 	  tmp = boost::math::tools::bisect(hatzetafn, lmin, lmax, tol, max_iter);
-#elif 1
+#elif 0
   int digits = std::numeric_limits<double>::digits - 3;
   boost::math::tools::eps_tolerance<double> tol(digits);
   boost::uintmax_t max_iter = 1000;
@@ -1152,11 +1226,11 @@ double Methods::Saddlepoint(double Q, const arma::vec& lambda) {
   int tol = static_cast<int>(digits * 0.6);
   boost::uintmax_t max_iter = 1000;
   double guess = (lmax - lmin) / 2.;
-  double hatzeta = boost::math::tools::newton_raphson_iterate(hatzetafn, guess, lmin, lmax, tol, max_iter);
+  double hatzeta = boost::math::tools::halley_iterate(hatzetafn, guess, lmin, lmax, tol, max_iter);
 
 #endif
 
-  double hatzeta = tmp.first + (tmp.second - tmp.first) / 2.;
+  // double hatzeta = tmp.first + (tmp.second - tmp.first) / 2.;
 
   double w = sgn(hatzeta) * std::sqrt(2 * (hatzeta * Q - k0(hatzeta)));
   double v = hatzeta * std::sqrt(kpprime0(hatzeta));
@@ -1175,6 +1249,7 @@ int Methods::sgn(T x) {
 }
 
 double Methods::Liu_pval(double Q, const arma::vec& lambda) {
+  std::cerr << "Called Liu_pval\n";
   arma::vec c1{
 	  arma::accu(lambda),
 	  arma::accu(arma::pow(lambda, 2)),
@@ -1187,17 +1262,18 @@ double Methods::Liu_pval(double Q, const arma::vec& lambda) {
   double s1 = c1[2] / std::pow(c1[1], 1.5);
   double s2 = c1[3] / std::pow(c1[1], 2);
 
-  double a, d, l;
-  if (s1 * s1 > s2) {
-	a = 1. / (s1 - std::sqrt(s1 * s1 - s2));
-	d = s1 * std::pow(a, 3) - a * a;
-	l = a * a - 2 * d;
+  double a, d, l; // l = degrees of freedom, d = non-centrality parameter for non-central chisq
+  if (std::pow(s1, 2) > s2) {
+	a = 1. / (s1 - std::sqrt(std::pow(s1, 2) - s2));
+	d = s1 * std::pow(a, 3) - std::pow(a, 2);
+	l = std::pow(a, 2) - 2 * d;
   } else {
-	l = 1. / s2;
-	a = std::sqrt(l);
-	d = 0;
+    std::cerr << "s1^2 <= s2\n";
+	a = 1. / s1; // Was s2, matching Wu et al. code, but should be s1 according to Liu et al. 2009 pg. 855
+    d = 0;
+	l = 1. / std::pow(s1, 2);
   }
-  double muX = l * d;
+  double muX = l + d; // Was l * d matching Wu et al. code, but should be l + d according to Liu et al. 2009 pg. 854
   double sigmaX = arma::datum::sqrt2 * a;
   double df = l;
 

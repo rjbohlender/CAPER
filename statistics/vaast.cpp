@@ -343,11 +343,11 @@ double VAAST::Score(const arma::sp_mat &X, const arma::vec &Y, const arma::vec &
   }
 
   arma::vec log_lh = LRT();
-  vaast_site_scores = 2.0 * (log_lh + arma::log(w)) - site_penalty;
+  vaast_site_scores = 2.0 * (log_lh + arma::log(w));
   variant_bitmask(X, Y, w);
   vaast_site_scores(mask).zeros();
 
-  double val = arma::accu(vaast_site_scores);
+  double val = arma::accu(vaast_site_scores) - site_penalty;
   return (val >= 0) ? val : 0; // Mask all negative values
 }
 

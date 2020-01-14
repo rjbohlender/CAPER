@@ -70,6 +70,14 @@ public:
 			   int b = 25,
 			   bool shuffle = false,
 			   bool adjust = true);
+  double SKATO_clean(Gene &gene,
+               arma::vec &Y,
+               Covariates cov,
+               const std::string &k,
+               int a = 1,
+               int b = 25,
+               bool shuffle = false,
+               bool adjust = true);
 #endif
   // Wu, Guan, and Pankow 2016
   double SKATR(Gene &gene,

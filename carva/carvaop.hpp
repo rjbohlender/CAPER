@@ -26,7 +26,7 @@ private:
   auto stage1() -> void;
   auto stage2() -> void;
 
-  auto check_perm(const TaskParams &tp,
+  static auto check_perm(const TaskParams &tp,
 				  double perm_val,
 				  int success_threshold,
 				  std::pair<const std::string, Result> &v) -> void;

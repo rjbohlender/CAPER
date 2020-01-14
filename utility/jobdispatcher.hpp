@@ -182,14 +182,16 @@ private:
 			// Dispatch gene
 			Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_, tp_, cov_->get_original_phenotypes());
 
-            if (tp_.range_start && tp_.range_end) {
-			  if (gene_no >= *tp_.range_start && gene_no <= *tp_.range_end) {
-				single_dispatch(gene_data);
-			  } else if (gene_no > *tp_.range_end) {
-				break; // Stop early
-			  }
-			} else {
-			  single_dispatch(gene_data);
+			if(!gene_data.is_skippable()) {
+              if (tp_.range_start && tp_.range_end) {
+                if (gene_no >= *tp_.range_start && gene_no <= *tp_.range_end) {
+                  single_dispatch(gene_data);
+                } else if (gene_no > *tp_.range_end) {
+                  break; // Stop early
+                }
+              } else {
+                single_dispatch(gene_data);
+              }
 			}
 			// Reset for next gene
 			gene_no++;

@@ -41,7 +41,7 @@ Reporter::Reporter(TaskParams &tp)
   }
 
   simple_path_ss << tp.output_path << "/" << tp.method;
-  if(tp.group_size > 0)
+  if(tp.group_size > 0 && tp.method == "VAAST")
     simple_path_ss << boost::format(".g%1$d") % tp.group_size;
   if(tp.testable)
     simple_path_ss << ".testable";

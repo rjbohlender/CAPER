@@ -30,7 +30,7 @@ struct Result {
   void set_odds(double odds);
   void update_ci();
   void calc_exact_p();
-  void calc_exact_p(double nmac, double nmaj);
+  void calc_exact_p(double n1, double n2);
 
   std::string gene;
   std::string transcript;
