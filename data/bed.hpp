@@ -42,7 +42,8 @@ public:
   explicit Bed(const std::string &ifile);
   explicit Bed(std::stringstream &ss);
 
-  bool check_variant(const std::string &chr, const std::string &pos);
+  bool check_variant(const std::string &chr, std::pair<std::string, std::string> &&pos); // MNP version
+  bool check_variant(const std::string &chr, const std::string &pos); // SNV / single INDEL version
   bool check_variant(const std::string &chr, int pos);
 
   bool empty();

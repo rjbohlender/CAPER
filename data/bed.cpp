@@ -85,6 +85,21 @@ Bed::Bed(std::stringstream &ss) {
   }
 }
 
+bool Bed::check_variant(const std::string &chr, std::pair<std::string, std::string> &&pos) {
+  int start = std::stoi(pos.first);
+  int end = std::stoi(pos.second);
+
+  if (ranges_.find(chr) == ranges_.end()) {
+    return false;
+  }
+
+  auto it = std::lower_bound(ranges_[chr].begin(), ranges_[chr].end(), start); // First range >= start
+  if (it == ranges_[chr].end()) {
+    return false;
+  }
+  return *it <= end;
+}
+
 bool Bed::check_variant(const std::string &chr, const std::string &pos) {
   int ipos = std::stoi(pos);
 

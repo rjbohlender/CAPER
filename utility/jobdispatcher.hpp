@@ -391,15 +391,28 @@ private:
 				RJBUtil::Splitter<std::string> &split,
 				RJBUtil::Splitter<std::string> &vsplit) {
 	// Is variant masked?
-	if (!bed_.check_variant(vsplit[0], vsplit[1])) {
-	  // Variant not masked
-	  ss << line << "\n";
-	  // Track number of variants in each transcript
-	  if (nvariants_.find(split[1]) == nvariants_.end()) {
-	    nvariants_[split[1]] = 1;
-	  } else {
-	    nvariants_[split[1]]++;
-	  }
+	if (vsplit[2] != vsplit[1]) {
+      if (!bed_.check_variant(vsplit[0], std::make_pair(vsplit[1], vsplit[2]))) {
+        // Variant not masked
+        ss << line << "\n";
+        // Track number of variants in each transcript
+        if (nvariants_.find(split[1]) == nvariants_.end()) {
+          nvariants_[split[1]] = 1;
+        } else {
+          nvariants_[split[1]]++;
+        }
+      }
+	} else {
+      if (!bed_.check_variant(vsplit[0], vsplit[1])) {
+        // Variant not masked
+        ss << line << "\n";
+        // Track number of variants in each transcript
+        if (nvariants_.find(split[1]) == nvariants_.end()) {
+          nvariants_[split[1]] = 1;
+        } else {
+          nvariants_[split[1]]++;
+        }
+      }
 	}
   }
 
