@@ -319,11 +319,14 @@ double VAAST::Score(const arma::sp_mat &X, const arma::vec &Y, const arma::vec &
     // The idea is to add an additional term to the VAAST CLRT that captures the frequency of biallelic variants in cases and controls.
     // For starters, we can try collapsing all variants with a positive VAAST score into one biallelic term.
 	arma::vec log_lh = LRT();
-	vaast_site_scores = 2.0 * (log_lh + arma::log(w)) - site_penalty;
+	vaast_site_scores = 2.0 * (log_lh + arma::log(w));
 	variant_bitmask(X, Y, w);
 	vaast_site_scores(mask).zeros();
 
-	// Get all variants with positive vaast score
+    vaast_site_scores(arma::find(vaast_site_scores <= 2)).zeros();
+    vaast_site_scores(arma::find(vaast_site_scores > 2)) -= site_penalty;
+
+    // Get all variants with positive vaast score
 	arma::mat Xmat(X);
 	arma::uvec collapse = arma::find(vaast_site_scores > 0);
 	arma::vec variant(n_case + n_control, arma::fill::zeros);
@@ -347,7 +350,10 @@ double VAAST::Score(const arma::sp_mat &X, const arma::vec &Y, const arma::vec &
   variant_bitmask(X, Y, w);
   vaast_site_scores(mask).zeros();
 
-  double val = arma::accu(vaast_site_scores) - site_penalty;
+  vaast_site_scores(arma::find(vaast_site_scores <= 2)).zeros();
+  vaast_site_scores(arma::find(vaast_site_scores > 2)) -= site_penalty;
+
+  double val = arma::accu(vaast_site_scores);
   return (val >= 0) ? val : 0; // Mask all negative values
 }
 

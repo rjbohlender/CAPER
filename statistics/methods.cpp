@@ -33,12 +33,12 @@
 #include "../link/gaussian.hpp"
 #include "glm.hpp"
 
-constexpr double Methods::rho_[];
+constexpr std::array<double, 8> Methods::rho_;
 
 // TODO Check with Chad / Yao re: replacing NAN values for MGIT
 arma::vec rank(arma::vec &v, const char *direction) {
   if (strcmp(direction, "ascend") != 0 && strcmp(direction, "descend") != 0)
-	throw (std::logic_error("Order argument must be either 'ascend' or 'descend'"));
+	throw (std::logic_error("Order argument for rank() must be either 'ascend' or 'descend'"));
 
   arma::uvec sort_indices;
   try {
@@ -406,38 +406,63 @@ double Methods::SKATO_clean(Gene &gene,
   check_weights(gene, k, a, b);
   arma::vec &weights = gene.get_weights(k);
 
-  std::array<double, 8> pvals{};
+  double p = gene.get_nvariants(k);
+
+  // Allocate matrices that won't be changing as a function of rho_
   arma::mat J(gene.get_nvariants(k), gene.get_nvariants(k), arma::fill::ones);
   arma::mat I = arma::eye(gene.get_nvariants(k), gene.get_nvariants(k));
   arma::sp_mat G = gene.get_matrix(k);
+
+  arma::sp_mat V0(pi0.n_elem, pi0.n_elem);
+  V0.diag() = pi0 % (1 - pi0);
+  arma::mat X0 = cov.get_covariate_matrix();
+
+  // Cov matrix of Y - pi_hat
+  arma::mat P = V0 - V0 * X0 * arma::inv(X0.t() * V0 * X0) * X0.t() * V0;
+  arma::mat P12 = arma::real(arma::sqrtmat(P)); // REML Estimator
+
+  // Sparse weight matrix
+  arma::sp_mat W(weights.n_elem, weights.n_elem);
+  W.diag() = weights;
+
+  arma::mat Z = P12 * G * W;
+  arma::vec zbar = arma::mean(Z, 1); // Row means
+  double zdot = arma::accu(zbar.t() * zbar);
+
+  arma::mat M = (zbar / zdot) * zbar.t();
+
   int i = 0;
-  for(const auto &rho : rho_) {
+  std::array<double, 8> pvals{};
+  arma::vec tau(rho_.size(), arma::fill::zeros);
+  for(const auto &rho : rho_) { // Generate P-values
     arma::mat R = (1 - rho) * I + rho * J;
-
-    arma::sp_mat V0(pi0.n_elem, pi0.n_elem);
-    V0.diag() = pi0 % (1 - pi0);
-    arma::mat X0 = cov.get_covariate_matrix();
-
-    // Cov matrix of Y - pi_hat
-    arma::mat P = V0 - V0 * X0 * arma::inv(X0.t() * V0 * X0) * X0.t() * V0;
-    arma::mat P12 = arma::real(arma::sqrtmat(P));
-
-    // Sparse weight matrix
-    arma::sp_mat W(weights.n_elem, weights.n_elem);
-    W.diag() = weights;
 
     // Weighted linear kernel for SKAT-O
     arma::mat K = G * W * R * W * G.t();
 
     double Q = arma::accu((Y - pi0).t() * K * (Y - pi0));
+    if(rho == 1) {
+      if (Q > 0) {
+        boost::math::chi_squared chisq(1);
+        pvals[i] = boost::math::cdf(boost::math::complement(chisq, Q));
+      } else {
+        pvals[i] = 1;
+      }
+    } else {
+      arma::vec lambda;
+      arma::eig_sym(lambda, P12.t() * K * P12);
 
-    arma::vec lambda;
-    arma::eig_sym(lambda, P12.t() * K * P12);
+      pvals[i] = SKAT_pval(Q, lambda);
+    }
 
-    pvals[i] = SKAT_pval(Q, lambda);
+    // Calcualate tau for current rho -- equation between 2.5 and 2.6 in Lee et al. 2012 -- second term a bit of a workaround for armadillo
+    tau(i) = std::pow(p, 2) * rho * zdot + (1 - rho) / zdot * arma::accu(arma::pow(arma::sum(Z.each_col() % zbar, 0), 2));
 
     i++;
   }
+
+  double T = *std::min_element(pvals.begin(), pvals.end()); // Test statistic
+
   return 0;
 }
 

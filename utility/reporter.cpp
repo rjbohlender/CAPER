@@ -407,10 +407,6 @@ auto Reporter::report_simple(TaskParams &tp) -> void {
 }
 
 auto Reporter::report_detail(std::vector<CARVATask> &res, TaskParams &tp) -> void {
-  std::string header;
-
-  detail_file_ << header << std::endl;
-
   int i = 0; // For each gene
   for (auto &v : details_) {
 	detail_file_ << v;

@@ -119,7 +119,7 @@ private:
   Kernel kernel_;
   std::map<std::string, arma::sp_mat> K_;
   // Weights for SKAT-O
-  static constexpr double rho_[8] = {0, 0.01, 0.04, 0.09, 0.16, 0.25, 0.5, 1};
+  static constexpr std::array<double, 8> rho_{0, 0.01, 0.04, 0.09, 0.16, 0.25, 0.5, 1};
 
   // Check weighting
   void check_weights(Gene &gene, const std::string &k, int a = 1, int b = 25, bool no_weight = false);
