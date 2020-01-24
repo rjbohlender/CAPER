@@ -91,19 +91,19 @@ auto CAESEOp::effectsize() -> void {
 	  // SKAT corrects for covariates so we don't use this permutation approach
 	  if (ta_.get_tp().approximate) {
 		permutations = ta_.get_permute(k).permutations_mac_bin(1,
-															   ta_.get_cov().get_odds(),
-															   ta_.get_cov().get_ncases(),
-															   mac_indices[k],
-															   maj_indices[k],
-															   *ta_.get_tp().approximate,
-															   k);
+                                                               ta_.get_cov().get_odds(),
+                                                               ta_.get_cov().get_ncases(),
+                                                               mac_indices[k],
+                                                               maj_indices[k],
+                                                               k,
+                                                               *ta_.get_tp().approximate, 0);
 	  } else {
 		permutations = ta_.get_permute(k).permutations_maj_bin(1,
-															   ta_.get_cov().get_odds(),
-															   ta_.get_cov().get_ncases(),
-															   mac_indices[k],
-															   maj_indices[k],
-															   k);
+                                                               ta_.get_cov().get_odds(),
+                                                               ta_.get_cov().get_ncases(),
+                                                               mac_indices[k],
+                                                               maj_indices[k],
+                                                               k, 0);
 	  }
 	  phenotypes = arma::conv_to<arma::vec>::from(permutations[0]);
 

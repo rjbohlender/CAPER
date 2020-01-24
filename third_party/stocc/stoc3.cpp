@@ -45,7 +45,7 @@ Constructor
 ***********************************************************************/
 StochasticLib3::StochasticLib3(int seed) : StochasticLib1(seed) {
    // SetAccuracy(1.E-8);                  // set default accuracy -- Original
-  SetAccuracy(1.E-8);                  // set default accuracy
+  SetAccuracy(1.E-10);                  // set default accuracy
    // Initialize variables
    fnc_n_last = -1, fnc_m_last = -1, fnc_N_last = -1;
    fnc_o_last = -1.;
@@ -436,15 +436,15 @@ int32_t * source, double * weights, int32_t n, int colors) {
    */
 
    // variables 
-   std::array<int, MAXCOLORS> order1 {};              // sort order, index into source and destination
-   std::array<int, MAXCOLORS> order2 {};              // corresponding index into arrays when equal weights pooled together
-   std::array<int, MAXCOLORS> order3 {};              // secondary index for sorting by variance
-   std::array<int32_t, MAXCOLORS> osource {};         // contents of source, sorted by weight with equal weights pooled together
-   std::array<int32_t, MAXCOLORS> urn {};             // balls from osource not taken yet
-   std::array<int32_t, MAXCOLORS> osample {};         // balls sampled
-   std::array<double, MAXCOLORS> oweights {};         // sorted list of weights
-   std::array<double, MAXCOLORS> wcum {};             // list of accumulated probabilities
-   std::array<double, MAXCOLORS> var {};              // sorted list of variance
+   std::vector<int> order1 (colors);              // sort order, index into source and destination
+   std::vector<int> order2 (colors);              // corresponding index into arrays when equal weights pooled together
+   std::vector<int> order3 (colors);              // secondary index for sorting by variance
+   std::vector<int32_t> osource (colors);         // contents of source, sorted by weight with equal weights pooled together
+   std::vector<int32_t> urn (colors);             // balls from osource not taken yet
+   std::vector<int32_t> osample (colors);         // balls sampled
+   std::vector<double> oweights (colors);         // sorted list of weights
+   std::vector<double> wcum (colors);             // list of accumulated probabilities
+   std::vector<double> var (colors);              // sorted list of variance
    double w = 0.;                      // weight of balls of one color
    double w1, w2;                      // odds within group; mean weight in group
    double wsum;                        // total weight of all balls of several or all colors
@@ -1236,6 +1236,9 @@ int32_t * source, double * weights, int32_t n, int colors) {
 
       // determine number of scans (not fine-tuned):
       ngibbs = 4;  if (accuracy < 1E-6) ngibbs = 6;  if (colors2 > 5) ngibbs++;
+
+      // Try higher values
+      ngibbs = 100;
 
       // Gibbs sampler
       for (k = 0; k < ngibbs; k++) {

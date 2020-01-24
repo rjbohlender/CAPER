@@ -33,18 +33,27 @@ struct Permute {
 						int nperm,
 						int seed);
   std::vector<std::vector<int32_t>> permutations_maj_bin(int nperm,
-														 arma::vec &odds,
-														 arma::uword ncases,
-														 arma::uvec &mac_indices,
-														 arma::uvec &maj_indices,
-														 const std::string &transcript);
+                                                         arma::vec &odds,
+                                                         arma::uword ncases,
+                                                         arma::uvec &mac_indices,
+                                                         arma::uvec &maj_indices,
+                                                         const std::string &transcript,
+                                                         arma::uword maj_nbins);
   std::vector<std::vector<int32_t>> permutations_mac_bin(int nperm,
-														 arma::vec &odds,
-														 arma::uword ncases,
-														 arma::uvec &mac_indices,
-														 arma::uvec &maj_indices,
-														 arma::uword &approximate,
-														 const std::string &transcript);
+                                                         arma::vec &odds,
+                                                         arma::uword ncases,
+                                                         arma::uvec &mac_indices,
+                                                         arma::uvec &maj_indices,
+                                                         const std::string &transcript,
+                                                         arma::uword &approximate,
+                                                         arma::uword maj_nbins);
+  std::vector<std::vector<int32_t>> permutations_mac_bin_fix(int nperm,
+                                                             arma::vec &odds,
+                                                             arma::uword ncases,
+                                                             arma::uvec &mac_indices,
+                                                             arma::uvec &maj_indices,
+                                                             arma::uword &approximate,
+                                                             const std::string &transcript);
   std::vector<std::vector<int32_t>> permutations_bin(int nperm,
 													 arma::vec &odds,
 													 arma::uword ncases,
@@ -82,5 +91,7 @@ struct Permute {
   std::map<std::string, std::vector<std::vector<int32_t>>> ret;
   std::map<std::string, arma::uvec> sort_mac_idx;
   std::map<std::string, arma::uvec> sort_maj_idx;
+  std::map<std::string, std::vector<arma::uvec>> mac_spans;
+  std::map<std::string, std::vector<arma::span>> maj_spans;
 };
 #endif //PERMUTE_ASSOCIATE_PERMUTATION_HPP

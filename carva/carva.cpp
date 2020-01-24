@@ -131,6 +131,9 @@ int main(int argc, char **argv) {
         ("approx,a",
          po::value(&approximate),
          "Group minor allele carriers into n bins with shared average odds. This option is useful for very large data sets where the total number of minor allele carriers to be permuted can be very large, and result in extreme run times.")
+        ("maj_nbins",
+         po::value<arma::uword>()->default_value(1),
+         "Group major allele carriers into n bins with shared average odds.")
         ("output_stats",
          po::bool_switch(&stats),
          "Write permuted statistics to .simple file following default output.")
@@ -313,6 +316,7 @@ int main(int argc, char **argv) {
   tp.mac = vm.count("mac") > 0 ? vm["mac"].as<arma::uword>() : -1;
   tp.pthresh = pthresh;
   tp.approximate = approximate;
+  tp.maj_nbins = vm["maj_nbins"].as<arma::uword>();
   // SKAT Options
   tp.kernel = vm["kernel"].as<std::string>();
   tp.adjust = adjust;

@@ -100,7 +100,7 @@ SKATParam::SKATParam(arma::mat &Z1) {
 	double term1 = std::pow(pm, 2) * r_corr + arma::sum(arma::sum(arma::pow(cof1, 2))) * (1 - r_corr);
 	tau(i) = term1 * arma::sum(arma::sum(arma::pow(z_mean, 2)));
   }
-#ifndef NDEBUG
+#if 0
   std::cerr << "MuQ: " << MuQ << "\n";
   std::cerr << "VarQ: " << VarQ << "\n";
   std::cerr << "KerQ: " << KerQ << "\n";
@@ -250,8 +250,8 @@ SKAT_Davies::SKAT_Davies(double Q, arma::vec &lambda) {
   std::vector<int> df(lambda.size(), 1); // n1
   int r1 = lambda.n_rows;
   double sigma = 0; // sigma
-  int lim1 = 10000;
-  double acc = 10e-6;
+  int lim1 = 1000000;
+  double acc = 10e-9;
   double trace[7]{0};
   ifault = 0;
   res = 0;
@@ -267,7 +267,7 @@ SKAT_Davies::SKAT_Davies(double Q, arma::vec &lambda) {
   // res = 1 - res;
   res = 1 - qfc2.get_res();
 
-#ifndef NDEBUG
+#if 0
   std::cerr << "Davies:\n";
   std::cerr << "lambda: " << lambda.t();
   std::cerr << "lb1: ";
@@ -320,7 +320,7 @@ SKAT_EachQ::SKAT_EachQ(arma::vec &Qall, std::vector<arma::vec> &lambda_all) {
 	double Qnorm = (Q - param_temp.muQ) / param_temp.sigmaQ * std::sqrt(2 * param_temp.l) + param_temp.l;
 	PvalueLambda pval_lambda(lambda_temp, Q);
 
-#ifndef NDEBUG
+#if 0
 	std::cerr << "pval: " << pval_lambda.p_val << "\n";
 	std::cerr << "pval_liu: " << pval_lambda.p_val_liu << "\n";
 #endif
@@ -422,7 +422,7 @@ double SKAT_Optimal_Pvalue_Davies(arma::vec &pmin_q, SKATParam &param_m, arma::v
 	// I = boost::math::quadrature::gauss<double, 20>::integrate(f1, DBL_EPSILON, 40.);
   }
 
-#ifndef NDEBUG
+#if 0
   std::cerr << "integral: " << I << "\n";
   std::cerr << "error: " << error << "\n";
 #endif

@@ -179,11 +179,12 @@ arma::vec Permute::calculate_fisher_mean(int32_t n, arma::vec &odds) {
 }
 
 std::vector<std::vector<int32_t>> Permute::permutations_maj_bin(int nperm,
-																arma::vec &odds,
-																arma::uword ncases,
-																arma::uvec &mac_indices,
-																arma::uvec &maj_indices,
-																const std::string &transcript) {
+                                                                arma::vec &odds,
+                                                                arma::uword ncases,
+                                                                arma::uvec &mac_indices,
+                                                                arma::uvec &maj_indices,
+                                                                const std::string &transcript,
+                                                                arma::uword maj_nbins) {
   if (bins_built.find(transcript) == bins_built.end()) {
 	bins_built[transcript] = false;
   }
@@ -194,20 +195,22 @@ std::vector<std::vector<int32_t>> Permute::permutations_maj_bin(int nperm,
 	  ret[transcript][i] = std::vector<int32_t>(odds.n_rows, 0);
 	}
 
+	arma::vec maj_odds = odds(maj_indices);
 	odds_[transcript] = arma::conv_to<std::vector<double>>::from(odds(mac_indices));
 	sort_mac_idx[transcript] = mac_indices;
-	arma::uvec odds_sort = arma::sort_index(odds(maj_indices));
+	arma::uvec odds_sort = arma::sort_index(maj_odds);
 	sort_maj_idx[transcript] = maj_indices(odds_sort);
 
+
 	// Create bins
-	double nbins = 1;
+	double nbins = maj_nbins;
 	mac_bins[transcript] = mac_indices.n_elem;
 	maj_bins[transcript] = nbins;
 	arma::uword stride = maj_indices.n_elem / nbins;
 	m[transcript] = std::vector<int32_t>(odds_[transcript].size(), 1);
 	for (arma::uword i = 0; i < nbins; i++) {
 	  arma::span cur(i * stride, std::min(i * stride + stride - 1, maj_indices.n_elem));
-	  arma::vec odds_spanned = odds(odds_sort(cur));
+	  arma::vec odds_spanned = maj_odds(odds_sort(cur));
 	  // Set number in group
 	  m[transcript].push_back(odds_spanned.n_elem);
 	  // Set odds for group
@@ -268,12 +271,13 @@ void Permute::permute_thread(std::shared_ptr<std::vector<std::vector<int32_t>>> 
 
 }
 std::vector<std::vector<int32_t>> Permute::permutations_mac_bin(int nperm,
-																arma::vec &odds,
-																arma::uword ncases,
-																arma::uvec &mac_indices,
-																arma::uvec &maj_indices,
-																arma::uword &approximate,
-																const std::string &transcript) {
+                                                                arma::vec &odds,
+                                                                arma::uword ncases,
+                                                                arma::uvec &mac_indices,
+                                                                arma::uvec &maj_indices,
+                                                                const std::string &transcript,
+                                                                arma::uword &approximate,
+                                                                arma::uword maj_nbins) {
   if(bins_built.find(transcript) == bins_built.end()) {
 	bins_built[transcript] = false;
   }
@@ -317,14 +321,15 @@ std::vector<std::vector<int32_t>> Permute::permutations_mac_bin(int nperm,
 
 	// Maj bin
 	if(maj_indices.n_elem > 0) {
-      nbins = 1;
+      nbins = maj_nbins;
       maj_bins[transcript] = nbins;
       arma::uword stride = maj_indices.n_elem / nbins;
-      odds_sort = arma::sort_index(odds(maj_indices));
+      arma::vec maj_odds = odds(maj_indices);
+      odds_sort = arma::sort_index(maj_odds);
       sort_maj_idx[transcript] = maj_indices(odds_sort);
       for (arma::uword i = 0; i < nbins; i++) {
         arma::span cur(i * stride, std::min(i * stride + stride - 1, maj_indices.n_elem));
-        arma::vec odds_spanned = odds(odds_sort(cur));
+        arma::vec odds_spanned = maj_odds(odds_sort(cur));
         // Set number in group
         m[transcript].push_back(odds_spanned.n_elem);
         // Set odds for group
@@ -433,13 +438,11 @@ auto Permute::unpack(int x, int y, bool shuffle) -> arma::uvec {
 	r(arma::span(0, x - 1)).fill(1);
   }
   // Fisher-Yates Shuffle
-  if(shuffle) {
-	for(arma::sword i = r.n_elem - 1; i >= 1; --i) {
-	  auto j = static_cast<arma::sword>(sto.IRandom(0, i));
-	  arma::uword tmp = r[i];
-	  r[i] = r[j];
-	  r[j] = tmp;
-	}
+  for(arma::sword i = r.n_elem - 1; i >= 1; --i) {
+	auto j = static_cast<arma::sword>(sto.IRandom(0, i));
+	arma::uword tmp = r[i];
+	r[i] = r[j];
+	r[j] = tmp;
   }
   return r;
 }
@@ -453,5 +456,135 @@ auto Permute::reset() -> void {
 	ret.clear();
 	sort_mac_idx.clear();
 	sort_maj_idx.clear();
+}
+
+std::vector<std::vector<int32_t>> Permute::permutations_mac_bin_fix(int nperm,
+																	arma::vec &odds,
+																	arma::uword ncases,
+																	arma::uvec &mac_indices,
+																	arma::uvec &maj_indices,
+																	arma::uword &approximate,
+																	const std::string &transcript) {
+	if(bins_built.find(transcript) == bins_built.end()) {
+		bins_built[transcript] = false;
+	}
+
+	arma::vec mac_odds = odds(mac_indices);
+	arma::uvec mac_sort_idx = arma::sort_index(mac_odds);
+	arma::uvec mac_unsort_idx = arma::sort_index(mac_sort_idx);
+	arma::vec mac_sorted = mac_odds(mac_sort_idx);
+
+	arma::vec maj_odds = odds(maj_indices);
+	arma::uvec maj_sort_idx = arma::sort_index(maj_odds);
+	arma::uvec maj_unsort_idx = arma::sort_index(maj_sort_idx);
+	arma::vec maj_sorted = maj_odds(maj_sort_idx);
+
+	if(!bins_built[transcript]) {
+		ret[transcript] = std::vector<std::vector<int32_t>>(nperm);
+		for (int i = 0; i < nperm; i++) {
+			ret[transcript][i] = std::vector<int32_t>(odds.n_rows, 0);
+		}
+
+		// Create minor bins
+		sort_mac_idx[transcript] = mac_indices(mac_sort_idx); // Not sure I need this anymore
+
+		double nbins = std::max(approximate, 1ull);
+		mac_bins[transcript] = nbins;
+		double max_mac_sorted = arma::max(mac_sorted);
+		double min_mac_sorted = arma::min(mac_sorted);
+		double bin_width = ((max_mac_sorted + 0.5) - min_mac_sorted) / nbins;
+		for (arma::uword i = 0; i < nbins; i++) {
+			std::vector<arma::uword> odds_in_range;
+			for(arma::uword j = 0; j < mac_sorted.n_elem; j++) { // sorted
+				if(mac_sorted(j) >= min_mac_sorted + i * bin_width && mac_sorted(j) < min_mac_sorted + (i + 1) * bin_width) {
+					odds_in_range.push_back(j);
+				} else if(mac_sorted(j) < min_mac_sorted + i * bin_width) {
+					continue;
+				} else {
+					break;
+				}
+			}
+			arma::uvec odds_spanned = arma::conv_to<arma::uvec>::from(odds_in_range);
+			if(odds_spanned.n_elem > 0) {
+				// Set number in group
+				m[transcript].push_back(odds_spanned.n_elem);
+				// Set odds for group
+				odds_[transcript].push_back(arma::mean(mac_sorted(odds_spanned)));
+				mac_spans[transcript].push_back(odds_spanned);
+			} else {
+				mac_bins[transcript]--;
+			}
+		}
+
+		// Maj bin
+		// if(maj_indices.n_elem > 0) {
+		// 	maj_bins[transcript] = 1;
+		// 	sort_maj_idx[transcript] = maj_indices(maj_sort_idx); // Not sure I need this
+		// 	// Set number in group
+		// 	m[transcript].push_back(maj_indices.n_elem);
+		// 	maj_spans[transcript] = arma::span::all;
+		// 	// Set odds for group
+		// 	odds_[transcript].push_back(arma::mean(odds(maj_indices)));
+		// }
+		if(maj_indices.n_elem > 0) {
+			// nbins = std::min(approximate, maj_indices.n_elem);
+            nbins = 10;
+			maj_bins[transcript] = nbins;
+			arma::uword stride = maj_indices.n_elem / nbins;
+			arma::vec maj_odds = odds(maj_indices);
+			arma::uvec odds_sort = arma::sort_index(maj_odds);
+			sort_maj_idx[transcript] = maj_indices(odds_sort);
+			for (arma::uword i = 0; i < nbins; i++) {
+				arma::span cur(i * stride, std::min(i * stride + stride - 1, maj_indices.n_elem));
+
+				maj_spans[transcript].push_back(cur);
+
+				arma::vec odds_spanned = maj_odds(odds_sort(cur));
+				// Set number in group
+				m[transcript].push_back(odds_spanned.n_elem);
+				// Set odds for group
+				odds_[transcript].push_back(arma::mean(odds_spanned));
+			}
+		}
+		bins_built[transcript] = true;
+	}
+
+	// Generate permutations
+	for (int i = 0; i < nperm; i++) {
+		arma::vec mac_fill(mac_indices.n_elem, arma::fill::zeros);
+		arma::vec maj_fill(maj_indices.n_elem, arma::fill::zeros);
+		std::vector<int32_t> tmp(odds_[transcript].size(), 0);
+		sto.MultiFishersNCHyp(&tmp[0], &(m[transcript][0]), &(odds_[transcript][0]), ncases, odds_[transcript].size());
+
+		// Unpack bins
+		arma::uword filled = 0;
+		for (int j = 0; j < mac_bins[transcript]; j++) { // for each bin
+			arma::uvec r = unpack(tmp[j], m[transcript][j], j < mac_bins[transcript]); // unpack and randomize cases into a vector
+			mac_fill(mac_spans[transcript][j]) = arma::conv_to<arma::vec>::from(r);
+			// for (int k = 0; k < r.n_elem; k++) { //
+			// 	ret[transcript][i][sort_mac_idx[transcript][k + filled]] = r(k);
+			// }
+
+			filled += m[transcript][j];
+		}
+		filled = 0;
+		for (int j = mac_bins[transcript]; j < mac_bins[transcript] + maj_bins[transcript]; j++) {
+			arma::uvec r = unpack(tmp[j], m[transcript][j], j < mac_bins[transcript]); // Don't have to shuffle major allele carriers
+			maj_fill(maj_spans[transcript][j - mac_bins[transcript]]) = arma::conv_to<arma::vec>::from(r);
+			// for (int k = 0; k < r.n_elem; k++) {
+			// 	ret[transcript][i][sort_maj_idx[transcript][k + filled]] = r(k);
+			// }
+			filled += m[transcript][j];
+		}
+		arma::vec vtmp(odds.n_elem);
+		vtmp(mac_indices) = mac_fill(mac_unsort_idx);
+		vtmp(maj_indices) = maj_fill(maj_unsort_idx);
+
+		for(int j = 0; j < ret[transcript][i].size(); j++) {
+			ret[transcript][i][j] = vtmp(j);
+		}
+	}
+
+	return ret[transcript];
 };
 

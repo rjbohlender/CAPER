@@ -68,6 +68,7 @@ auto CARVAOp::stage1() -> void {
 					true);
   }
 
+
   if (verbose_) {
 	if (!ta_.get_tp().alternate_permutation) {
 	  for (const auto &v : ta_.results) {
@@ -99,7 +100,7 @@ auto CARVAOp::stage1() -> void {
 	  if (!ta_.get_gene().is_polymorphic(k))
 		continue;
 
-	  arma::vec phenotypes;
+      arma::vec phenotypes;
 	  if (!ta_.get_tp().alternate_permutation) {
 		phenotypes = arma::conv_to<arma::vec>::from(ta_.get_permutations()[iter]);
 		perm_val =
@@ -198,7 +199,6 @@ auto CARVAOp::stage2() -> void {
   // For permutation set output
   std::ofstream pset_ofs;
 
-
   // Setup
   if (!ta_.get_tp().alternate_permutation) {
 	for (auto &v : ta_.results) {
@@ -220,7 +220,8 @@ auto CARVAOp::stage2() -> void {
 	  // Minor and major allele carrier indices
       mac_indices[k] = arma::find(arma::sum(arma::mat(ta_.get_gene().get_matrix(k) + ta_.get_gene().get_missing(k)), 1) > 0);
       // mac_indices[k] = arma::find(arma::sum(arma::mat(ta_.get_gene().get_matrix(k)), 1) > 0);
-      maj_indices[k] = arma::find(arma::sum(arma::mat(ta_.get_gene().get_matrix(k)), 1) == 0);
+      maj_indices[k] = arma::find(arma::sum(arma::mat(ta_.get_gene().get_matrix(k) + ta_.get_gene().get_missing(k)), 1) == 0);
+      // maj_indices[k] = arma::find(arma::sum(arma::mat(ta_.get_gene().get_matrix(k)), 1) == 0);
 	  // No longer true for Yao's fix assert(mac_indices[k].n_rows + maj_indices[k].n_rows == ta_.get_cov().get_nsamples());
 
 #if 0
@@ -249,7 +250,7 @@ auto CARVAOp::stage2() -> void {
 	}
   }
 
-  int iter = 0;
+            int iter = 0;
   arma::vec phenotypes = ta_.get_cov().get_phenotype_vector();
 
   if (ta_.get_tp().permute_set) {
@@ -287,21 +288,26 @@ auto CARVAOp::stage2() -> void {
 		} else {
 		  if (ta_.get_tp().approximate) {
 			permutations = ta_.get_permute(k).permutations_mac_bin(1,
-																   ta_.get_cov().get_odds(),
-																   ta_.get_cov().get_ncases(),
-																   mac_indices[k],
-																   maj_indices[k],
-																   *ta_.get_tp().approximate,
-																   k);
+                                                                   ta_.get_cov().get_odds(),
+                                                                   ta_.get_cov().get_ncases(),
+                                                                   mac_indices[k],
+                                                                   maj_indices[k],
+                                                                   k,
+                                                                   *ta_.get_tp().approximate,
+                                                                   ta_.get_tp().maj_nbins);
 		  } else {
 			permutations = ta_.get_permute(k).permutations_maj_bin(1,
-																   ta_.get_cov().get_odds(),
-																   ta_.get_cov().get_ncases(),
-																   mac_indices[k],
-																   maj_indices[k],
-																   k);
+                                                                   ta_.get_cov().get_odds(),
+                                                                   ta_.get_cov().get_ncases(),
+                                                                   mac_indices[k],
+                                                                   maj_indices[k],
+                                                                   k,
+                                                                   ta_.get_tp().maj_nbins);
 		  }
 		  phenotypes = arma::conv_to<arma::vec>::from(permutations[0]);
+		  if(ta_.get_tp().permute_set) {
+		    pset_ofs << phenotypes.t();
+		  }
 		}
 
 		try {
@@ -331,18 +337,23 @@ auto CARVAOp::stage2() -> void {
                                                                      ta_.get_cov().get_ncases(),
                                                                      mac_indices[k],
                                                                      maj_indices[k],
+                                                                     k,
                                                                      *ta_.get_tp().approximate,
-                                                                     k);
+                                                                     ta_.get_tp().maj_nbins);
             } else {
               permutations = ta_.get_permute(k).permutations_maj_bin(1,
                                                                      ta_.get_cov().get_odds(),
                                                                      ta_.get_cov().get_ncases(),
                                                                      mac_indices[k],
                                                                      maj_indices[k],
-                                                                     k);
+                                                                     k,
+                                                                     ta_.get_tp().maj_nbins);
             }
           }
 		  phenotypes = arma::conv_to<arma::vec>::from(permutations[0]);
+          if(ta_.get_tp().permute_set) {
+            pset_ofs << phenotypes.t();
+          }
 		  perm_val = call_method(ta_.get_methods(),
 								 ta_.get_gene(),
 								 ta_.get_cov(),
@@ -382,6 +393,9 @@ auto CARVAOp::stage2() -> void {
 			phenotypes(i) = phenotypes(j);
 			phenotypes(j) = tmp;
 		  }
+          if(ta_.get_tp().permute_set) {
+            pset_ofs << phenotypes.t();
+          }
 		  perm_val = call_method(ta_.get_methods(),
 								 ta_.get_gene(),
 								 ta_.get_cov(),
@@ -412,7 +426,7 @@ auto CARVAOp::stage2() -> void {
 	iter++;
   }
   if (verbose_) {
-	if (!ta_.get_tp().alternate_permutation) {
+	if (!ta_.get_tp().alternate_permutation){
 	  for (const auto &v : ta_.results) {
 		std::cerr << "Stage 2: " << ta_.get_gene().get_gene() << "\t" << v.second.transcript << "\t";
 		std::cerr << std::defaultfloat << std::setprecision(6) << v.second.original << std::endl;
@@ -577,7 +591,17 @@ auto CARVAOp::call_method(Methods &method,
   } else if (tp.method == "SKAT") {
 	return method.SKAT(gene, phenotypes, cov, k, tp.a, tp.b, shuffle, detail, tp.linear);
   } else if (tp.method == "SKATO") {
-	return method.SKATO(gene, phenotypes, cov, k, tp.a, tp.b, shuffle, tp.adjust);
+	// double ret = method.SKATO(gene, phenotypes, cov, k, tp.a, tp.b, shuffle, tp.adjust);
+	// arma::wall_clock timer;
+	// timer.tic();
+    // double tmp = method.SKATO(gene, phenotypes, cov, k, tp.a, tp.b, shuffle, tp.adjust);
+    // double tmp = method.SKATRO(gene, k, phenotypes, tp.a, tp.b, detail, tp.linear);
+    // std::cerr << "SKATO original time: " << timer.toc() << std::endl;
+    // timer.tic();
+    double ret =  method.SKATO_clean(gene, phenotypes, cov, k, tp.a, tp.b, shuffle, tp.adjust);
+    // std::cerr << "SKATO clean time: " << timer.toc() << std::endl;
+    // std::cerr << "original: " << tmp << " clean: " << ret << std::endl;
+    return ret;
   } else if (tp.method == "VAAST") {
 	return method.Vaast(gene,
 						phenotypes,

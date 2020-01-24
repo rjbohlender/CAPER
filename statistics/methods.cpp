@@ -38,24 +38,24 @@ constexpr std::array<double, 8> Methods::rho_;
 // TODO Check with Chad / Yao re: replacing NAN values for MGIT
 arma::vec rank(arma::vec &v, const char *direction) {
   if (strcmp(direction, "ascend") != 0 && strcmp(direction, "descend") != 0)
-	throw (std::logic_error("Order argument for rank() must be either 'ascend' or 'descend'"));
+    throw (std::logic_error("Order argument for rank() must be either 'ascend' or 'descend'"));
 
   arma::uvec sort_indices;
   try {
-	sort_indices = arma::sort_index(v, direction);
+    sort_indices = arma::sort_index(v, direction);
   } catch (const std::logic_error &e) {
-	if (strcmp(direction, "ascend") == 0) {
-	  std::cerr << "NANs among ranked values. Replacing with 1.\n";
-	  v.replace(arma::datum::nan, 1);
-	} else {
+    if (strcmp(direction, "ascend") == 0) {
+      std::cerr << "NANs among ranked values. Replacing with 1.\n";
+      v.replace(arma::datum::nan, 1);
+    } else {
 #ifndef NDEBUG
-	  std::cerr << v.t();
-	  std::cerr << e.what();
+      std::cerr << v.t();
+      std::cerr << e.what();
 #endif
-	  std::cerr << "NANs among ranked values. Replacing with 0.\n";
-	  v.replace(arma::datum::nan, 0);
-	}
-	sort_indices = arma::sort_index(v, direction);
+      std::cerr << "NANs among ranked values. Replacing with 0.\n";
+      v.replace(arma::datum::nan, 0);
+    }
+    sort_indices = arma::sort_index(v, direction);
   }
   arma::vec sorted = v(sort_indices);
 
@@ -63,53 +63,58 @@ arma::vec rank(arma::vec &v, const char *direction) {
   arma::uword i = 0, j = 0;
 
   while (i < v.n_rows) {
-	j = i + 1;
-	// Find the next different value
-	while (j < v.n_rows) {
-	  if (sorted(i) != sorted(j))
-		break;
-	  j++;
-	}
-	// Adjusted rank
-	for (arma::uword k = i; k <= j - 1; k++) {
-	  ranks(sort_indices(k)) = 1. + (i + j - 1.) / 2.0f;
-	}
-	// Update i
-	i = j;
+    j = i + 1;
+    // Find the next different value
+    while (j < v.n_rows) {
+      if (sorted(i) != sorted(j))
+        break;
+      j++;
+    }
+    // Adjusted rank
+    for (arma::uword k = i; k <= j - 1; k++) {
+      ranks(sort_indices(k)) = 1. + (i + j - 1.) / 2.0f;
+    }
+    // Update i
+    i = j;
   }
 
   return ranks;
 }
 
 Methods::Methods(std::string method)
-	: method_(std::move(method)),
-	  kernel_(Kernel::Linear) {
+    : method_(std::move(method)),
+      kernel_(Kernel::Linear) {
 }
 
 Methods::Methods(TaskParams &tp, const std::shared_ptr<Covariates> &cov)
-	: method_(tp.method), tp_(tp) {
+    : method_(tp.method), tp_(tp) {
   if (tp.kernel == "Linear") {
-	kernel_ = Kernel::Linear;
+    kernel_ = Kernel::Linear;
   } else if (tp.kernel == "wLinear") {
-	kernel_ = Kernel::wLinear;
+    kernel_ = Kernel::wLinear;
   } else if (tp.kernel == "IBS") {
-	kernel_ = Kernel::IBS;
+    kernel_ = Kernel::IBS;
   } else if (tp.kernel == "wIBS") {
-	kernel_ = Kernel::wIBS;
+    kernel_ = Kernel::wIBS;
   } else if (tp.kernel == "Quadratic") {
-	kernel_ = Kernel::Quadratic;
+    kernel_ = Kernel::Quadratic;
   } else if (tp.kernel == "twoWayX") {
-	kernel_ = Kernel::twoWayX;
+    kernel_ = Kernel::twoWayX;
+  }
+  // For debugging
+  if ((tp.method == "SKATR" || tp.method == "SKATRO" || tp.method == "BURDEN" || tp.method == "SKATO") && !tp.linear) {
+    obj_ = std::make_shared<SKATR_Null>(cov);
+    lin_obj_ = nullptr;
   }
 
   if ((tp.method == "SKATR" || tp.method == "SKATRO" || tp.method == "BURDEN") && !tp.linear) {
-	obj_ = std::make_shared<SKATR_Null>(cov);
-	lin_obj_ = nullptr;
+    obj_ = std::make_shared<SKATR_Null>(cov);
+    lin_obj_ = nullptr;
   } else if ((tp.method == "SKATR" || tp.method == "SKATRO" || tp.method == "BURDEN") && tp.linear) {
-	obj_ = nullptr;
-	lin_obj_ = std::make_shared<SKATR_Linear_Null>(*cov);
+    obj_ = nullptr;
+    lin_obj_ = std::make_shared<SKATR_Linear_Null>(*cov);
   } else if (tp.method == "VT") {
-	vt_obj_ = std::make_shared<VT_Res>();
+    vt_obj_ = std::make_shared<VT_Res>();
   }
 }
 
@@ -118,8 +123,8 @@ Methods::Methods(TaskParams &tp, const std::shared_ptr<Covariates> &cov)
  */
 void Methods::clear(std::vector<std::string> &v) {
   for (const auto &k : v) {
-	K_[k].reset();
-	Q_sim_all[k].reset();
+    K_[k].reset();
+    Q_sim_all[k].reset();
   }
   Q_sim_all.clear();
   re2.reset();
@@ -149,18 +154,18 @@ double Methods::CALPHA(Gene &gene, arma::vec &Y, const std::string &k) {
 
   arma::vec n(X.n_cols, arma::fill::zeros);
   for (arma::uword i = 0; i < X.n_cols; i++) {
-	for (const auto &v: X.col(i)) {
-	  if (v > 0)
-		n(i)++;
-	}
+    for (const auto &v: X.col(i)) {
+      if (v > 0)
+        n(i)++;
+    }
   }
 
   arma::vec g(X.n_cols, arma::fill::zeros);
   arma::uvec case_idx = arma::find(Y == 1);
   for (auto it = X.begin(); it != X.end(); ++it) {
-	if (arma::find(case_idx == it.row()).eval().n_elem > 0) {
-	  g(it.col())++;
-	}
+    if (arma::find(case_idx == it.row()).eval().n_elem > 0) {
+      g(it.col())++;
+    }
   }
   // arma::vec g = arma::sum(X.rows(arma::find(Y == 1)) > 0, 0).t();
 
@@ -183,12 +188,12 @@ double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &k, double maf) 
 
   arma::mat Xnew;
   if (rare.size() <= 1) {
-	Xnew = X;
+    Xnew = X;
   } else {
-	arma::mat Xcollapse = arma::sum(X.cols(rare), 1);
-	Xcollapse(arma::find(Xcollapse > 1)).ones();
-	Xnew = X.cols(common);
-	Xnew.insert_cols(Xnew.n_cols, Xcollapse);
+    arma::mat Xcollapse = arma::sum(X.cols(rare), 1);
+    Xcollapse(arma::find(Xcollapse > 1)).ones();
+    Xnew = X.cols(common);
+    Xnew.insert_cols(Xnew.n_cols, Xcollapse);
   }
 
   // Rescale to -1, 0, 1
@@ -204,114 +209,114 @@ double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &k, double maf) 
   arma::mat COV = ((nA - 1.) * arma::cov(Xx) + (nU - 1.) * arma::cov(Yy)) / (N - 2.);
   arma::mat INV;
   if (!arma::inv_sympd(INV, COV)) {
-	arma::pinv(INV, COV);
+    arma::pinv(INV, COV);
   }
 #if 0
   if (!arma::inv_sympd(INV, COV)) {
-	// Inversion failed
-	std::cerr << "Inversion failed." << std::endl;
-	arma::vec eigvals;
-	arma::mat eigvecs;
-	arma::eig_sym(eigvals, eigvecs, COV);
+    // Inversion failed
+    std::cerr << "Inversion failed." << std::endl;
+    arma::vec eigvals;
+    arma::mat eigvecs;
+    arma::eig_sym(eigvals, eigvecs, COV);
 
-	eigvals = 1. / eigvals;
-	arma::mat eigvecs_inv = arma::inv(eigvecs);
+    eigvals = 1. / eigvals;
+    arma::mat eigvecs_inv = arma::inv(eigvecs);
 
-	INV = eigvecs * arma::diagmat(eigvals) * eigvecs_inv;
+    INV = eigvecs * arma::diagmat(eigvals) * eigvecs_inv;
   }
 #endif
   arma::mat ret = (Xxmean - Yymean) * INV * (Xxmean - Yymean).t() * nA * nU / N;
   auto p = static_cast<double>(Xxmean.n_elem);
   double stat = arma::as_scalar(ret) * (nA + nU - 1 - p) / (p * (nA + nU - 2)); // F(N, nA + nU - 1 - N) distributed
   if (stat < 0)
-	stat = 0;
+    stat = 0;
   boost::math::fisher_f fisher_f(p, nA + nU - 1 - p);
   double pval;
   try {
     if (isnan(stat)) {
       return 1.;
     }
-	pval = boost::math::cdf(boost::math::complement(fisher_f, stat));
+    pval = boost::math::cdf(boost::math::complement(fisher_f, stat));
   } catch (boost::exception &e) {
-	std::cerr << "COV: " << COV;
-	std::cerr << "INV: " << INV;
-	std::cerr << "Xxmean: " << Xxmean;
-	std::cerr << "Yymean: " << Yymean;
-	std::cerr << "stat: " << stat << std::endl;
-	std::cerr << "ret: " << arma::as_scalar(ret);
-	throw;
+    std::cerr << "COV: " << COV;
+    std::cerr << "INV: " << INV;
+    std::cerr << "Xxmean: " << Xxmean;
+    std::cerr << "Yymean: " << Yymean;
+    std::cerr << "stat: " << stat << std::endl;
+    std::cerr << "ret: " << arma::as_scalar(ret);
+    throw;
   }
   return pval;
 }
 
 double Methods::RVT1(Gene &gene, arma::vec &Y, arma::mat design, const std::string &k, bool linear) {
   if (linear) {
-	// Quantitative trait
-	arma::sp_mat X = gene.get_matrix(k).t();
-	Gaussian link("identity");
-	GLM<Gaussian> fit1(design, Y, link);
-	arma::mat d2 = arma::join_horiz(design, arma::rowvec(arma::sum(X) / X.n_rows).t());
-	GLM<Gaussian> fit2(d2, Y, link);
+    // Quantitative trait
+    arma::sp_mat X = gene.get_matrix(k).t();
+    Gaussian link("identity");
+    GLM<Gaussian> fit1(design, Y, link);
+    arma::mat d2 = arma::join_horiz(design, arma::rowvec(arma::sum(X) / X.n_rows).t());
+    GLM<Gaussian> fit2(d2, Y, link);
 
-	double n = Y.n_elem;
+    double n = Y.n_elem;
 
-	boost::math::chi_squared chisq(1);
-	// TODO: Should be rank not n_rows
-	double stat = (fit1.dev_ - fit2.dev_) / (fit2.dev_ / (n - d2.n_rows));
-	if(stat < 0) {
-	  stat = std::numeric_limits<double>::epsilon();
-	}
-	return boost::math::cdf(boost::math::complement(chisq, stat));
+    boost::math::chi_squared chisq(1);
+    // TODO: Should be rank not n_rows
+    double stat = (fit1.dev_ - fit2.dev_) / (fit2.dev_ / (n - d2.n_rows));
+    if (stat < 0) {
+      stat = std::numeric_limits<double>::epsilon();
+    }
+    return boost::math::cdf(boost::math::complement(chisq, stat));
   } else {
-	// Binary trait
-	arma::sp_mat X = gene.get_matrix(k).t();
-	Binomial link("logit");
-	GLM<Binomial> fit1(design, Y, link);
-	arma::mat d2 = arma::join_horiz(design, arma::rowvec(arma::sum(X) / X.n_rows).t());
-	GLM<Binomial> fit2(d2, Y, link);
+    // Binary trait
+    arma::sp_mat X = gene.get_matrix(k).t();
+    Binomial link("logit");
+    GLM<Binomial> fit1(design, Y, link);
+    arma::mat d2 = arma::join_horiz(design, arma::rowvec(arma::sum(X) / X.n_rows).t());
+    GLM<Binomial> fit2(d2, Y, link);
 
-	boost::math::chi_squared chisq(1);
-	double stat = fit1.dev_ - fit2.dev_;
-	if(stat < 0) {
-	  stat = std::numeric_limits<double>::epsilon();
-	}
-	return boost::math::cdf(boost::math::complement(chisq, stat));
+    boost::math::chi_squared chisq(1);
+    double stat = fit1.dev_ - fit2.dev_;
+    if (stat < 0) {
+      stat = std::numeric_limits<double>::epsilon();
+    }
+    return boost::math::cdf(boost::math::complement(chisq, stat));
   }
 }
 
 double Methods::RVT2(Gene &gene, arma::vec &Y, arma::mat design, const std::string &k, bool linear) {
   if (linear) {
-	// Quantitative trait
-	arma::sp_mat X = gene.get_matrix(k).t();
-	Gaussian link("identity");
-	GLM<Gaussian> fit1(design, Y, link);
-	arma::rowvec r = arma::conv_to<arma::rowvec>::from(arma::rowvec(arma::sum(X)) > 0);
-	arma::mat d2 = arma::join_horiz(design, r.t());
-	GLM<Gaussian> fit2(d2, Y, link);
+    // Quantitative trait
+    arma::sp_mat X = gene.get_matrix(k).t();
+    Gaussian link("identity");
+    GLM<Gaussian> fit1(design, Y, link);
+    arma::rowvec r = arma::conv_to<arma::rowvec>::from(arma::rowvec(arma::sum(X)) > 0);
+    arma::mat d2 = arma::join_horiz(design, r.t());
+    GLM<Gaussian> fit2(d2, Y, link);
 
-	double n = Y.n_elem;
+    double n = Y.n_elem;
 
-	boost::math::chi_squared chisq(1);
-	double stat = (fit1.dev_ - fit2.dev_) / (fit2.dev_ / (n - d2.n_rows));
-	if(stat < 0) {
-	  stat = std::numeric_limits<double>::epsilon();
-	}
-	return boost::math::cdf(boost::math::complement(chisq, stat));
+    boost::math::chi_squared chisq(1);
+    double stat = (fit1.dev_ - fit2.dev_) / (fit2.dev_ / (n - d2.n_rows));
+    if (stat < 0) {
+      stat = std::numeric_limits<double>::epsilon();
+    }
+    return boost::math::cdf(boost::math::complement(chisq, stat));
   } else {
-	// Binary trait
-	arma::sp_mat X = gene.get_matrix(k).t();
-	Binomial link("logit");
-	GLM<Binomial> fit1(design, Y, link);
-	arma::rowvec r = arma::conv_to<arma::rowvec>::from(arma::rowvec(arma::sum(X)) > 0);
-	arma::mat d2 = arma::join_horiz(design, r.t());
-	GLM<Binomial> fit2(d2, Y, link);
+    // Binary trait
+    arma::sp_mat X = gene.get_matrix(k).t();
+    Binomial link("logit");
+    GLM<Binomial> fit1(design, Y, link);
+    arma::rowvec r = arma::conv_to<arma::rowvec>::from(arma::rowvec(arma::sum(X)) > 0);
+    arma::mat d2 = arma::join_horiz(design, r.t());
+    GLM<Binomial> fit2(d2, Y, link);
 
-	boost::math::chi_squared chisq(1);
-	double stat = fit1.dev_ - fit2.dev_;
-	if(stat < 0) {
-	  stat = std::numeric_limits<double>::epsilon();
-	}
-	return boost::math::cdf(boost::math::complement(chisq, stat));
+    boost::math::chi_squared chisq(1);
+    double stat = fit1.dev_ - fit2.dev_;
+    if (stat < 0) {
+      stat = std::numeric_limits<double>::epsilon();
+    }
+    return boost::math::cdf(boost::math::complement(chisq, stat));
   }
 }
 
@@ -339,37 +344,36 @@ double Methods::SKAT(Gene &gene,
     fitted = cov.get_fitted();
   }
 
-
   arma::sp_mat tXmat;
   arma::uword n = Xmat.n_cols; // Number of samples
   arma::uword p = Xmat.n_rows; // Number of variants
 
   // Only build kernel once
   if (K_[k].n_rows != n) {
-	switch (kernel_) {
-	case Kernel::Linear:K_[k] = kernel_Linear(Xmat);
-	  break;
-	case Kernel::wLinear:K_[k] = kernel_wLinear(Xmat, weights);
-	  break;
-	case Kernel::IBS:tXmat = Xmat.t();
-	  K_[k] = kernel_IBS(tXmat, n, p);
-	  break;
-	case Kernel::wIBS:tXmat = Xmat.t();
-	  K_[k] = kernel_wIBS(tXmat, n, p, weights);
-	  break;
-	case Kernel::Quadratic:K_[k] = kernel_Quadratic(Xmat);
-	  break;
-	case Kernel::twoWayX:tXmat = Xmat.t();
-	  K_[k] = kernel_twoWayX(tXmat, n, p);
-	  break;
-	default:throw (std::runtime_error("Incorrect Kernel specification"));
-	}
+    switch (kernel_) {
+    case Kernel::Linear:K_[k] = kernel_Linear(Xmat);
+      break;
+    case Kernel::wLinear:K_[k] = kernel_wLinear(Xmat, weights);
+      break;
+    case Kernel::IBS:tXmat = Xmat.t();
+      K_[k] = kernel_IBS(tXmat, n, p);
+      break;
+    case Kernel::wIBS:tXmat = Xmat.t();
+      K_[k] = kernel_wIBS(tXmat, n, p, weights);
+      break;
+    case Kernel::Quadratic:K_[k] = kernel_Quadratic(Xmat);
+      break;
+    case Kernel::twoWayX:tXmat = Xmat.t();
+      K_[k] = kernel_twoWayX(tXmat, n, p);
+      break;
+    default:throw (std::runtime_error("Incorrect Kernel specification"));
+    }
   }
 
   arma::vec Z = Y - fitted;
   // double Q = arma::accu(Z.t() * K_[k] * Z / 2);
   double Q = arma::accu(Z.t() * K_[k] * Z);  // Removing factor of 2 division -- doesn't appear in texts
-  if(tp_.total_permutations > 0) {
+  if (tp_.total_permutations > 0) {
     return Q;
   } else { // Calculate analytic p-values
     arma::sp_mat V0(fitted.n_elem, fitted.n_elem);
@@ -402,6 +406,8 @@ double Methods::SKATO_clean(Gene &gene,
     cov.set_phenotype_vector(Y);
     cov.refit_permuted();
     pi0 = cov.get_fitted();
+  } else {
+    pi0 = cov.get_fitted();
   }
   check_weights(gene, k, a, b);
   arma::vec &weights = gene.get_weights(k);
@@ -418,81 +424,150 @@ double Methods::SKATO_clean(Gene &gene,
   arma::mat X0 = cov.get_covariate_matrix();
 
   // Cov matrix of Y - pi_hat
-  arma::mat P = V0 - V0 * X0 * arma::inv(X0.t() * V0 * X0) * X0.t() * V0;
-  arma::mat P12 = arma::real(arma::sqrtmat(P)); // REML Estimator
+  arma::mat P12 = arma::sqrt(V0) - arma::sqrt(V0) * X0 * arma::inv(X0.t() * V0 * X0) * X0.t() * V0;
+  // arma::mat P12 = arma::real(arma::sqrtmat(P)); // REML Estimator
 
   // Sparse weight matrix
   arma::sp_mat W(weights.n_elem, weights.n_elem);
   W.diag() = weights;
 
   arma::mat Z = P12 * G * W;
+  // arma::mat Z = P12 * G;
+  // arma::mat Z = arma::mat(arma::sqrt(V0) * G * W);
   arma::vec zbar = arma::mean(Z, 1); // Row means
   double zdot = arma::accu(zbar.t() * zbar);
 
   arma::mat M = (zbar / zdot) * zbar.t();
 
   int i = 0;
-  std::array<double, 8> pvals{};
+  arma::vec pvals(rho_.size(), arma::fill::zeros);
   arma::vec tau(rho_.size(), arma::fill::zeros);
-  for(const auto &rho : rho_) { // Generate P-values
-    arma::mat R = (1 - rho) * I + rho * J;
+  arma::vec qmins(rho_.size(), arma::fill::zeros);
+  arma::vec Qvals(rho_.size(), arma::fill::zeros);
+  double T;
+  {
+    std::array<arma::vec, 8> lambdas{};
+    for (const auto &rho : rho_) { // Generate P-values
+      arma::mat R = (1 - rho) * I + rho * J;
 
-    // Weighted linear kernel for SKAT-O
-    arma::mat K = G * W * R * W * G.t();
-
-    double Q = arma::accu((Y - pi0).t() * K * (Y - pi0));
-    if(rho == 1) {
-      if (Q > 0) {
-        boost::math::chi_squared chisq(1);
-        pvals[i] = boost::math::cdf(boost::math::complement(chisq, Q));
+      // Weighted linear kernel for SKAT-O
+      // arma::mat K = G * W * R * W * G.t();
+      arma::mat L;
+      if(rho < 1) {
+        L = arma::chol(R, "lower");
       } else {
-        pvals[i] = 1;
+        L = arma::vec(J.n_rows, arma::fill::ones);
       }
-    } else {
-      arma::vec lambda;
-      arma::eig_sym(lambda, P12.t() * K * P12);
+      arma::mat A = G * W * L; // A * A.t() == K_rho
 
-      pvals[i] = SKAT_pval(Q, lambda);
+      double Q = arma::accu((Y - pi0).t() * A * A.t() * (Y - pi0));
+      Qvals(i) = Q;
+      if (rho > 1) {
+        if (Q > 0) {
+          boost::math::chi_squared chisq(1);
+          pvals[i] = boost::math::cdf(boost::math::complement(chisq, Q));
+        } else {
+          pvals[i] = 1;
+        }
+      } else {
+        arma::vec lambda;
+        // arma::eig_sym(lambda, P12.t() * K * P12);
+        // arma::eig_sym(lambda, arma::sqrt(V0) * A * A.t() * arma::sqrt(V0));
+        arma::svd(lambda, P12 * A);
+        // std::cerr << "Eigen time: " << timer2.toc() << std::endl;
+        lambda = arma::pow(lambda(arma::find(lambda > 0)), 2);
+        // lambda = lambda(arma::find(lambda > arma::mean(lambda) / 10000));
+        lambdas[i] = lambda;
+        pvals[i] = SKAT_pval(Q, lambda);
+      }
+
+      // Calcualate tau for current rho -- equation between 2.5 and 2.6 in Lee et al. 2012 -- second term a bit of a workaround for armadillo
+      tau(i) =
+          std::pow(p, 2) * rho * zdot + (1 - rho) / zdot * arma::accu(arma::pow(arma::sum(Z.each_col() % zbar, 0), 2));
+
+      i++;
     }
+    // std::cerr << "SKATO total rho_ time: " << timer.toc() << std::endl;
+    T = *std::min_element(pvals.begin(), pvals.end()); // Test statistic -- Minimum p-value
 
-    // Calcualate tau for current rho -- equation between 2.5 and 2.6 in Lee et al. 2012 -- second term a bit of a workaround for armadillo
-    tau(i) = std::pow(p, 2) * rho * zdot + (1 - rho) / zdot * arma::accu(arma::pow(arma::sum(Z.each_col() % zbar, 0), 2));
-
-    i++;
+    i = 0;
+    for (const auto &l : lambdas) {
+      qmins(i) = Liu_qval_mod(T, l);
+      i++;
+    }
+    // For the full burden quantile
+    // boost::math::chi_squared chisq(1);
+    // qmins(i) = boost::math::quantile(boost::math::complement(chisq, T > 0 ? T : std::sqrt(std::numeric_limits<double>::min())));
   }
 
-  double T = *std::min_element(pvals.begin(), pvals.end()); // Test statistic
+  // Liu values for p-value calculation
+  // Values don't vary with rho
+  arma::vec lk = arma::eig_sym(Z.t() * (arma::eye(arma::size(M)) - M) * Z);
+  lk = lk(arma::find(lk > 0));
+  double muQ = arma::accu(lk);
+  double varZ = 4 * arma::trace(Z.t() * M * Z * Z.t() * (arma::eye(arma::size(M)) - M) * Z);
+  double varQ = 2 * arma::accu(arma::pow(lk, 2)) + varZ;
 
-  return 0;
+  auto delta = [&](double x) {
+    double d = (qmins(0) - tau(0) * x) / (1 - rho_[0]);
+    for (int i = 1; i < rho_.size(); i++) {
+      double v = (qmins(i) - tau(i) * x) / (1 - rho_[i]);
+      if (v < d) {
+        d = v;
+      }
+    }
+    return (d - muQ) * std::sqrt(varQ - varZ) / std::sqrt(varQ) + muQ;
+  };
+
+  boost::math::chi_squared chisq(1);
+
+  auto expectation = [&](double x) { // W.R.T a chisq 1df pdf
+    double d = delta(x);
+    double p = SKAT_pval(d, lk); // Value of 1 - F(delta(x) | lambda)
+    return p * boost::math::pdf(chisq, x);
+  };
+
+  double q1 = boost::math::quantile(boost::math::complement(chisq, T));
+
+  double ret = T + boost::math::quadrature::gauss_kronrod<double, 15>::integrate(expectation,
+      std::sqrt(std::numeric_limits<double>::min()),
+      q1, // std::numeric_limits<double>::max(),
+      5);
+
+  if(std::isnan(ret)) {
+    ret = 1;
+  }
+
+  return std::max(std::numeric_limits<double>::min(), std::min(rho_.size() * T, ret));
 }
 
 double Methods::SKATO(Gene &gene,
-					  arma::vec &Y,
-					  Covariates cov,
-					  const std::string &k,
-					  int a,
-					  int b,
-					  bool shuffle,
-					  bool adjust) {
+                      arma::vec &Y,
+                      Covariates cov,
+                      const std::string &k,
+                      int a,
+                      int b,
+                      bool shuffle,
+                      bool adjust) {
   // Randomize indices
   if (shuffle) {
-	cov.set_phenotype_vector(Y);
-	cov.refit_permuted();
+    cov.set_phenotype_vector(Y);
+    cov.refit_permuted();
   }
 
   check_weights(gene, k, a, b);
   arma::sp_mat &Z = gene.get_matrix(k);
 
   if (Z.n_rows < 2000 && adjust) {
-	// SKAT_Adjust(Gene &gene, Covariates &cov, const std::string &k, const std::string &kernel, int a, int b);
-	std::string kernel = "Linear";
-	if (kernel_ == Kernel::wLinear) {
-	  kernel = "wLinear";
-	}
+    // SKAT_Adjust(Gene &gene, Covariates &cov, const std::string &k, const std::string &kernel, int a, int b);
+    std::string kernel = "Linear";
+    if (kernel_ == Kernel::wLinear) {
+      kernel = "wLinear";
+    }
 
-	SKAT_Adjust skat_adjust(gene, cov, k, kernel, a, b, re2, Q_sim_all);
+    SKAT_Adjust skat_adjust(gene, cov, k, kernel, a, b, re2, Q_sim_all);
 
-	return skat_adjust.p_value;
+    return skat_adjust.p_value;
   }
   // Fallthrough, no small sample size adjustment
 
@@ -502,11 +577,11 @@ double Methods::SKATO(Gene &gene,
   arma::vec rall(nr);
 
   for (arma::uword i = 0; i < nr; i++) {
-	if (rho_[i] > 0.999) {
-	  rall(i) = 0.999;
-	} else {
-	  rall(i) = rho_[i];
-	}
+    if (rho_[i] > 0.999) {
+      rall(i) = 0.999;
+    } else {
+      rall(i) = rho_[i];
+    }
   }
 
   // SKAT_Optimal_Logistic
@@ -516,15 +591,15 @@ double Methods::SKATO(Gene &gene,
   arma::vec pi_1 = cov.get_fitted() % (1 - cov.get_fitted());
 #if 1
   arma::mat Z1 = (arma::diagmat(arma::sqrt(pi_1)) * Z
-	  - (arma::diagmat(arma::sqrt(pi_1)) * X1) * arma::inv_sympd(X1.t() * (arma::diagmat(pi_1) * X1))
-		  * (X1.t() * (arma::diagmat(pi_1) * Z)))
-	  / arma::datum::sqrt2;
+      - (arma::diagmat(arma::sqrt(pi_1)) * X1) * arma::inv_sympd(X1.t() * (arma::diagmat(pi_1) * X1))
+          * (X1.t() * (arma::diagmat(pi_1) * Z)))
+      / arma::datum::sqrt2;
 #else
   // Schur product is slow -- Roughly 25% speed improvement using diagonal matrices
   arma::mat Z1 = ((Z.each_col() % arma::sqrt(pi_1))
-	  - (X1.each_col() % arma::sqrt(pi_1)) * arma::inv_sympd(X1.t() * (X1.each_col() % pi_1))
-		  * (X1.t() * (Z.each_col() % pi_1)))
-	  / arma::datum::sqrt2;
+      - (X1.each_col() % arma::sqrt(pi_1)) * arma::inv_sympd(X1.t() * (X1.each_col() % pi_1))
+          * (X1.t() * (Z.each_col() % pi_1)))
+      / arma::datum::sqrt2;
 #endif
   arma::mat temp_res_out;
   SKAT_Optimal_GetQ skat_optimal_getQ(Z, res, rall, temp_res_out, 0);
@@ -533,25 +608,25 @@ double Methods::SKATO(Gene &gene,
   std::vector<LiuParam> liu_param_all;
 
   for (arma::uword i = 0; i < nr; i++) {
-	double rcorr = rho_[i];
-	if (rcorr == 1)
-	  rcorr = 0.999; // Prevents cholesky decomposition failure
-	arma::mat Rm = arma::diagmat(arma::vec(pm).fill(1 - rcorr)) + arma::mat(pm, pm).fill(rcorr);
-	arma::mat Z2 = Z1 * arma::chol(Rm).t();
-	arma::mat K1 = Z2.t() * Z2;
+    double rcorr = rho_[i];
+    if (rcorr == 1)
+      rcorr = 0.999; // Prevents cholesky decomposition failure
+    arma::mat Rm = arma::diagmat(arma::vec(pm).fill(1 - rcorr)) + arma::mat(pm, pm).fill(rcorr);
+    arma::mat Z2 = Z1 * arma::chol(Rm).t();
+    arma::mat K1 = Z2.t() * Z2;
 
-	arma::vec eigval;
-	arma::mat eigvec;
+    arma::vec eigval;
+    arma::mat eigvec;
 
-	arma::eig_sym(eigval, eigvec, K1);
+    arma::eig_sym(eigval, eigvec, K1);
 
-	arma::uvec IDX1 = arma::find(eigval >= 0); // Positive eigenvalues
-	arma::uvec IDX2 = arma::find(eigval > arma::mean(eigval(IDX1)) / 100000);
+    arma::uvec IDX1 = arma::find(eigval >= 0); // Positive eigenvalues
+    arma::uvec IDX2 = arma::find(eigval > arma::mean(eigval(IDX1)) / 100000);
 
-	// eigval(IDX2) == their lambda.temp for a given i
-	arma::vec lambda = eigval(IDX2);
+    // eigval(IDX2) == their lambda.temp for a given i
+    arma::vec lambda = eigval(IDX2);
 
-	lambda_all.emplace_back(lambda);
+    lambda_all.emplace_back(lambda);
   }
 
   // SKAT_Optimal_Each_Q
@@ -573,13 +648,13 @@ double Methods::SKATO(Gene &gene,
 
   double pval1 = arma::min(pval_each) * multi;
   if (pval <= 0 || IDX.n_rows < rall.n_rows) {
-	pval = pval1;
+    pval = pval1;
   }
 
   if (pval == 0) {
-	if (IDX.n_rows > 0) {
-	  pval = arma::min(pval_each(IDX));
-	}
+    if (IDX.n_rows > 0) {
+      pval = arma::min(pval_each(IDX));
+    }
   }
 
 #ifndef NDEBUG
@@ -592,14 +667,14 @@ double Methods::SKATO(Gene &gene,
 #endif
 
 double Methods::Vaast(Gene &gene,
-					  arma::vec &Y,
-					  const std::string &k,
-					  bool score_only_minor,
-					  bool score_only_alternative,
-					  double site_penalty,
-					  arma::uword group_threshold,
-					  bool detail,
-					  bool biallelic) {
+                      arma::vec &Y,
+                      const std::string &k,
+                      bool score_only_minor,
+                      bool score_only_alternative,
+                      double site_penalty,
+                      arma::uword group_threshold,
+                      bool detail,
+                      bool biallelic) {
 #if 1
   VAAST vaast(gene, Y, k, score_only_minor, score_only_alternative, site_penalty, group_threshold, detail, biallelic);
   return vaast.score;
@@ -638,12 +713,12 @@ double Methods::Vaast(Gene &gene,
 
   // Mask sites
   arma::uvec mask = variant_bitmask(vaast_site_scores,
-									case_allele1,
-									control_allele1,
-									case_allele0,
-									control_allele0,
-									score_only_minor,
-									score_only_alternative);
+                                    case_allele1,
+                                    control_allele1,
+                                    case_allele0,
+                                    control_allele0,
+                                    score_only_minor,
+                                    score_only_alternative);
 
   vaast_site_scores(mask).zeros();
 
@@ -652,53 +727,53 @@ double Methods::Vaast(Gene &gene,
   // Expand the scores
   arma::vec expanded_scores;
   if (group_threshold == 1) {
-	expanded_scores = vaast_site_scores;
+    expanded_scores = vaast_site_scores;
   } else {
-	expanded_scores.reshape(Xmat.n_cols, 1);
-	arma::uword j = 0;
-	for (const auto &v : groups) {
-	  for (const auto &i : v) {
-		// Recalculate group score without current variant
-		arma::uvec index = arma::regspace<arma::uvec>(0, Xmat.n_cols - 1);
-		index.shed_row(i);
+    expanded_scores.reshape(Xmat.n_cols, 1);
+    arma::uword j = 0;
+    for (const auto &v : groups) {
+      for (const auto &i : v) {
+        // Recalculate group score without current variant
+        arma::uvec index = arma::regspace<arma::uvec>(0, Xmat.n_cols - 1);
+        index.shed_row(i);
 
-		arma::mat altX;
-		arma::vec altW;
-		std::vector<arma::uvec> altgroups;
-		arma::uvec altungrouped;
+        arma::mat altX;
+        arma::vec altW;
+        std::vector<arma::uvec> altgroups;
+        arma::uvec altungrouped;
 
-		std::tie(altX, altW, altgroups, altungrouped) =
-			variant_grouping(Xmat.cols(index), Yvec, weights(index), group_threshold);
+        std::tie(altX, altW, altgroups, altungrouped) =
+            variant_grouping(Xmat.cols(index), Yvec, weights(index), group_threshold);
 
-		arma::vec case_count1 = altX.t() * Yvec;
-		arma::vec cont_count1 = altX.t() * (1. - Yvec);
-		arma::vec case_count0 = 2 * n_case - case_count1;
-		arma::vec cont_count0 = 2 * n_control - cont_count1;
+        arma::vec case_count1 = altX.t() * Yvec;
+        arma::vec cont_count1 = altX.t() * (1. - Yvec);
+        arma::vec case_count0 = 2 * n_case - case_count1;
+        arma::vec cont_count0 = 2 * n_control - cont_count1;
 
-		arma::uvec altmask = variant_bitmask(vaast_site_scores,
-											 case_count1,
-											 cont_count1,
-											 case_count0,
-											 cont_count0,
-											 score_only_minor,
-											 score_only_alternative);
+        arma::uvec altmask = variant_bitmask(vaast_site_scores,
+                                             case_count1,
+                                             cont_count1,
+                                             case_count0,
+                                             cont_count0,
+                                             score_only_minor,
+                                             score_only_alternative);
 
-		arma::vec new_group_loglh = LRT(case_count1, cont_count1, case_count0, cont_count0);
-		arma::vec new_score = 2.0 * (new_group_loglh + arma::log(altW)) - site_penalty;
+        arma::vec new_group_loglh = LRT(case_count1, cont_count1, case_count0, cont_count0);
+        arma::vec new_score = 2.0 * (new_group_loglh + arma::log(altW)) - site_penalty;
 
-		new_score(altmask).zeros();
+        new_score(altmask).zeros();
 
-		expanded_scores(i) = (total_score - arma::accu(new_score) < 0) ? 0 : total_score - arma::accu(new_score);
-	  }
-	  j++;
-	}
-	expanded_scores(ungrouped) = vaast_site_scores(arma::span(j, j + ungrouped.n_rows - 1));
+        expanded_scores(i) = (total_score - arma::accu(new_score) < 0) ? 0 : total_score - arma::accu(new_score);
+      }
+      j++;
+    }
+    expanded_scores(ungrouped) = vaast_site_scores(arma::span(j, j + ungrouped.n_rows - 1));
   }
   expanded_scores(arma::find(expanded_scores < 0)).zeros();
 
   // Store scores for detailed output
   if (detail) {
-	gene.set_scores(k, expanded_scores);
+    gene.set_scores(k, expanded_scores);
   }
 
   return total_score;
@@ -721,23 +796,23 @@ double Methods::VT(Gene &gene, const std::string &k, arma::vec &phenotypes) {
   arma::vec zscores(hmaf.n_rows, arma::fill::zeros);
 
   for (arma::uword i = 0; i < hmaf.n_rows; i++) {
-	arma::uvec idx = arma::find(maf <= hmaf[i]);
-	double znum = 0, zden = 0;
-	for (const auto &j : idx) {
-	  // znum = arma::sum(arma::sum(arma::diagmat(res) * Xmat_subset, 0));
-	  znum += arma::accu(res % X.col(i));
-	  // zden += std::sqrt(arma::sum(arma::sum(arma::pow(X.cols(arma::find(maf < hmaf[i + 1])), 2))));
-	  zden += arma::accu(X.col(i) % X.col(i));
-	}
-	zden = std::sqrt(zden);
-	zscores(i) = znum / zden;
+    arma::uvec idx = arma::find(maf <= hmaf[i]);
+    double znum = 0, zden = 0;
+    for (const auto &j : idx) {
+      // znum = arma::sum(arma::sum(arma::diagmat(res) * Xmat_subset, 0));
+      znum += arma::accu(res % X.col(i));
+      // zden += std::sqrt(arma::sum(arma::sum(arma::pow(X.cols(arma::find(maf < hmaf[i + 1])), 2))));
+      zden += arma::accu(X.col(i) % X.col(i));
+    }
+    zden = std::sqrt(zden);
+    zscores(i) = znum / zden;
   }
 
   try {
-	return arma::max(zscores);
+    return arma::max(zscores);
   } catch (std::logic_error &e) {
-	// TODO Check for better failure condition in the original paper. What should the value be in the case of a single variant?
-	return 0;
+    // TODO Check for better failure condition in the original paper. What should the value be in the case of a single variant?
+    return 0;
   }
 }
 #endif
@@ -750,7 +825,8 @@ double Methods::VTfix(Gene &gene, const std::string &k, arma::vec &phenotypes) {
   }
   pheno = pheno(vt_obj_->get_subset(k));
   arma::vec phenoCount = pheno % vt_obj_->get_mCount(k); // Changes under permutation
-  arma::vec csPhenoCount = arma::cumsum(vt_obj_->sum_groups(phenoCount, vt_obj_->get_oneToLen(k), k)); // Changes under permutation
+  arma::vec csPhenoCount =
+      arma::cumsum(vt_obj_->sum_groups(phenoCount, vt_obj_->get_oneToLen(k), k)); // Changes under permutation
 
   return arma::max((csPhenoCount - vt_obj_->get_csCountMeanpheno(k)) / vt_obj_->get_sqrtCsCountSquare(k));
 }
@@ -813,14 +889,14 @@ arma::sp_mat Methods::kernel_IBS(arma::sp_mat &Xmat, arma::uword &n, arma::uword
   double temp, diff;
 
   for (int i = 0; i < n - 1; i++) {
-	for (int j = i + 1; j < n; j++) {
-	  temp = 0;
-	  for (int k = 0; k < p; k++) {
-		diff = 2 - abs(Xmat(i * p + k) - Xmat(j * p + k));
-		temp += diff;
-	  }
-	  K(i * n + j) = K(j * n + i) = temp / 2. / p;
-	}
+    for (int j = i + 1; j < n; j++) {
+      temp = 0;
+      for (int k = 0; k < p; k++) {
+        diff = 2 - abs(Xmat(i * p + k) - Xmat(j * p + k));
+        temp += diff;
+      }
+      K(i * n + j) = K(j * n + i) = temp / 2. / p;
+    }
   }
   return K;
 }
@@ -840,14 +916,14 @@ arma::sp_mat Methods::kernel_wIBS(arma::sp_mat &Xmat, arma::uword &n, arma::uwor
   double w_total = arma::sum(weights);
 
   for (int i = 0; i < n - 1; i++) {
-	for (int j = i + 1; j < n; j++) {
-	  temp = 0;
-	  for (int k = 0; k < p; k++) {
-		diff = std::abs(Xmat(i * p + k) - Xmat(j * p + k));
-		temp += diff * weights(k);
-	  }
-	  K(i * n + j) = K(j * n + i) = 1 - temp / 2 / w_total;
-	}
+    for (int j = i + 1; j < n; j++) {
+      temp = 0;
+      for (int k = 0; k < p; k++) {
+        diff = std::abs(Xmat(i * p + k) - Xmat(j * p + k));
+        temp += diff * weights(k);
+      }
+      K(i * n + j) = K(j * n + i) = 1 - temp / 2 / w_total;
+    }
   }
   return K;
 }
@@ -874,23 +950,23 @@ arma::sp_mat Methods::kernel_twoWayX(arma::sp_mat &Xmat, arma::uword n, arma::uw
   double temp, temp1, temp2;
 
   for (int i = 0; i < n; i++) {
-	for (int j = i; j < n; j++) {
-	  temp = 1;
+    for (int j = i; j < n; j++) {
+      temp = 1;
 
-	  for (int k = 0; k < p; k++) {
-		temp2 = Xmat(i * p + k) * Xmat(j * p + k);
-		temp += temp2;
-		if (k == 0) {
-		  temp1 = temp2;
-		  continue;
-		}
+      for (int k = 0; k < p; k++) {
+        temp2 = Xmat(i * p + k) * Xmat(j * p + k);
+        temp += temp2;
+        if (k == 0) {
+          temp1 = temp2;
+          continue;
+        }
 
-		temp += temp1 * Xmat(i * p + k) * Xmat(j * p + k);
-		temp1 += temp2;
+        temp += temp1 * Xmat(i * p + k) * Xmat(j * p + k);
+        temp1 += temp2;
 
-	  }
-	  K(i * n + j) = K(j * n + i) = temp;
-	}
+      }
+      K(i * n + j) = K(j * n + i) = temp;
+    }
   }
   return K;
 }
@@ -907,22 +983,22 @@ arma::sp_mat Methods::kernel_twoWayX(arma::sp_mat &Xmat, arma::uword n, arma::uw
  * @return
  */
 double Methods::SKATR(Gene &gene,
-					  const std::string &k,
-					  arma::vec &phenotypes,
-					  int a,
-					  int b,
-					  bool detail,
-					  bool linear,
-					  bool permute,
-					  bool shuffle) {
+                      const std::string &k,
+                      arma::vec &phenotypes,
+                      int a,
+                      int b,
+                      bool detail,
+                      bool linear,
+                      bool permute,
+                      bool shuffle) {
   arma::sp_mat G(gene.get_matrix(k));
 
-  if(shuffle) {
-	if (linear) {
-	  lin_obj_->shuffle(phenotypes);
-	} else {
-	  obj_->shuffle(phenotypes);
-	}
+  if (shuffle) {
+    if (linear) {
+      lin_obj_->shuffle(phenotypes);
+    } else {
+      obj_->shuffle(phenotypes);
+    }
   }
 
   check_weights(gene, k, a, b);
@@ -931,59 +1007,65 @@ double Methods::SKATR(Gene &gene,
   arma::mat W = arma::diagmat(weights);
   // We're permuting, only calculate the Q-value
   if (permute) {
-	arma::rowvec Zs;
-	if (linear) {
-	  Zs = arma::sum(arma::diagmat(lin_obj_->get_U0()) * G) / std::sqrt(lin_obj_->get_s2());
-	} else {
-	  Zs = arma::sum(arma::diagmat(obj_->get_U0()) * G);
-	}
-	arma::mat Z = Zs * W;
+    arma::rowvec Zs;
+    if (linear) {
+      Zs = arma::sum(arma::diagmat(lin_obj_->get_U0()) * G) / std::sqrt(lin_obj_->get_s2());
+    } else {
+      Zs = arma::sum(arma::diagmat(obj_->get_U0()) * G);
+    }
+    arma::mat Z = Zs * W;
 
-	double Q = arma::accu(arma::pow(Z, 2));
+    double Q = arma::accu(arma::pow(Z, 2));
 
-	return Q;
-	// We're not permuting, return asymptotic p-values
+    return Q;
+    // We're not permuting, return asymptotic p-values
   } else {
 
-	arma::mat tmp;
-	if (linear) {
-	  tmp = lin_obj_->get_Ux().t() * G;
-	} else {
-	  tmp = obj_->get_Ux().t() * G;
-	}
+    arma::mat tmp;
+    if (linear) {
+      tmp = lin_obj_->get_Ux().t() * G;
+    } else {
+      tmp = obj_->get_Ux().t() * G;
+    }
 
-	arma::mat Gs;
-	arma::rowvec Zs;
-	if (linear) {
-	  Gs = G.t() * G - tmp.t() * tmp;
-	  Zs = arma::sum(arma::diagmat(lin_obj_->get_U0()) * G) / std::sqrt(lin_obj_->get_s2());
-	} else {
-	  Gs = (arma::diagmat(obj_->get_Yv()) * G).t() * G - tmp.t() * tmp;
-	  Zs = arma::sum(arma::diagmat(obj_->get_U0()) * G);
-	}
+    arma::mat Gs;
+    arma::rowvec Zs;
+    if (linear) {
+      Gs = G.t() * G - tmp.t() * tmp;
+      Zs = arma::sum(arma::diagmat(lin_obj_->get_U0()) * G) / std::sqrt(lin_obj_->get_s2());
+    } else {
+      Gs = (arma::diagmat(obj_->get_Yv()) * G).t() * G - tmp.t() * tmp;
+      Zs = arma::sum(arma::diagmat(obj_->get_U0()) * G);
+    }
 
-	arma::mat R = (Gs * W).t() * W;
-	arma::mat Z = Zs * W;
+    arma::mat R = (Gs * W).t() * W;
+    arma::mat Z = Zs * W;
 
-	arma::vec s;
-	arma::svd(s, R);
+    arma::vec s;
+    arma::svd(s, R);
 
-	double Q = arma::accu(arma::pow(Z, 2));
+    double Q = arma::accu(arma::pow(Z, 2));
 
-	if (detail) {
-	  arma::vec variant_scores = arma::sum(arma::pow(Z, 2), 0).t();
-	  gene.set_scores(k, variant_scores);
-	}
+    if (detail) {
+      arma::vec variant_scores = arma::sum(arma::pow(Z, 2), 0).t();
+      gene.set_scores(k, variant_scores);
+    }
 
-	return SKAT_pval(Q, s);
+    return SKAT_pval(Q, s);
   }
 }
 
-double Methods::SKATRO(Gene &gene, const std::string &k, arma::vec &phenotypes, int a, int b, bool detail, bool linear) {
+double Methods::SKATRO(Gene &gene,
+                       const std::string &k,
+                       arma::vec &phenotypes,
+                       int a,
+                       int b,
+                       bool detail,
+                       bool linear) {
   if (linear) {
-	lin_obj_->shuffle(phenotypes);
+    lin_obj_->shuffle(phenotypes);
   } else {
-	obj_->shuffle(phenotypes);
+    obj_->shuffle(phenotypes);
   }
 
   arma::sp_mat G(gene.get_matrix(k));
@@ -996,19 +1078,19 @@ double Methods::SKATRO(Gene &gene, const std::string &k, arma::vec &phenotypes, 
 
   arma::mat tmp;
   if (linear) {
-	tmp = lin_obj_->get_Ux().t() * G;
+    tmp = lin_obj_->get_Ux().t() * G;
   } else {
-	tmp = obj_->get_Ux().t() * G;
+    tmp = obj_->get_Ux().t() * G;
   }
 
   arma::mat Gs;
   arma::rowvec Zs;
   if (linear) {
-	Gs = G.t() * G - tmp.t() * tmp;
-	Zs = arma::sum(arma::diagmat(lin_obj_->get_U0()) * G) / std::sqrt(lin_obj_->get_s2());
+    Gs = G.t() * G - tmp.t() * tmp;
+    Zs = arma::sum(arma::diagmat(lin_obj_->get_U0()) * G) / std::sqrt(lin_obj_->get_s2());
   } else {
-	Gs = (arma::diagmat(obj_->get_Yv()) * G).t() * G - tmp.t() * tmp;
-	Zs = arma::sum(arma::diagmat(obj_->get_U0()) * G);
+    Gs = (arma::diagmat(obj_->get_Yv()) * G).t() * G - tmp.t() * tmp;
+    Zs = arma::sum(arma::diagmat(obj_->get_U0()) * G);
   }
 
   arma::mat R = (Gs * W).t() * W;
@@ -1024,7 +1106,7 @@ double Methods::SKATRO(Gene &gene, const std::string &k, arma::vec &phenotypes, 
   arma::vec Qw{0, 0, 0, 0, 0, 0, 0, 0};
 
   for (arma::uword i = 0; i < K; i++) {
-	Qw[i] = (1 - rho_[i]) * Qs + rho_[i] * Qb;
+    Qw[i] = (1 - rho_[i]) * Qs + rho_[i] * Qb;
   }
 
   arma::vec pval = {0, 0, 0, 0, 0, 0, 0, 0};
@@ -1037,63 +1119,63 @@ double Methods::SKATRO(Gene &gene, const std::string &k, arma::vec &phenotypes, 
 
   arma::mat RJ2(Rs.n_rows, Rs.n_rows, arma::fill::zeros);
   for (arma::uword i = 0; i < Rs.n_rows; i++) {
-	RJ2.row(i) = (Rs(i) + Rs.t()) / N;
+    RJ2.row(i) = (Rs(i) + Rs.t()) / N;
   } // Replacement for R's outer(Rs, Rs, '+')
 
   std::vector<arma::vec> lamk(K - 1);
   for (arma::uword i = 0; i < K; i++) {
-	// Pure burden
-	if (rho_[i] == 1) {
-	  boost::math::chi_squared chisq(1); // 1-df chisq
-	  double stat = Qb / R1;
-	  if (!std::isfinite(stat)) {
-		pval[i] = 1.;
-	  } else {
-		pval[i] = boost::math::cdf(boost::math::complement(chisq, stat));
-	  }
-	  continue;
-	}
+    // Pure burden
+    if (rho_[i] == 1) {
+      boost::math::chi_squared chisq(1); // 1-df chisq
+      double stat = Qb / R1;
+      if (!std::isfinite(stat)) {
+        pval[i] = 1.;
+      } else {
+        pval[i] = boost::math::cdf(boost::math::complement(chisq, stat));
+      }
+      continue;
+    }
 
-	// Setup Davies
-	double c1 = std::sqrt(1 - rho_[i]) * (std::sqrt(1 - rho_[i] + N * rho_[i]) - std::sqrt(1 - rho_[i]));
-	double c2 = std::pow(std::sqrt(1 - rho_[i] + N * rho_[i]) - std::sqrt(1 - rho_[i]), 2) * R1 / std::pow(N, 2);
+    // Setup Davies
+    double c1 = std::sqrt(1 - rho_[i]) * (std::sqrt(1 - rho_[i] + N * rho_[i]) - std::sqrt(1 - rho_[i]));
+    double c2 = std::pow(std::sqrt(1 - rho_[i] + N * rho_[i]) - std::sqrt(1 - rho_[i]), 2) * R1 / std::pow(N, 2);
 
-	arma::mat mk = (1 - rho_[i]) * R + c1 * RJ2 + c2;
+    arma::mat mk = (1 - rho_[i]) * R + c1 * RJ2 + c2;
 
-	arma::mat Utmp, Vtmp;
-	bool svd_success = arma::svd_econ(Utmp, lamk[i], Vtmp, mk);
-	if (!svd_success) {
-	  lamk[i] = arma::svd(mk);
-	}
+    arma::mat Utmp, Vtmp;
+    bool svd_success = arma::svd_econ(Utmp, lamk[i], Vtmp, mk);
+    if (!svd_success) {
+      lamk[i] = arma::svd(mk);
+    }
 
-	double tol = 1e-20;
-	if (lamk[i].max() <= tol) {
-	  lamk[i] = arma::clamp(lamk[i], tol, tol + std::numeric_limits<double>::epsilon());
-	} else {
-	  lamk[i] = arma::clamp(lamk[i], tol, lamk[i].max());
-	}
+    double tol = 1e-20;
+    if (lamk[i].max() <= tol) {
+      lamk[i] = arma::clamp(lamk[i], tol, tol + std::numeric_limits<double>::epsilon());
+    } else {
+      lamk[i] = arma::clamp(lamk[i], tol, lamk[i].max());
+    }
 
-	pval[i] = SKAT_pval(Qw[i], lamk[i]);
+    pval[i] = SKAT_pval(Qw[i], lamk[i]);
   }
 
   double pmin = pval.min();
   arma::vec qval = {0, 0, 0, 0, 0, 0, 0, 0};
   for (arma::uword i = 0; i < K - 1; i++) {
-	qval[i] = Liu_qval_mod(pmin, lamk[i]);
+    qval[i] = Liu_qval_mod(pmin, lamk[i]);
   }
 
   arma::vec lam;
   arma::svd(lam, R - (Rs * Rs.t()) / R1);
 
   if (lam.max() <= 0) {
-	lam = arma::clamp(lam, 0, std::numeric_limits<double>::epsilon());
+    lam = arma::clamp(lam, 0, std::numeric_limits<double>::epsilon());
   } else {
-	lam = arma::clamp(lam, 0, lam.max());
+    lam = arma::clamp(lam, 0, lam.max());
   }
 
   arma::vec tauk(K - 1);
   for (arma::uword i = 0; i < K - 1; i++) {
-	tauk(i) = (1 - rho_[i]) * R2 / R1 + rho_[i] * R1;
+    tauk(i) = (1 - rho_[i]) * R2 / R1 + rho_[i] * R1;
   }
   double vp2 = 4. * (R3 / R1 - (R2 * R2) / (R1 * R1));
   double MuQ = arma::accu(lam);
@@ -1102,20 +1184,20 @@ double Methods::SKATRO(Gene &gene, const std::string &k, arma::vec &phenotypes, 
 
   boost::math::chi_squared chisq(1);
   double q1 = boost::math::quantile(boost::math::complement(chisq,
-															pmin > 0 ? pmin
-																	 : std::sqrt(std::numeric_limits<double>::min())));
+                                                            pmin > 0 ? pmin
+                                                                     : std::sqrt(std::numeric_limits<double>::min())));
   double T0 = pmin;
 
   // Integration
   auto katint = [&](double xpar) -> double {
-	double eta1 = std::numeric_limits<double>::max();
-	for (arma::uword i = 0; i < K - 1; i++) {
-	  double val = (qval[i] - tauk[i] * xpar) / (1 - rho_[i]);
-	  if (val < eta1)
-		eta1 = val;
-	}
-	double x = (eta1 - MuQ) * sd1 + MuQ;
-	return SKAT_pval(x, lam) * boost::math::pdf(chisq, xpar);
+    double eta1 = std::numeric_limits<double>::max();
+    for (arma::uword i = 0; i < K - 1; i++) {
+      double val = (qval[i] - tauk[i] * xpar) / (1 - rho_[i]);
+      if (val < eta1)
+        eta1 = val;
+    }
+    double x = (eta1 - MuQ) * sd1 + MuQ;
+    return SKAT_pval(x, lam) * boost::math::pdf(chisq, xpar);
   };
 
   double error_estimate;
@@ -1124,29 +1206,29 @@ double Methods::SKATRO(Gene &gene, const std::string &k, arma::vec &phenotypes, 
   double p_value = 1;
   // Can't calculate p-value, return alternate
   if (q1 < std::numeric_limits<double>::min() * 10) {
-	return std::max(std::numeric_limits<double>::min(), std::min(p_value, pmin * K));
+    return std::max(std::numeric_limits<double>::min(), std::min(p_value, pmin * K));
   }
   p_value = T0 + boost::math::quadrature::gauss_kronrod<double, 15>::integrate(katint,
-																			   std::numeric_limits<double>::min()
-																				   * 10,
-																			   q1,
-																			   max_depth,
-																			   tolerance,
-																			   &error_estimate);
+                                                                               std::numeric_limits<double>::min()
+                                                                                   * 10,
+                                                                               q1,
+                                                                               max_depth,
+                                                                               tolerance,
+                                                                               &error_estimate);
 
   if (p_value >= 1 || pmin >= 1) {
-	std::cerr << "p_value: " << p_value << " pmin: " << pmin << "\n";
+    std::cerr << "p_value: " << p_value << " pmin: " << pmin << "\n";
   }
 
   return std::max(std::numeric_limits<double>::min(), std::min(p_value, pmin * K));
 }
 
-double Methods::Liu_qval_mod(double pval, const arma::vec& lambda) {
+double Methods::Liu_qval_mod(double pval, const arma::vec &lambda) {
   arma::vec c1{
-	  arma::accu(lambda),
-	  arma::accu(arma::pow(lambda, 2)),
-	  arma::accu(arma::pow(lambda, 3)),
-	  arma::accu(arma::pow(lambda, 4))
+      arma::accu(lambda),
+      arma::accu(arma::pow(lambda, 2)),
+      arma::accu(arma::pow(lambda, 3)),
+      arma::accu(arma::pow(lambda, 4))
   };
 
   double muQ = c1[0];
@@ -1159,63 +1241,63 @@ double Methods::Liu_qval_mod(double pval, const arma::vec& lambda) {
   double beta2 = 12 * s2;
 
   double a, d, l;
-  if (s1 * s1 > s2) {
-	a = 1. / (s1 - std::sqrt(s1 * s1 - s2));
-	d = s1 * std::pow(a, 3) - a * a;
-	l = a * a - 2 * d;
-  } else {
-	l = 1. / s2;
-	a = std::sqrt(l);
-	d = 0;
+  if (std::pow(s1, 2) > s2) {
+    a = 1. / (s1 - std::sqrt(s1 * s1 - s2));
+    d = s1 * std::pow(a, 3) - std::pow(a, 2);
+    l = std::pow(a, 2) - 2 * d;
+  } else { // Modified to match kurtosis only in this branch
+    l = 1. / s2;
+    a = std::sqrt(l);
+    d = 0;
   }
 
-  double muX = l * d;
+  double muX = l + d;
   double sigmaX = arma::datum::sqrt2 * a;
   double df = l;
 
   boost::math::chi_squared chisq(df);
   double q = boost::math::quantile(boost::math::complement(chisq,
-														   pval > 0 ? pval
-																	: std::sqrt(std::numeric_limits<double>::min())));
-  return (q - df) / std::sqrt(2 * df) * sigmaQ + muQ;
+                                                           pval > 0 ? pval
+                                                                    : std::sqrt(std::numeric_limits<double>::min())));
+  return (q - muX) / sigmaX * sigmaQ + muQ; // Does match the Liu (2009) paper.
 }
 
-double Methods::Saddlepoint(double Q, const arma::vec& lambda) {
+double Methods::Saddlepoint(double Q, const arma::vec &lambda) {
   // Check for valid input
   if (Q <= 0) {
-	return 1;
+    return 1;
   }
 
   double d = lambda.max();
   if (d == 0) {
-	return Liu_pval(Q, lambda);
+    return Liu_pval(Q, lambda);
   }
   arma::vec ulambda = lambda / d;
   Q /= d;
 
   if (ulambda.has_nan()) {
-	ulambda.replace(arma::datum::nan, 0);
+    ulambda.replace(arma::datum::nan, 0);
   }
 
   auto k0 = [&](double &zeta) -> double {
-	return -arma::accu(arma::log(1 - 2 * (zeta * ulambda))) / 2;
+    return -arma::accu(arma::log(1 - 2 * (zeta * ulambda))) / 2;
   };
   auto kprime0 = [&](double &zeta) -> double {
-	return arma::accu(ulambda / (1 - 2 * zeta * ulambda));
+    return arma::accu(ulambda / (1 - 2 * zeta * ulambda));
   };
   auto kpprime0 = [&](double &zeta) -> double {
-	return 2 * arma::accu(arma::pow(ulambda, 2) / arma::pow(1 - 2 * (zeta * ulambda), 2));
+    return 2 * arma::accu(arma::pow(ulambda, 2) / arma::pow(1 - 2 * (zeta * ulambda), 2));
   };
   auto kppprime0 = [&](double &zeta) -> double {
     return 8 * arma::accu(arma::pow(ulambda, 3) / arma::pow(1 - 2 * (zeta * ulambda), 3));
   };
 #if 0
   auto hatzetafn = [&](double zeta) -> double {
-	return kprime0(zeta) - Q;
+    return kprime0(zeta) - Q;
   };
 #else
   auto hatzetafn = [&](double zeta) -> std::tuple<double, double, double> {
-	return std::make_tuple(kprime0(zeta) - Q, kpprime0(zeta), kppprime0(zeta));
+    return std::make_tuple(kprime0(zeta) - Q, kpprime0(zeta), kppprime0(zeta));
   };
 #endif
 
@@ -1223,11 +1305,11 @@ double Methods::Saddlepoint(double Q, const arma::vec& lambda) {
 
   double lmin, lmax;
   if (arma::any(ulambda < 0)) {
-	lmin = arma::max(1 / (2 * ulambda(arma::find(ulambda < 0)))) * 0.99999;
+    lmin = arma::max(1 / (2 * ulambda(arma::find(ulambda < 0)))) * 0.99999;
   } else if (Q > sum(ulambda)) {
-	lmin = -0.01;
+    lmin = -0.01;
   } else {
-	lmin = -static_cast<int>(ulambda.size()) / (2. * Q);
+    lmin = -static_cast<int>(ulambda.size()) / (2. * Q);
   }
   lmax = arma::min(1 / (2 * ulambda(arma::find(ulambda > 0)))) * 0.99999;
 
@@ -1237,14 +1319,14 @@ double Methods::Saddlepoint(double Q, const arma::vec& lambda) {
   boost::math::tools::eps_tolerance<double> tol(digits);
   boost::uintmax_t max_iter = 1000;
   std::pair<double, double>
-	  tmp = boost::math::tools::bisect(hatzetafn, lmin, lmax, tol, max_iter);
+      tmp = boost::math::tools::bisect(hatzetafn, lmin, lmax, tol, max_iter);
 #elif 0
   int digits = std::numeric_limits<double>::digits - 3;
   boost::math::tools::eps_tolerance<double> tol(digits);
   boost::uintmax_t max_iter = 1000;
   double factor = (lmax - lmin) / 100;
   std::pair<double, double>
-	  tmp = boost::math::tools::bracket_and_solve_root(hatzetafn, lmin, factor, true, tol, max_iter);
+      tmp = boost::math::tools::bracket_and_solve_root(hatzetafn, lmin, factor, true, tol, max_iter);
 #else
   int digits = std::numeric_limits<double>::digits - 3;
   // boost::math::tools::eps_tolerance<double> tol(digits);
@@ -1261,10 +1343,10 @@ double Methods::Saddlepoint(double Q, const arma::vec& lambda) {
   double v = hatzeta * std::sqrt(kpprime0(hatzeta));
 
   if (std::abs(hatzeta) < 1e-4 || std::isnan(w) || std::isnan(v)) {
-	return Liu_pval(Q, lambda);
+    return Liu_pval(Q, lambda);
   } else {
-	boost::math::normal norm(0, 1);
-	return boost::math::cdf(boost::math::complement(norm, w + log(v / w) / w));
+    boost::math::normal norm(0, 1);
+    return boost::math::cdf(boost::math::complement(norm, w + log(v / w) / w));
   }
 }
 
@@ -1273,13 +1355,12 @@ int Methods::sgn(T x) {
   return (T(0) < x) - (x < T(0));
 }
 
-double Methods::Liu_pval(double Q, const arma::vec& lambda) {
-  std::cerr << "Called Liu_pval\n";
+double Methods::Liu_pval(double Q, const arma::vec &lambda) {
   arma::vec c1{
-	  arma::accu(lambda),
-	  arma::accu(arma::pow(lambda, 2)),
-	  arma::accu(arma::pow(lambda, 3)),
-	  arma::accu(arma::pow(lambda, 4))
+      arma::accu(lambda),
+      arma::accu(arma::pow(lambda, 2)),
+      arma::accu(arma::pow(lambda, 3)),
+      arma::accu(arma::pow(lambda, 4))
   };
   double muQ = c1[0];
   double sigmaQ = std::sqrt(2 * c1[1]);
@@ -1289,32 +1370,31 @@ double Methods::Liu_pval(double Q, const arma::vec& lambda) {
 
   double a, d, l; // l = degrees of freedom, d = non-centrality parameter for non-central chisq
   if (std::pow(s1, 2) > s2) {
-	a = 1. / (s1 - std::sqrt(std::pow(s1, 2) - s2));
-	d = s1 * std::pow(a, 3) - std::pow(a, 2);
-	l = std::pow(a, 2) - 2 * d;
+    a = 1. / (s1 - std::sqrt(std::pow(s1, 2) - s2));
+    d = s1 * std::pow(a, 3) - std::pow(a, 2);
+    l = std::pow(a, 2) - 2 * d;
   } else {
-    std::cerr << "s1^2 <= s2\n";
-	a = 1. / s1; // Was s2, matching Wu et al. code, but should be s1 according to Liu et al. 2009 pg. 855
+    a = 1. / s2;
     d = 0;
-	l = 1. / std::pow(s1, 2);
+    l = 1. / std::pow(s1, 2);
   }
-  double muX = l + d; // Was l * d matching Wu et al. code, but should be l + d according to Liu et al. 2009 pg. 854
+  double muX = l + d;
   double sigmaX = arma::datum::sqrt2 * a;
   double df = l;
 
   double Qnorm = (Q - muQ) / sigmaQ * sigmaX + muX;
 
   try {
-	boost::math::non_central_chi_squared chisq(df, d);
-	return boost::math::cdf(boost::math::complement(chisq, Qnorm));
+    boost::math::non_central_chi_squared chisq(df, d);
+    return boost::math::cdf(boost::math::complement(chisq, Qnorm));
   } catch (std::exception &e) {
-	return 1;
+    return 1;
   }
 }
 
-double Methods::SKAT_pval(double Q, const arma::vec& lambda) {
+double Methods::SKAT_pval(double Q, const arma::vec &lambda) {
   if (std::isnan(Q)) {
-	return 1;
+    return 1;
   }
 
   std::vector<double> lb1 = arma::conv_to<std::vector<double>>::from(lambda);
@@ -1328,34 +1408,34 @@ double Methods::SKAT_pval(double Q, const arma::vec& lambda) {
 
   double pval = 1. - qfc.get_res();
   if (pval >= 1 || pval <= 0 || qfc.get_fault() > 0) {
-	pval = Saddlepoint(Q, lambda);
+    pval = Saddlepoint(Q, lambda);
   }
   return pval;
 }
 
 void Methods::check_weights(Gene &gene, const std::string &k, int a, int b, bool no_weight) {
   if (gene.is_weighted(k)) {
-	return;
+    return;
   } else if (no_weight) {
-	arma::vec weights(gene.get_matrix(k).n_cols, arma::fill::ones);
-	gene.set_weights(k, weights);
-	return;
+    arma::vec weights(gene.get_matrix(k).n_cols, arma::fill::ones);
+    gene.set_weights(k, weights);
+    return;
   }
   arma::mat G(gene.get_matrix(k));
   arma::vec weights(G.n_cols, arma::fill::ones);
 
   if (kernel_ == Kernel::wLinear) {
-	arma::vec maf = arma::mean(G, 0).t() / 2.;
+    arma::vec maf = arma::mean(G, 0).t() / 2.;
 
-	for (arma::uword i = 0; i < G.n_cols; i++) {
-	  weights(i) = std::pow(maf(i), a - 1) * std::pow(1 - maf(i), b - 1) / boost::math::beta(a, b);
-	}
-	if (method_ == "VAAST") {
-	  weights.replace(0, std::sqrt(std::numeric_limits<double>::min()));
-	}
-	gene.set_weights(k, weights);
+    for (arma::uword i = 0; i < G.n_cols; i++) {
+      weights(i) = std::pow(maf(i), a - 1) * std::pow(1 - maf(i), b - 1) / boost::math::beta(a, b);
+    }
+    if (method_ == "VAAST") {
+      weights.replace(0, std::sqrt(std::numeric_limits<double>::min()));
+    }
+    gene.set_weights(k, weights);
   } else {
-	gene.set_weights(k, weights);
+    gene.set_weights(k, weights);
   }
 }
 

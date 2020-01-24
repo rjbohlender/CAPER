@@ -79,12 +79,12 @@ auto PowerOp::power() -> void {
 
 			// Shuffle phenotypes
 			std::vector<std::vector<int32_t>> permutations = permute_.permutations_maj_bin(
-				block,
-				bootstrapped_odds,
-				ncases,
-				mac_idx,
-				maj_idx,
-				ts);
+                block,
+                bootstrapped_odds,
+                ncases,
+                mac_idx,
+                maj_idx,
+                ts, 0);
 
 			for (arma::uword j = 0; j < block; j++) {
 			  phenotypes_ = arma::conv_to<arma::vec>::from(permutations[j]);
@@ -143,12 +143,12 @@ auto PowerOp::power() -> void {
 			  do {
 				// Shuffle phenotypes
 				std::vector<std::vector<int32_t>> permutations = permute_.permutations_maj_bin(
-					block,
-					bootstrapped_odds,
-					ncases,
-					mac_idx,
-					maj_idx,
-					ts);
+                    block,
+                    bootstrapped_odds,
+                    ncases,
+                    mac_idx,
+                    maj_idx,
+                    ts, 0);
 
 				for (arma::uword j = 0; j < block; j++) {
 				  n++;
