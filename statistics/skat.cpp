@@ -250,8 +250,8 @@ SKAT_Davies::SKAT_Davies(double Q, arma::vec &lambda) {
   std::vector<int> df(lambda.size(), 1); // n1
   int r1 = lambda.n_rows;
   double sigma = 0; // sigma
-  int lim1 = 1000000;
-  double acc = 10e-9;
+  int lim1 = 10000;
+  double acc = 10e-6;
   double trace[7]{0};
   ifault = 0;
   res = 0;

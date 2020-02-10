@@ -590,6 +590,8 @@ auto CARVAOp::call_method(Methods &method,
 	return method.SKATRO(gene, k, phenotypes, tp.a, tp.b, detail, tp.linear);
   } else if (tp.method == "SKAT") {
 	return method.SKAT(gene, phenotypes, cov, k, tp.a, tp.b, shuffle, detail, tp.linear);
+  } else if (tp.method == "classicSKATO") {
+    return method.classicSKATO(gene, phenotypes, cov, k, tp.a, tp.b, shuffle, tp.adjust);
   } else if (tp.method == "SKATO") {
 	// double ret = method.SKATO(gene, phenotypes, cov, k, tp.a, tp.b, shuffle, tp.adjust);
 	// arma::wall_clock timer;

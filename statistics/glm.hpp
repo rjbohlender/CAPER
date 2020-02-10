@@ -8,6 +8,7 @@
 #define ARMA_DONT_USE_WRAPPER
 
 #include <armadillo>
+#include <boost/math/tools/toms748_solve.hpp>
 
 #include "../link/family.hpp"
 
@@ -56,6 +57,7 @@ struct GLM {
   auto irls_qr(arma::mat &X, arma::colvec &Y) -> arma::vec;
   auto irls(arma::mat &X, arma::colvec &Y) -> arma::vec;
   auto svd_subset(arma::mat &X) -> arma::uvec;
+  auto pirls(arma::mat &X, arma::colvec &Y) -> arma::vec;
 };
 
 template<typename LinkT>
@@ -286,6 +288,51 @@ auto GLM<LinkT>::irls(arma::mat &X, arma::colvec &Y) -> arma::vec {
   }
   dev_ = arma::sum(link.dev_resids(Y, link.linkinv(X * x), arma::vec(X.n_rows, arma::fill::ones)));
   return x;
+}
+
+template<typename LinkT>
+auto GLM<LinkT>::pirls(arma::mat &X, arma::colvec &Y) -> arma::vec {
+  // arma::vec b = arma::solve(X, Y, arma::solve_opts::fast); // Definitely wrong for my case. Not on the right scale.
+  double iter = 0;
+  double maximum = 1000;
+  arma::vec b = arma::vec(X.n_cols, arma::fill::zeros);
+  double m = X.n_rows;
+  double p = 2;
+  double eps = 1e-8;
+  double i = arma::norm(link.linkinv(X * b) - Y) / (16 * p); // 16 * p && p = 2
+  while(eps / (16 * p * (1 + eps)) * arma::norm(X * b - Y) < i && iter < maximum) {
+    arma::vec eta = X * b;
+    arma::vec g = link.linkinv(eta);
+    arma::vec gprime = link.mueta(eta);
+    arma::vec z = eta + (Y - g) / gprime;
+    arma::vec W = arma::pow(gprime, 2) / link.variance(g);
+    double s = 0.5 * std::pow(i, (p-2)/p) * std::pow(m, -(p - 2) / p);
+
+    arma::mat R1 = arma::diagmat(W) + s * arma::eye(W.n_elem, W.n_elem);
+    arma::vec bt1 = arma::solve(X.t() * R1 * X, X.t() * R1 * z);
+    arma::vec delta = b - bt1;
+
+    double L;
+    double U;
+    auto linesearch = [&](double alpha) -> double {
+      return arma::norm(link.linkinv(X * (b - alpha * delta)) - Y);
+    };
+    int digits = std::numeric_limits<double>::digits - 3;
+    boost::math::tools::eps_tolerance<double> tol(digits);
+    unsigned long maxiter = 1000;
+    std::tie(L, U) = boost::math::tools::bracket_and_solve_root(linesearch, 0., 2., true, tol, maxiter);
+
+    b = b - (L + U) / 2. * delta;
+
+    // auto progress = [&]() -> bool {
+    //   double lambda = 16. * p;
+    //   double k = std::pow(p, p) * arma::norm(X * delta) / (2 * p * p * arma::dot(delta, arma::diagmat(W) * X * delta));
+    //   double a0 = std::min(1. / (16. * lambda), 1. / std::pow(16. * lambda * k, 1 / (p - 1)));
+    // };
+    iter++;
+  }
+
+  return b;
 }
 
 #endif //PERMUTE_ASSOCIATE_GLM_HPP

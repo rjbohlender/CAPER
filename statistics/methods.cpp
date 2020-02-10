@@ -541,14 +541,14 @@ double Methods::SKATO_clean(Gene &gene,
   return std::max(std::numeric_limits<double>::min(), std::min(rho_.size() * T, ret));
 }
 
-double Methods::SKATO(Gene &gene,
-                      arma::vec &Y,
-                      Covariates cov,
-                      const std::string &k,
-                      int a,
-                      int b,
-                      bool shuffle,
-                      bool adjust) {
+double Methods::classicSKATO(Gene &gene,
+                             arma::vec &Y,
+                             Covariates cov,
+                             const std::string &k,
+                             int a,
+                             int b,
+                             bool shuffle,
+                             bool adjust) {
   // Randomize indices
   if (shuffle) {
     cov.set_phenotype_vector(Y);
@@ -1269,6 +1269,9 @@ double Methods::Saddlepoint(double Q, const arma::vec &lambda) {
   }
 
   double d = lambda.max();
+  if (true) {
+    return Liu_pval(Q, lambda);
+  }
   if (d == 0) {
     return Liu_pval(Q, lambda);
   }
@@ -1428,8 +1431,10 @@ void Methods::check_weights(Gene &gene, const std::string &k, int a, int b, bool
     arma::vec maf = arma::mean(G, 0).t() / 2.;
 
     for (arma::uword i = 0; i < G.n_cols; i++) {
-      weights(i) = std::pow(maf(i), a - 1) * std::pow(1 - maf(i), b - 1) / boost::math::beta(a, b);
+      // weights(i) = std::pow(maf(i), a - 1) * std::pow(1 - maf(i), b - 1) / boost::math::beta(a, b);
+      weights(i) = std::pow(maf(i), a - 1) * std::pow(1 - maf(i), b - 1);
     }
+    weights = weights / arma::accu(weights) * G.n_cols;
     if (method_ == "VAAST") {
       weights.replace(0, std::sqrt(std::numeric_limits<double>::min()));
     }

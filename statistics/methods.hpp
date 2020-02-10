@@ -62,14 +62,14 @@ public:
 #endif
 #if 1
   // Lee et al. 2012
-  double SKATO(Gene &gene,
-			   arma::vec &Y,
-			   Covariates cov,
-			   const std::string &k,
-			   int a = 1,
-			   int b = 25,
-			   bool shuffle = false,
-			   bool adjust = true);
+  double classicSKATO(Gene &gene,
+                      arma::vec &Y,
+                      Covariates cov,
+                      const std::string &k,
+                      int a = 1,
+                      int b = 25,
+                      bool shuffle = false,
+                      bool adjust = true);
   double SKATO_clean(Gene &gene,
                arma::vec &Y,
                Covariates cov,
