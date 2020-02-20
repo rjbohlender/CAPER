@@ -110,5 +110,17 @@ arma::vec Gaussian::dev_resids(const arma::vec &y, const arma::vec &mu, const ar
   return weight % arma::pow(y - mu, 2);
 }
 
+void Gaussian::initialize(arma::vec &y, arma::vec &n, arma::vec &mu, arma::vec &weight) noexcept {
+  mu = y;
+}
+
+double Gaussian::aic(arma::vec &y, arma::vec &n, arma::vec &mu, arma::vec &weight, double dev, double rank) noexcept {
+  // aic =	function(y, n, mu, wt, dev) {
+  //                       nobs <- length(y)
+  //                       nobs*(log(dev/nobs*2*pi)+1)+2 - sum(log(wt))
+  //                   }
+  return 0;
+}
+
 
 

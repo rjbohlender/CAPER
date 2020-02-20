@@ -30,7 +30,6 @@ private:
   std::map<std::string, arma::uvec> snpid_;
   std::map<std::string, arma::uvec> subset_;
   std::map<std::string, arma::vec> count_;
-  std::map<std::string, arma::vec> nCount_;
   std::map<std::string, arma::vec> mCount_;
   std::map<std::string, arma::vec> countg_;
   std::map<std::string, arma::vec> countSquare_;

@@ -137,10 +137,10 @@ LiuParam::LiuParam(arma::vec &c1) {
 }
 
 LiuParam::LiuParam(arma::vec &lambda, bool mod_lambda) {
-  arma::vec c1{arma::sum(lambda),
-			   arma::sum(arma::sum(arma::pow(lambda, 2))),
-			   arma::sum(arma::sum(arma::pow(lambda, 3))),
-			   arma::sum(arma::sum(arma::pow(lambda, 4)))};
+  arma::vec c1{arma::accu(lambda),
+			   arma::accu(arma::pow(lambda, 2)),
+			   arma::accu(arma::pow(lambda, 3)),
+			   arma::accu(arma::pow(lambda, 4))};
 
   muQ = c1(0);
   sigmaQ = std::sqrt(2 * c1(1));
@@ -214,9 +214,9 @@ double PvalueLambda::Get_Liu_Pval_MOD_Lambda(double Q, arma::vec &lambda, bool l
   boost::math::non_central_chi_squared chisq(param.l, param.d);
 
   if (log_p) {
-	return std::log(boost::math::cdf(chisq, Q_Norm1));
+	return std::log(boost::math::cdf(boost::math::complement(chisq, Q_Norm1)));
   } else {
-	return boost::math::cdf(chisq, Q_Norm1);
+	return boost::math::cdf(boost::math::complement(chisq, Q_Norm1));
   }
 }
 
@@ -355,7 +355,12 @@ SKAT_Integrate_Davies::SKAT_Integrate_Davies(arma::vec &pmin_q, SKATParam &param
 	  rall(rall) {}
 
 double SKAT_Integrate_Davies::operator()(double x) {
-  arma::vec temp1 = param_m.tau * x;
+  arma::vec temp1(1);
+  if (rall.n_elem == 1) {
+    temp1 = param_m.tau(0) * x;
+  } else {
+    temp1 = param_m.tau * x;
+  }
 
   arma::vec temp = (pmin_q - temp1) / (1. - rall);
   double temp_min = arma::min(temp);

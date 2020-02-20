@@ -6,6 +6,7 @@
 
 #include <boost/math/distributions/normal.hpp>
 #include <boost/math/distributions/cauchy.hpp>
+#include <boost/math/distributions/binomial.hpp>
 
 #include "binomial.hpp"
 
@@ -190,11 +191,36 @@ Binomial::LinkID Binomial::check_linkid(const std::string &link) {
 
 arma::vec Binomial::dev_resids(const arma::vec &y, const arma::vec &mu, const arma::vec &weight) noexcept {
   auto y_log_y = [](const arma::vec &y, const arma::vec &mu) {
-    arma::vec ret = y % log(y / mu);
-    ret.replace(arma::datum::nan, 0);
-	ret.replace(arma::datum::inf, 0);
+    arma::uvec idx = arma::find(y > 0);
+    arma::vec ret(y.n_elem, arma::fill::zeros);
+    ret(idx) = y(idx) % arma::log(y(idx) / mu(idx));
     return ret;
   };
   arma::vec ret = 2. * weight % (y_log_y(y, mu) + y_log_y((1. - y), (1. - mu)));
   return ret;
+}
+
+void Binomial::initialize(arma::vec &y, arma::vec &n, arma::vec &mu, arma::vec &weight) noexcept {
+  n = arma::vec(y.n_elem, arma::fill::ones);
+  mu = (weight % y + 0.5) / (weight + 1);
+}
+
+double Binomial::aic(arma::vec &y, arma::vec &n, arma::vec &mu, arma::vec &weight, double dev, double rank) noexcept {
+  // aic <- function(y, n, mu, wt, dev) {
+  //        m <- if(any(n > 1)) n else wt
+  //	-2*sum(ifelse(m > 0, (wt/m), 0)*
+  //               dbinom(round(m*y), round(m), mu, log=TRUE))
+  //    }
+  arma::vec m;
+  if(arma::any(n > 1)) {
+    m = n;
+  } else {
+    m = weight;
+  }
+  double aic_val = 0;
+  for(int i = 0; i < y.n_elem; i++) {
+    boost::math::binomial_distribution<> binom(boost::math::round(m(i)), mu(i));
+    aic_val += -2 * std::log(boost::math::pdf(binom, boost::math::round(m(i) * y(i))));
+  }
+  return aic_val + 2 * rank;
 }

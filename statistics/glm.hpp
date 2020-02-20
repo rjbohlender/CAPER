@@ -18,17 +18,31 @@ struct GLM {
   arma::vec beta_; // coefficients
   arma::vec mu_;   // fitted.values
   arma::vec eta_;  // linear.predictors
+  arma::vec var_; // variance
+  arma::vec weights_;
+  arma::vec n_;
   double dev_;
   arma::uvec indices_;
   bool success;
 
   GLM(arma::mat &X, arma::vec &Y, LinkT &link) {
     indices_ = arma::regspace<arma::uvec>(0, X.n_cols - 1);
+    weights_ = arma::vec(X.n_rows, arma::fill::ones);
+
+    if (X.n_cols == 0) {
+      eta_ = arma::vec(X.n_rows, arma::fill::zeros);
+      mu_ = link.linkinv(eta_);
+      dev_ = arma::accu(link.dev_resids(Y, mu_, arma::vec(X.n_rows, arma::fill::ones)));
+      return;
+    } else {
+      link.initialize(Y, n_, mu_, weights_);
+    }
+
 	try{
       // beta_ = gradient_descent(X, Y);
       // beta_ = irls_svdnewton(X, Y);
-      // beta_ = irls_qr(X, Y);
-      beta_ = irls(X, Y);
+      beta_ = irls_qr(X, Y);
+      // beta_ = irls_qr_R(X, Y);
 	} catch(std::exception &e) {
       std::cerr << "IRLS failed; Using gradient descent." << std::endl;
       //beta_ = gradient_descent(X, Y);
@@ -49,15 +63,15 @@ struct GLM {
     mu_ = link.linkinv(X.cols(indices_), beta_);
     eta_ = link.link(mu_);
 
-	success = !(mu_.has_nan() || eta_.has_nan());
+    success = !(mu_.has_nan() || eta_.has_nan());
   }
   // Algorithms for finding the optimum
   auto gradient_descent(arma::mat &X, arma::colvec &Y) -> arma::vec;
   auto irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec;
   auto irls_qr(arma::mat &X, arma::colvec &Y) -> arma::vec;
+  auto irls_qr_R(arma::mat &X, arma::colvec &Y) -> arma::vec;
   auto irls(arma::mat &X, arma::colvec &Y) -> arma::vec;
   auto svd_subset(arma::mat &X) -> arma::uvec;
-  auto pirls(arma::mat &X, arma::colvec &Y) -> arma::vec;
 };
 
 template<typename LinkT>
@@ -209,61 +223,146 @@ auto GLM<LinkT>::irls_qr(arma::mat &X, arma::colvec &Y) -> arma::vec {
   arma::uword m = X.n_rows;
   arma::uword n = X.n_cols;
 
-  // SVD
+  // A = QR
   arma::mat Q, R;
-
-  bool success = arma::qr_econ(Q, R, X);
+  bool qr_success = arma::qr_econ(Q, R, X);
+  if (!qr_success) {
+    qr_success = arma::qr(Q, R, X);
+    if (!qr_success) {
+      throw(std::runtime_error("Failed QR decomposition of X."));
+    }
+  }
 
   // Matrices and Vectors
-  arma::vec eta(m, arma::fill::randn);
-  arma::vec s(n, arma::fill::randn);
-  arma::vec weights(m, arma::fill::ones);
+  eta_ = link.link(mu_);
+  arma::vec s(n, arma::fill::zeros);
 
-  dev_ = 0;
-  double devold;
+  dev_ = arma::accu(link.dev_resids(Y, mu_, weights_));
+  double devold = dev_;
 
   do {
-	devold = dev_;
+	mu_ = link.linkinv(eta_);
+	var_ = link.variance(mu_);
+    if(!arma::is_finite(var_)) {
+      throw(std::runtime_error("Non-finite values in V(mu)."));
+    }
+	if(arma::any(var_ == 0)) {
+	  throw(std::runtime_error("0s in V(mu)."));
+	}
+	arma::vec mueta = link.mueta(eta_);
 
-	arma::vec g = link.linkinv(eta);
-	arma::vec varg = link.variance(g);
-	arma::vec gprime = link.mueta(eta);
+	arma::vec z = eta_ + (Y - mu_) / mueta;
+	arma::vec W = arma::sqrt(weights_ % arma::pow(mueta, 2) / var_);
 
-	arma::vec z(m);
-	arma::vec W(m);
-
-	z = eta + (Y - g) / gprime;
-	W = weights % arma::pow(gprime, 2) / varg;
-
-	arma::mat C;
+	arma::mat Lt;
 	arma::mat QWQ = Q.t() * (Q.each_col() % W);
-	success = arma::chol(C, QWQ);
+    bool chol_success = arma::chol(Lt, QWQ);
 	double jitter = 1e-9;
-	while(!success && jitter < 1.) {
+	while(!chol_success && jitter < 1.) {
 	  QWQ.diag() += jitter;
-	  success = arma::chol(C, QWQ);
+      chol_success = arma::chol(Lt, QWQ);
 	  jitter *= 10;
 	}
-	if (!success) {
-	  throw(std::runtime_error("Cholesky decomposition of UWU matrix failed."));
+	if (!chol_success) {
+	  throw(std::runtime_error("Cholesky decomposition of QWQ matrix failed."));
 	}
 
-	s = arma::solve(arma::trimatl(C.t()), Q.t() * (W % z));
-	s = arma::solve(arma::trimatu(C), s);
+	s = arma::solve(arma::trimatl(Lt.t()), Q.t() * (W % z));
+	s = arma::solve(arma::trimatu(Lt), s);
 
-	eta = Q * s;
+    eta_ = Q * s;
+	mu_ = link.linkinv(eta_);
 
 	iter++;
 
-	dev_ = arma::sum(link.dev_resids(Y, g, weights));
+	devold = dev_;
+	dev_ = arma::accu(link.dev_resids(Y, mu_, weights_));
 
   } while(iter < max_iter && std::abs(dev_ - devold) / (0.1 + std::abs(dev_)) > tol);
 
-  if(std::abs(dev_ - devold) / (0.1 + std::abs(dev_)) <= tol) {
+  if(std::abs(dev_ - devold) / (0.1 + std::abs(dev_)) > tol) {
 	std::cerr << "IRLS failed to converge." << std::endl;
   }
 
-  return arma::solve(R.t(), Q.t() * eta);
+  return arma::solve(R.t(), Q.t() * eta_);
+}
+
+template<typename LinkT>
+auto GLM<LinkT>::irls_qr_R(arma::mat &X, arma::colvec &Y) -> arma::vec {
+  const auto tol = 1e-8;
+  const auto max_iter = 25;
+  auto iter = 0;
+
+  arma::uword m = X.n_rows;
+  arma::uword n = X.n_cols;
+
+  // Matrices and Vectors
+  eta_ = link.link(mu_);
+  arma::vec s(n, arma::fill::zeros);
+
+  dev_ = arma::accu(link.dev_resids(Y, mu_, weights_));
+  double devold = dev_;
+
+  do {
+    mu_ = link.linkinv(eta_);
+    var_ = link.variance(mu_);
+    if(!arma::is_finite(var_)) {
+      throw(std::runtime_error("Non-finite values in V(mu)."));
+    }
+    if(arma::any(var_ == 0)) {
+      throw(std::runtime_error("0s in V(mu)."));
+    }
+    arma::vec mueta = link.mueta(eta_);
+    if(arma::any(mueta == 0)) {
+      throw(std::runtime_error("0s in mueta."));
+    }
+
+    arma::vec z = eta_ + (Y - mu_) / mueta;
+    arma::vec W = arma::sqrt(weights_ % arma::pow(mueta, 2) / var_);
+
+    // A = QR
+    arma::mat Q, R;
+    bool qr_success = arma::qr_econ(Q, R, X.each_col() % W);
+    if (!qr_success) {
+      qr_success = arma::qr(Q, R, X.each_col() % W);
+      if (!qr_success) {
+        throw(std::runtime_error("Failed QR decomposition of X."));
+      }
+    }
+
+    arma::vec zw = z % W;
+    beta_ = arma::solve(arma::trimatu(R), Q.t() * zw);
+
+    // arma::mat Lt;
+    // arma::mat QWQ = Q.t() * (Q.each_col() % W);
+    // bool chol_success = arma::chol(Lt, QWQ);
+    // double jitter = 1e-9;
+    // while(!chol_success && jitter < 1.) {
+    //   QWQ.diag() += jitter;
+    //   chol_success = arma::chol(Lt, QWQ);
+    //   jitter *= 10;
+    // }
+    // if (!chol_success) {
+    //   throw(std::runtime_error("Cholesky decomposition of QWQ matrix failed."));
+    // }
+
+    // s = arma::solve(arma::trimatl(Lt.t()), Q.t() * (W % z));
+    // s = arma::solve(arma::trimatu(Lt), s);
+
+    eta_ = X * beta_;
+    mu_ = link.linkinv(eta_);
+
+    devold = dev_;
+    dev_ = arma::accu(link.dev_resids(Y, mu_, weights_));
+
+    iter++;
+  } while(iter < max_iter && std::abs(dev_ - devold) / (0.1 + std::abs(dev_)) > tol);
+
+  if(std::abs(dev_ - devold) / (0.1 + std::abs(dev_)) > tol) {
+    std::cerr << "IRLS failed to converge." << std::endl;
+  }
+
+  return beta_;
 }
 
 template<typename LinkT>
@@ -274,6 +373,7 @@ auto GLM<LinkT>::irls(arma::mat &X, arma::colvec &Y) -> arma::vec {
 
   arma::vec x(X.n_cols, arma::fill::zeros);
   arma::vec xold;
+  double devold;
   for(iter = 0; iter < max_iter; iter++) {
     arma::vec eta = X * x;
     arma::vec g = link.linkinv(eta);
@@ -282,57 +382,27 @@ auto GLM<LinkT>::irls(arma::mat &X, arma::colvec &Y) -> arma::vec {
 	arma::vec W = arma::pow(gprime, 2) / link.variance(g);
 	xold = x;
 	x = arma::solve(X.t() * (X.each_col() % W), X.t() * (W % z));
-	if(arma::norm(x - xold) < tol) {
+	devold = dev_;
+    dev_ = arma::sum(link.dev_resids(Y, link.linkinv(X * x), arma::vec(X.n_rows, arma::fill::ones)));
+    if(!std::isfinite(dev_)) {
+      int i = 0;
+      while (!std::isfinite(dev_)) {
+        if(i >= max_iter) {
+          throw(std::runtime_error("Unable to correct step size for divergent IRLS step."));
+        }
+        x = (x + xold) / 2.;
+        eta = X * x;
+        g = link.linkinv(eta);
+        dev_ = arma::sum(link.dev_resids(Y, g, arma::vec(X.n_rows, arma::fill::ones)));
+        i++;
+      }
+    }
+	//if(arma::norm(x - xold) < tol) {
+    if(std::abs(dev_ - devold) / (0.1 + std::abs(dev_)) < tol) {
 	  break;
 	}
   }
-  dev_ = arma::sum(link.dev_resids(Y, link.linkinv(X * x), arma::vec(X.n_rows, arma::fill::ones)));
   return x;
-}
-
-template<typename LinkT>
-auto GLM<LinkT>::pirls(arma::mat &X, arma::colvec &Y) -> arma::vec {
-  // arma::vec b = arma::solve(X, Y, arma::solve_opts::fast); // Definitely wrong for my case. Not on the right scale.
-  double iter = 0;
-  double maximum = 1000;
-  arma::vec b = arma::vec(X.n_cols, arma::fill::zeros);
-  double m = X.n_rows;
-  double p = 2;
-  double eps = 1e-8;
-  double i = arma::norm(link.linkinv(X * b) - Y) / (16 * p); // 16 * p && p = 2
-  while(eps / (16 * p * (1 + eps)) * arma::norm(X * b - Y) < i && iter < maximum) {
-    arma::vec eta = X * b;
-    arma::vec g = link.linkinv(eta);
-    arma::vec gprime = link.mueta(eta);
-    arma::vec z = eta + (Y - g) / gprime;
-    arma::vec W = arma::pow(gprime, 2) / link.variance(g);
-    double s = 0.5 * std::pow(i, (p-2)/p) * std::pow(m, -(p - 2) / p);
-
-    arma::mat R1 = arma::diagmat(W) + s * arma::eye(W.n_elem, W.n_elem);
-    arma::vec bt1 = arma::solve(X.t() * R1 * X, X.t() * R1 * z);
-    arma::vec delta = b - bt1;
-
-    double L;
-    double U;
-    auto linesearch = [&](double alpha) -> double {
-      return arma::norm(link.linkinv(X * (b - alpha * delta)) - Y);
-    };
-    int digits = std::numeric_limits<double>::digits - 3;
-    boost::math::tools::eps_tolerance<double> tol(digits);
-    unsigned long maxiter = 1000;
-    std::tie(L, U) = boost::math::tools::bracket_and_solve_root(linesearch, 0., 2., true, tol, maxiter);
-
-    b = b - (L + U) / 2. * delta;
-
-    // auto progress = [&]() -> bool {
-    //   double lambda = 16. * p;
-    //   double k = std::pow(p, p) * arma::norm(X * delta) / (2 * p * p * arma::dot(delta, arma::diagmat(W) * X * delta));
-    //   double a0 = std::min(1. / (16. * lambda), 1. / std::pow(16. * lambda * k, 1 / (p - 1)));
-    // };
-    iter++;
-  }
-
-  return b;
 }
 
 #endif //PERMUTE_ASSOCIATE_GLM_HPP

@@ -13,49 +13,45 @@ VT_Res::VT_Res() {
 auto VT_Res::initialize(Gene &gene, arma::vec &pheno, const std::string &k) -> void{
   arma::sp_mat X(gene.get_matrix(k));
 
-  geno_[k] = arma::vec(X.n_elem, arma::fill::zeros);
+  arma::uword N = X.n_rows;
+  geno_[k] = arma::vec(X.n_rows * X.n_cols, arma::fill::zeros);
   for(arma::uword i = 0; i < X.n_cols; i++) {
-	arma::span span(i * X.n_rows, std::min((i + 1) * X.n_rows - 1, geno_[k].n_elem - 1));
+	arma::span span(i * N, std::min((i + 1) * N - 1, geno_[k].n_elem - 1));
 	geno_[k](span) = arma::vec(X.col(i));
   }
 
-  snpid_[k] = arma::uvec(X.n_elem);
+  snpid_[k] = arma::uvec(X.n_rows * X.n_cols);
   for(arma::uword i = 0; i < X.n_cols; i++) {
-	arma::span snp(i * X.n_rows, (i + 1) * X.n_rows - 1);
+	arma::span snp(i * N, (i + 1) * N - 1);
 	snpid_[k](snp).fill(i);
   }
 
   meanpheno_ = arma::mean(pheno);
-  double N = X.n_rows;
-
-  subset_[k] = arma::find(geno_[k] > 0);
-  geno_[k] = geno_[k](subset_[k]);
-  snpid_[k] = snpid_[k](subset_[k]);
 
   // Values that don't change in permutation
-  count_[k] = arma::vec(geno_[k].n_elem, arma::fill::zeros);
-  nCount_[k] = arma::vec(X.n_cols, arma::fill::zeros);
-  for(arma::uword i = 0; i < geno_[k].n_elem; i++) {
-	nCount_[k](snpid_[k](i))++;
+  count_[k] = arma::vec(X.n_elem, arma::fill::zeros);
+  for(arma::uword i = 0; i < X.n_cols; i++) {
+	// count_[k](i) = nCount_[k](snpid_[k](i));
+    arma::span span(i * N, std::min((i + 1) * N - 1, X.n_elem - 1));
+    double val = arma::accu(X.col(i));
+    count_[k](span).fill(val);
   }
-  for(arma::uword i = 0; i < geno_[k].n_elem; i++) {
-	count_[k](i) = nCount_[k](snpid_[k](i));
-  }
-  mCount_[k] = count_[k];
+  mCount_[k] = geno_[k];
   countg_[k] = arma::vec(count_[k].n_elem, arma::fill::zeros);
   arma::uword elem = 0;
+  arma::vec ucount = arma::unique(count_[k]);
   for(const auto &v : count_[k]) {
-	countg_[k](elem) = arma::accu(arma::unique(count_[k]) < v);
+	countg_[k](elem) = arma::accu(ucount < v);
 	elem++;
   }
-  countSquare_[k] = arma::pow(count_[k], 2);
+  countSquare_[k] = arma::pow(mCount_[k], 2);
   arma::vec f = (1 + count_[k]) / std::sqrt(2 + 2 * N);
   weight_[k] = 1 / arma::sqrt(f % (1. - f));
   countWeight_[k] = count_[k] % weight_[k];
 
   // For group
   double nx = countg_[k].n_elem;
-  group_[k] = arma::vec(nx, arma::fill::ones) + (countg_[k] - 1.0);
+  group_[k] = arma::vec(nx, arma::fill::ones) + (countg_[k] - 1);
   ugroup_[k] = arma::unique(group_[k]);
   double len = ugroup_[k].n_elem;
   arr_[k] = arma::vec(len, arma::fill::zeros);
@@ -65,7 +61,7 @@ auto VT_Res::initialize(Gene &gene, arma::vec &pheno, const std::string &k) -> v
 	whiches_[k].push_back(arma::find(group_[k] == i));
   }
 
-  count_[k] = sum_groups(count_[k], oneToLen_[k], k);
+  count_[k] = sum_groups(mCount_[k], oneToLen_[k], k);
   countSquare_[k] = sum_groups(countSquare_[k], oneToLen_[k], k);
 
   // Insensitive to permutation -- TODO move to VT class

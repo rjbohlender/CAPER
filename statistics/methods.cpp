@@ -386,10 +386,26 @@ double Methods::SKAT(Gene &gene,
     W.diag() = weights;
 
     arma::vec lambda;
-
     arma::eig_sym(lambda, W * Xmat.t() * P * Xmat * W);
 
-    return SKAT_pval(Q, lambda);
+    // Matching R
+    arma::mat X = Xmat * arma::diagmat(weights);
+    arma::vec Q_temp = (Z.t() * X).t();
+    double Q = arma::dot(Q_temp, Q_temp / 2);
+
+    // W.1 = t(Z) %*% (Z * pi_1) - (t(Z * pi_1) %*%X1)%*%solve(t(X1)%*%(X1 * pi_1))%*% (t(X1) %*% (Z * pi_1)) # t(Z) P0 Z
+    arma::vec pi_1 = fitted % (1 - fitted);
+    arma::mat W1 = X.t() * (arma::diagmat(pi_1) * X) - ((arma::diagmat(pi_1) * X).t() * X0) *
+        arma::inv(X0.t() * (arma::diagmat(pi_1) * X0)) * (X0.t() * (arma::diagmat(pi_1) * X));
+
+    // Get_Davies_PVal
+    arma::mat K(W1 / 2.);
+    arma::mat eigvecs;
+    arma::eig_sym(lambda, eigvecs, K);
+
+    PvalueLambda pvl(lambda, Q);
+
+    return pvl.p_val;
   }
 }
 
@@ -823,7 +839,6 @@ double Methods::VTfix(Gene &gene, const std::string &k, arma::vec &phenotypes) {
   if (!vt_obj_->is_initialized(k)) {
     vt_obj_->initialize(gene, pheno, k);
   }
-  pheno = pheno(vt_obj_->get_subset(k));
   arma::vec phenoCount = pheno % vt_obj_->get_mCount(k); // Changes under permutation
   arma::vec csPhenoCount =
       arma::cumsum(vt_obj_->sum_groups(phenoCount, vt_obj_->get_oneToLen(k), k)); // Changes under permutation
@@ -1431,10 +1446,9 @@ void Methods::check_weights(Gene &gene, const std::string &k, int a, int b, bool
     arma::vec maf = arma::mean(G, 0).t() / 2.;
 
     for (arma::uword i = 0; i < G.n_cols; i++) {
-      // weights(i) = std::pow(maf(i), a - 1) * std::pow(1 - maf(i), b - 1) / boost::math::beta(a, b);
-      weights(i) = std::pow(maf(i), a - 1) * std::pow(1 - maf(i), b - 1);
+      weights(i) = std::pow(maf(i), a - 1) * std::pow(1 - maf(i), b - 1) / boost::math::beta(a, b);
+      //weights(i) = std::pow(maf(i), a - 1) * std::pow(1 - maf(i), b - 1);
     }
-    weights = weights / arma::accu(weights) * G.n_cols;
     if (method_ == "VAAST") {
       weights.replace(0, std::sqrt(std::numeric_limits<double>::min()));
     }

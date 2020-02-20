@@ -159,12 +159,12 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
     std::string sample_id = splitter[1];
     ped_samples_.push_back(sample_id);
     if(ifile.empty()) {
-	  phenotypes.push_back(std::stod(splitter[6]));
+	  phenotypes.push_back(std::stod(splitter[5]) - 1);
 	}
     nsamples_++;
     if(linear_) {
       try {
-		sample_phen_map[sample_id] = std::stod(splitter[6]);
+		sample_phen_map[sample_id] = std::stod(splitter[5]);
       } catch(std::exception &e) {
         std::cerr << "Failed to convert quantitative phenotype in .ped file column 7.\n";
         throw(e);
@@ -172,7 +172,7 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
     } else {
       try {
 		double phen = std::stoi(splitter[5]);
-		sample_phen_map[sample_id] = (phen == 2) ? 1 : 0;
+		sample_phen_map[sample_id] = phen - 1;
       } catch(std::exception &e) {
         std::cerr << "Failed to convert binary phenotype in .ped file column 6.\n";
         throw(e);
@@ -339,10 +339,10 @@ void Covariates::sort_covariates(std::string &header) {
   RJBUtil::Splitter<std::string> splitter(header, " \t");
 
   std::map<std::string, arma::uword> header_map;
-  arma::uvec indices = arma::uvec(cov_samples_.size(), arma::fill::zeros);
 
   // Cov order
   if(!cov_samples_.empty()) {
+    arma::uvec indices = arma::uvec(cov_samples_.size(), arma::fill::zeros);
     for(auto it = cov_samples_.begin(); it != cov_samples_.end(); it++) {
       header_map[*it] = std::distance(cov_samples_.begin(), it);
     }
@@ -355,6 +355,7 @@ void Covariates::sort_covariates(std::string &header) {
     phenotypes_ = phenotypes_(indices);
     design_ = design_.rows(indices);
   } else {
+    arma::uvec indices = arma::uvec(ped_samples_.size(), arma::fill::zeros);
     for(auto it = ped_samples_.begin(); it != ped_samples_.end(); it++) {
       header_map[*it] = std::distance(ped_samples_.begin(), it);
     }
