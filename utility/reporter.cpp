@@ -470,15 +470,20 @@ auto Reporter::sync_write_simple(std::unordered_map<std::string, Result> &result
   recalculate_mgit(results);
 
   for(const auto &v : results) {
-	if (v.second.successes < tp.success_threshold) {
-	  if(std::find(unfinished_.begin(), unfinished_.end(), v.second.gene) == unfinished_.end())
-		unfinished_.push_back(v.second.gene);
-	}
+    if(!v.second.skippable) {
+      if (v.second.successes < tp.success_threshold) {
+        if(std::find(unfinished_.begin(), unfinished_.end(), v.second.gene) == unfinished_.end())
+          unfinished_.push_back(v.second.gene);
+      }
+    }
   }
   if(top_only) {
 	// Find the most significant result.
 	std::unique_ptr<Result> topres;
 	for(auto &r : results) {
+	  if(r.second.skippable) {
+	    continue;
+	  }
 	  if(topres == nullptr) {
 		topres = std::make_unique<Result>(r.second);
 	  } else {
@@ -487,18 +492,23 @@ auto Reporter::sync_write_simple(std::unordered_map<std::string, Result> &result
 		}
 	  }
 	}
-	simple_file_tmp_ << *topres;
+	if(topres != nullptr) {
+      simple_file_tmp_ << *topres;
+	}
     return;
   }
 
   if(testable_) {
     for(auto &tr : results) {
-      if(tr.second.testable) {
+      if(tr.second.testable && !tr.second.skippable) {
         simple_file_tmp_ << tr.second;
       }
     }
   } else {
 	for(auto &tr : results) {
+	  if(tr.second.skippable) {
+	    continue;
+	  }
 	  simple_file_tmp_ << tr.second;
 	}
   }

@@ -16,7 +16,7 @@
 
 struct Result {
   Result();
-  Result(const std::string &gene, const std::string &transcript);
+  Result(const std::string &gene, const std::string &transcript, bool skippable);
   Result(const Result &res) = default;
   Result(Result &&res) noexcept;
 
@@ -48,6 +48,7 @@ struct Result {
   double mgit_p;
   int mgit_successes;
   bool done;
+  bool skippable;
   std::vector<double> permuted;
   int rank;
   bool testable;

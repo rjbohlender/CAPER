@@ -21,6 +21,7 @@ Result::Result()
 	  empirical_midp(NAN),
 	  mgit_p(NAN),
 	  done(false),
+	  skippable(false),
 	  permuted(),
 	  testable(true),
 	  odds(NAN),
@@ -33,7 +34,7 @@ Result::Result()
 	  output_stats(false) {
 }
 
-Result::Result(const std::string &gene, const std::string &transcript)
+Result::Result(const std::string &gene, const std::string &transcript, bool skippable)
 	: gene(gene),
 	  transcript(transcript),
 	  successes(0),
@@ -45,6 +46,7 @@ Result::Result(const std::string &gene, const std::string &transcript)
 	  empirical_midp(NAN),
 	  mgit_p(NAN),
 	  done(false),
+	  skippable(skippable),
 	  permuted(),
 	  mgit_successes(0),
 	  testable(true),
@@ -70,6 +72,7 @@ Result::Result(Result &&res) noexcept
 	  empirical_midp(res.empirical_midp),
 	  mgit_p(res.mgit_p),
 	  done(res.done),
+	  skippable(res.skippable),
 	  permuted(std::move(res.permuted)),
 	  mgit_successes(res.mgit_successes),
 	  testable(res.testable),
@@ -94,6 +97,7 @@ Result &Result::operator=(Result &&rhs) noexcept {
   empirical_midp = rhs.empirical_midp;
   mgit_p = rhs.mgit_p;
   done = rhs.done;
+  skippable = rhs.skippable;
   permuted = std::move(rhs.permuted);
   mgit_successes = rhs.mgit_successes;
   testable = rhs.testable;

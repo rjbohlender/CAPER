@@ -14,7 +14,7 @@ CAESETask::CAESETask(Stage stage,
 					 std::vector<std::vector<int32_t>> &perm)
   : gene_(gene), cov_(cov), methods_(tp, cov), tp_(tp), permutations_(tp.total_permutations) {
   for (const auto &k : gene_.get_transcripts()) {
-	results[k] = Result(gene_.get_gene(), k);
+	results[k] = Result(gene_.get_gene(), k, !gene.is_polymorphic(k));
 	permute_[k] = Permute();
   }
 }
@@ -25,7 +25,7 @@ CAESETask::CAESETask(Stage stage,
 					 std::vector<std::vector<int32_t>> &perm)
 	: gene_(gene), cov_(cov), methods_(tp, cov), tp_(tp), permutations_(tp.total_permutations) {
   for (const auto &k : gene_.get_transcripts()) {
-	results[k] = Result(gene_.get_gene(), k);
+	results[k] = Result(gene_.get_gene(), k, !gene_.is_polymorphic(k));
 	permute_[k] = Permute();
   }
 }
