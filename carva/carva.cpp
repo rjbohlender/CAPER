@@ -139,7 +139,13 @@ int main(int argc, char **argv) {
          "Write permuted statistics to .simple file following default output.")
         ("permute_out",
          po::value(&permute_set),
-         "Output permutations to the given file.");
+         "Output permutations to the given file.")
+        ("min_minor_allele_count",
+         po::value<arma::uword>()->default_value(1),
+         "Minimum number of minor allele copies to test a gene.")
+        ("min_variant_count",
+         po::value<arma::uword>()->default_value(1),
+         "Minimum number of variants to test a gene.");
     vaast.add_options()
         ("group_size,g",
          po::value<arma::uword>()->default_value(0),
@@ -314,7 +320,9 @@ int main(int argc, char **argv) {
   tp.gene_list = gene_list;
   tp.nodetail = nodetail;
   tp.top_only = top_only;
-  tp.mac = vm.count("mac") > 0 ? vm["mac"].as<arma::uword>() : -1;
+  tp.mac = vm.count("mac") > 0 ? vm["mac"].as<arma::uword>() : std::numeric_limits<unsigned long long>::max();
+  tp.min_minor_allele_count = vm["min_minor_allele_count"].as<arma::uword>();
+  tp.min_variant_count = vm["min_variant_count"].as<arma::uword>();
   tp.pthresh = pthresh;
   tp.approximate = approximate;
   tp.maj_nbins = vm["maj_nbins"].as<arma::uword>();
@@ -339,8 +347,11 @@ int main(int argc, char **argv) {
       tp.method == "RVT1" || tp.method == "RVT2" || tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN"
           || tp.method == "VT" || tp.method == "SKATR" || tp.method == "SKATRO" || tp.method == "classicSKATO";
   tp.analytic = tp.method == "SKATO" || (tp.method == "SKATR" && tp.total_permutations == 0) || tp.method == "RVT1"
-      || tp.method == "RVT2" || tp.method == "CMC" || tp.method == "SKATRO" || (tp.method == "SKAT" && tp.total_permutations == 0)
-      || tp.method == "classicSKATO";
+     || tp.method == "RVT2" || (tp.method == "CMC" && tp.total_permutations == 0) || tp.method == "SKATRO" || (tp.method == "SKAT" && tp.total_permutations == 0)
+     || tp.method == "classicSKATO";
+  // tp.analytic = tp.method == "SKATO" || (tp.method == "SKATR" && tp.total_permutations == 0) || tp.method == "RVT1"
+  //     || tp.method == "RVT2" || tp.method == "CMC" || tp.method == "SKATRO" || (tp.method == "SKAT" && tp.total_permutations == 0)
+  //     || tp.method == "classicSKATO";
   if (tp.linear && !tp.quantitative) {
     std::cerr << "Quantitative trait analysis is only supported for the RVT1, RVT2, SKATO, SKAT, and BURDEN methods."
               << std::endl;

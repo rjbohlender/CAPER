@@ -45,9 +45,11 @@ auto CARVAOp::finish() -> void {
 
   // Report results for non-gene_list run
   if (!ta_.get_tp().gene_list) {
-	reporter_->sync_write_simple(ta_.results, ta_.get_tp(), ta_.get_tp().top_only);
-	reporter_->sync_write_detail(ta_.get_gene().get_detail(), ta_.get_gene().is_testable());
-	reporter_->sync_write_vaast(ta_, ta_.get_tp());
+    if(!ta_.get_gene().is_skippable()) {
+      reporter_->sync_write_simple(ta_.results, ta_.get_tp(), ta_.get_tp().top_only);
+      reporter_->sync_write_detail(ta_.get_gene().get_detail(), ta_.get_gene().is_testable());
+      reporter_->sync_write_vaast(ta_, ta_.get_tp());
+    }
   }
 }
 

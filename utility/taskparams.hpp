@@ -43,6 +43,8 @@ struct TaskParams {
   std::string ped_path;
   arma::uword mac;
   double maf;
+  double min_variant_count;
+  double min_minor_allele_count;
   bool covadj;
   bool cov_adjusted; // Methods that cannot be covariate adjusted permute a subset
 

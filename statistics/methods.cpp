@@ -196,57 +196,74 @@ double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &k, double maf) 
     Xnew.insert_cols(Xnew.n_cols, Xcollapse);
   }
 
-  // Rescale to -1, 0, 1
-  Xnew -= 1;
+  if (tp_.total_permutations < 0) {
+    // Rescale to -1, 0, 1
+    Xnew -= 1;
 
-  // Calculate two-sample Hotelling's T2 statistic
-  arma::mat Xx = Xnew.rows(arma::find(Y == 1));
-  arma::mat Yy = Xnew.rows(arma::find(Y == 0));
+    // Calculate two-sample Hotelling's T2 statistic
+    arma::mat Xx = Xnew.rows(arma::find(Y == 1));
+    arma::mat Yy = Xnew.rows(arma::find(Y == 0));
 
-  arma::rowvec Xxmean = arma::mean(Xx);
-  arma::rowvec Yymean = arma::mean(Yy);
+    arma::rowvec Xxmean = arma::mean(Xx);
+    arma::rowvec Yymean = arma::mean(Yy);
 
-  arma::mat COV = ((nA - 1.) * arma::cov(Xx) + (nU - 1.) * arma::cov(Yy)) / (N - 2.);
-  arma::mat INV;
-  if (!arma::inv_sympd(INV, COV)) {
-    arma::pinv(INV, COV);
-  }
-#if 0
-  if (!arma::inv_sympd(INV, COV)) {
-    // Inversion failed
-    std::cerr << "Inversion failed." << std::endl;
-    arma::vec eigvals;
-    arma::mat eigvecs;
-    arma::eig_sym(eigvals, eigvecs, COV);
+    return arma::norm(Xxmean - Yymean);
+  } else {
+    // Rescale to -1, 0, 1
+    Xnew -= 1;
 
-    eigvals = 1. / eigvals;
-    arma::mat eigvecs_inv = arma::inv(eigvecs);
+    // Calculate two-sample Hotelling's T2 statistic
+    arma::mat Xx = Xnew.rows(arma::find(Y == 1));
+    arma::mat Yy = Xnew.rows(arma::find(Y == 0));
 
-    INV = eigvecs * arma::diagmat(eigvals) * eigvecs_inv;
-  }
-#endif
-  arma::mat ret = (Xxmean - Yymean) * INV * (Xxmean - Yymean).t() * nA * nU / N;
-  auto p = static_cast<double>(Xxmean.n_elem);
-  double stat = arma::as_scalar(ret) * (nA + nU - 1 - p) / (p * (nA + nU - 2)); // F(N, nA + nU - 1 - N) distributed
-  if (stat < 0)
-    stat = 0;
-  boost::math::fisher_f fisher_f(p, nA + nU - 1 - p);
-  double pval;
-  try {
-    if (isnan(stat)) {
-      return 1.;
+    arma::rowvec Xxmean = arma::mean(Xx);
+    arma::rowvec Yymean = arma::mean(Yy);
+
+    arma::mat COV = ((nA - 1.) * arma::cov(Xx) + (nU - 1.) * arma::cov(Yy)) / (N - 2.);
+    arma::mat INV;
+    if (!arma::inv_sympd(INV, COV)) {
+      arma::pinv(INV, COV);
     }
-    pval = boost::math::cdf(boost::math::complement(fisher_f, stat));
-  } catch (boost::exception &e) {
-    std::cerr << "COV: " << COV;
-    std::cerr << "INV: " << INV;
-    std::cerr << "Xxmean: " << Xxmean;
-    std::cerr << "Yymean: " << Yymean;
-    std::cerr << "stat: " << stat << std::endl;
-    std::cerr << "ret: " << arma::as_scalar(ret);
-    throw;
+#if 0
+    if (!arma::inv_sympd(INV, COV)) {
+      // Inversion failed
+      std::cerr << "Inversion failed." << std::endl;
+      arma::vec eigvals;
+      arma::mat eigvecs;
+      arma::eig_sym(eigvals, eigvecs, COV);
+
+      eigvals = 1. / eigvals;
+      arma::mat eigvecs_inv = arma::inv(eigvecs);
+
+      INV = eigvecs * arma::diagmat(eigvals) * eigvecs_inv;
+    }
+#endif
+    arma::mat ret = (Xxmean - Yymean) * INV * (Xxmean - Yymean).t() * nA * nU / N;
+    auto p = static_cast<double>(Xxmean.n_elem);
+    double stat = arma::as_scalar(ret) * (nA + nU - 1 - p) / (p * (nA + nU - 2)); // F(N, nA + nU - 1 - N) distributed
+    if (stat < 0)
+      stat = 0;
+    if(tp_.total_permutations > 0) {
+      return stat;
+    }
+    boost::math::fisher_f fisher_f(p, nA + nU - 1 - p);
+    double pval;
+    try {
+      if (isnan(stat)) {
+        return 1.;
+      }
+      pval = boost::math::cdf(boost::math::complement(fisher_f, stat));
+    } catch (boost::exception &e) {
+      std::cerr << "COV: " << COV;
+      std::cerr << "INV: " << INV;
+      std::cerr << "Xxmean: " << Xxmean;
+      std::cerr << "Yymean: " << Yymean;
+      std::cerr << "stat: " << stat << std::endl;
+      std::cerr << "ret: " << arma::as_scalar(ret);
+      throw;
+    }
+    return pval;
   }
-  return pval;
 }
 
 double Methods::RVT1(Gene &gene, arma::vec &Y, arma::mat design, const std::string &k, bool linear) {
@@ -853,20 +870,23 @@ double Methods::WSS(Gene &gene, arma::vec &Y, const std::string &k) {
   double nU = Y.n_rows - nA; // Control count
   double n = Y.n_rows;
 
-  arma::vec mU = arma::sum(X.rows(arma::find(Y == 0)), 0).t();
-  arma::vec q = (mU + 1.) / (2. * nU + 2.);
+  arma::vec mU = arma::sum(X, 0).t();
+  arma::vec q = (mU + 1.) / (2. * n + 2.);
 
-  arma::mat w = arma::diagmat(1. / arma::sqrt(n * (arma::diagmat(q) * (1. - q))));
+  arma::vec w = 1. / arma::sqrt(q % (1. - q));
   w.replace(arma::datum::nan, 0);
 
-  arma::mat gamma_mat = X * w;
+  arma::mat gamma_mat = X * arma::diagmat(w);
   gamma_mat.replace(arma::datum::nan, 0);
 
   arma::vec gamma = arma::sum(gamma_mat, 1);
 
+#if 0
   arma::vec ranks = rank(gamma, "ascend");
 
-  return arma::sum(ranks(arma::find(Y > 0)));
+  return arma::sum(ranks % Y);
+#endif
+  return arma::accu(gamma % Y);
 }
 
 std::string Methods::str() {
@@ -1157,11 +1177,7 @@ double Methods::SKATRO(Gene &gene,
 
     arma::mat mk = (1 - rho_[i]) * R + c1 * RJ2 + c2;
 
-    arma::mat Utmp, Vtmp;
-    bool svd_success = arma::svd_econ(Utmp, lamk[i], Vtmp, mk);
-    if (!svd_success) {
-      lamk[i] = arma::svd(mk);
-    }
+    lamk[i] = arma::eig_sym(mk);
 
     double tol = 1e-20;
     if (lamk[i].max() <= tol) {
@@ -1180,7 +1196,8 @@ double Methods::SKATRO(Gene &gene,
   }
 
   arma::vec lam;
-  arma::svd(lam, R - (Rs * Rs.t()) / R1);
+  arma::eig_sym(lam, R - (Rs * Rs.t()) / R1);
+  lam = arma::abs(lam);
 
   if (lam.max() <= 0) {
     lam = arma::clamp(lam, 0, std::numeric_limits<double>::epsilon());
@@ -1192,7 +1209,7 @@ double Methods::SKATRO(Gene &gene,
   for (arma::uword i = 0; i < K - 1; i++) {
     tauk(i) = (1 - rho_[i]) * R2 / R1 + rho_[i] * R1;
   }
-  double vp2 = 4. * (R3 / R1 - (R2 * R2) / (R1 * R1));
+  double vp2 = 4. * (R3 / R1 - std::pow(R2, 2) / std::pow(R1, 2));
   double MuQ = arma::accu(lam);
   double VarQ = 2. * arma::accu(lam.t() * lam);
   double sd1 = std::sqrt(VarQ) / std::sqrt(VarQ + vp2);
@@ -1252,8 +1269,8 @@ double Methods::Liu_qval_mod(double pval, const arma::vec &lambda) {
   double s1 = c1[2] / std::pow(c1[1], 3. / 2.);
   double s2 = c1[3] / std::pow(c1[1], 2);
 
-  double beta1 = 2 * arma::datum::sqrt2 * s1;
-  double beta2 = 12 * s2;
+  // double beta1 = 2 * arma::datum::sqrt2 * s1;
+  // double beta2 = 12 * s2;
 
   double a, d, l;
   if (std::pow(s1, 2) > s2) {
@@ -1284,9 +1301,6 @@ double Methods::Saddlepoint(double Q, const arma::vec &lambda) {
   }
 
   double d = lambda.max();
-  if (true) {
-    return Liu_pval(Q, lambda);
-  }
   if (d == 0) {
     return Liu_pval(Q, lambda);
   }
@@ -1324,7 +1338,7 @@ double Methods::Saddlepoint(double Q, const arma::vec &lambda) {
   double lmin, lmax;
   if (arma::any(ulambda < 0)) {
     lmin = arma::max(1 / (2 * ulambda(arma::find(ulambda < 0)))) * 0.99999;
-  } else if (Q > sum(ulambda)) {
+  } else if (Q > arma::sum(ulambda)) {
     lmin = -0.01;
   } else {
     lmin = -static_cast<int>(ulambda.size()) / (2. * Q);
@@ -1361,10 +1375,10 @@ double Methods::Saddlepoint(double Q, const arma::vec &lambda) {
   double v = hatzeta * std::sqrt(kpprime0(hatzeta));
 
   if (std::abs(hatzeta) < 1e-4 || std::isnan(w) || std::isnan(v)) {
-    return Liu_pval(Q, lambda);
+    return Liu_pval(Q * d, lambda);
   } else {
     boost::math::normal norm(0, 1);
-    return boost::math::cdf(boost::math::complement(norm, w + log(v / w) / w));
+    return boost::math::cdf(boost::math::complement(norm, w + std::log(v / w) / w));
   }
 }
 
@@ -1392,9 +1406,9 @@ double Methods::Liu_pval(double Q, const arma::vec &lambda) {
     d = s1 * std::pow(a, 3) - std::pow(a, 2);
     l = std::pow(a, 2) - 2 * d;
   } else {
-    a = 1. / s2;
+    a = std::sqrt(1. / s2);
     d = 0;
-    l = 1. / std::pow(s1, 2);
+    l = 1. / s2;
   }
   double muX = l + d;
   double sigmaX = arma::datum::sqrt2 * a;

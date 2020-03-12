@@ -230,7 +230,7 @@ void Gene::parse(std::stringstream &ss, arma::vec &phenotypes) {
     }
     weights_[ts] = arma::vec(nvariants_[ts], arma::fill::zeros);
     // Check if any polymorphic. Mark transcripts skippable if all fixed.
-    if (arma::accu(sums) == 0 || nvariants_[ts] == 0) {
+    if (arma::accu(sums) < tp_.min_minor_allele_count || nvariants_[ts] < tp_.min_variant_count) {
       std::cerr << "gene: " << gene_ << " marked skippable." << std::endl;
       polymorphic_[ts] = false;
     } else {
