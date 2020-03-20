@@ -32,6 +32,7 @@
 #include "../link/binomial.hpp"
 #include "../link/gaussian.hpp"
 #include "glm.hpp"
+#include "fishertest.hpp"
 
 constexpr std::array<double, 8> Methods::rho_;
 
@@ -263,6 +264,35 @@ double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &k, double maf) 
       throw;
     }
     return pval;
+  }
+}
+
+double Methods::CMC1df(Gene &gene, arma::vec &Y, const std::string &k) {
+  // Runtime for MDA OV with just fisher test and 10000 perms = 6544.95
+  // Runtime for fast path with 10000 perms = 267.874
+  if(tp_.total_permutations > 0) {
+    arma::vec X(arma::sum(gene.get_matrix(k), 1));
+    X(arma::find(X > 0)).ones();
+
+    arma::uword ncase = arma::accu(Y);
+    arma::uword ncont = arma::accu(1 - Y);
+
+    double case_alt = arma::accu(X % Y);
+    double cont_alt = arma::accu(X % (1 - Y));
+    double case_ref = ncase - case_alt;
+    double cont_ref = ncont - cont_alt;
+
+    if (case_alt == 0 || cont_alt == 0 || case_ref == 0 || cont_ref == 0) {
+      case_alt += 0.5;
+      cont_alt += 0.5;
+      case_ref += 0.5;
+      cont_ref += 0.5;
+    }
+
+    return case_alt * cont_ref / (cont_alt * case_ref);
+  } else {
+    FisherTest fisherTest(gene, Y, k);
+    return fisherTest.get_pval();
   }
 }
 

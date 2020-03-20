@@ -580,6 +580,8 @@ auto CARVAOp::call_method(Methods &method,
 	return method.CALPHA(gene, phenotypes, k);
   } else if (tp.method == "CMC") {
 	return method.CMC(gene, phenotypes, k, tp.cmcmaf);
+  } else if (tp.method == "CMC1df") {
+    return method.CMC1df(gene, phenotypes, k);
   } else if (tp.method == "RVT1") {
 	return method.RVT1(gene, phenotypes, cov.get_covariate_matrix(), k, tp.linear);
   } else if (tp.method == "RVT2") {

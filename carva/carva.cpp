@@ -223,6 +223,7 @@ int main(int argc, char **argv) {
       "BURDEN",
       "CALPHA",
       "CMC",
+      "CMC1df",
       "VT",
       "WSS",
       "RVT1",
@@ -247,7 +248,7 @@ int main(int argc, char **argv) {
   if (method_choices.count(vm["method"].as<std::string>()) == 0) {
     // Method not among choices
     std::cerr
-        << "Method must be one of {BURDEN, CALPHA, CMC, RVT1, RVT2, SKAT, SKATR, SKATO, SKATRO, VAAST, VT, WSS}.\n";
+        << "Method must be one of {BURDEN, CALPHA, CMC, CMC1df, RVT1, RVT2, SKAT, SKATR, SKATO, SKATRO, VAAST, VT, WSS}.\n";
     std::cerr << visible << "\n";
     return 1;
   }
@@ -348,7 +349,7 @@ int main(int argc, char **argv) {
           || tp.method == "VT" || tp.method == "SKATR" || tp.method == "SKATRO" || tp.method == "classicSKATO";
   tp.analytic = tp.method == "SKATO" || (tp.method == "SKATR" && tp.total_permutations == 0) || tp.method == "RVT1"
      || tp.method == "RVT2" || (tp.method == "CMC" && tp.total_permutations == 0) || tp.method == "SKATRO" || (tp.method == "SKAT" && tp.total_permutations == 0)
-     || tp.method == "classicSKATO";
+     || tp.method == "classicSKATO" || tp.method == "CMC1df";
   // tp.analytic = tp.method == "SKATO" || (tp.method == "SKATR" && tp.total_permutations == 0) || tp.method == "RVT1"
   //     || tp.method == "RVT2" || tp.method == "CMC" || tp.method == "SKATRO" || (tp.method == "SKAT" && tp.total_permutations == 0)
   //     || tp.method == "classicSKATO";

@@ -14,10 +14,10 @@ FisherTest::FisherTest(Gene &gene, arma::vec &Y, const std::string &ts)
   double ncase = arma::accu(Y);
   double ncont = arma::accu(1 - Y);
 
-  case_alt = arma::accu(X.t() * Y > 0);
-  case_ref = 2 * ncase - case_alt;
-  cont_alt = arma::accu(X.t() * (1 - Y) > 0);
-  cont_ref = 2 * ncont - cont_alt;
+  case_alt = arma::accu(arma::vec(arma::sum(X, 1) % Y) > 0);
+  cont_alt = arma::accu(arma::vec(arma::sum(X, 1) %  (1 - Y)) > 0);
+  case_ref = ncase - case_alt;
+  cont_ref = ncont - cont_alt;
 
   // Following R's implementation
   // 2x2 table
