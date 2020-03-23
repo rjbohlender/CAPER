@@ -63,6 +63,9 @@ FisherTest::FisherTest(Gene &gene, arma::vec &Y, const std::string &ts)
   auto pnhyper = [&](double q, double ncp = 1, bool upper_tail = false) -> double {
 	if (ncp == 1) {
 	  if (upper_tail) {
+	    if(x == 0) {
+	      return 1;
+	    }
 		return (boost::math::cdf(boost::math::complement(hyper, x - 1)));
 	  } else {
 		return (boost::math::cdf(hyper, x));
@@ -87,16 +90,17 @@ FisherTest::FisherTest(Gene &gene, arma::vec &Y, const std::string &ts)
 	}
   };
 
-  // Calculate P-value
-  if(or_ == 0) {
-	p_ = static_cast<double>(x == lo);
-  } else if(!std::isfinite(or_)) {
-	p_ = static_cast<double>(x == hi);
-  } else {
-    double relErr = 1 + 1e-7;
-    arma::vec d = dnhyper(or_);
-    p_ = arma::sum(d(arma::find(d <= d(x - lo) * relErr)));
-  }
+  // Calculate P-value Two-Sided
+  // if(or_ == 0) {
+  // 	p_ = static_cast<double>(x == lo);
+  // } else if(!std::isfinite(or_)) {
+  // 	p_ = static_cast<double>(x == hi);
+  // } else {
+  //   double relErr = 1 + 1e-7;
+  //   arma::vec d = dnhyper(or_);
+  //   p_ = arma::sum(d(arma::find(d <= d(x - lo) * relErr)));
+  // }
+  p_ = pnhyper(x, or_, true);
 
   // MLE of the odds ratio
   auto mle = [&](double x) -> double {
