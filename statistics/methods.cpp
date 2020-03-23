@@ -296,14 +296,17 @@ double Methods::CMC1df(Gene &gene, arma::vec &Y, const std::string &k) {
   }
 }
 
-double Methods::RVT1(Gene &gene, arma::vec &Y, arma::mat design, const std::string &k, bool linear) {
+double Methods::RVT1(Gene &gene, arma::vec &Y, arma::mat design, arma::vec &initial_beta, const std::string &k, bool linear) {
+  // Runtime 100 perms naive initialization on macbook pro, ovarian data -- 2421.09
+  // Runtime 100 perms prior initialization on macbook pro, ovarian data -- 1863.08 -- Poor initialization in permutation
+  // Runtime 100 perms single prior initialization on macbook pro, ovarian data -- 1757.13
   if (linear) {
     // Quantitative trait
     arma::sp_mat X = gene.get_matrix(k).t();
     Gaussian link("identity");
     GLM<Gaussian> fit1(design, Y, link);
     arma::mat d2 = arma::join_horiz(design, arma::rowvec(arma::sum(X) / X.n_rows).t());
-    GLM<Gaussian> fit2(d2, Y, link);
+    GLM<Gaussian> fit2(d2, Y, link, fit1.beta_);
 
     double n = Y.n_elem;
 
@@ -320,7 +323,7 @@ double Methods::RVT1(Gene &gene, arma::vec &Y, arma::mat design, const std::stri
     Binomial link("logit");
     GLM<Binomial> fit1(design, Y, link);
     arma::mat d2 = arma::join_horiz(design, arma::rowvec(arma::sum(X) / X.n_rows).t());
-    GLM<Binomial> fit2(d2, Y, link);
+    GLM<Binomial> fit2(d2, Y, link, fit1.beta_);
 
     boost::math::chi_squared chisq(1);
     double stat = fit1.dev_ - fit2.dev_;
@@ -331,7 +334,12 @@ double Methods::RVT1(Gene &gene, arma::vec &Y, arma::mat design, const std::stri
   }
 }
 
-double Methods::RVT2(Gene &gene, arma::vec &Y, arma::mat design, const std::string &k, bool linear) {
+double Methods::RVT2(Gene &gene,
+                     arma::vec &Y,
+                     arma::mat design,
+                     arma::vec &initial_beta,
+                     const std::string &k,
+                     bool linear) {
   if (linear) {
     // Quantitative trait
     arma::sp_mat X = gene.get_matrix(k).t();
@@ -339,7 +347,7 @@ double Methods::RVT2(Gene &gene, arma::vec &Y, arma::mat design, const std::stri
     GLM<Gaussian> fit1(design, Y, link);
     arma::rowvec r = arma::conv_to<arma::rowvec>::from(arma::rowvec(arma::sum(X)) > 0);
     arma::mat d2 = arma::join_horiz(design, r.t());
-    GLM<Gaussian> fit2(d2, Y, link);
+    GLM<Gaussian> fit2(d2, Y, link, fit1.beta_);
 
     double n = Y.n_elem;
 
@@ -356,7 +364,7 @@ double Methods::RVT2(Gene &gene, arma::vec &Y, arma::mat design, const std::stri
     GLM<Binomial> fit1(design, Y, link);
     arma::rowvec r = arma::conv_to<arma::rowvec>::from(arma::rowvec(arma::sum(X)) > 0);
     arma::mat d2 = arma::join_horiz(design, r.t());
-    GLM<Binomial> fit2(d2, Y, link);
+    GLM<Binomial> fit2(d2, Y, link, fit1.beta_);
 
     boost::math::chi_squared chisq(1);
     double stat = fit1.dev_ - fit2.dev_;

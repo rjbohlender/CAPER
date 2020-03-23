@@ -583,9 +583,9 @@ auto CARVAOp::call_method(Methods &method,
   } else if (tp.method == "CMC1df") {
     return method.CMC1df(gene, phenotypes, k);
   } else if (tp.method == "RVT1") {
-	return method.RVT1(gene, phenotypes, cov.get_covariate_matrix(), k, tp.linear);
+	return method.RVT1(gene, phenotypes, cov.get_covariate_matrix(), cov.get_coef(), k, tp.linear);
   } else if (tp.method == "RVT2") {
-	return method.RVT2(gene, phenotypes, cov.get_covariate_matrix(), k, tp.linear);
+	return method.RVT2(gene, phenotypes, cov.get_covariate_matrix(), cov.get_coef(), k, tp.linear);
   } else if (tp.method == "SKATR") {
 	return method.SKATR(gene, k, phenotypes, tp.a, tp.b, detail, tp.linear, tp.total_permutations > 0, true);
   } else if (tp.method == "SKATRO") {

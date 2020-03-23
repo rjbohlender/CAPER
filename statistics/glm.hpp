@@ -36,6 +36,8 @@ struct GLM {
       return;
     } else {
       link.initialize(Y, n_, mu_, weights_);
+      eta_ = link.linkinv(mu_);
+      dev_ = arma::accu(link.dev_resids(Y, mu_, arma::vec(X.n_rows, arma::fill::ones)));
     }
 
 	try{
@@ -58,6 +60,53 @@ struct GLM {
 		mu_.fill(arma::datum::nan);
 		eta_.fill(arma::datum::nan);
 	  }
+    }
+
+    mu_ = link.linkinv(X.cols(indices_), beta_);
+    eta_ = link.link(mu_);
+
+    success = !(mu_.has_nan() || eta_.has_nan());
+  }
+
+  GLM(arma::mat &X, arma::vec &Y, LinkT &link, arma::vec initial_beta) {
+    indices_ = arma::regspace<arma::uvec>(0, X.n_cols - 1);
+    weights_ = arma::vec(X.n_rows, arma::fill::ones);
+
+    if (initial_beta.n_rows < X.n_cols) {
+      initial_beta.insert_rows(initial_beta.n_rows, X.n_cols - initial_beta.n_rows); // Zeroed by default
+    }
+
+    if (X.n_cols == 0) {
+      eta_ = arma::vec(X.n_rows, arma::fill::zeros);
+      mu_ = link.linkinv(eta_);
+      dev_ = arma::accu(link.dev_resids(Y, mu_, arma::vec(X.n_rows, arma::fill::ones)));
+      return;
+    } else {
+      mu_ = link.linkinv(X, initial_beta);
+      eta_ = link.link(mu_);
+      dev_ = arma::accu(link.dev_resids(Y, mu_, arma::vec(X.n_rows, arma::fill::ones)));
+    }
+
+    try{
+      // beta_ = gradient_descent(X, Y);
+      // beta_ = irls_svdnewton(X, Y);
+      beta_ = irls_qr(X, Y);
+      // beta_ = irls_qr_R(X, Y);
+    } catch(std::exception &e) {
+      std::cerr << "IRLS failed; Using gradient descent." << std::endl;
+      //beta_ = gradient_descent(X, Y);
+      //std::cerr << e.what();
+      try {
+        beta_ = gradient_descent(X, Y);
+        std::cerr << beta_;
+      } catch(std::exception &e) {
+        beta_ = arma::vec(X.n_cols);
+        mu_ = arma::vec(X.n_rows);
+        eta_ = arma::vec(X.n_rows);
+        beta_.fill(arma::datum::nan);
+        mu_.fill(arma::datum::nan);
+        eta_.fill(arma::datum::nan);
+      }
     }
 
     mu_ = link.linkinv(X.cols(indices_), beta_);
@@ -138,7 +187,6 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
   arma::vec diff = s - s_old;
 
   do {
-
     arma::vec g = link.linkinv(eta(good));
     arma::vec varg = link.variance(g);
     arma::vec gprime = link.mueta(eta(good));
@@ -234,11 +282,8 @@ auto GLM<LinkT>::irls_qr(arma::mat &X, arma::colvec &Y) -> arma::vec {
   }
 
   // Matrices and Vectors
-  eta_ = link.link(mu_);
   arma::vec s(n, arma::fill::zeros);
-
-  dev_ = arma::accu(link.dev_resids(Y, mu_, weights_));
-  double devold = dev_;
+  double devold;
 
   do {
 	mu_ = link.linkinv(eta_);
@@ -255,7 +300,7 @@ auto GLM<LinkT>::irls_qr(arma::mat &X, arma::colvec &Y) -> arma::vec {
 	arma::vec W = arma::sqrt(weights_ % arma::pow(mueta, 2) / var_);
 
 	arma::mat Lt;
-	arma::mat QWQ = Q.t() * (Q.each_col() % W);
+	arma::mat QWQ = Q.t() * arma::diagmat(W) * Q;
     bool chol_success = arma::chol(Lt, QWQ);
 	double jitter = 1e-9;
 	while(!chol_success && jitter < 1.) {

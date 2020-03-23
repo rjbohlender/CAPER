@@ -44,7 +44,7 @@ public:
   arma::vec &get_fitted();
   arma::vec get_residuals() const;
   arma::vec &get_mean();
-  arma::rowvec &get_coef();
+  arma::vec & get_coef();
 
   // Permute
   void refit_permuted();
@@ -70,13 +70,13 @@ private:
   arma::vec fitted_;
   arma::vec mean_; // Mean of MFNCH
   arma::vec eta_;
-  arma::rowvec coef_;
+  arma::vec coef_;
 
   // Permutation
   arma::vec p_odds_;
   arma::vec p_fitted_;
   arma::vec p_eta_;
-  arma::rowvec p_coef_;
+  arma::vec p_coef_;
 
   bool sorted_;
   bool linear_;

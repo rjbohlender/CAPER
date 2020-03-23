@@ -300,7 +300,7 @@ void Covariates::fit_null() {
     GLM<Gaussian> fit(design_, phenotypes_, link);
     fitted_ = fit.mu_;
     eta_ = fit.eta_;
-    coef_ = fit.beta_.t();
+    coef_ = fit.beta_;
     // From Moser and Coombs (2004) -- Get Logistic Regression params without dichotomizing
     double lambda = arma::datum::pi / std::sqrt(3);
     Binomial alt_link("logit");
@@ -318,7 +318,7 @@ void Covariates::fit_null() {
 	odds_ = fit.mu_ / (1. - fit.mu_);
 	fitted_ = fit.mu_;
 	eta_ = fit.eta_;
-	coef_ = fit.beta_.t();
+	coef_ = fit.beta_;
 
 	// Initially, permuted values are equal to the first fit.
 	p_odds_ = odds_;
@@ -378,7 +378,7 @@ bool Covariates::is_sorted() {
   return sorted_;
 }
 
-arma::rowvec &Covariates::get_coef() {
+arma::vec & Covariates::get_coef() {
   return p_coef_;
 }
 
