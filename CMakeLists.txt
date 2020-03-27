@@ -78,10 +78,6 @@ set(PROJECT_SUPPORT_FILES
     third_party/QFC/qfc2.cpp
     third_party/QFC/qfc2.hpp
     carva/carvatask.cpp
-    statistics/skat.cpp
-    statistics/skat.hpp
-    statistics/skat_adjust.cpp
-    statistics/skat_adjust.hpp
     data/covariates.cpp
     statistics/vaast.cpp
     statistics/vaast.hpp
@@ -101,8 +97,8 @@ set(PROJECT_SUPPORT_FILES
     statistics/vt.hpp
     data/calccasm.cpp
     data/calccasm.hpp
-    statistics/skatr.cpp
-    statistics/skatr.hpp
+        statistics/skat.cpp
+        statistics/skat.hpp
     power/powerop.cpp
     power/powerop.hpp
     utility/taskqueue2.hpp
@@ -115,7 +111,9 @@ set(PROJECT_SUPPORT_FILES
     caese/caesetask.cpp
     caese/caesetask.hpp
     statistics/fishertest.cpp
-    statistics/fishertest.hpp utility/jointhreads.hpp utility/indexsort.hpp)
+    statistics/fishertest.hpp
+    utility/jointhreads.hpp
+    utility/indexsort.hpp)
 
 
 include_directories("${CMAKE_CURRENT_LIST_DIR}/third_party")

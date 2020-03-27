@@ -179,15 +179,15 @@ arma::vec VariantGroup::log_likelihood(arma::vec &freq, arma::vec &allele0, arma
   return allele1 % arma::log(clamped) + allele0 % arma::log(1.0 - clamped);
 }
 
-VAAST::VAAST(Gene &gene,
-			 arma::vec &Y,
-			 const std::string &k,
-			 bool score_only_minor,
-			 bool score_only_alternative,
-			 double site_penalty,
-			 arma::uword group_threshold,
-			 bool detail,
-			 bool biallelic)
+VAASTLogic::VAASTLogic(Gene &gene,
+                       arma::vec &Y,
+                       const std::string &k,
+                       bool score_only_minor,
+                       bool score_only_alternative,
+                       double site_penalty,
+                       arma::uword group_threshold,
+                       bool detail,
+                       bool biallelic)
 	: som(score_only_minor), soa(score_only_alternative), detail(detail), biallelic(biallelic), k(k), group_threshold(group_threshold),
 	  site_penalty(site_penalty),
 	  X(gene.get_matrix(k)), Y(Y) {
@@ -241,17 +241,17 @@ VAAST::VAAST(Gene &gene,
   }
 }
 
-VAAST::VAAST(arma::sp_mat X,
-			 arma::vec &Y,
-			 arma::vec &weights,
-			 std::vector<std::string> &positions_,
-			 const std::string &k,
-			 bool score_only_minor,
-			 bool score_only_alternative,
-			 bool biallelic,
-			 arma::uword group_threshold,
-			 double site_penalty)
-	: som(score_only_minor), soa(score_only_alternative), detail(true), biallelic(biallelic), k(k), group_threshold(group_threshold),
+VAASTLogic::VAASTLogic(arma::sp_mat X,
+                       arma::vec &Y,
+                       arma::vec &weights,
+                       std::vector<std::string> &positions_,
+                       std::string k,
+                       bool score_only_minor,
+                       bool score_only_alternative,
+                       bool biallelic,
+                       arma::uword group_threshold,
+                       double site_penalty)
+	: som(score_only_minor), soa(score_only_alternative), detail(true), biallelic(biallelic), k(std::move(k)), group_threshold(group_threshold),
 	  site_penalty(site_penalty),
 	  X(std::move(X)), Y(Y) {
 
@@ -294,7 +294,7 @@ VAAST::VAAST(arma::sp_mat X,
   }
 }
 
-double VAAST::Score() {
+double VAASTLogic::Score() {
   double val = 0;
   for (const auto &g : groups) {
     val += arma::accu(g.variant_scores);
@@ -302,7 +302,7 @@ double VAAST::Score() {
   return val;
 }
 
-double VAAST::Score(const arma::sp_mat &X, const arma::vec &Y, const arma::vec &w) {
+double VAASTLogic::Score(const arma::sp_mat &X, const arma::vec &Y, const arma::vec &w) {
   // Get sample sizes
   n_case = static_cast<arma::uword>(arma::sum(Y));
   n_control = static_cast<arma::uword>(arma::sum(1 - Y));
@@ -357,7 +357,7 @@ double VAAST::Score(const arma::sp_mat &X, const arma::vec &Y, const arma::vec &
   return (val >= 0) ? val : 0; // Mask all negative values
 }
 
-arma::vec VAAST::LRT() {
+arma::vec VAASTLogic::LRT() {
   arma::vec alt_control_freq = control_allele1 / (control_allele0 + control_allele1);
   arma::vec alt_case_freq = case_allele1 / (case_allele0 + case_allele1);
 
@@ -372,14 +372,14 @@ arma::vec VAAST::LRT() {
   return alt_log_lh - null_log_lh;
 }
 
-arma::vec VAAST::log_likelihood(arma::vec &freq, arma::vec &allele0, arma::vec &allele1) {
+arma::vec VAASTLogic::log_likelihood(arma::vec &freq, arma::vec &allele0, arma::vec &allele1) {
   // Prevent numerical issues
   arma::vec clamped = arma::clamp(freq, 1e-9, 1.0 - 1e-9);
 
   return allele1 % arma::log(clamped) + allele0 % arma::log(1.0 - clamped);
 }
 
-void VAAST::check_weights(Gene &gene) {
+void VAASTLogic::check_weights(Gene &gene) {
   if (gene.is_weighted(k)) {
 	weights = gene.get_weights(k);
 	return;
@@ -389,10 +389,10 @@ void VAAST::check_weights(Gene &gene) {
   gene.set_weights(k, weights);
 }
 
-void VAAST::variant_grouping(const arma::sp_mat &X,
-							 const arma::vec &Y,
-							 const arma::vec &w,
-							 std::vector<std::string> &positions) {
+void VAASTLogic::variant_grouping(const arma::sp_mat &X,
+                                  const arma::vec &Y,
+                                  const arma::vec &w,
+                                  std::vector<std::string> &positions) {
   groups.clear();
   if (group_threshold == 0 || X.n_cols == 1) {
 	groups.emplace_back(VariantGroup(X, Y, w, 0, site_penalty, som, soa));
@@ -524,7 +524,7 @@ void VAAST::variant_grouping(const arma::sp_mat &X,
 //! \param x uvec with elements to keep
 //! \param y uvec with elements to exclude
 //! \return copy of uvec excluding any element in y
-arma::uvec VAAST::setdiff(arma::uvec x, arma::uvec y) {
+arma::uvec VAASTLogic::setdiff(arma::uvec x, arma::uvec y) {
   for (size_t j = 0; j < y.n_elem; j++) {
 	arma::uvec q1 = arma::find(x == y[j]);
 	if (!q1.empty()) {
@@ -535,7 +535,7 @@ arma::uvec VAAST::setdiff(arma::uvec x, arma::uvec y) {
   return x;
 }
 
-void VAAST::variant_bitmask(const arma::sp_mat &X, const arma::vec &Y, const arma::vec &w) {
+void VAASTLogic::variant_bitmask(const arma::sp_mat &X, const arma::vec &Y, const arma::vec &w) {
   // mask sites where major allele is more common in cases
   // We can simplify because the 1 is always the minor allele
   // arma::uvec tmpmask = vaast_site_scores <= 0;

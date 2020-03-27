@@ -50,7 +50,7 @@ private:
   arma::vec log_likelihood(arma::vec &freq, arma::vec &allele0, arma::vec &allele1);
 };
 
-struct VAAST {
+struct VAASTLogic {
   const bool som;      // score_only_minor
   const bool soa;      // score_only_alternative
   const bool detail;   // Add detailed output
@@ -81,25 +81,25 @@ struct VAAST {
   double score;
 
   // Constructors
-  VAAST(Gene &gene,
-		arma::vec &Y,
-		const std::string &k,
-		bool score_only_minor,
-		bool score_only_alternative,
-		double site_penalty,
-		arma::uword group_threshold,
-		bool detail,
-		bool biallelic);
-  VAAST(arma::sp_mat X,
-		arma::vec &Y,
-		arma::vec &weights,
-		std::vector<std::string> &positions_,
-		const std::string &k,
-		bool score_only_minor,
-		bool score_only_alternative,
-		bool biallelic,
-		arma::uword group_threshold,
-		double site_penalty);
+  VAASTLogic(Gene &gene,
+             arma::vec &Y,
+             const std::string &k,
+             bool score_only_minor,
+             bool score_only_alternative,
+             double site_penalty,
+             arma::uword group_threshold,
+             bool detail,
+             bool biallelic);
+  VAASTLogic(arma::sp_mat X,
+             arma::vec &Y,
+             arma::vec &weights,
+             std::vector<std::string> &positions_,
+             std::string k,
+             bool score_only_minor,
+             bool score_only_alternative,
+             bool biallelic,
+             arma::uword group_threshold,
+             double site_penalty);
 
   void check_weights(Gene &gene);
   double Score();

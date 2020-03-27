@@ -1,437 +1,322 @@
 //
-// Created by Bohlender,Ryan James on 8/22/18.
+// Created by Bohlender,Ryan James on 9/22/18.
 //
 
 #include "skat.hpp"
+
 #include "../third_party/QFC/qfc2.hpp"
 
-// Boost Math
-#include <boost/math/distributions/non_central_chi_squared.hpp>
+#include <boost/math/distributions/normal.hpp>
 #include <boost/math/distributions/chi_squared.hpp>
+#include <boost/math/distributions/non_central_chi_squared.hpp>
 
-// Boost Integration
-#include <boost/math/quadrature/trapezoidal.hpp>
-#include <boost/math/quadrature/gauss_kronrod.hpp>
-#include <boost/math/quadrature/gauss.hpp>
-#include <boost/math/quadrature/tanh_sinh.hpp>
+#include <boost/math/tools/roots.hpp>
 
-constexpr double SKATParam::rho_[];
 
-SKAT_Optimal_GetQ::SKAT_Optimal_GetQ(arma::sp_mat &Z,
-									 arma::vec &res,
-									 arma::vec &rall,
-									 arma::mat &res_out,
-									 int nResampling) {
-  arma::uword nr = rall.n_rows;
-  arma::uword pm = Z.n_cols;
-
-  Q_r.zeros(nr);
-
-  arma::rowvec temp = res.t() * Z;
-  for (arma::uword i = 0; i < nr; i++) {
-	double r_corr = rall(i);
-	arma::mat Q1 = (1 - r_corr) * arma::sum(arma::pow(temp, 2), 1);
-	arma::mat Q2 = r_corr * std::pow(pm, 2) * arma::pow(arma::mean(temp, 1), 2);
-	Q_r(i) = Q1(0, 0) + Q2(0, 0);
+double SKAT_pval(double Q, const arma::vec &lambda) {
+  if (std::isnan(Q)) {
+    return 1;
   }
-  Q_r = Q_r / 2.;
 
-  // For moment adjustment
-  if (nResampling > 0) {
-	Q_sim = arma::mat(nResampling, nr);
+  std::vector<double> lb1 = arma::conv_to<std::vector<double>>::from(lambda);
+  std::vector<double> nc1(lb1.size(), 0);
+  std::vector<int> df(lb1.size(), 1);
+  double sigma = 0;
+  int lim1 = 1000000;
+  double acc = 1e-9;
 
-	for (arma::uword i = 0; i < nResampling; i++) {
-	  if (res_out.size() > 0) {
-		temp = res_out.col(i).t() * Z;
-	  } else {
-		temp = arma::shuffle(res).t() * Z;
-	  }
-	  for (arma::uword j = 0; j < nr; j++) {
-		double r_corr = rall(j);
-		arma::mat Q1 = (1 - r_corr) * arma::sum(arma::pow(temp, 2), 1);
-		arma::mat Q2 = r_corr * std::pow(pm, 2) * arma::pow(arma::mean(temp, 1), 2);
-		Q_sim(i, j) = Q1(0, 0) + Q2(0, 0);
-	  }
-	}
-	Q_sim = Q_sim / 2.;
+  QFC qfc(lb1, nc1, df, sigma, Q, lim1, acc);
+
+  double pval = 1. - qfc.get_res();
+  if (pval >= 1 || pval <= 0 || qfc.get_fault() > 0) {
+    pval = Saddlepoint(Q, lambda);
   }
+  return pval;
 }
 
-SKATParam::SKATParam(arma::mat &Z1) {
-  // Dimensions
-  arma::uword n = Z1.n_rows;
-  arma::uword pm = Z1.n_cols;
-  arma::uword nr = 8;
+double Liu_qval_mod(double pval, const arma::vec &lambda) {
+  arma::vec c1{
+      arma::accu(lambda),
+      arma::accu(arma::pow(lambda, 2)),
+      arma::accu(arma::pow(lambda, 3)),
+      arma::accu(arma::pow(lambda, 4))
+  };
 
-  arma::vec z_mean = arma::mean(Z1, 1);
-  arma::mat Z_mean = arma::mat(z_mean.n_rows, pm);
-  Z_mean.each_col() = z_mean;
+  double muQ = c1[0];
+  double sigmaQ = std::sqrt(2 * c1[1]);
 
-  arma::rowvec cof1 = (z_mean.t() * Z1) / arma::sum(arma::sum(arma::pow(z_mean, 2)));
+  double s1 = c1[2] / std::pow(c1[1], 3. / 2.);
+  double s2 = c1[3] / std::pow(c1[1], 2);
 
-  arma::mat Z_item1 = Z_mean * arma::diagmat(cof1);
-  arma::mat Z_item2 = Z1 - Z_item1;
-
-  // Make Z_item2 symmetric
-  arma::mat W3_2_t = Z_item2.t() * Z_item2;
-
-  arma::vec param_lambda;
-  arma::mat param_eigvec;
-
-  arma::eig_sym(param_lambda, param_eigvec, W3_2_t);
-
-  arma::uvec IDX1 = arma::find(param_lambda >= 0); // Positive eigenvalues
-  arma::uvec IDX2 = arma::find(param_lambda > arma::mean(param_lambda(IDX1)) / 100000);
-
-  double W3_3_item = arma::sum(arma::sum((Z_item1.t() * Z_item1) % (Z_item2.t() * Z_item2))) * 4;
-
-  // Liu params section
-  MuQ = arma::sum(param_lambda(IDX2));
-  VarQ = arma::sum(arma::pow(param_lambda(IDX2), 2)) * 2 + W3_3_item;
-  KerQ = arma::sum(arma::pow(param_lambda(IDX2), 4)) / std::pow(arma::sum(arma::pow(param_lambda(IDX2), 2)), 2) * 12;
-  Df = 12. / KerQ;
-
-  lambda = param_lambda;
-
-  tau.zeros(nr);
-  for (arma::uword i = 0; i < nr; i++) {
-	double r_corr = rho_[i];
-
-	double term1 = std::pow(pm, 2) * r_corr + arma::sum(arma::sum(arma::pow(cof1, 2))) * (1 - r_corr);
-	tau(i) = term1 * arma::sum(arma::sum(arma::pow(z_mean, 2)));
-  }
-#if 0
-  std::cerr << "MuQ: " << MuQ << "\n";
-  std::cerr << "VarQ: " << VarQ << "\n";
-  std::cerr << "KerQ: " << KerQ << "\n";
-  std::cerr << "Df: " << Df << "\n";
-  std::cerr << "tau: " << tau.t();
-#endif
-}
-
-LiuParam::LiuParam(arma::vec &c1) {
-  muQ = c1(0);
-  sigmaQ = std::sqrt(2 * c1(1));
-  varQ = 2 * c1(1);
-  s1 = c1(2) / std::pow(c1(1), 3. / 2.);
-  s2 = c1(3) / std::pow(c1(1), 2);
-
-  beta1 = std::sqrt(8) * s1;
-  beta2 = 12 * s2;
-
-  type1 = false;
-
+  double a, d, l;
   if (std::pow(s1, 2) > s2) {
-	a = 1 / (s1 - std::sqrt(std::pow(s1, 2) - s2));
-	d = s1 * std::pow(a, 3) - std::pow(a, 2);
-	l = std::pow(a, 2) - 2 * d;
-  } else {
-	type1 = true;
-	l = 1 / s2;
-	a = std::sqrt(l);
-	d = 0;
+    a = 1. / (s1 - std::sqrt(s1 * s1 - s2));
+    d = s1 * std::pow(a, 3) - std::pow(a, 2);
+    l = std::pow(a, 2) - 2 * d;
+  } else { // Modified to match kurtosis only in this branch
+    l = 1. / s2;
+    a = std::sqrt(l);
+    d = 0;
   }
 
-  muX = l + d;
-  sigmaX = std::sqrt(2) * a;
+  double muX = l + d;
+  double sigmaX = arma::datum::sqrt2 * a;
+  double df = l;
+
+  boost::math::chi_squared chisq(df);
+  double q = boost::math::quantile(boost::math::complement(chisq,
+                                                           pval > 0 ? pval
+                                                                    : std::sqrt(std::numeric_limits<double>::min())));
+  return (q - muX) / sigmaX * sigmaQ + muQ; // Does match the Liu (2009) paper.
 }
 
-LiuParam::LiuParam(arma::vec &lambda, bool mod_lambda) {
-  arma::vec c1{arma::accu(lambda),
-			   arma::accu(arma::pow(lambda, 2)),
-			   arma::accu(arma::pow(lambda, 3)),
-			   arma::accu(arma::pow(lambda, 4))};
 
-  muQ = c1(0);
-  sigmaQ = std::sqrt(2 * c1(1));
-  varQ = 2 * c1(1);
-  s1 = c1(2) / std::pow(c1(1), 3. / 2.);
-  s2 = c1(3) / std::pow(c1(1), 2);
+double Liu_pval(double Q, const arma::vec &lambda) {
+  arma::vec c1{
+      arma::accu(lambda),
+      arma::accu(arma::pow(lambda, 2)),
+      arma::accu(arma::pow(lambda, 3)),
+      arma::accu(arma::pow(lambda, 4))
+  };
+  double muQ = c1[0];
+  double sigmaQ = std::sqrt(2 * c1[1]);
 
-  beta1 = std::sqrt(8) * s1;
-  beta2 = 12 * s2;
+  double s1 = c1[2] / std::pow(c1[1], 1.5);
+  double s2 = c1[3] / std::pow(c1[1], 2);
 
-  type1 = false;
-
+  double a, d, l; // l = degrees of freedom, d = non-centrality parameter for non-central chisq
   if (std::pow(s1, 2) > s2) {
-	a = 1 / (s1 - std::sqrt(std::pow(s1, 2) - s2));
-	d = s1 * std::pow(a, 3) - std::pow(a, 2);
-	l = std::pow(a, 2) - 2 * d;
+    a = 1. / (s1 - std::sqrt(std::pow(s1, 2) - s2));
+    d = s1 * std::pow(a, 3) - std::pow(a, 2);
+    l = std::pow(a, 2) - 2 * d;
   } else {
-	type1 = true;
-	l = 1 / s2;
-	a = std::sqrt(l);
-	d = 0;
+    a = std::sqrt(1. / s2);
+    d = 0;
+    l = 1. / s2;
   }
+  double muX = l + d;
+  double sigmaX = arma::datum::sqrt2 * a;
+  double df = l;
 
-  muX = l + d;
-  sigmaX = std::sqrt(2) * a;
-}
+  double Qnorm = (Q - muQ) / sigmaQ * sigmaX + muX;
 
-PvalueLambda::PvalueLambda(arma::vec &lambda, double Q) {
-  p_val_liu = Get_Liu_Pval_MOD_Lambda(Q, lambda);
-
-  SKAT_Davies skd(Q, lambda);
-
-  p_val = skd.res; // qfc in SKAT returns 1 - res;
-
-  is_converged = true;
-
-  // Check convergence
-  if (lambda.size() == 1) {
-	p_val = p_val_liu;
-  } else if (skd.ifault != 0) {
-	is_converged = false;
-  }
-
-  if (p_val > 1 || p_val <= 0) {
-	is_converged = false;
-	p_val = p_val_liu;
-  }
-
-  if (p_val == 0) {
-	LiuParam param(lambda, true);
-	p_val_zero_msg = Get_Liu_Pval_MOD_Lambda_Zero(Q, param);
-	p_val_log = Get_Liu_Pval_MOD_Lambda(Q, lambda, true);
-
-  }
-}
-
-double PvalueLambda::Get_Liu_Pval_MOD_Lambda(double Q, arma::vec &lambda, bool log_p) {
-  LiuParam param = LiuParam(lambda, true);
-
-  double Q_Norm = (Q - param.muQ) / param.sigmaQ;
-  double Q_Norm1 = Q_Norm * param.sigmaX + param.muX;
-
-  if (Q_Norm1 < 0) {
-	if (log_p) {
-	  return -arma::datum::inf;
-	} else {
-	  return 0;
-	}
-  }
-
-  boost::math::non_central_chi_squared chisq(param.l, param.d);
-
-  if (log_p) {
-	return std::log(boost::math::cdf(boost::math::complement(chisq, Q_Norm1)));
-  } else {
-	return boost::math::cdf(boost::math::complement(chisq, Q_Norm1));
-  }
-}
-
-std::string PvalueLambda::Get_Liu_Pval_MOD_Lambda_Zero(double Q, LiuParam &param) {
-  double Q_Norm = (Q - param.muQ) / param.sigmaQ;
-  double Q_Norm1 = Q_Norm * param.sigmaX + param.muX;
-
-  double temp[10] = {0.05, 1e-10, 1e-20, 1e-30, 1e-40, 1e-50, 1e-60, 1e-70, 1e-80, 1e-90};
-
-  boost::math::non_central_chi_squared chisq(param.l, param.d);
-
-  int max = 0;
-  for (arma::uword i = 0; i < 10; i++) {
-	double val = boost::math::quantile(chisq, temp[i]);
-	if (val < Q_Norm1) {
-	  max = i;
-	}
-  }
-  std::stringstream ss;
-  ss << "Pvalue < " << temp[max] << "\n";
-
-  return ss.str();
-}
-
-SKAT_Davies::SKAT_Davies(double Q, arma::vec &lambda) {
-  //arma::uvec rev = arma::sort_index(lambda, "descend");
-  // Davies setup
-  //std::vector<double> lb1 = arma::conv_to<std::vector<double>>::from(lambda(rev)); //
-  std::vector<double> lb1 = arma::conv_to<std::vector<double>>::from(lambda); //
-  std::vector<double> nc1(lambda.size(), 0); // nc1
-  std::vector<int> df(lambda.size(), 1); // n1
-  int r1 = lambda.n_rows;
-  double sigma = 0; // sigma
-  int lim1 = 10000;
-  double acc = 10e-6;
-  double trace[7]{0};
-  ifault = 0;
-  res = 0;
-
-
-  // Davies p-value
-  // c1 is Q
-  // void qfc(double* lb1, double* nc1, int* n1, int *r1, double *sigma, double *c1, int *lim1, double *acc, double* trace, int* ifault, double *res){
-  // qfc(&lb1[0], &nc1[0], &df[0], &r1, &sigma, &Q, &lim1, &acc, &trace[0], &ifault, &res);
-
-  QFC qfc2(lb1, nc1, df, sigma, Q, lim1, acc);
-
-  // res = 1 - res;
-  res = 1 - qfc2.get_res();
-
-#if 0
-  std::cerr << "Davies:\n";
-  std::cerr << "lambda: " << lambda.t();
-  std::cerr << "lb1: ";
-  for (int i = 0; i < r1; i++) {
-	std::cerr << lb1[i] << " ";
-  }
-  std::cerr << "\nnc1: ";
-  for (int i = 0; i < r1; i++) {
-	std::cerr << nc1[i] << " ";
-  }
-  std::cerr << "\ndf: ";
-  for (int i = 0; i < r1; i++) {
-	std::cerr << df[i] << " ";
-  }
-  std::cerr << "\n";
-  std::cerr << "r: " << r1 << "\n";
-  std::cerr << "sigma: " << sigma << "\n";
-  std::cerr << "trace: ";
-  for (int i = 0; i < 7; i++) {
-	std::cerr << trace[i] << " ";
-  }
-  std::cerr << "\nifault: " << ifault << "\n";
-  std::cerr << "res: " << res << "\n";
-#endif
-}
-
-SKAT_EachQ::SKAT_EachQ(arma::vec &Qall, std::vector<arma::vec> &lambda_all) {
-  arma::uword nr = Qall.size();
-  arma::vec c1{0, 0, 0, 0};
-
-  std::vector<LiuParam> param_mat;
-
-  // set vectors
-  pval.zeros(nr);
-  pmin_q.zeros(nr);
-  pmin = 0;
-
-  for (arma::uword i = 0; i < nr; i++) {
-	double Q = Qall(i);
-	arma::vec lambda_temp = lambda_all[i];
-
-	c1(0) = arma::sum(lambda_temp);
-	c1(1) = arma::sum(arma::sum(arma::pow(lambda_temp, 2)));
-	c1(2) = arma::sum(arma::sum(arma::pow(lambda_temp, 3)));
-	c1(3) = arma::sum(arma::sum(arma::pow(lambda_temp, 4)));
-
-	LiuParam param_temp(c1);
-
-	// Substitute sigmaQ for sqrt(varQ)
-	double Qnorm = (Q - param_temp.muQ) / param_temp.sigmaQ * std::sqrt(2 * param_temp.l) + param_temp.l;
-	PvalueLambda pval_lambda(lambda_temp, Q);
-
-#if 0
-	std::cerr << "pval: " << pval_lambda.p_val << "\n";
-	std::cerr << "pval_liu: " << pval_lambda.p_val_liu << "\n";
-#endif
-
-	pval(i) = pval_lambda.p_val;
-	param_mat.emplace_back(param_temp);
-  }
-
-  pmin = arma::min(pval);
-
-  for (arma::uword i = 0; i < nr; i++) {
-	double muQ = param_mat[i].muQ;
-	double varQ = std::pow(param_mat[i].sigmaQ, 2);
-	double df = param_mat[i].l;
-
-	boost::math::chi_squared chisq(df);
-
-	double q_org;
-	try {
-	  q_org = boost::math::quantile(chisq, 1 - pmin);
-	} catch (boost::exception &e) {
-	  q_org = boost::math::quantile(chisq, 1 - DBL_EPSILON); // Handle overflow
-	}
-	double qq = (q_org - df) / std::sqrt(2 * df) * std::sqrt(varQ) + muQ;
-	pmin_q(i) = qq;
-  }
-}
-
-SKAT_Integrate_Davies::SKAT_Integrate_Davies(arma::vec &pmin_q, SKATParam &param_m, arma::vec &rall)
-	: pmin_q(pmin_q),
-	  param_m(param_m),
-	  rall(rall) {}
-
-double SKAT_Integrate_Davies::operator()(double x) {
-  arma::vec temp1(1);
-  if (rall.n_elem == 1) {
-    temp1 = param_m.tau(0) * x;
-  } else {
-    temp1 = param_m.tau * x;
-  }
-
-  arma::vec temp = (pmin_q - temp1) / (1. - rall);
-  double temp_min = arma::min(temp);
-
-  double re = 0;
-  double min1 = temp_min;
-  double temp_val = 0;
-  if (min1 > arma::sum(param_m.lambda) * 10000) {
-	temp_val = 0;
-  } else {
-	double min1_temp = min1 - param_m.MuQ;
-	double sd1 = std::sqrt(param_m.VarQ - param_m.VarRemain) / std::sqrt(param_m.VarQ);
-	double min1_st = min1_temp * sd1 + param_m.MuQ;
-
-	SKAT_Davies skd(min1_st, param_m.lambda);
-
-	temp_val = skd.res; // temp<-dav.re$Qq
-  }
-  if (temp_val > 1) {
-	temp_val = 1;
-  }
-  boost::math::chi_squared chisq(1);
-  return (1 - temp_val) * boost::math::pdf(chisq, x);
-}
-
-SKAT_Integrate_Liu::SKAT_Integrate_Liu(arma::vec &pmin_q, SKATParam &param_m, arma::vec &rall)
-	: pmin_q(pmin_q),
-	  param_m(param_m),
-	  rall(rall) {}
-
-double SKAT_Integrate_Liu::operator()(double x) {
-  arma::mat temp1 = param_m.tau * x;
-
-  arma::vec temp = (pmin_q - temp1) / (1 - rall);
-  double temp_min = arma::min(temp);
-
-  double temp_q = (temp_min - param_m.MuQ) / std::sqrt(param_m.VarQ) * std::sqrt(2 * param_m.Df) + param_m.Df;
-
-  boost::math::chi_squared chisq(param_m.Df);
-  boost::math::chi_squared chisq2(1);
-  return boost::math::cdf(chisq, temp_q) * boost::math::pdf(chisq2, x);
-}
-
-double SKAT_Optimal_Pvalue_Davies(arma::vec &pmin_q, SKATParam &param_m, arma::vec &rall, double pmin) {
-  SKAT_Integrate_Davies skat_integrate_davies(pmin_q, param_m, rall);
-
-  // Start at DBL_EPSILON to avoid overflow
-  double I;
-  double error;
   try {
-	auto f1 = [&](double x) { return skat_integrate_davies(x); };
-	// boost::math::quadrature::tanh_sinh<double> integrator;
-	// I = integrator.integrate(f1, DBL_EPSILON, 40.);
-	// I = boost::math::quadrature::trapezoidal(f1, DBL_EPSILON, 40., 1e-9);
-	I = boost::math::quadrature::gauss_kronrod<double, 61>::integrate(f1, DBL_EPSILON, 40., 15, 1e-14, &error);
-	// I = boost::math::quadrature::gauss<double, 20>::integrate(f1, DBL_EPSILON, 40.);
-  } catch (boost::exception &e) {
-	SKAT_Integrate_Liu skat_integrate_liu(pmin_q, param_m, rall);
-	auto f1 = [&](double x) { return skat_integrate_liu(x); };
-	// boost::math::quadrature::tanh_sinh<double> integrator;
-	// I = integrator.integrate(f1, DBL_EPSILON, 40.);
-	// I = boost::math::quadrature::trapezoidal(f1, DBL_EPSILON, 40., 1e-9);
-	I = boost::math::quadrature::gauss_kronrod<double, 61>::integrate(f1, DBL_EPSILON, 40., 15, 1e-14, &error);
-	// I = boost::math::quadrature::gauss<double, 20>::integrate(f1, DBL_EPSILON, 40.);
+    boost::math::non_central_chi_squared chisq(df, d);
+    return boost::math::cdf(boost::math::complement(chisq, Qnorm));
+  } catch (std::exception &e) {
+    return 1;
   }
-
-#if 0
-  std::cerr << "integral: " << I << "\n";
-  std::cerr << "error: " << error << "\n";
-#endif
-
-  return 1 - I;
 }
 
+double Saddlepoint(double Q, const arma::vec &lambda) {
+  // Check for valid input
+  if (Q <= 0) {
+    return 1;
+  }
+
+  double d = lambda.max();
+  if (d == 0) {
+    return Liu_pval(Q, lambda);
+  }
+  arma::vec ulambda = lambda / d;
+  Q /= d;
+
+  if (ulambda.has_nan()) {
+    ulambda.replace(arma::datum::nan, 0);
+  }
+
+  auto k0 = [&](double &zeta) -> double {
+    return -arma::accu(arma::log(1 - 2 * (zeta * ulambda))) / 2;
+  };
+  auto kprime0 = [&](double &zeta) -> double {
+    return arma::accu(ulambda / (1 - 2 * zeta * ulambda));
+  };
+  auto kpprime0 = [&](double &zeta) -> double {
+    return 2 * arma::accu(arma::pow(ulambda, 2) / arma::pow(1 - 2 * (zeta * ulambda), 2));
+  };
+  auto kppprime0 = [&](double &zeta) -> double {
+    return 8 * arma::accu(arma::pow(ulambda, 3) / arma::pow(1 - 2 * (zeta * ulambda), 3));
+  };
+#if 0
+  auto hatzetafn = [&](double zeta) -> double {
+    return kprime0(zeta) - Q;
+  };
+#else
+  auto hatzetafn = [&](double zeta) -> std::tuple<double, double, double> {
+    return std::make_tuple(kprime0(zeta) - Q, kpprime0(zeta), kppprime0(zeta));
+  };
+#endif
+
+  arma::uword n = ulambda.size();
+
+  double lmin, lmax;
+  if (arma::any(ulambda < 0)) {
+    lmin = arma::max(1 / (2 * ulambda(arma::find(ulambda < 0)))) * 0.99999;
+  } else if (Q > arma::sum(ulambda)) {
+    lmin = -0.01;
+  } else {
+    lmin = -static_cast<int>(ulambda.size()) / (2. * Q);
+  }
+  lmax = arma::min(1 / (2 * ulambda(arma::find(ulambda > 0)))) * 0.99999;
+
+  // Root finding
+#if 0
+  int digits = std::numeric_limits<double>::digits - 3;
+  boost::math::tools::eps_tolerance<double> tol(digits);
+  boost::uintmax_t max_iter = 1000;
+  std::pair<double, double>
+      tmp = boost::math::tools::bisect(hatzetafn, lmin, lmax, tol, max_iter);
+#elif 0
+  int digits = std::numeric_limits<double>::digits - 3;
+  boost::math::tools::eps_tolerance<double> tol(digits);
+  boost::uintmax_t max_iter = 1000;
+  double factor = (lmax - lmin) / 100;
+  std::pair<double, double>
+      tmp = boost::math::tools::bracket_and_solve_root(hatzetafn, lmin, factor, true, tol, max_iter);
+#else
+  int digits = std::numeric_limits<double>::digits - 3;
+  // boost::math::tools::eps_tolerance<double> tol(digits);
+  int tol = static_cast<int>(digits * 0.6);
+  boost::uintmax_t max_iter = 1000;
+  double guess = (lmax - lmin) / 2.;
+  double hatzeta = boost::math::tools::halley_iterate(hatzetafn, guess, lmin, lmax, tol, max_iter);
+
+#endif
+
+  // double hatzeta = tmp.first + (tmp.second - tmp.first) / 2.;
+
+  double w = sgn(hatzeta) * std::sqrt(2 * (hatzeta * Q - k0(hatzeta)));
+  double v = hatzeta * std::sqrt(kpprime0(hatzeta));
+
+  if (std::abs(hatzeta) < 1e-4 || std::isnan(w) || std::isnan(v)) {
+    return Liu_pval(Q * d, lambda);
+  } else {
+    boost::math::normal norm(0, 1);
+    return boost::math::cdf(boost::math::complement(norm, w + std::log(v / w) / w));
+  }
+}
+
+
+SKATR_Null::SKATR_Null(std::shared_ptr<Covariates> cov)
+: crand(std::random_device{}()), cov_(*cov) {
+  X = cov_.get_covariate_matrix();
+  Y = cov_.get_phenotype_vector();
+  pi0 = cov_.get_fitted();
+  Yv = pi0 % (1 - pi0);
+  Yh = arma::sqrt(Yv);
+
+  arma::mat U, V;
+  arma::vec S;
+  arma::svd_econ(U, S, V, arma::diagmat(Yh) * X);
+
+  Ux = arma::diagmat(Yh) * U;
+  U0 = Y - pi0;
+}
+
+auto SKATR_Null::shuffle(arma::vec &phenotypes) -> void {
+  cov_.set_phenotype_vector(phenotypes);
+  cov_.refit_permuted();
+
+  pi0 = cov_.get_fitted();
+  Yv = pi0 % (1 - pi0);
+  Yh = arma::sqrt(Yv);
+  Y = phenotypes;
+
+  arma::mat U, V;
+  arma::vec S;
+  bool success = arma::svd_econ(U, S, V, arma::diagmat(Yh) * X, "left");
+  if (!success) {
+    std::cerr << "Yh: " << Yh.t();
+    std::cerr << "Yv: " << Yv.t();
+    std::cerr << "Y: " << Y.t();
+    for (int i = 0; i < Y.n_elem; i++) {
+      std::cerr << Y[i];
+      for (int j = 0; j < X.n_cols; j++) {
+        std::cerr << "\t" << X(i, j);
+      }
+      std::cerr << std::endl;
+    }
+  }
+
+  Ux = arma::diagmat(Yh) * U;
+  U0 = Y - pi0;
+}
+
+auto SKATR_Null::get_U0() noexcept -> arma::vec {
+  return U0;
+}
+
+auto SKATR_Null::get_pi0() noexcept -> arma::vec {
+  return pi0;
+}
+
+auto SKATR_Null::get_Yv() noexcept -> arma::vec {
+  return Yv;
+}
+
+auto SKATR_Null::get_Yh() noexcept -> arma::vec {
+  return Yh;
+}
+
+auto SKATR_Null::get_Ux() noexcept -> const arma::mat & {
+  return Ux;
+}
+
+auto SKATR_Null::get_coef() noexcept -> arma::rowvec {
+  return coef;
+}
+
+auto SKATR_Null::get_Y() noexcept -> arma::vec {
+  return Y;
+}
+
+auto SKATR_Null::get_X() noexcept -> const arma::mat & {
+  return X;
+}
+
+SKATR_Linear_Null::SKATR_Linear_Null(Covariates cov)
+: cov_(cov) {
+  X = cov_.get_covariate_matrix();
+  Y = cov_.get_phenotype_vector();
+
+  arma::mat U, V;
+  arma::vec s;
+  arma::svd_econ(U, s, V, X.t());
+
+  Ux = U;
+  U0 = cov_.get_residuals();
+  s2 = arma::accu(arma::pow(U0, 2)) / (Y.n_elem - X.n_rows); // Residual sum of squares over residual df
+}
+
+auto SKATR_Linear_Null::shuffle(arma::vec &phenotypes) -> void {
+  cov_.set_phenotype_vector(phenotypes);
+  cov_.refit_permuted();
+
+  Y = phenotypes;
+
+  U0 = cov_.get_residuals();
+  s2 = arma::accu(arma::pow(U0, 2)) / (Y.n_elem - X.n_rows);
+}
+
+auto SKATR_Linear_Null::get_U0() noexcept -> arma::vec {
+  return U0;
+}
+
+auto SKATR_Linear_Null::get_s2() noexcept -> double {
+  return s2;
+}
+
+auto SKATR_Linear_Null::get_Ux() noexcept -> const arma::mat & {
+  return Ux;
+}
+
+auto SKATR_Linear_Null::get_coef() noexcept -> const arma::rowvec & {
+  return coef;
+}
+
+auto SKATR_Linear_Null::get_Y() noexcept -> arma::vec {
+  return Y;
+}
+auto SKATR_Linear_Null::get_X() noexcept -> const arma::mat & {
+  return X;
+}

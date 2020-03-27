@@ -497,7 +497,7 @@ auto Gene::testable(const std::string &k, Covariates &cov, TaskParams &tp) -> bo
   }
   assert(arma::accu(extreme_phen) == ncase);
 
-  VAAST vaast(genotypes_[k], extreme_phen, weights_[k], positions_[k], k, tp.score_only_minor, tp
+  VAASTLogic vaast(genotypes_[k], extreme_phen, weights_[k], positions_[k], k, tp.score_only_minor, tp
       .score_only_alternative, false, tp.group_size, 2.);
 
   return arma::accu(vaast.expanded_scores > 0) >= 4;

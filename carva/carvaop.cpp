@@ -586,38 +586,22 @@ auto CARVAOp::call_method(Methods &method,
 	return method.RVT1(gene, phenotypes, cov.get_covariate_matrix(), cov.get_coef(), k, tp.linear);
   } else if (tp.method == "RVT2") {
 	return method.RVT2(gene, phenotypes, cov.get_covariate_matrix(), cov.get_coef(), k, tp.linear);
-  } else if (tp.method == "SKATR") {
-	return method.SKATR(gene, k, phenotypes, tp.a, tp.b, detail, tp.linear, tp.total_permutations > 0, true);
-  } else if (tp.method == "SKATRO") {
-	return method.SKATRO(gene, k, phenotypes, tp.a, tp.b, detail, tp.linear);
   } else if (tp.method == "SKAT") {
-	return method.SKAT(gene, phenotypes, cov, k, tp.a, tp.b, shuffle, detail, tp.linear);
-  } else if (tp.method == "classicSKATO") {
-    return method.classicSKATO(gene, phenotypes, cov, k, tp.a, tp.b, shuffle, tp.adjust);
+	return method.SKAT(gene, k, phenotypes, tp.a, tp.b, detail, tp.linear, tp.total_permutations > 0, true);
   } else if (tp.method == "SKATO") {
-	// double ret = method.SKATO(gene, phenotypes, cov, k, tp.a, tp.b, shuffle, tp.adjust);
-	// arma::wall_clock timer;
-	// timer.tic();
-    // double tmp = method.SKATO(gene, phenotypes, cov, k, tp.a, tp.b, shuffle, tp.adjust);
-    // double tmp = method.SKATRO(gene, k, phenotypes, tp.a, tp.b, detail, tp.linear);
-    // std::cerr << "SKATO original time: " << timer.toc() << std::endl;
-    // timer.tic();
-    double ret =  method.SKATO_clean(gene, phenotypes, cov, k, tp.a, tp.b, shuffle, tp.adjust);
-    // std::cerr << "SKATO clean time: " << timer.toc() << std::endl;
-    // std::cerr << "original: " << tmp << " clean: " << ret << std::endl;
-    return ret;
+	return method.SKATO(gene, k, phenotypes, tp.a, tp.b, detail, tp.linear);
   } else if (tp.method == "VAAST") {
-	return method.Vaast(gene,
-						phenotypes,
-						k,
-						tp.score_only_minor,
-						tp.score_only_alternative,
-						2.0,
-						tp.group_size,
-						detail,
-						tp.biallelic);
+	return method.VAAST(gene,
+                        phenotypes,
+                        k,
+                        tp.score_only_minor,
+                        tp.score_only_alternative,
+                        2.0,
+                        tp.group_size,
+                        detail,
+                        tp.biallelic);
   } else if (tp.method == "VT") {
-	return method.VTfix(gene, k, phenotypes);
+	return method.VT(gene, k, phenotypes);
   } else if (tp.method == "WSS") {
 	return method.WSS(gene, phenotypes, k);
   } else {

@@ -378,22 +378,6 @@ auto GLM<LinkT>::irls_qr_R(arma::mat &X, arma::colvec &Y) -> arma::vec {
     arma::vec zw = z % W;
     beta_ = arma::solve(arma::trimatu(R), Q.t() * zw);
 
-    // arma::mat Lt;
-    // arma::mat QWQ = Q.t() * (Q.each_col() % W);
-    // bool chol_success = arma::chol(Lt, QWQ);
-    // double jitter = 1e-9;
-    // while(!chol_success && jitter < 1.) {
-    //   QWQ.diag() += jitter;
-    //   chol_success = arma::chol(Lt, QWQ);
-    //   jitter *= 10;
-    // }
-    // if (!chol_success) {
-    //   throw(std::runtime_error("Cholesky decomposition of QWQ matrix failed."));
-    // }
-
-    // s = arma::solve(arma::trimatl(Lt.t()), Q.t() * (W % z));
-    // s = arma::solve(arma::trimatu(Lt), s);
-
     eta_ = X * beta_;
     mu_ = link.linkinv(eta_);
 

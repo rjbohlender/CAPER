@@ -91,7 +91,7 @@ int main(int argc, char **argv) {
         ("method,m",
          po::value<std::string>()->default_value("VAAST"),
          "The statistical method to be used.\n"
-         "Options: {BURDEN, CALPHA, CMC, RVT1, RVT2, SKAT, SKATO, SKATR, SKATRO, VAAST, VT, WSS}.")
+         "Options: {BURDEN, CALPHA, CMC, CMC1df, RVT1, RVT2, SKAT, SKATO, SKAT, SKATO, VAAST, VT, WSS}.")
         ("range",
          po::value(&gene_range)->multitoken(),
          "A range of genes to analyze from the matrix file. "
@@ -229,26 +229,19 @@ int main(int argc, char **argv) {
       "RVT1",
       "RVT2",
       "SKAT",
-      "SKATR",
       "SKATO",
-      "classicSKATO",
-      "SKATRO",
       "VAAST"
   };
 
   std::set<std::string> kernel_choices = {
       "Linear",
       "wLinear"
-      //"IBS",
-      //"wIBS",
-      //"Quadratic",
-      //"twoWayX"
   };
 
   if (method_choices.count(vm["method"].as<std::string>()) == 0) {
     // Method not among choices
     std::cerr
-        << "Method must be one of {BURDEN, CALPHA, CMC, CMC1df, RVT1, RVT2, SKAT, SKATR, SKATO, SKATRO, VAAST, VT, WSS}.\n";
+        << "Method must be one of {BURDEN, CALPHA, CMC, CMC1df, RVT1, RVT2, SKAT, SKATO, VAAST, VT, WSS}.\n";
     std::cerr << visible << "\n";
     return 1;
   }
@@ -346,13 +339,9 @@ int main(int argc, char **argv) {
   tp.alternate_permutation = !tp.covadj || tp.covariates_path == "";
   tp.quantitative =
       tp.method == "RVT1" || tp.method == "RVT2" || tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN"
-          || tp.method == "VT" || tp.method == "SKATR" || tp.method == "SKATRO" || tp.method == "classicSKATO";
-  tp.analytic = tp.method == "SKATO" || (tp.method == "SKATR" && tp.total_permutations == 0) || tp.method == "RVT1"
-     || tp.method == "RVT2" || (tp.method == "CMC" && tp.total_permutations == 0) || tp.method == "SKATRO" || (tp.method == "SKAT" && tp.total_permutations == 0)
-     || tp.method == "classicSKATO" || (tp.method == "CMC1df" && tp.total_permutations == 0);
-  // tp.analytic = tp.method == "SKATO" || (tp.method == "SKATR" && tp.total_permutations == 0) || tp.method == "RVT1"
-  //     || tp.method == "RVT2" || tp.method == "CMC" || tp.method == "SKATRO" || (tp.method == "SKAT" && tp.total_permutations == 0)
-  //     || tp.method == "classicSKATO";
+          || tp.method == "VT";
+  tp.analytic = tp.method == "SKATO" || (tp.method == "SKAT" && tp.total_permutations == 0) || tp.method == "RVT1"
+     || tp.method == "RVT2" || (tp.method == "CMC" && tp.total_permutations == 0) || (tp.method == "CMC1df" && tp.total_permutations == 0);
   if (tp.linear && !tp.quantitative) {
     std::cerr << "Quantitative trait analysis is only supported for the RVT1, RVT2, SKATO, SKAT, and BURDEN methods."
               << std::endl;
@@ -360,7 +349,7 @@ int main(int argc, char **argv) {
   }
   tp.cov_adjusted =
       tp.method == "RVT1" || tp.method == "RVT2" || tp.method == "SKATO" || tp.method == "SKAT" || tp.method ==
-          "BURDEN" || tp.method == "SKATR" || tp.method == "SKATRO";
+          "BURDEN";
 
   std::vector<int> range_opt;
   if (!vm["range"].empty() && (range_opt = vm["range"].as<std::vector<int>>()).size() == 2) {
@@ -381,20 +370,9 @@ int main(int argc, char **argv) {
     std::cerr << "Thread count must be >= 2." << std::endl;
     std::cerr << visible << std::endl;
   }
-#if 0
-  if(tp.permute_set && tp.nthreads) {
-    std::cerr << "Restricting to a single worker thread. Permute set output is not threadsafe." << std::endl;
-    tp.nthreads = 2;
-  }
-#endif
 
-  if (tp.method == "SKATO" || tp.method == "SKATRO") {
+  if (tp.method == "SKATO") {
     // Different defaults for SKATO
-#if 0
-    if(vm["stage_1_max_perm"].defaulted() || vm["stage_1_max_perm"].as<arma::uword>() > 0) {
-      tp.stage_1_permutations = 0;
-    }
-#endif
     if (vm["stage_2_max_perm"].defaulted()) {
       tp.stage_2_permutations = 0;
     }

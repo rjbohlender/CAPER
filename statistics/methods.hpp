@@ -16,19 +16,13 @@
 #include "../data/gene.hpp"
 #include "../data/covariates.hpp"
 #include "skat.hpp"
-#include "skat_adjust.hpp"
-#include "skatr.hpp"
 #include "vt.hpp"
 
 arma::vec rank(arma::vec &v, const char *direction);
 
 enum class Kernel {
   Linear,
-  wLinear,
-  Quadratic,
-  IBS,
-  wIBS,
-  twoWayX
+  wLinear
 };
 
 class Methods {
@@ -54,66 +48,34 @@ public:
               arma::vec &initial_beta,
               const std::string &k,
               bool linear);
-#if 1
-  // Wu et al. 2011
+  // Wu, Guan, and Pankow 2016
   double SKAT(Gene &gene,
-              arma::vec &Y,
-              Covariates cov,
               const std::string &k,
-              int a = 1,
-              int b = 25,
-              bool shuffle = false,
-              bool detail = false,
-              bool linear = false);
-#endif
-#if 1
-  // Lee et al. 2012
-  double classicSKATO(Gene &gene,
-                      arma::vec &Y,
-                      Covariates cov,
-                      const std::string &k,
-                      int a = 1,
-                      int b = 25,
-                      bool shuffle = false,
-                      bool adjust = true);
-  double SKATO_clean(Gene &gene,
-               arma::vec &Y,
-               Covariates cov,
+              arma::vec &phenotypes,
+              int a,
+              int b,
+              bool detail,
+              bool linear,
+              bool permute,
+              bool shuffle);
+  // Wu, Guan, and Pankow 2016
+  double SKATO(Gene &gene,
                const std::string &k,
-               int a = 1,
-               int b = 25,
-               bool shuffle = false,
-               bool adjust = true);
-#endif
-  // Wu, Guan, and Pankow 2016
-  double SKATR(Gene &gene,
-			   const std::string &k,
-			   arma::vec &phenotypes,
-			   int a,
-			   int b,
-			   bool detail,
-			   bool linear,
-			   bool permute,
-			   bool shuffle);
-  // Wu, Guan, and Pankow 2016
-  double SKATRO(Gene &gene,
-				const std::string &k,
-				arma::vec &phenotypes,
-				int a,
-				int b,
-				bool detail = false,
-				bool linear = false);
-  double Vaast(Gene &gene,
-			   arma::vec &Y,
-			   const std::string &k,
-			   bool score_only_minor = true,
-			   bool score_only_alternative = true,
-			   double site_penalty = 2.0,
-			   arma::uword group_threshold = 4,
-			   bool detail = false,
-			   bool biallelic = false);
-  //double VT(Gene &gene, const std::string &k, arma::vec &phenotypes);
-  double VTfix(Gene &gene, const std::string &k, arma::vec &phenotypes);
+               arma::vec &phenotypes,
+               int a,
+               int b,
+               bool detail = false,
+               bool linear = false);
+  double VAAST(Gene &gene,
+               arma::vec &Y,
+               const std::string &k,
+               bool score_only_minor = true,
+               bool score_only_alternative = true,
+               double site_penalty = 2.0,
+               arma::uword group_threshold = 4,
+               bool detail = false,
+               bool biallelic = false);
+  double VT(Gene &gene, const std::string &k, arma::vec &phenotypes);
 
   // Madsen, Browning 2009
   double WSS(Gene &gene, arma::vec &Y, const std::string &k);
@@ -123,26 +85,13 @@ private:
 
   // SKAT support fields
   Kernel kernel_;
-  std::map<std::string, arma::sp_mat> K_;
   // Weights for SKAT-O
   static constexpr std::array<double, 8> rho_{0, 0.01, 0.04, 0.09, 0.16, 0.25, 0.5, 1};
 
   // Check weighting
   void check_weights(Gene &gene, const std::string &k, int a = 1, int b = 25, bool no_weight = false);
 
-  // Kernel member functions
-  arma::sp_mat kernel_Linear(arma::sp_mat &Xmat);
-  arma::sp_mat kernel_wLinear(arma::sp_mat &Xmat, arma::vec &weights);
-  arma::sp_mat kernel_IBS(arma::sp_mat &Xmat, arma::uword &n, arma::uword &p);
-  arma::sp_mat kernel_wIBS(arma::sp_mat &Xmat, arma::uword &n, arma::uword &p, arma::vec &weights);
-  arma::sp_mat kernel_Quadratic(arma::sp_mat &Xmat);
-  arma::sp_mat kernel_twoWayX(arma::sp_mat &Xmat, arma::uword n, arma::uword p);
-
-  // SKATO Support
-  std::shared_ptr<SKAT_Residuals_Logistic> re2;
-  std::map<std::string, std::shared_ptr<SKAT_Optimal_GetQ>> Q_sim_all;
-
-  // SKATR Null Model
+  // SKAT Null Model
   std::shared_ptr<SKATR_Null> obj_;
   std::shared_ptr<SKATR_Linear_Null> lin_obj_;
 
@@ -151,17 +100,6 @@ private:
 
   // TaskParams
   TaskParams tp_;
-
-  // Davies method
-  double SKAT_pval(double Q, const arma::vec& lambda);
-
-  // Liu Method
-  double Liu_qval_mod(double pval, const arma::vec& lambda);
-  double Liu_pval(double Q, const arma::vec& lambda);
-  double Saddlepoint(double Q, const arma::vec& lambda);
-
-  template<class T>
-  int sgn(T x);
 };
 
 #endif //PERMUTE_ASSOCIATE_METHODS_HPP
