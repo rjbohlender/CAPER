@@ -60,6 +60,7 @@ int main(int argc, char **argv) {
   boost::optional<std::string> bed;
   boost::optional<std::string> weight;
   boost::optional<std::string> gene_list;
+  boost::optional<std::string> feature_list;
   boost::optional<std::string> permute_set;
   boost::optional<double> pthresh;
   boost::optional<arma::uword> approximate;
@@ -125,7 +126,10 @@ int main(int argc, char **argv) {
         ("genes,l",
          po::value(&gene_list),
          "A comma-separated list of genes to analyze.")
-        ("nodetail",
+		("features",
+		po::value(&feature_list),
+		"A comma-separated list of transcripts to analyze.")
+		("nodetail",
          po::bool_switch(&nodetail),
          "Don't produce detailed, variant level output.")
         ("approx,a",

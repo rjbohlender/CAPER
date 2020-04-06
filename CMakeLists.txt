@@ -39,6 +39,7 @@ else()
 endif ()
 
 add_subdirectory(tools/vcf2matrix)
+add_subdirectory(tools/matrix_indexer)
 
 message(${CMAKE_CXX_FLAGS_DEBUG})
 message(${CMAKE_CXX_FLAGS_RELEASE})
@@ -97,8 +98,8 @@ set(PROJECT_SUPPORT_FILES
     statistics/vt.hpp
     data/calccasm.cpp
     data/calccasm.hpp
-        statistics/skat.cpp
-        statistics/skat.hpp
+    statistics/skat.cpp
+    statistics/skat.hpp
     power/powerop.cpp
     power/powerop.hpp
     utility/taskqueue2.hpp

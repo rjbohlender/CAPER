@@ -50,6 +50,26 @@ private:
   arma::vec log_likelihood(arma::vec &freq, arma::vec &allele0, arma::vec &allele1);
 };
 
+struct Variant {
+  double case_allele1 = 0;
+  double case_allele0 = 0;
+  double control_allele1 = 0;
+  double control_allele0 = 0;
+  double weight = 1;
+  std::string type = "";
+  std::string loc = "";
+  int index = 0;
+
+  // Calculated here
+  double score = 0;
+
+  Variant(std::string type);
+  Variant(double case_allele1, double case_allele0, double control_allele1, double control_allele0, double weight, std::string type, std::string loc, int index);
+
+  void merge(Variant &other);
+  void calc_score();
+};
+
 struct VAASTLogic {
   const bool som;      // score_only_minor
   const bool soa;      // score_only_alternative
@@ -58,6 +78,7 @@ struct VAASTLogic {
   const std::string k; // Transcript
   const arma::uword group_threshold;
   const double site_penalty;
+  bool printed_mergeinfo = false;
 
   arma::sp_mat X;
   const arma::vec Y;
@@ -107,9 +128,14 @@ struct VAASTLogic {
   arma::vec LRT();
   arma::vec log_likelihood(arma::vec &freq, arma::vec &allele0, arma::vec &allele1);
   void variant_grouping(const arma::sp_mat &X,
-						  const arma::vec &Y,
-						  const arma::vec &w,
-						  std::vector<std::string> &positions);
+						const arma::vec &Y,
+						const arma::vec &w,
+						std::vector<std::string> &positions);
+  void alt_grouping(const arma::sp_mat &X,
+					const arma::vec &Y,
+					const arma::vec &w,
+					std::vector<std::string> &positions);
+  void alt_score();
   void variant_bitmask(const arma::sp_mat &X, const arma::vec &Y, const arma::vec &w);
 
   static arma::uvec setdiff(arma::uvec x, arma::uvec y);
