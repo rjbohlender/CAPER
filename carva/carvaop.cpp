@@ -219,10 +219,10 @@ auto CARVAOp::stage2() -> void {
 	  }
 	  // Minor and major allele carrier indices
       mac_indices[k] = arma::find(arma::sum(arma::mat(ta_.get_gene().get_matrix(k) + ta_.get_gene().get_missing(k)), 1) > 0);
-      // mac_indices[k] = arma::find(arma::sum(arma::mat(ta_.get_gene().get_matrix(k)), 1) > 0);
+	  // Missing are permuted with mac
       maj_indices[k] = arma::find(arma::sum(arma::mat(ta_.get_gene().get_matrix(k) + ta_.get_gene().get_missing(k)), 1) == 0);
-      // maj_indices[k] = arma::find(arma::sum(arma::mat(ta_.get_gene().get_matrix(k)), 1) == 0);
-	  // No longer true for Yao's fix assert(mac_indices[k].n_rows + maj_indices[k].n_rows == ta_.get_cov().get_nsamples());
+      // Missing are excluded from maj
+	  assert(mac_indices[k].n_rows + maj_indices[k].n_rows == ta_.get_cov().get_nsamples());
 
 #if 0
 	  // Calculated to test for bugs with no polymorphic variants
@@ -288,21 +288,25 @@ auto CARVAOp::stage2() -> void {
 		} else {
 		  if (ta_.get_tp().approximate) {
 			permutations = ta_.get_permute(k).permutations_mac_bin(1,
-                                                                   ta_.get_cov().get_odds(),
-                                                                   ta_.get_cov().get_ncases(),
-                                                                   mac_indices[k],
-                                                                   maj_indices[k],
-                                                                   k,
-                                                                   *ta_.get_tp().approximate,
-                                                                   ta_.get_tp().maj_nbins);
+																   ta_.get_cov().get_odds(),
+																   ta_.get_cov().get_ncases(),
+																   mac_indices[k],
+																   maj_indices[k],
+																   k,
+																   *ta_.get_tp().approximate,
+																   ta_.get_tp().maj_nbins,
+																   ta_.get_tp().lower_bin_cutoff,
+																   ta_.get_tp().upper_bin_cutoff);
 		  } else {
 			permutations = ta_.get_permute(k).permutations_maj_bin(1,
-                                                                   ta_.get_cov().get_odds(),
-                                                                   ta_.get_cov().get_ncases(),
-                                                                   mac_indices[k],
-                                                                   maj_indices[k],
-                                                                   k,
-                                                                   ta_.get_tp().maj_nbins);
+																   ta_.get_cov().get_odds(),
+																   ta_.get_cov().get_ncases(),
+																   mac_indices[k],
+																   maj_indices[k],
+																   k,
+																   ta_.get_tp().maj_nbins,
+																   ta_.get_tp().lower_bin_cutoff,
+																   ta_.get_tp().upper_bin_cutoff);
 		  }
 		  phenotypes = arma::conv_to<arma::vec>::from(permutations[0]);
 		  if(ta_.get_tp().permute_set) {
@@ -333,21 +337,25 @@ auto CARVAOp::stage2() -> void {
           } else {
             if (ta_.get_tp().approximate) {
               permutations = ta_.get_permute(k).permutations_mac_bin(1,
-                                                                     ta_.get_cov().get_odds(),
-                                                                     ta_.get_cov().get_ncases(),
-                                                                     mac_indices[k],
-                                                                     maj_indices[k],
-                                                                     k,
-                                                                     *ta_.get_tp().approximate,
-                                                                     ta_.get_tp().maj_nbins);
+																	 ta_.get_cov().get_odds(),
+																	 ta_.get_cov().get_ncases(),
+																	 mac_indices[k],
+																	 maj_indices[k],
+																	 k,
+																	 *ta_.get_tp().approximate,
+																	 ta_.get_tp().maj_nbins,
+																	 ta_.get_tp().lower_bin_cutoff,
+																	 ta_.get_tp().upper_bin_cutoff);
             } else {
               permutations = ta_.get_permute(k).permutations_maj_bin(1,
-                                                                     ta_.get_cov().get_odds(),
-                                                                     ta_.get_cov().get_ncases(),
-                                                                     mac_indices[k],
-                                                                     maj_indices[k],
-                                                                     k,
-                                                                     ta_.get_tp().maj_nbins);
+																	 ta_.get_cov().get_odds(),
+																	 ta_.get_cov().get_ncases(),
+																	 mac_indices[k],
+																	 maj_indices[k],
+																	 k,
+																	 ta_.get_tp().maj_nbins,
+																	 ta_.get_tp().lower_bin_cutoff,
+																	 ta_.get_tp().upper_bin_cutoff);
             }
           }
 		  phenotypes = arma::conv_to<arma::vec>::from(permutations[0]);

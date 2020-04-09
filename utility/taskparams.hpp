@@ -56,6 +56,9 @@ struct TaskParams {
   boost::optional<std::string> bed;
   boost::optional<std::string> weight;
 
+  double lower_bin_cutoff;
+  double upper_bin_cutoff;
+
   bool verbose;
 
   // Output permutations

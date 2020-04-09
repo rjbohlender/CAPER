@@ -214,7 +214,6 @@ VAASTLogic::VAASTLogic(Gene &gene,
 	  site_penalty(site_penalty),
 	  X(gene.get_matrix(k)), Y(Y) {
 
-  std::cerr << "Starting: " << k << std::endl;
   // Verify weights are okay
   check_weights(gene);
 

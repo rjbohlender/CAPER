@@ -149,8 +149,14 @@ int main(int argc, char **argv) {
          "Minimum number of minor allele copies to test a gene.")
         ("min_variant_count",
          po::value<arma::uword>()->default_value(1),
-         "Minimum number of variants to test a gene.");
-    vaast.add_options()
+         "Minimum number of variants to test a gene.")
+		("lower_bin_cutoff",
+		 po::value<double>()->default_value(0.01),
+		 "The value at which samples with extremely small odds ratios will be binned separately. These bins are in addition to those specified by the approximation step.")
+		("upper_bin_cutoff",
+			po::value<double>()->default_value(5),
+			"The value at which samples with extremely large odds ratios will be binned separately. These bins are in addition to those specified by the approximation step.");
+	vaast.add_options()
         ("group_size,g",
          po::value<arma::uword>()->default_value(0),
          "Group size. VAAST can collapse variants into groups of variants, dependent upon the collapse having a higher total VAAST score.")
@@ -311,6 +317,8 @@ int main(int argc, char **argv) {
   tp.bed = bed;
   tp.weight = weight;
   tp.permute_set = permute_set;
+  tp.lower_bin_cutoff = vm["lower_bin_cutoff"].as<double>();
+  tp.upper_bin_cutoff = vm["upper_bin_cutoff"].as<double>();
   // Threading
   tp.nthreads = vm["nthreads"].as<size_t>();
   // Options
@@ -340,7 +348,7 @@ int main(int argc, char **argv) {
   tp.power = false;
 
   // tp.alternate_permutation = tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN";
-  tp.alternate_permutation = !tp.covadj || tp.covariates_path == "";
+  tp.alternate_permutation = !tp.covadj || tp.covariates_path.empty();
   tp.quantitative =
       tp.method == "RVT1" || tp.method == "RVT2" || tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN"
           || tp.method == "VT";
