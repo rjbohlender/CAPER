@@ -325,14 +325,20 @@ double VAASTLogic::Score() {
   return val;
 #else
   double val = 0;
+#if 0
   std::cerr << "\n\nSTART:\n";
+#endif
   for (auto &s : vaast_site_scores) {
 	if (s > 2) {
+#if 0
 	  std::cerr << "s: " << s - 2 << std::endl;
+#endif
 	  val += s - 2;
 	}
   }
+#if 0
   std::cerr << "END\n\n";
+#endif
   return val;
 #endif
 }
@@ -712,11 +718,13 @@ void VAASTLogic::alt_grouping(const arma::sp_mat &X,
   std::vector<Variant> grouped;
 
   std::ofstream merge_debug;
+#if 0
   if(!printed_mergeinfo) {
     std::stringstream ss;
     ss << "/Users/rjbohlender/CLionProjects/PA_Test/aas_no_intron/" << k << ".mergeinfo";
 	merge_debug.open(ss.str());
   }
+#endif
 
   for(auto &type : type_idx_map) {
 	std::vector<std::vector<Variant>> sub_groups;
@@ -751,21 +759,23 @@ void VAASTLogic::alt_grouping(const arma::sp_mat &X,
 		  sub_groups.emplace_back(std::vector<Variant>());
 		}
 	  }
-	  std::cerr << "gid: " << sub_groups.size() << " " << "var: " << positions[type.second[i].index] << " score: " << type.second[i].score << std::endl;
+	  // std::cerr << "gid: " << sub_groups.size() << " " << "var: " << positions[type.second[i].index] << " score: " << type.second[i].score << std::endl;
 	  sub_groups.back().emplace_back(std::move(merging_vars[i]));
 	}
 
 	int gid = 0;
     for(auto &group : sub_groups) {
       gid++;
-	  std::cerr << "gid: " << gid << " group_size:" << group.size() << std::endl;
+	  // std::cerr << "gid: " << gid << " group_size:" << group.size() << std::endl;
 	  std::stable_sort(group.begin(), group.end(), [](auto &a, auto &b) { return a.score < b.score; });
       Variant old(type.first);
 	  Variant merged(type.first);
 	  old.merge(group[group.size() - 1]);
 	  merged.merge(group[group.size() - 1]);
+#if 0
 	  if(!printed_mergeinfo)
 		merge_debug << gid << " " << positions[group.back().index] << std::endl;
+#endif
 	  for(int j = static_cast<int>(group.size()) - 2; j >= 0; j--) {
 		merged.merge(group[j]);
 		if(merged.score > old.score) {
@@ -785,8 +795,10 @@ void VAASTLogic::alt_grouping(const arma::sp_mat &X,
   vaast_site_scores.zeros();
   int i = 0;
   for(auto &v : unmerged) {
+#if 0
     if(!printed_mergeinfo)
 	  merge_debug << "unmerged " << positions[v.index] << std::endl;
+#endif
     vaast_site_scores(i) = v.score;
     i++;
   }
@@ -794,10 +806,12 @@ void VAASTLogic::alt_grouping(const arma::sp_mat &X,
 	vaast_site_scores(i) = v.score;
 	i++;
   }
+#if 0
   if(!printed_mergeinfo) {
 	merge_debug.close();
 	printed_mergeinfo = true;
   }
+#endif
 }
 
 Variant::Variant(std::string type) : type(std::move(type)) {
