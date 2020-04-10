@@ -746,7 +746,7 @@ void VAASTLogic::alt_grouping(const arma::sp_mat &X,
 
 	int sites = merging_vars.size() / 5;
 	for(int i = 0; i < merging_vars.size(); i++) {
-	  if(sub_groups.size() < sites) {
+	  if(sub_groups.size() < sites || sub_groups.size() == 0) {
 		if ((i % 5) == 0) {
 		  sub_groups.emplace_back(std::vector<Variant>());
 		}
