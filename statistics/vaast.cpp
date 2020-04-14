@@ -386,10 +386,12 @@ double VAASTLogic::Score(const arma::sp_mat &X, const arma::vec &Y, const arma::
 	return (val >= 0) ? val : 0; // Mask all negative values
   }
 
+  arma::uvec unweighted = arma::find(w == 0);
   arma::vec log_lh = LRT();
   vaast_site_scores = 2.0 * (log_lh + arma::log(w));
   vaast_site_scores(arma::find(vaast_site_scores / (-2.) > 0)).zeros();
-  variant_bitmask(X, Y, w);
+  vaast_site_scores(unweighted).zeros();
+  variant_bitmask(X, Y, w); // Mask variants with CASM weight 0
   vaast_site_scores(mask).zeros();
 
   // vaast_site_scores(arma::find(vaast_site_scores <= 2)).zeros();

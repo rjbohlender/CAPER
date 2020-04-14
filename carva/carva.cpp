@@ -151,11 +151,11 @@ int main(int argc, char **argv) {
          po::value<arma::uword>()->default_value(1),
          "Minimum number of variants to test a gene.")
 		("lower_bin_cutoff",
-		 po::value<double>()->default_value(0.01),
+		 po::value<double>()->default_value(0.5),
 		 "The value at which samples with extremely small odds ratios will be binned separately. These bins are in addition to those specified by the approximation step.")
 		("upper_bin_cutoff",
-			po::value<double>()->default_value(5),
-			"The value at which samples with extremely large odds ratios will be binned separately. These bins are in addition to those specified by the approximation step.");
+		 po::value<double>()->default_value(2),
+		 "The value at which samples with extremely large odds ratios will be binned separately. These bins are in addition to those specified by the approximation step.");
 	vaast.add_options()
         ("group_size,g",
          po::value<arma::uword>()->default_value(0),
