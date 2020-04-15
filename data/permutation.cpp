@@ -370,9 +370,9 @@ void Permute::build_minor_bins(const arma::vec &odds,
   for (arma::uword i = 0; i < nbins; i++) {
 	std::vector<arma::uword> odds_in_range;
 	for(arma::uword j = 0; j < mac_odds_binnable.n_elem; j++) { // sorted
-	  if(mac_odds_binnable(j) >= min_mac_odds + i * bin_width && mac_odds(j) < min_mac_odds + (i + 1) * bin_width) {
+	  if(mac_odds_binnable(j) >= min_mac_odds + i * bin_width && mac_odds_binnable(j) < min_mac_odds + (i + 1) * bin_width) {
 		odds_in_range.push_back(j);
-	  } else if(mac_odds(j) < min_mac_odds + i * bin_width) {
+	  } else if(mac_odds_binnable(j) < min_mac_odds + i * bin_width) {
 		continue;
 	  } else {
 		break;
@@ -383,7 +383,7 @@ void Permute::build_minor_bins(const arma::vec &odds,
 	  // Set number in group
 	  m[transcript].push_back(odds_spanned.n_elem);
 	  // Set odds for group
-	  odds_[transcript].push_back(arma::mean(mac_odds(odds_spanned)));
+	  odds_[transcript].push_back(arma::mean(mac_odds_binnable(odds_spanned)));
 	} else {
 	  mac_bins[transcript]--;
 	}

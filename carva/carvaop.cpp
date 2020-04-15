@@ -185,22 +185,19 @@ auto CARVAOp::stage1() -> void {
 }
 
 auto CARVAOp::stage2() -> void {
-  // Declare maps
-  std::map<std::string, std::vector<int32_t>> mac_case_count;
-  std::map<std::string, std::vector<int32_t>> maj_case_count;
-  std::map<std::string, arma::colvec> mac_odds;
-  std::map<std::string, arma::colvec> maj_odds;
-  std::map<std::string, arma::uvec> mac_indices;
-  std::map<std::string, arma::uvec> maj_indices;
-  std::map<std::string, arma::vec> af;
+  arma::vec mac_odds;
+  arma::vec maj_odds;
+  arma::uvec mac_indices;
+  arma::uvec maj_indices;
 
-  double perm_val;
-  int transcript_no;
+  double perm_val = 0;
+  int transcript_no = -1;
   // For permutation set output
   std::ofstream pset_ofs;
 
   // Setup
   if (!ta_.get_tp().alternate_permutation) {
+    arma::vec mac_carriers(ta_.get_cov().get_nsamples(), arma::fill::zeros);
 	for (auto &v : ta_.results) {
 	  const std::string &k = v.second.transcript;
 	  if(!ta_.get_gene().is_polymorphic(k)) {
@@ -217,22 +214,17 @@ auto CARVAOp::stage2() -> void {
 										false,
 										true);
 	  }
-	  // Minor and major allele carrier indices
-      mac_indices[k] = arma::find(arma::sum(arma::mat(ta_.get_gene().get_matrix(k) + ta_.get_gene().get_missing(k)), 1) > 0);
-	  // Missing are permuted with mac
-      maj_indices[k] = arma::find(arma::sum(arma::mat(ta_.get_gene().get_matrix(k) + ta_.get_gene().get_missing(k)), 1) == 0);
-      // Missing are excluded from maj
-	  assert(mac_indices[k].n_rows + maj_indices[k].n_rows == ta_.get_cov().get_nsamples());
-
-#if 0
-	  // Calculated to test for bugs with no polymorphic variants
-	  af[k] = arma::sum(arma::mat(ta_.get_gene().get_matrix(k)), 0).t() / ta_.get_gene().get_matrix(k).n_rows;
-	  std::cerr << "k: " << k << " " << af[k].t();
-#endif
-
-	  mac_odds[k] = ta_.get_cov().get_odds()(mac_indices[k]);
-	  maj_odds[k] = ta_.get_cov().get_odds()(maj_indices[k]);
+	  mac_carriers(arma::find(arma::sum(arma::mat(ta_.get_gene().get_matrix(k) + ta_.get_gene().get_missing(k)), 1) > 0)).ones();
 	}
+	// Minor and major allele carrier indices
+	mac_indices = arma::find(mac_carriers > 0);
+	// Missing are permuted with mac
+	maj_indices = arma::find(mac_carriers == 0);
+	// Missing are excluded from maj
+	assert(mac_indices.n_rows + maj_indices.n_rows == ta_.get_cov().get_nsamples());
+
+	mac_odds = ta_.get_cov().get_odds()(mac_indices);
+	maj_odds = ta_.get_cov().get_odds()(maj_indices);
   } else {
 	for (auto &v : ta_.results) {
 	  const std::string &k = v.second.transcript;
@@ -243,14 +235,14 @@ auto CARVAOp::stage2() -> void {
 										ta_.get_cov(),
 										ta_.get_cov().get_original_phenotypes(),
 										ta_.get_tp(),
-										k,
+										 k,
 										false,
 										true);
 	  }
 	}
   }
 
-            int iter = 0;
+  int iter = 0;
   arma::vec phenotypes = ta_.get_cov().get_phenotype_vector();
 
   if (ta_.get_tp().permute_set) {
@@ -274,8 +266,7 @@ auto CARVAOp::stage2() -> void {
 	  if (!ta_.get_gene().is_polymorphic(k))
 		continue;
 
-	  // SKAT corrects for covariates so we don't use this permutation approach
-	  if (!ta_.get_tp().alternate_permutation) {
+	  if (transcript_no == 0) { // Run permutation for only the first transcript and reuse to maintain MGIT functionality
 		if (ta_.get_tp().linear || !ta_.get_tp().covadj) {
 		  // Fisher-Yates Shuffle
 		  for (arma::sword i = phenotypes.n_elem - 1; i > 0; --i) {
@@ -290,8 +281,8 @@ auto CARVAOp::stage2() -> void {
 			permutations = ta_.get_permute(k).permutations_mac_bin(1,
 																   ta_.get_cov().get_odds(),
 																   ta_.get_cov().get_ncases(),
-																   mac_indices[k],
-																   maj_indices[k],
+																   mac_indices,
+																   maj_indices,
 																   k,
 																   *ta_.get_tp().approximate,
 																   ta_.get_tp().maj_nbins,
@@ -301,8 +292,8 @@ auto CARVAOp::stage2() -> void {
 			permutations = ta_.get_permute(k).permutations_maj_bin(1,
 																   ta_.get_cov().get_odds(),
 																   ta_.get_cov().get_ncases(),
-																   mac_indices[k],
-																   maj_indices[k],
+																   mac_indices,
+																   maj_indices,
 																   k,
 																   ta_.get_tp().maj_nbins,
 																   ta_.get_tp().lower_bin_cutoff,
@@ -310,110 +301,18 @@ auto CARVAOp::stage2() -> void {
 		  }
 		  phenotypes = arma::conv_to<arma::vec>::from(permutations[0]);
 		  if(ta_.get_tp().permute_set) {
-		    pset_ofs << phenotypes.t();
+			pset_ofs << phenotypes.t();
 		  }
-		}
-
-		try {
-		  perm_val = call_method(ta_.get_methods(),
-								 ta_.get_gene(),
-								 ta_.get_cov(),
-								 phenotypes,
-								 ta_.get_tp(),
-								  k,
-								 true,
-								 false);
-		} catch(std::exception &e) {
-		  std::cerr << "Failed permutation." << std::endl;
-          if (ta_.get_tp().linear || !ta_.get_tp().covadj) {
-            // Fisher-Yates Shuffle
-            for (arma::sword i = phenotypes.n_elem - 1; i > 0; --i) {
-              std::uniform_int_distribution<> dis(0, i);
-              auto j = static_cast<arma::uword>(dis(gen_));
-              double tmp = phenotypes(i);
-              phenotypes(i) = phenotypes(j);
-              phenotypes(j) = tmp;
-            }
-          } else {
-            if (ta_.get_tp().approximate) {
-              permutations = ta_.get_permute(k).permutations_mac_bin(1,
-																	 ta_.get_cov().get_odds(),
-																	 ta_.get_cov().get_ncases(),
-																	 mac_indices[k],
-																	 maj_indices[k],
-																	 k,
-																	 *ta_.get_tp().approximate,
-																	 ta_.get_tp().maj_nbins,
-																	 ta_.get_tp().lower_bin_cutoff,
-																	 ta_.get_tp().upper_bin_cutoff);
-            } else {
-              permutations = ta_.get_permute(k).permutations_maj_bin(1,
-																	 ta_.get_cov().get_odds(),
-																	 ta_.get_cov().get_ncases(),
-																	 mac_indices[k],
-																	 maj_indices[k],
-																	 k,
-																	 ta_.get_tp().maj_nbins,
-																	 ta_.get_tp().lower_bin_cutoff,
-																	 ta_.get_tp().upper_bin_cutoff);
-            }
-          }
-		  phenotypes = arma::conv_to<arma::vec>::from(permutations[0]);
-          if(ta_.get_tp().permute_set) {
-            pset_ofs << phenotypes.t();
-          }
-		  perm_val = call_method(ta_.get_methods(),
-								 ta_.get_gene(),
-								 ta_.get_cov(),
-								 phenotypes,
-								 ta_.get_tp(),
-								 k,
-								 false,
-								 false);
-		}
-	  } else {
-	    phenotypes = ta_.get_cov().get_phenotype_vector();
-		// Fisher-Yates Shuffle
-		for (arma::sword i = phenotypes.n_elem - 1; i > 0; --i) {
-		  std::uniform_int_distribution<> dis(0, i);
-		  auto j = static_cast<arma::uword>(dis(gen_));
-		  double tmp = phenotypes(i);
-		  phenotypes(i) = phenotypes(j);
-		  phenotypes(j) = tmp;
-		}
-
-		try {
-		  perm_val = call_method(ta_.get_methods(),
-								 ta_.get_gene(),
-								 ta_.get_cov(),
-								 phenotypes,
-								 ta_.get_tp(),
-								 k,
-								 transcript_no == 0,
-								 false);
-		} catch(std::exception &e) {
-		  std::cerr << "Failed permutation." << std::endl;
-		  // Fisher-Yates Shuffle
-		  for (arma::sword i = phenotypes.n_elem - 1; i > 0; --i) {
-			std::uniform_int_distribution<> dis(0, i);
-			auto j = static_cast<arma::uword>(dis(gen_));
-			double tmp = phenotypes(i);
-			phenotypes(i) = phenotypes(j);
-			phenotypes(j) = tmp;
-		  }
-          if(ta_.get_tp().permute_set) {
-            pset_ofs << phenotypes.t();
-          }
-		  perm_val = call_method(ta_.get_methods(),
-								 ta_.get_gene(),
-								 ta_.get_cov(),
-								 phenotypes,
-								 ta_.get_tp(),
-								 k,
-								 transcript_no == 0,
-								 false);
 		}
 	  }
+	  perm_val = call_method(ta_.get_methods(),
+							 ta_.get_gene(),
+							 ta_.get_cov(),
+							 phenotypes,
+							 ta_.get_tp(),
+							  k,
+							 true,
+							 false);
 
 	  // ta.increment_permuted(v.second.transcript, perm_val);
 	  v.second.permuted.push_back(perm_val);
@@ -434,16 +333,9 @@ auto CARVAOp::stage2() -> void {
 	iter++;
   }
   if (verbose_) {
-	if (!ta_.get_tp().alternate_permutation){
-	  for (const auto &v : ta_.results) {
-		std::cerr << "Stage 2: " << ta_.get_gene().get_gene() << "\t" << v.second.transcript << "\t";
-		std::cerr << std::defaultfloat << std::setprecision(6) << v.second.original << std::endl;
-	  }
-	} else {
-	  for (const auto &v : ta_.results) {
-		std::cerr << "Stage 2: " << ta_.get_gene().get_gene() << "\t" << v.second.transcript << "\t";
-		std::cerr << std::defaultfloat << std::setprecision(6) << v.second.original << std::endl;
-	  }
+	for (const auto &v : ta_.results) {
+	  std::cerr << "Stage 2: " << ta_.get_gene().get_gene() << "\t" << v.second.transcript << "\t";
+	  std::cerr << std::defaultfloat << std::setprecision(6) << v.second.original << std::endl;
 	}
   }
   if (ta_.get_tp().permute_set) {
