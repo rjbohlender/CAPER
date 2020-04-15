@@ -169,7 +169,10 @@ int main(int argc, char **argv) {
         ("testable",
          po::bool_switch(&testable),
          "Return scores only for genes with at least scoreable variants in VAAST.")
-        ("biallelic",
+	    ("control_freq_cutoff",
+		 po::value<double>()->default_value(0.5),
+		 "Caps the highest allele frequency for the control set in the likelihood calculation. Penalizes common variants without removing them.")
+		("biallelic",
          po::bool_switch(&biallelic),
          "Additional term for biallelic variants. For detecting potentially recessive variants.");
     skat.add_options()
@@ -332,6 +335,7 @@ int main(int argc, char **argv) {
   tp.pthresh = pthresh;
   tp.approximate = approximate;
   tp.maj_nbins = vm["maj_nbins"].as<arma::uword>();
+  tp.control_freq_cutoff = vm["control_freq_cutoff"].as<double>();
   // SKAT Options
   tp.kernel = vm["kernel"].as<std::string>();
   tp.adjust = adjust;

@@ -208,9 +208,10 @@ VAASTLogic::VAASTLogic(Gene &gene,
 					   double site_penalty,
 					   arma::uword group_threshold,
 					   bool detail,
-					   bool biallelic)
+					   bool biallelic,
+					   double control_freq_cutoff)
 	: som(score_only_minor), soa(score_only_alternative), detail(detail), biallelic(biallelic), k(k),
-	  group_threshold(group_threshold),
+	  group_threshold(group_threshold), control_freq_cutoff(control_freq_cutoff),
 	  site_penalty(site_penalty),
 	  X(gene.get_matrix(k)), Y(Y) {
 
@@ -275,9 +276,10 @@ VAASTLogic::VAASTLogic(arma::sp_mat X,
 					   bool score_only_alternative,
 					   bool biallelic,
 					   arma::uword group_threshold,
-					   double site_penalty)
+					   double site_penalty,
+					   double control_freq_cutoff)
 	: som(score_only_minor), soa(score_only_alternative), detail(true), biallelic(biallelic), k(std::move(k)),
-	  group_threshold(group_threshold),
+	  group_threshold(group_threshold), control_freq_cutoff(control_freq_cutoff),
 	  site_penalty(site_penalty),
 	  X(std::move(X)), Y(Y) {
 
@@ -403,6 +405,9 @@ double VAASTLogic::Score(const arma::sp_mat &X, const arma::vec &Y, const arma::
 arma::vec VAASTLogic::LRT() {
   arma::vec alt_control_freq = control_allele1 / (control_allele0 + control_allele1);
   arma::vec alt_case_freq = case_allele1 / (case_allele0 + case_allele1);
+
+  // Match -r behavior for VAAST
+  alt_control_freq(arma::find(alt_control_freq > control_freq_cutoff)).fill(control_freq_cutoff);
 
   arma::vec
 	  null_freq = (case_allele1 + control_allele1) / (case_allele0 + case_allele1 + control_allele0 + control_allele1);

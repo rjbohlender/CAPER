@@ -67,14 +67,15 @@ public:
                bool detail = false,
                bool linear = false);
   double VAAST(Gene &gene,
-               arma::vec &Y,
-               const std::string &k,
-               bool score_only_minor = true,
-               bool score_only_alternative = true,
-               double site_penalty = 2.0,
-               arma::uword group_threshold = 4,
-               bool detail = false,
-               bool biallelic = false);
+			   arma::vec &Y,
+			   const std::string &k,
+			   bool score_only_minor = true,
+			   bool score_only_alternative = true,
+			   double site_penalty = 2.0,
+			   arma::uword group_threshold = 0,
+			   bool detail = false,
+			   bool biallelic = false,
+			   double control_freq_cutoff = 0.5);
   double VT(Gene &gene, const std::string &k, arma::vec &phenotypes);
 
   // Madsen, Browning 2009

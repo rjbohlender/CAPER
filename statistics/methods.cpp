@@ -333,15 +333,17 @@ double Methods::RVT2(Gene &gene,
 }
 
 double Methods::VAAST(Gene &gene,
-                      arma::vec &Y,
-                      const std::string &k,
-                      bool score_only_minor,
-                      bool score_only_alternative,
-                      double site_penalty,
-                      arma::uword group_threshold,
-                      bool detail,
-                      bool biallelic) {
-  VAASTLogic vaast_logic(gene, Y, k, score_only_minor, score_only_alternative, site_penalty, group_threshold, detail, biallelic);
+					  arma::vec &Y,
+					  const std::string &k,
+					  bool score_only_minor,
+					  bool score_only_alternative,
+					  double site_penalty,
+					  arma::uword group_threshold,
+					  bool detail,
+					  bool biallelic,
+					  double control_freq_cutoff) {
+  VAASTLogic vaast_logic
+	  (gene, Y, k, score_only_minor, score_only_alternative, site_penalty, group_threshold, detail, biallelic, control_freq_cutoff);
   return vaast_logic.score;
 }
 

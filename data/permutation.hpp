@@ -51,36 +51,6 @@ struct Permute {
 														 arma::uword maj_nbins,
 														 double lower_bin_cutoff,
 														 double upper_bin_cutoff);
-  std::vector<std::vector<int32_t>> permutations_mac_bin_fix(int nperm,
-                                                             arma::vec &odds,
-                                                             arma::uword ncases,
-                                                             arma::uvec &mac_indices,
-                                                             arma::uvec &maj_indices,
-                                                             arma::uword &approximate,
-                                                             const std::string &transcript);
-  std::vector<std::vector<int32_t>> permutations_bin(int nperm,
-													 arma::vec &odds,
-													 arma::uword ncases,
-													 arma::uvec &mac_indices,
-													 arma::uvec &maj_indices,
-													 arma::uword &approximate,
-													 const std::string &transcript);
-  arma::vec calculate_fisher_mean(int32_t n, arma::vec &odds);
-  std::vector<std::vector<int32_t>> cases_in_bins(int nperm,
-												  arma::colvec &odds,
-												  int ncases,
-												  std::vector<int32_t> &bin_counts);
-  std::vector<int32_t> random_case_count(int nperm,
-										 arma::uvec &mac_indices,
-										 arma::uvec &maj_indices,
-										 arma::vec &prob,
-										 int ncases);
-  std::vector<int32_t> random_case_count(int nperm,
-										 arma::uvec &mac_indices,
-										 arma::uvec &maj_indices,
-										 arma::vec &prob,
-										 int ncases,
-										 int n_maj_bins);
 
   auto unpack(int successes, int bin_size, bool shuffle) -> arma::uvec;
   auto reset() -> void;

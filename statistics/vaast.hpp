@@ -79,6 +79,7 @@ struct VAASTLogic {
   const arma::uword group_threshold;
   const double site_penalty;
   bool printed_mergeinfo = false;
+  double control_freq_cutoff;
 
   arma::sp_mat X;
   const arma::vec Y;
@@ -103,24 +104,26 @@ struct VAASTLogic {
 
   // Constructors
   VAASTLogic(Gene &gene,
-             arma::vec &Y,
-             const std::string &k,
-             bool score_only_minor,
-             bool score_only_alternative,
-             double site_penalty,
-             arma::uword group_threshold,
-             bool detail,
-             bool biallelic);
+			 arma::vec &Y,
+			 const std::string &k,
+			 bool score_only_minor,
+			 bool score_only_alternative,
+			 double site_penalty,
+			 arma::uword group_threshold,
+			 bool detail,
+			 bool biallelic,
+			 double control_freq_cutoff);
   VAASTLogic(arma::sp_mat X,
-             arma::vec &Y,
-             arma::vec &weights,
-             std::vector<std::string> &positions_,
-             std::string k,
-             bool score_only_minor,
-             bool score_only_alternative,
-             bool biallelic,
-             arma::uword group_threshold,
-             double site_penalty);
+			 arma::vec &Y,
+			 arma::vec &weights,
+			 std::vector<std::string> &positions_,
+			 std::string k,
+			 bool score_only_minor,
+			 bool score_only_alternative,
+			 bool biallelic,
+			 arma::uword group_threshold,
+			 double site_penalty,
+			 double control_freq_cutoff);
 
   void check_weights(Gene &gene);
   double Score();

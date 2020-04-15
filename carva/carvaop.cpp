@@ -492,14 +492,15 @@ auto CARVAOp::call_method(Methods &method,
 	return method.SKATO(gene, k, phenotypes, tp.a, tp.b, detail, tp.linear);
   } else if (tp.method == "VAAST") {
 	return method.VAAST(gene,
-                        phenotypes,
-                        k,
-                        tp.score_only_minor,
-                        tp.score_only_alternative,
-                        2.0,
-                        tp.group_size,
-                        detail,
-                        tp.biallelic);
+						phenotypes,
+						k,
+						tp.score_only_minor,
+						tp.score_only_alternative,
+						2.0,
+						tp.group_size,
+						detail,
+						tp.biallelic,
+						tp.control_freq_cutoff);
   } else if (tp.method == "VT") {
 	return method.VT(gene, k, phenotypes);
   } else if (tp.method == "WSS") {

@@ -59,6 +59,8 @@ struct TaskParams {
   double lower_bin_cutoff;
   double upper_bin_cutoff;
 
+  double control_freq_cutoff;
+
   bool verbose;
 
   // Output permutations
