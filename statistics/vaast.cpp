@@ -454,6 +454,7 @@ void VAASTLogic::variant_grouping(const arma::sp_mat &X,
   std::vector<arma::uword> deletion;
   std::vector<arma::uword> mnp;
   std::vector<arma::uword> SNVs;
+  std::vector<arma::uword> spda;
   arma::uword i = 0;
   for (const auto &p : positions) {
 	RJBUtil::Splitter<std::string> splitter(p, "-");
@@ -465,6 +466,8 @@ void VAASTLogic::variant_grouping(const arma::sp_mat &X,
 	  deletion.push_back(i);
 	} else if (splitter.back() == "complex_substitution") {
 	  mnp.push_back(i);
+	} else if (splitter.back() == "SPDA") {
+	  spda.push_back(i);
 	} else {
 	  throw (std::logic_error("Wrong variant type."));
 	}
@@ -478,6 +481,7 @@ void VAASTLogic::variant_grouping(const arma::sp_mat &X,
   type_idx_map["deletion"] = arma::conv_to<arma::uvec>::from(deletion);
   type_idx_map["mnp"] = arma::conv_to<arma::uvec>::from(mnp);
   type_idx_map["SNV"] = arma::conv_to<arma::uvec>::from(SNVs);
+  type_idx_map["SPDA"] = arma::conv_to<arma::uvec>::from(spda);
 
   for (const auto &type : type_idx_map) {
 	arma::uvec idx = type.second;
