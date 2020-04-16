@@ -91,7 +91,7 @@ void Covariates::refit_permuted() {
 	success = fit.success;
 	p_fitted_ = fit.mu_;
 	p_eta_ = fit.eta_;
-	p_coef_ = fit.beta_.t();
+	p_coef_ = fit.beta_;
 	// From Moser and Coombs (2004) -- Get Logistic Regression params without dichotomizing
 	double lambda = arma::datum::pi / std::sqrt(3);
 	Binomial alt_link("logit");
@@ -104,7 +104,7 @@ void Covariates::refit_permuted() {
 	p_odds_ = fit.mu_ / (1. - fit.mu_);
 	p_fitted_ = fit.mu_;
 	p_eta_ = fit.eta_;
-	p_coef_ = fit.beta_.t();
+	p_coef_ = fit.beta_;
   }
 
   // Use BayesianGLM to overcome perfect separation

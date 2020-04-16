@@ -11,7 +11,7 @@
 Permute::Permute()
 	: sto(std::random_device{}()) {}
 
-void Permute::get_permutations(std::shared_ptr<std::vector<std::vector<int32_t>>> permutations,
+void Permute::get_permutations(std::shared_ptr<std::vector<std::vector<int8_t>>> permutations,
 							   arma::colvec &odds,
 							   arma::uword ncases,
 							   arma::uword nperm,
@@ -135,7 +135,7 @@ Permute &Permute::operator=(const Permute &rhs) {
 Permute::Permute(const Permute &other)
 	: sto(other.sto) {}
 
-void Permute::permute_thread(std::shared_ptr<std::vector<std::vector<int32_t>>> p,
+void Permute::permute_thread(std::shared_ptr<std::vector<std::vector<int8_t>>> p,
 							 int32_t *m,
 							 double *odds,
 							 int ncases,
@@ -145,8 +145,13 @@ void Permute::permute_thread(std::shared_ptr<std::vector<std::vector<int32_t>>> 
 							 int seed) {
   StochasticLib3 rng(seed);
 
+  std::vector<int32_t> tmp(ngroups, 0);
+
   for (int i = 0; i < nperm; i++) {
-	rng.MultiFishersNCHyp(&(*p)[offset + i][0], m, odds, ncases, ngroups);
+	rng.MultiFishersNCHyp(&tmp[0], m, odds, ncases, ngroups);
+	for(int j = 0; j < ngroups; j++) {
+	  (*p)[offset + i][j] = tmp[j];
+	}
   }
 
 }

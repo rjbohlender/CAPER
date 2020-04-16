@@ -32,7 +32,7 @@ enum class Stage {
 class CARVATask {
 public:
   std::unordered_map<std::string, Result> results;
-  std::vector<std::vector<int32_t>> &permutations;
+  std::vector<std::vector<int8_t>> &permutations;
   std::unordered_map<std::string, Permute> permute;
   int success_threshold;
   int stop_check_threshold;
@@ -46,12 +46,12 @@ public:
 			arma::uword succ_thresh,
 			arma::uword s1_perm,
 			arma::uword s2_perm,
-			std::vector<std::vector<int32_t>> &perm);
+			std::vector<std::vector<int8_t>> &perm);
   CARVATask(Stage stage,
 			Gene &gene,
 			const std::shared_ptr<Covariates> &cov,
 			TaskParams &tp,
-			std::vector<std::vector<int32_t>> &perm);
+			std::vector<std::vector<int8_t>> &perm);
   CARVATask(const CARVATask &ta);
   CARVATask(CARVATask &&ta) noexcept;
   CARVATask &operator=(const CARVATask &rhs);
@@ -66,7 +66,7 @@ public:
   Methods &get_methods();
   int get_max_permutations();
   int get_npermutations();
-  std::vector<std::vector<int32_t>> &get_permutations();
+  std::vector<std::vector<int8_t>> &get_permutations();
   Result &max_original_statistic();
   Result &min_empirical_pvalue();
   Result &min_mgit_p();

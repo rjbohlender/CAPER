@@ -72,7 +72,7 @@ public:
 	// Sort covariates
 	cov_->sort_covariates(header_);
 
-	permutation_ptr_ = std::make_shared<std::vector<std::vector<int32_t>>>();
+	permutation_ptr_ = std::make_shared<std::vector<std::vector<int8_t>>>();
 	if (tp.external) { // Read in external stage 1 permutations
 	  if(!check_file_exists(tp.external_path)) {
 	    throw(std::runtime_error("ERROR: External permutation file doesn't exist."));
@@ -438,7 +438,7 @@ private:
   arma::uword ngenes_ = 0;
 
   std::shared_ptr<Covariates> cov_;
-  std::shared_ptr<std::vector<std::vector<int32_t>>> permutation_ptr_;
+  std::shared_ptr<std::vector<std::vector<int8_t>>> permutation_ptr_;
 };
 
 #endif //PERMUTE_ASSOCIATE_JOBDISPATCHER_HPP

@@ -19,7 +19,7 @@ CARVATask::CARVATask(Stage stage,
 					 arma::uword succ_thresh,
 					 arma::uword s1_perm,
 					 arma::uword s2_perm,
-					 std::vector<std::vector<int32_t>> &perm)
+					 std::vector<std::vector<int8_t>> &perm)
 	: stage_(stage),
 	  gene_(std::move(gene)),
 	  cov_(cov),
@@ -42,7 +42,7 @@ CARVATask::CARVATask(Stage stage,
 					 Gene &gene,
 					 const std::shared_ptr<Covariates> &cov,
 					 TaskParams &tp,
-					 std::vector<std::vector<int32_t>> &perm)
+					 std::vector<std::vector<int8_t>> &perm)
 	: stage_(stage),
 	  gene_(std::move(gene)),
 	  cov_(cov),
@@ -146,7 +146,7 @@ int CARVATask::get_npermutations() {
   }
 }
 
-std::vector<std::vector<int32_t>> &CARVATask::get_permutations() {
+std::vector<std::vector<int8_t>> &CARVATask::get_permutations() {
   return permutations;
 }
 

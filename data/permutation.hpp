@@ -18,13 +18,13 @@ struct Permute {
   Permute(const Permute &other);
   Permute &operator=(const Permute &rhs);
 
-  void get_permutations(std::shared_ptr<std::vector<std::vector<int32_t>>> permutations,
+  void get_permutations(std::shared_ptr<std::vector<std::vector<int8_t>>> permutations,
 						arma::colvec &odds,
 						arma::uword ncases,
 						arma::uword nperm,
 						arma::uword nthreads);
 
-  void permute_thread(std::shared_ptr<std::vector<std::vector<int32_t>>> p,
+  void permute_thread(std::shared_ptr<std::vector<std::vector<int8_t>>> p,
 						int32_t *m,
 						double *odds,
 						int ncases,
