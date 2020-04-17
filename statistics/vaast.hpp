@@ -11,45 +11,6 @@
 #include "../data/gene.hpp"
 #include "../data/covariates.hpp"
 
-class VariantGroup {
-public:
-  arma::uword nvariants;
-  arma::sp_mat Xcollapse;
-  arma::vec Y;
-  arma::vec weight;
-  const double site_penalty;
-  const bool som;
-  const bool soa;
-
-  arma::vec case_allele1;
-  arma::vec control_allele1;
-  arma::vec case_allele0;
-  arma::vec control_allele0;
-
-  arma::uword n_case;
-  arma::uword n_control;
-
-  arma::vec variant_scores;
-  arma::uvec mask;
-
-  double score;
-
-  VariantGroup(arma::sp_mat X,
-				 arma::vec Y,
-				 arma::vec weights,
-				 arma::uword group_threshold,
-				 double site_penalty,
-				 bool score_only_minor,
-				 bool score_only_alternative);
-
-private:
-  void variant_mask();
-
-  double Score(const arma::sp_mat &X, const arma::vec &Y, const arma::vec &w);
-  arma::vec LRT();
-  arma::vec log_likelihood(arma::vec &freq, arma::vec &allele0, arma::vec &allele1);
-};
-
 struct Variant {
   double case_allele1 = 0;
   double case_allele0 = 0;
@@ -105,7 +66,6 @@ struct VAASTLogic {
 
   arma::uvec mask;
 
-  std::vector<VariantGroup> groups;
   arma::vec vaast_site_scores;
   arma::vec expanded_scores;
 
@@ -139,10 +99,6 @@ struct VAASTLogic {
   double Score(const arma::sp_mat &X, const arma::vec &Y, const arma::vec &w);
   arma::vec LRT();
   arma::vec log_likelihood(arma::vec &freq, arma::vec &allele0, arma::vec &allele1);
-  void variant_grouping(const arma::sp_mat &X,
-						const arma::vec &Y,
-						const arma::vec &w,
-						std::vector<std::string> &positions);
   void alt_grouping(const arma::sp_mat &X,
 					const arma::vec &Y,
 					const arma::vec &w,

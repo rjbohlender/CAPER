@@ -503,11 +503,11 @@ auto Gene::testable(const std::string &k, Covariates &cov, TaskParams &tp) -> bo
   return arma::accu(vaast.expanded_scores > 0) >= 4;
 }
 
-auto Gene::is_testable() -> bool {
+auto Gene::is_testable() const -> bool {
   return testable_;
 }
 
-auto Gene::is_skippable() -> bool {
+auto Gene::is_skippable() const -> bool {
   return skippable_;
 }
 

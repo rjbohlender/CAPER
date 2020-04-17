@@ -53,10 +53,10 @@ public:
   void set_scores(const std::string &k, arma::vec &scores);
   auto get_detail() -> std::string;
   auto get_vaast() -> std::map<std::string, std::string>;
-  auto is_skippable() -> bool;
+  auto is_skippable() const -> bool;
   auto is_polymorphic(const std::string &k) -> bool;
   auto is_weighted(const std::string &k) -> bool;
-  auto is_testable() -> bool;
+  auto is_testable() const -> bool;
   auto generate_detail(Covariates &cov, std::unordered_map<std::string, Result> &results, TaskParams &tp) -> void;
   auto generate_vaast(Covariates &cov) -> void;
   auto clear(Covariates &cov, std::unordered_map<std::string, Result> &results, TaskParams &tp) -> void;
