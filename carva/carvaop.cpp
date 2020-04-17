@@ -175,7 +175,7 @@ auto CARVAOp::stage1() -> void {
 	  v.second.empirical_midp = midp;
 	  v.second.update_ci();
 
-	  double n = ta_.get_gene().get_samples().size();
+	  double n = 2 * ta_.get_gene().get_samples().size();
 	  double nmac = arma::accu(arma::sum(arma::mat(ta_.get_gene().get_matrix(v.second.transcript)), 1) > 0);
 	  double nmaj = n - nmac;
 
@@ -372,7 +372,7 @@ auto CARVAOp::stage2() -> void {
 	v.second.empirical_midp = midp;
 	v.second.update_ci();
 
-	double n = ta_.get_gene().get_samples().size();
+	double n = 2 * ta_.get_gene().get_samples().size();
 	double nmac = arma::accu(arma::sum(arma::mat(ta_.get_gene().get_matrix(v.second.transcript)), 1) > 0);
 	double nmaj = n - nmac;
 
@@ -492,11 +492,11 @@ auto CARVAOp::call_method(Methods &method,
 						k,
 						tp.score_only_minor,
 						tp.score_only_alternative,
-						2.0,
+						tp.vaast_site_penalty,
 						tp.group_size,
 						detail,
 						tp.biallelic,
-						tp.control_freq_cutoff);
+						tp.soft_maf_filter);
   } else if (tp.method == "VT") {
 	return method.VT(gene, k, phenotypes);
   } else if (tp.method == "WSS") {

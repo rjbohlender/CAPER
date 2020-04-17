@@ -209,9 +209,9 @@ VAASTLogic::VAASTLogic(Gene &gene,
 					   arma::uword group_threshold,
 					   bool detail,
 					   bool biallelic,
-					   double control_freq_cutoff)
+					   double soft_maf_filter)
 	: som(score_only_minor), soa(score_only_alternative), detail(detail), biallelic(biallelic), k(k),
-	  group_threshold(group_threshold), control_freq_cutoff(control_freq_cutoff),
+	  group_threshold(group_threshold), soft_maf_filter(soft_maf_filter),
 	  site_penalty(site_penalty),
 	  X(gene.get_matrix(k)), Y(Y) {
 
@@ -277,9 +277,9 @@ VAASTLogic::VAASTLogic(arma::sp_mat X,
 					   bool biallelic,
 					   arma::uword group_threshold,
 					   double site_penalty,
-					   double control_freq_cutoff)
+					   double soft_maf_filter)
 	: som(score_only_minor), soa(score_only_alternative), detail(true), biallelic(biallelic), k(std::move(k)),
-	  group_threshold(group_threshold), control_freq_cutoff(control_freq_cutoff),
+	  group_threshold(group_threshold), soft_maf_filter(soft_maf_filter),
 	  site_penalty(site_penalty),
 	  X(std::move(X)), Y(Y) {
 
@@ -407,7 +407,7 @@ arma::vec VAASTLogic::LRT() {
   arma::vec alt_case_freq = case_allele1 / (case_allele0 + case_allele1);
 
   // Match -r behavior for VAAST
-  alt_control_freq(arma::find(alt_control_freq > control_freq_cutoff)).fill(control_freq_cutoff);
+  alt_control_freq(arma::find(alt_control_freq > soft_maf_filter)).fill(soft_maf_filter);
 
   arma::vec
 	  null_freq = (case_allele1 + control_allele1) / (case_allele0 + case_allele1 + control_allele0 + control_allele1);
@@ -675,6 +675,7 @@ void VAASTLogic::alt_grouping(const arma::sp_mat &X,
   std::vector<Variant> insertion;
   std::vector<Variant> deletion;
   std::vector<Variant> mnp;
+  std::vector<Variant> spda;
 
   for (int i = 0; i < positions.size(); i++) {
 	RJBUtil::Splitter<std::string> splitter(positions[i], "-");
@@ -688,7 +689,8 @@ void VAASTLogic::alt_grouping(const arma::sp_mat &X,
 								w(i),
 								splitter.back(),
 								loc.str(),
-								i));
+								i,
+								soft_maf_filter));
 	} else if (splitter.back() == "insertion") {
 	  insertion.emplace_back(Variant(case_allele1(i),
 									 case_allele0(i),
@@ -697,7 +699,8 @@ void VAASTLogic::alt_grouping(const arma::sp_mat &X,
 									 w(i),
 									 splitter.back(),
 									 loc.str(),
-									 i));
+									 i,
+									 soft_maf_filter));
 	} else if (splitter.back() == "deletion") {
 	  deletion.emplace_back(Variant(case_allele1(i),
 									case_allele0(i),
@@ -706,7 +709,18 @@ void VAASTLogic::alt_grouping(const arma::sp_mat &X,
 									w(i),
 									splitter.back(),
 									loc.str(),
-									i));
+									i,
+									soft_maf_filter));
+	} else if (splitter.back() == "SPDA") {
+	  deletion.emplace_back(Variant(case_allele1(i),
+									case_allele0(i),
+									control_allele1(i),
+									control_allele0(i),
+									w(i),
+									splitter.back(),
+									loc.str(),
+									i,
+									soft_maf_filter));
 	} else if (splitter.back() == "complex_substitution") {
 	  mnp.emplace_back(Variant(case_allele1(i),
 							   case_allele0(i),
@@ -715,7 +729,8 @@ void VAASTLogic::alt_grouping(const arma::sp_mat &X,
 							   w(i),
 							   splitter.back(),
 							   loc.str(),
-							   i));
+							   i,
+							   soft_maf_filter));
 	} else {
 	  throw (std::logic_error("Wrong variant type."));
 	}
@@ -724,6 +739,7 @@ void VAASTLogic::alt_grouping(const arma::sp_mat &X,
   type_idx_map["insertion"] = std::move(insertion);
   type_idx_map["deletion"] = std::move(deletion);
   type_idx_map["mnp"] = std::move(mnp);
+  type_idx_map["spda"] = std::move(spda);
 
   std::vector<Variant> unmerged;
   std::vector<Variant> grouped;
@@ -779,8 +795,8 @@ void VAASTLogic::alt_grouping(const arma::sp_mat &X,
       gid++;
 	  // std::cerr << "gid: " << gid << " group_size:" << group.size() << std::endl;
 	  std::stable_sort(group.begin(), group.end(), [](auto &a, auto &b) { return a.score < b.score; });
-      Variant old(type.first);
-	  Variant merged(type.first);
+      Variant old(type.first, soft_maf_filter);
+	  Variant merged(type.first, soft_maf_filter);
 	  old.merge(group[group.size() - 1]);
 	  merged.merge(group[group.size() - 1]);
 #if 0
@@ -825,7 +841,7 @@ void VAASTLogic::alt_grouping(const arma::sp_mat &X,
 #endif
 }
 
-Variant::Variant(std::string type) : type(std::move(type)) {
+Variant::Variant(std::string type, double soft_maf_filter) : type(std::move(type)), soft_maf_filter(soft_maf_filter) {
 
 }
 
@@ -836,9 +852,10 @@ Variant::Variant(double case_allele1,
 				 double weight,
 				 std::string type,
 				 std::string loc,
-				 int index)
+				 int index,
+				 double soft_maf_filter)
 	: case_allele1(case_allele1), case_allele0(case_allele0), control_allele1(control_allele1),
-	  control_allele0(control_allele0), weight(weight), type(std::move(type)), loc(std::move(loc)), index(index) {
+	  control_allele0(control_allele0), weight(weight), type(std::move(type)), loc(std::move(loc)), index(index), soft_maf_filter(soft_maf_filter) {
 	calc_score();
 }
 
@@ -865,6 +882,8 @@ void Variant::calc_score() {
 
   double case_alt_freq = case_allele1 / (case_allele0 + case_allele1);
   double control_alt_freq = control_allele1 / (control_allele0 + control_allele1);
+
+  control_alt_freq = control_alt_freq > soft_maf_filter ? soft_maf_filter : control_alt_freq;
 
   double null_freq = (case_allele1 + control_allele1) / (case_allele1 + case_allele0 + control_allele1 + control_allele0);
 

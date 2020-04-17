@@ -17,6 +17,9 @@ public:
   auto run() -> void;
   auto finish() -> void;
 
+  bool done_;
+  bool verbose_;
+  CARVATask ta_;
 private:
   // PRNG
   std::mt19937 gen_;
@@ -38,10 +41,6 @@ private:
 					 bool shuffle,
 					 bool detail) -> double;
 
-
-  CARVATask ta_;
-  bool done_;
-  bool verbose_;
   std::shared_ptr<Reporter> reporter_;
 };
 

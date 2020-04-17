@@ -59,12 +59,21 @@ struct Variant {
   std::string type = "";
   std::string loc = "";
   int index = 0;
+  double soft_maf_filter = 0.5;
 
   // Calculated here
   double score = 0;
 
-  Variant(std::string type);
-  Variant(double case_allele1, double case_allele0, double control_allele1, double control_allele0, double weight, std::string type, std::string loc, int index);
+  Variant(std::string type, double soft_maf_filter);
+  Variant(double case_allele1,
+		  double case_allele0,
+		  double control_allele1,
+		  double control_allele0,
+		  double weight,
+		  std::string type,
+		  std::string loc,
+		  int index,
+		  double soft_maf_filter);
 
   void merge(Variant &other);
   void calc_score();
@@ -79,7 +88,7 @@ struct VAASTLogic {
   const arma::uword group_threshold;
   const double site_penalty;
   bool printed_mergeinfo = false;
-  double control_freq_cutoff;
+  double soft_maf_filter;
 
   arma::sp_mat X;
   const arma::vec Y;
@@ -112,7 +121,7 @@ struct VAASTLogic {
 			 arma::uword group_threshold,
 			 bool detail,
 			 bool biallelic,
-			 double control_freq_cutoff);
+			 double soft_maf_filter);
   VAASTLogic(arma::sp_mat X,
 			 arma::vec &Y,
 			 arma::vec &weights,
@@ -123,7 +132,7 @@ struct VAASTLogic {
 			 bool biallelic,
 			 arma::uword group_threshold,
 			 double site_penalty,
-			 double control_freq_cutoff);
+			 double soft_maf_filter);
 
   void check_weights(Gene &gene);
   double Score();
@@ -138,7 +147,6 @@ struct VAASTLogic {
 					const arma::vec &Y,
 					const arma::vec &w,
 					std::vector<std::string> &positions);
-  void alt_score();
   void variant_bitmask(const arma::sp_mat &X, const arma::vec &Y, const arma::vec &w);
 
   static arma::uvec setdiff(arma::uvec x, arma::uvec y);

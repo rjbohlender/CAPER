@@ -59,7 +59,8 @@ struct TaskParams {
   double lower_bin_cutoff;
   double upper_bin_cutoff;
 
-  double control_freq_cutoff;
+  double soft_maf_filter;
+  double vaast_site_penalty;
 
   bool verbose;
 

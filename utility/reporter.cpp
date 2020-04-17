@@ -571,18 +571,18 @@ auto Reporter::sort_simple(TaskParams &tp) -> void {
 	RJBUtil::Splitter<std::string> emp_midci_splitter(splitter[7], ",");
 
     ResultLine rs = ResultLine {
-      .gene = splitter[0],
-      .transcript = splitter[1],
-      .original = std::stod(splitter[2]),
-      .exact_p = std::stod(splitter[3]),
-      .empirical_p = std::stod(splitter[4]),
-      .empirical_p_ci = std::make_pair(std::stod(emp_ci_splitter[0]), std::stod(emp_ci_splitter[1])),
-      .empirical_midp = std::stod(splitter[6]),
-      .empirical_midp_ci = std::make_pair(std::stod(emp_midci_splitter[0]), std::stod(emp_midci_splitter[1])),
-      .mgit = std::stod(splitter[8]),
-      .successes = std::stoul(splitter[9]),
-      .mgit_successes = std::stoul(splitter[10]),
-      .permutations = std::stoul(splitter[11])
+      splitter[0],
+      splitter[1],
+      std::stod(splitter[2]),
+      std::stod(splitter[3]),
+      std::stod(splitter[4]),
+      std::make_pair(std::stod(emp_ci_splitter[0]), std::stod(emp_ci_splitter[1])),
+      std::stod(splitter[6]),
+      std::make_pair(std::stod(emp_midci_splitter[0]), std::stod(emp_midci_splitter[1])),
+      std::stod(splitter[8]),
+      std::stoul(splitter[9]),
+      std::stoul(splitter[10]),
+      std::stoul(splitter[11])
     };
 	for(int i = 12; i < splitter.size(); i++) {
 	  rs.stats.push_back(splitter[i]);
@@ -666,7 +666,7 @@ auto Reporter::sort_simple(TaskParams &tp) -> void {
 	if (tp.maf < 0.05) {
 	  uf_ss << "-r " << tp.maf << " ";
 	}
-	if (tp.mac != 250) {
+	if (tp.mac < std::numeric_limits<unsigned long long>::max()) {
 	  uf_ss << "--mac " << tp.mac << " ";
 	}
 	if (tp.nodetail) {

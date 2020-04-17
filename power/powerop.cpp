@@ -250,11 +250,11 @@ double PowerOp::call_method(Methods &method,
 			   k,
 			   tp.score_only_minor,
 			   tp.score_only_alternative,
-			   2.0,
+			   tp.vaast_site_penalty,
 			   tp.group_size,
 			   detail,
 			   false,
-			   tp.control_freq_cutoff);
+			   tp.soft_maf_filter);
   } else if (tp.method == "VT") {
 	return method.VT(gene, k, phenotypes);
   } else if (tp.method == "WSS") {

@@ -167,7 +167,7 @@ private:
 		lock.unlock();
 
 		// Logic for running with OPs
-		if (!op.is_done()) {
+		if (!op.done_) {
 		  op.run();
 		  dispatch(op);
 		} else {
@@ -175,7 +175,7 @@ private:
 
 		  if(tp_.gene_list) {
 			lock.lock();
-			results_.emplace_back(op.get_task());
+			results_.emplace_back(op.ta_);
 			lock.unlock();
 		  }
 		}

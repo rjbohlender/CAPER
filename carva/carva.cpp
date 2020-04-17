@@ -169,12 +169,15 @@ int main(int argc, char **argv) {
         ("testable",
          po::bool_switch(&testable),
          "Return scores only for genes with at least scoreable variants in VAAST.")
-	    ("control_freq_cutoff",
+	    ("soft_maf_filter",
 		 po::value<double>()->default_value(0.5),
 		 "Caps the highest allele frequency for the control set in the likelihood calculation. Penalizes common variants without removing them.")
 		("biallelic",
          po::bool_switch(&biallelic),
-         "Additional term for biallelic variants. For detecting potentially recessive variants.");
+         "Additional term for biallelic variants. For detecting potentially recessive variants.")
+        ("site_penalty",
+		 po::value<double>()->default_value(2.0),
+		 "VAAST site penalty. AIC penalty applied to each site in VAAST.");
     skat.add_options()
         ("kernel,k",
          po::value<std::string>()->default_value("wLinear"),
@@ -315,6 +318,7 @@ int main(int argc, char **argv) {
   tp.maf = vm["maf"].as<double>();
   tp.cmcmaf = vm["cmcmaf"].as<double>();
   tp.group_size = vm["group_size"].as<arma::uword>();
+  tp.vaast_site_penalty = vm["site_penalty"].as<double>();
   tp.score_only_minor = score_only_minor;
   tp.score_only_alternative = score_only_alternative;
   tp.bed = bed;
@@ -335,7 +339,7 @@ int main(int argc, char **argv) {
   tp.pthresh = pthresh;
   tp.approximate = approximate;
   tp.maj_nbins = vm["maj_nbins"].as<arma::uword>();
-  tp.control_freq_cutoff = vm["control_freq_cutoff"].as<double>();
+  tp.soft_maf_filter = vm["soft_maf_filter"].as<double>();
   // SKAT Options
   tp.kernel = vm["kernel"].as<std::string>();
   tp.adjust = adjust;
