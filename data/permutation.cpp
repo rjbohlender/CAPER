@@ -150,7 +150,7 @@ void Permute::permute_thread(std::shared_ptr<std::vector<std::vector<int8_t>>> p
   for (int i = 0; i < nperm; i++) {
 	rng.MultiFishersNCHyp(&tmp[0], m, odds, ncases, ngroups);
 	for(int j = 0; j < ngroups; j++) {
-	  (*p)[offset + i][j] = tmp[j];
+	  (*p)[offset + i][j] = static_cast<int8_t>(tmp[j]);
 	}
   }
 

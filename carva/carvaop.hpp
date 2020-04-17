@@ -16,8 +16,6 @@ public:
 
   auto run() -> void;
   auto finish() -> void;
-  auto is_done() const -> bool;
-  auto get_task() -> CARVATask;
 
 private:
   // PRNG

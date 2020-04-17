@@ -382,10 +382,6 @@ auto CARVAOp::stage2() -> void {
   done_ = true;
 }
 
-auto CARVAOp::is_done() const -> bool {
-  return done_;
-}
-
 auto CARVAOp::check_perm(const TaskParams &tp,
 						 double perm_val,
 						 int success_threshold,
@@ -509,8 +505,3 @@ auto CARVAOp::call_method(Methods &method,
 	throw (std::logic_error("Failed to find method."));
   }
 }
-
-auto CARVAOp::get_task() -> CARVATask {
-  return ta_;
-}
-
