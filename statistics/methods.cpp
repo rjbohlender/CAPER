@@ -231,8 +231,8 @@ double Methods::CMC1df(Gene &gene, arma::vec &Y, const std::string &k) {
     arma::vec X(arma::sum(gene.get_matrix(k), 1));
     X(arma::find(X > 0)).ones();
 
-    arma::uword ncase = arma::accu(Y);
-    arma::uword ncont = arma::accu(1 - Y);
+    arma::uword ncase = 2 * arma::accu(Y);
+    arma::uword ncont = 2 * arma::accu(1 - Y);
 
     double case_alt = arma::accu(X % Y);
     double cont_alt = arma::accu(X % (1 - Y));
