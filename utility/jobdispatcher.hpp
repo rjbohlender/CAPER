@@ -180,7 +180,7 @@ private:
 		if (!gene_.empty()) {
 		  if (std::any_of(nvariants_.cbegin(), nvariants_.cend(), [&](const auto &v) { return v.second > 0; })) {
 			// Dispatch gene
-			Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_, tp_, cov_->get_original_phenotypes());
+			Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_, tp_);
 
 			if(!gene_data.is_skippable()) {
               if (tp_.range_start && tp_.range_end) {
@@ -206,7 +206,7 @@ private:
 		}
 	  }
 	}
-	Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_, tp_, cov_->get_original_phenotypes());
+	Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_, tp_);
 
 	if (!gene_data.is_skippable())
 	  single_dispatch(gene_data);
@@ -248,7 +248,7 @@ private:
 		if (!gene_.empty()) {
 		  if (std::any_of(nvariants_.cbegin(), nvariants_.cend(), [&](const auto &v) { return v.second > 0; })) {
 			// Dispatch gene
-			Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_, tp_, cov_->get_original_phenotypes());
+			Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_, tp_);
 
 			if (!gene_data.is_skippable())
 			  multiple_dispatch(gene_data);
@@ -281,7 +281,7 @@ private:
 	  }
 	}
 	if (!current.str().empty()) {
-	  Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_, tp_, cov_->get_original_phenotypes());
+	  Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_, tp_);
 
 	  if (!gene_data.is_skippable())
 		multiple_dispatch(gene_data);

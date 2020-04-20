@@ -55,6 +55,7 @@ int main(int argc, char **argv) {
   bool biallelic = false;
   bool nocovadj = false;
   bool stats = false;
+  bool legacy_grouping = false;
   std::vector<int> gene_range;
   std::vector<std::string> power;
   boost::optional<std::string> bed;
@@ -112,8 +113,8 @@ int main(int argc, char **argv) {
          po::value<arma::uword>(),
          "Minor allele count cutoff.")
         ("maf,r",
-         po::value<double>()->default_value(0.005),
-         "Minor allele frequency cutoff. Default equivalent to XQC.")
+         po::value<double>()->default_value(0.5),
+         "Minor allele frequency cutoff. We recommend using an external sample and filtering variants based on the frequency in that sample, rather than filtering within. Can result in a reduction in power for variants near the threshold.")
         ("pthresh,j",
          po::value(&pthresh),
          "The threshold to terminate permutation based on whether it is outside the p-value CI.")
@@ -177,7 +178,10 @@ int main(int argc, char **argv) {
          "Additional term for biallelic variants. For detecting potentially recessive variants.")
         ("site_penalty",
 		 po::value<double>()->default_value(2.0),
-		 "VAAST site penalty. AIC penalty applied to each site in VAAST.");
+		 "VAAST site penalty. AIC penalty applied to each site in VAAST.")
+		("legacy_grouping",
+		 po::bool_switch(&legacy_grouping),
+		 "Match grouping behavior to VAAST 2.0. Off by default. If enabled variants are grouped by type annotation, otherwise grouped all together.");
     skat.add_options()
         ("kernel,k",
          po::value<std::string>()->default_value("wLinear"),
@@ -319,6 +323,7 @@ int main(int argc, char **argv) {
   tp.cmcmaf = vm["cmcmaf"].as<double>();
   tp.group_size = vm["group_size"].as<arma::uword>();
   tp.vaast_site_penalty = vm["site_penalty"].as<double>();
+  tp.legacy_grouping = legacy_grouping;
   tp.score_only_minor = score_only_minor;
   tp.score_only_alternative = score_only_alternative;
   tp.bed = bed;

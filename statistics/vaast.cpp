@@ -2,6 +2,7 @@
 // Created by Bohlender,Ryan James on 10/2/18.
 //
 
+#define PRINT_MERGEINFO 0
 #include "vaast.hpp"
 
 #include <algorithm>
@@ -15,10 +16,11 @@ VAASTLogic::VAASTLogic(Gene &gene,
 					   arma::uword group_threshold,
 					   bool detail,
 					   bool biallelic,
-					   double soft_maf_filter)
+					   double soft_maf_filter,
+					   bool legacy_)
 	: som(score_only_minor), soa(score_only_alternative), detail(detail), biallelic(biallelic), k(k),
 	  group_threshold(group_threshold), soft_maf_filter(soft_maf_filter),
-	  site_penalty(site_penalty),
+	  site_penalty(site_penalty), legacy(legacy_),
 	  X(gene.get_matrix(k)), Y(Y) {
 
   // Verify weights are okay
@@ -33,7 +35,11 @@ VAASTLogic::VAASTLogic(Gene &gene,
 	  gene.set_scores(k, vaast_site_scores);
   } else {
 	score = Score(X, Y, weights);
-	alt_grouping(X, Y, weights, gene.get_positions(k));
+	if(legacy) {
+	  legacy_grouping(X, Y, weights, gene.get_positions(k));
+	} else {
+	  variant_grouping(X, Y, weights, gene.get_positions(k));
+	}
 	score = Score();
   }
 
@@ -60,7 +66,11 @@ VAASTLogic::VAASTLogic(Gene &gene,
 		  }
 
 		  Score(Xnew, Y, Wnew); // Do normal individual variant scoring
-		  alt_grouping(Xnew, Y, Wnew, positions); // Redo grouping
+		  if(legacy) {
+			legacy_grouping(Xnew, Y, Wnew, positions);
+		  } else {
+			variant_grouping(Xnew, Y, Wnew, positions);
+		  }
 		  double new_score = Score();
 		  expanded_scores(i) = (score - new_score >= 0) ? score - new_score : 0; // Calculate score
 		}
@@ -83,18 +93,22 @@ VAASTLogic::VAASTLogic(arma::sp_mat X,
 					   bool biallelic,
 					   arma::uword group_threshold,
 					   double site_penalty,
-					   double soft_maf_filter)
+					   double soft_maf_filter,
+					   bool legacy_)
 	: som(score_only_minor), soa(score_only_alternative), detail(true), biallelic(biallelic), k(std::move(k)),
 	  group_threshold(group_threshold), soft_maf_filter(soft_maf_filter),
-	  site_penalty(site_penalty),
+	  site_penalty(site_penalty), legacy(legacy_),
 	  X(std::move(X)), Y(Y) {
-
 
   if (group_threshold == 0 || X.n_cols == 1) {
 	score = Score(X, Y, weights);
   } else {
 	score = Score(X, Y, weights);
-	alt_grouping(X, Y, weights, positions_);
+	if(legacy) {
+	  legacy_grouping(X, Y, weights, positions_);
+	} else {
+	  variant_grouping(X, Y, weights, positions_);
+	}
 	score = Score();
   }
 
@@ -115,7 +129,11 @@ VAASTLogic::VAASTLogic(arma::sp_mat X,
 	  }
 
 	  Score(Xnew, Y, Wnew); // Do normal individual variant scoring
-	  alt_grouping(Xnew, Y, Wnew, positions); // Redo grouping
+	  if(legacy) {
+		legacy_grouping(Xnew, Y, Wnew, positions);
+	  } else {
+		variant_grouping(Xnew, Y, Wnew, positions);
+	  }
 	  double new_score = Score();
 	  expanded_scores(i) = (score - new_score >= 0) ? score - new_score : 0; // Calculate score
 	}
@@ -326,10 +344,128 @@ void VAASTLogic::variant_bitmask(const arma::sp_mat &X, const arma::vec &Y, cons
 #endif
 }
 
-void VAASTLogic::alt_grouping(const arma::sp_mat &X,
-							  const arma::vec &Y,
-							  const arma::vec &w,
-							  std::vector<std::string> &positions) {
+void VAASTLogic::variant_grouping(const arma::sp_mat &X,
+								  const arma::vec &Y,
+								  const arma::vec &w,
+								  std::vector<std::string> &positions) {
+  case_allele1 = X.t() * Y;
+  control_allele1 = X.t() * (1 - Y);
+  case_allele0 = 2 * n_case - case_allele1;
+  control_allele0 = 2 * n_control - control_allele1;
+
+  std::vector<Variant> variants;
+
+  for (int i = 0; i < positions.size(); i++) {
+    RJBUtil::Splitter<std::string> splitter(positions[i], "-");
+	std::stringstream loc;
+	loc << splitter[0] << "-" << splitter[1] << "-" << splitter[2];
+	variants.emplace_back(Variant(case_allele1(i),
+								  case_allele0(i),
+								  control_allele1(i),
+								  control_allele0(i),
+								  w(i),
+								  splitter.back(),
+								  loc.str(),
+								  i,
+								  soft_maf_filter));
+  }
+
+  std::vector<std::vector<Variant>> sub_groups;
+  std::vector<Variant> unmerged;
+  std::vector<Variant> grouped;
+
+#if PRINT_MERGEINFO
+  if(!printed_mergeinfo) {
+	std::stringstream ss;
+	ss << "/Users/rjbohlender/CLionProjects/PA_Test/aas_no_intron/" << k << ".mergeinfo";
+	merge_debug.open(ss.str());
+  }
+#endif
+
+  std::stable_sort(variants.begin(), variants.end(), [&](auto &a, auto &b) {
+	if (w(a.index) == w(b.index)) {
+	  if (a.score == b.score) {
+		return positions[a.index] > positions[b.index]; // Lexicographically sorted to match default VAAST behavior
+	  } else {
+		return a.score > b.score;
+	  }
+	} else {
+	  return w(a.index) > w(b.index);
+	}
+  });
+
+  int skipped = 0;
+  std::vector<Variant> merging_vars;
+  for (const auto &v : variants) {
+	if (v.case_allele1 > group_threshold || v.score <= 0) {
+	  unmerged.push_back(v);
+	  skipped++;
+	} else {
+	  merging_vars.push_back(v);
+	}
+  }
+
+  int sites = merging_vars.size() / 5;
+  for (int i = 0; i < merging_vars.size(); i++) {
+	if (sub_groups.size() < sites || sub_groups.size() == 0) {
+	  if ((i % 5) == 0) {
+		sub_groups.emplace_back(std::vector<Variant>());
+	  }
+	}
+	// std::cerr << "gid: " << sub_groups.size() << " " << "var: " << positions[type.second[i].index] << " score: " << type.second[i].score << std::endl;
+	sub_groups.back().emplace_back(std::move(merging_vars[i]));
+  }
+
+  int gid = 0;
+  for (auto &group : sub_groups) {
+	gid++;
+	// std::cerr << "gid: " << gid << " group_size:" << group.size() << std::endl;
+	std::stable_sort(group.begin(), group.end(), [](auto &a, auto &b) { return a.score < b.score; });
+	Variant old("SNV", soft_maf_filter);
+	Variant merged("SNV", soft_maf_filter);
+	old.merge(group[group.size() - 1]);
+	merged.merge(group[group.size() - 1]);
+#if PRINT_MERGEINFO
+	if(!printed_mergeinfo)
+	  merge_debug << gid << " " << positions[group.back().index] << std::endl;
+#endif
+	for (int j = static_cast<int>(group.size()) - 2; j >= 0; j--) {
+	  merged.merge(group[j]);
+	  if (merged.score > old.score) {
+#if PRINT_MERGEINFO
+		if (!printed_mergeinfo)
+		  merge_debug << gid << " " << positions[group[j].index] << std::endl;
+#endif
+		old = merged;
+	  } else {
+		merged = old;
+		unmerged.push_back(group[j]);
+	  }
+	}
+	grouped.push_back(merged);
+  }
+
+  vaast_site_scores.resize(unmerged.size() + grouped.size());
+  vaast_site_scores.zeros();
+  int i = 0;
+  for (auto &v : unmerged) {
+#if PRINT_MERGEINFO
+	if(!printed_mergeinfo)
+	  merge_debug << "unmerged " << positions[v.index] << std::endl;
+#endif
+	vaast_site_scores(i) = v.score;
+	i++;
+  }
+  for (auto &v : grouped) {
+	vaast_site_scores(i) = v.score;
+	i++;
+  }
+}
+
+void VAASTLogic::legacy_grouping(const arma::sp_mat &X,
+								 const arma::vec &Y,
+								 const arma::vec &w,
+								 std::vector<std::string> &positions) {
   case_allele1 = X.t() * Y;
   control_allele1 = X.t() * (1 - Y);
   case_allele0 = 2 * n_case - case_allele1;
@@ -397,7 +533,7 @@ void VAASTLogic::alt_grouping(const arma::sp_mat &X,
 							   i,
 							   soft_maf_filter));
 	} else {
-	  throw (std::logic_error("Wrong variant type."));
+	  throw (std::logic_error("Wrong variant type in VAAST legacy grouping."));
 	}
   }
   type_idx_map["SNV"] = std::move(SNVs);
@@ -410,43 +546,43 @@ void VAASTLogic::alt_grouping(const arma::sp_mat &X,
   std::vector<Variant> grouped;
 
   std::ofstream merge_debug;
-#if 0
+#if PRINT_MERGEINFO
   if(!printed_mergeinfo) {
-    std::stringstream ss;
-    ss << "/Users/rjbohlender/CLionProjects/PA_Test/aas_no_intron/" << k << ".mergeinfo";
+	std::stringstream ss;
+	ss << "/Users/rjbohlender/CLionProjects/PA_Test/aas_no_intron/" << k << ".mergeinfo";
 	merge_debug.open(ss.str());
   }
 #endif
 
-  for(auto &type : type_idx_map) {
+  for (auto &type : type_idx_map) {
 	std::vector<std::vector<Variant>> sub_groups;
 
-    std::stable_sort(type.second.begin(), type.second.end(), [&](auto &a, auto &b){
-      if(w(a.index) == w(b.index)) {
-        if(a.score == b.score) {
-          return positions[a.index] > positions[b.index]; // Lexicographically sorted to match default VAAST behavior
-        } else {
+	std::stable_sort(type.second.begin(), type.second.end(), [&](auto &a, auto &b) {
+	  if (w(a.index) == w(b.index)) {
+		if (a.score == b.score) {
+		  return positions[a.index] > positions[b.index]; // Lexicographically sorted to match default VAAST behavior
+		} else {
 		  return a.score > b.score;
 		}
-      } else {
-        return w(a.index) > w(b.index);
-      }
-    });
+	  } else {
+		return w(a.index) > w(b.index);
+	  }
+	});
 
-    int skipped = 0;
-    std::vector<Variant> merging_vars;
-    for(const auto &v : type.second) {
-      if(v.case_allele1 > group_threshold || v.score <= 0) {
+	int skipped = 0;
+	std::vector<Variant> merging_vars;
+	for (const auto &v : type.second) {
+	  if (v.case_allele1 > group_threshold || v.score <= 0) {
 		unmerged.push_back(v);
-        skipped++;
-      } else {
-        merging_vars.push_back(v);
-      }
-    }
+		skipped++;
+	  } else {
+		merging_vars.push_back(v);
+	  }
+	}
 
 	int sites = merging_vars.size() / 5;
-	for(int i = 0; i < merging_vars.size(); i++) {
-	  if(sub_groups.size() < sites || sub_groups.size() == 0) {
+	for (int i = 0; i < merging_vars.size(); i++) {
+	  if (sub_groups.size() < sites || sub_groups.size() == 0) {
 		if ((i % 5) == 0) {
 		  sub_groups.emplace_back(std::vector<Variant>());
 		}
@@ -456,22 +592,22 @@ void VAASTLogic::alt_grouping(const arma::sp_mat &X,
 	}
 
 	int gid = 0;
-    for(auto &group : sub_groups) {
-      gid++;
+	for (auto &group : sub_groups) {
+	  gid++;
 	  // std::cerr << "gid: " << gid << " group_size:" << group.size() << std::endl;
 	  std::stable_sort(group.begin(), group.end(), [](auto &a, auto &b) { return a.score < b.score; });
-      Variant old(type.first, soft_maf_filter);
+	  Variant old(type.first, soft_maf_filter);
 	  Variant merged(type.first, soft_maf_filter);
 	  old.merge(group[group.size() - 1]);
 	  merged.merge(group[group.size() - 1]);
-#if 0
+#if PRINT_MERGEINFO
 	  if(!printed_mergeinfo)
 		merge_debug << gid << " " << positions[group.back().index] << std::endl;
 #endif
-	  for(int j = static_cast<int>(group.size()) - 2; j >= 0; j--) {
+	  for (int j = static_cast<int>(group.size()) - 2; j >= 0; j--) {
 		merged.merge(group[j]);
-		if(merged.score > old.score) {
-		  if(!printed_mergeinfo)
+		if (merged.score > old.score) {
+		  if (!printed_mergeinfo)
 			merge_debug << gid << " " << positions[group[j].index] << std::endl;
 		  old = merged;
 		} else {
@@ -480,25 +616,25 @@ void VAASTLogic::alt_grouping(const arma::sp_mat &X,
 		}
 	  }
 	  grouped.push_back(merged);
-    }
+	}
   }
 
   vaast_site_scores.resize(unmerged.size() + grouped.size());
   vaast_site_scores.zeros();
   int i = 0;
-  for(auto &v : unmerged) {
-#if 0
-    if(!printed_mergeinfo)
+  for (auto &v : unmerged) {
+#if PRINT_MERGEINFO
+	if(!printed_mergeinfo)
 	  merge_debug << "unmerged " << positions[v.index] << std::endl;
 #endif
-    vaast_site_scores(i) = v.score;
-    i++;
-  }
-  for(auto &v : grouped) {
 	vaast_site_scores(i) = v.score;
 	i++;
   }
-#if 0
+  for (auto &v : grouped) {
+	vaast_site_scores(i) = v.score;
+	i++;
+  }
+#if PRINT_MERGEINFO
   if(!printed_mergeinfo) {
 	merge_debug.close();
 	printed_mergeinfo = true;
@@ -520,8 +656,9 @@ Variant::Variant(double case_allele1,
 				 int index,
 				 double soft_maf_filter)
 	: case_allele1(case_allele1), case_allele0(case_allele0), control_allele1(control_allele1),
-	  control_allele0(control_allele0), weight(weight), type(std::move(type)), loc(std::move(loc)), index(index), soft_maf_filter(soft_maf_filter) {
-	calc_score();
+	  control_allele0(control_allele0), weight(weight), type(std::move(type)), loc(std::move(loc)), index(index),
+	  soft_maf_filter(soft_maf_filter) {
+  calc_score();
 }
 
 void Variant::merge(Variant &other) {
@@ -541,8 +678,8 @@ void Variant::calc_score() {
   }
 
   if (case_allele0 * control_allele1 > control_allele0 * case_allele1) { // OR filter in VAAST
-    score = 0;
-    return;
+	score = 0;
+	return;
   }
 
   double case_alt_freq = case_allele1 / (case_allele0 + case_allele1);
@@ -550,27 +687,29 @@ void Variant::calc_score() {
 
   control_alt_freq = control_alt_freq > soft_maf_filter ? soft_maf_filter : control_alt_freq;
 
-  double null_freq = (case_allele1 + control_allele1) / (case_allele1 + case_allele0 + control_allele1 + control_allele0);
+  double
+	  null_freq = (case_allele1 + control_allele1) / (case_allele1 + case_allele0 + control_allele1 + control_allele0);
 
   double p_alt_case = case_allele1 * std::log(case_alt_freq) + case_allele0 * std::log(1. - case_alt_freq);
-  double p_alt_control =  control_allele1 * std::log(control_alt_freq) + control_allele0 * std::log(1. - control_alt_freq);
+  double
+	  p_alt_control = control_allele1 * std::log(control_alt_freq) + control_allele0 * std::log(1. - control_alt_freq);
   double p_null_case = case_allele1 * std::log(null_freq) + case_allele0 * std::log(1. - null_freq);
   double p_null_control = control_allele1 * std::log(null_freq) + control_allele0 * std::log(1. - null_freq);
 
-  if(std::isnan(p_alt_case))
-    p_alt_case = 0;
-  if(std::isnan(p_alt_control))
-    p_alt_control = 0;
-  if(std::isnan(p_null_case))
+  if (std::isnan(p_alt_case))
+	p_alt_case = 0;
+  if (std::isnan(p_alt_control))
+	p_alt_control = 0;
+  if (std::isnan(p_null_case))
 	p_null_case = 0;
-  if(std::isnan(p_null_control))
+  if (std::isnan(p_null_control))
 	p_null_control = 0;
 
   double alt_log_lik = p_alt_case + p_alt_control;
   double null_log_lik = p_null_case + p_null_control;
 
   if (std::isnan(alt_log_lik)) {
-    alt_log_lik = 0;
+	alt_log_lik = 0;
   }
   if (std::isnan(null_log_lik)) {
 	null_log_lik = 0;
@@ -578,13 +717,13 @@ void Variant::calc_score() {
 
   double lrt = alt_log_lik - null_log_lik;
 
-  if(weight <= 0) {
-    score = 0;
+  if (weight <= 0) {
+	score = 0;
   } else {
 	score = 2 * (lrt + std::log(weight));
   }
   if (score / (-2.) > 0) {
-    score = 0;
+	score = 0;
   }
 }
 

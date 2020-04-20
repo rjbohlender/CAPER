@@ -14,14 +14,17 @@
 #include "../statistics/bayesianglm.hpp"
 #include "../statistics/glm.hpp"
 
-Gene::Gene(std::stringstream &ss, unsigned long nsamples, std::map<std::string, arma::uword> &nvariants,
-           const Weight &weight, TaskParams tp, arma::vec &phenotypes)
+Gene::Gene(std::stringstream &ss,
+		   unsigned long nsamples,
+		   std::map<std::string, arma::uword> &nvariants,
+		   const Weight &weight,
+		   TaskParams tp)
     : nsamples_(nsamples),
       nvariants_(nvariants),
       testable_(false),
       skippable_(false),
       tp_(std::move(tp)) {
-  parse(ss, phenotypes);
+  parse(ss);
   if (!weight.empty()) {
     for (const auto &k : transcripts_) {
       weights_[k].reshape(nvariants_[k], 1);
@@ -85,16 +88,9 @@ void Gene::clear(Covariates &cov, std::unordered_map<std::string, Result> &resul
   }
 }
 
-void Gene::parse(std::stringstream &ss, arma::vec &phenotypes) {
+void Gene::parse(std::stringstream &ss) {
   std::string line;
   arma::uword i = 0;
-  arma::uvec controls = arma::find(phenotypes == 0);
-  arma::uword ncontrol = controls.n_elem;
-  std::map<std::string, arma::sp_mat> control_gt;
-  if (tp_.quantitative) { // Don't subset if not dichotomous
-    controls = arma::conv_to<arma::uvec>::from(arma::regspace(0, 1, phenotypes.n_elem - 1));
-    ncontrol = controls.n_elem;
-  }
 
   while (std::getline(ss, line, '\n')) {
     if (i == 0) {
@@ -119,7 +115,6 @@ void Gene::parse(std::stringstream &ss, arma::vec &phenotypes) {
       // Start with matrix transposed
       genotypes_.emplace(std::make_pair(transcript, arma::sp_mat(nsamples_, nvariants_[transcript])));
       // Separately record the controls
-      control_gt.emplace(std::make_pair(transcript, arma::sp_mat(ncontrol, nvariants_[transcript])));
       missing_variant_carriers_.emplace(std::make_pair(transcript, arma::sp_mat(nsamples_, nvariants_[transcript])));
       // Reset counter on new transcript
       i = 1;
@@ -154,22 +149,12 @@ void Gene::parse(std::stringstream &ss, arma::vec &phenotypes) {
       if (val != 0) {
         try {
           genotypes_[transcript](j - 3, i - 1) = val;
-          if(phenotypes(j - 3) == 0) { // Record control values
-            control_gt[transcript](j - ncases - 3, i - 1) = val;
-          } else {
-            ncases++;
-          }
-        }
-        catch (std::exception &e) {
+        } catch (std::exception &e) {
           std::cerr << "Failed to set value for: row = " << j - 3 << " col = " << i - 1
                     << std::endl;
           std::cerr << "Gene: " << splitter[0] << " Transcript: " << splitter[1]
                     << " Location: " << splitter[2] << std::endl;
           throw (e);
-        }
-      } else {
-        if(phenotypes(j - 3) == 1) {
-          ncases++;
         }
       }
     }
@@ -207,9 +192,7 @@ void Gene::parse(std::stringstream &ss, arma::vec &phenotypes) {
   for (const auto &ts : transcripts_) {
     arma::rowvec sums = arma::rowvec(arma::sum(genotypes_[ts], 0));
 
-    arma::sp_mat &gt_control = control_gt[ts];
-
-    arma::rowvec maf = arma::rowvec(arma::mean(gt_control) / 2.);
+    arma::rowvec maf = arma::rowvec(arma::mean(genotypes_[ts]) / 2.);
     for (arma::sword i = sums.n_elem - 1; i >= 0; --i) {
       bool bmac = sums[i] > tp_.mac;
       bool bmaf = maf[i] > tp_.maf;
@@ -498,7 +481,7 @@ auto Gene::testable(const std::string &k, Covariates &cov, TaskParams &tp) -> bo
   assert(arma::accu(extreme_phen) == ncase);
 
   VAASTLogic vaast(genotypes_[k], extreme_phen, weights_[k], positions_[k], k, tp.score_only_minor, tp
-	  .score_only_alternative, false, tp.group_size, 2., 0);
+	  .score_only_alternative, false, tp.group_size, 2., 0, false);
 
   return arma::accu(vaast.expanded_scores > 0) >= 4;
 }

@@ -496,7 +496,8 @@ auto CARVAOp::call_method(Methods &method,
 						tp.group_size,
 						detail,
 						tp.biallelic,
-						tp.soft_maf_filter);
+						tp.soft_maf_filter,
+						tp.legacy_grouping);
   } else if (tp.method == "VT") {
 	return method.VT(gene, k, phenotypes);
   } else if (tp.method == "WSS") {

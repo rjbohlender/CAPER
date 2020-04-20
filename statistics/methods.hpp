@@ -75,7 +75,8 @@ public:
 			   arma::uword group_threshold = 0,
 			   bool detail = false,
 			   bool biallelic = false,
-			   double control_freq_cutoff = 0.5);
+			   double control_freq_cutoff = 0.5,
+			   bool legacy = false);
   double VT(Gene &gene, const std::string &k, arma::vec &phenotypes);
 
   // Madsen, Browning 2009

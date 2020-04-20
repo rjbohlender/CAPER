@@ -341,9 +341,20 @@ double Methods::VAAST(Gene &gene,
 					  arma::uword group_threshold,
 					  bool detail,
 					  bool biallelic,
-					  double control_freq_cutoff) {
+					  double control_freq_cutoff,
+					  bool legacy) {
   VAASTLogic vaast_logic
-	  (gene, Y, k, score_only_minor, score_only_alternative, site_penalty, group_threshold, detail, biallelic, control_freq_cutoff);
+	  (gene,
+	   Y,
+	   k,
+	   score_only_minor,
+	   score_only_alternative,
+	   site_penalty,
+	   group_threshold,
+	   detail,
+	   biallelic,
+	   control_freq_cutoff,
+	   legacy);
   return vaast_logic.score;
 }
 

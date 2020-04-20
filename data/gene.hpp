@@ -33,8 +33,11 @@ void print_semicolon_sep(arma::uvec &x, std::ostream &os);
  */
 class Gene {
 public:
-  Gene(std::stringstream &ss, unsigned long nsamples, std::map<std::string, arma::uword> &nvariants,
-       const Weight &weight, TaskParams tp, arma::vec &phenotypes);
+  Gene(std::stringstream &ss,
+	   unsigned long nsamples,
+	   std::map<std::string, arma::uword> &nvariants,
+	   const Weight &weight,
+	   TaskParams tp);
 
   void print();
 
@@ -88,7 +91,7 @@ private:
 
   std::map<std::string, arma::sp_mat> missing_variant_carriers_;
 
-  void parse(std::stringstream &ss, arma::vec &phenotypes);
+  void parse(std::stringstream &ss);
 
   auto testable(const std::string &k, Covariates &cov, TaskParams &tp) -> bool;
 };

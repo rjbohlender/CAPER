@@ -50,6 +50,7 @@ struct VAASTLogic {
   const double site_penalty;
   bool printed_mergeinfo = false;
   double soft_maf_filter;
+  bool legacy = false;
 
   arma::sp_mat X;
   const arma::vec Y;
@@ -81,7 +82,8 @@ struct VAASTLogic {
 			 arma::uword group_threshold,
 			 bool detail,
 			 bool biallelic,
-			 double soft_maf_filter);
+			 double soft_maf_filter,
+			 bool legacy_);
   VAASTLogic(arma::sp_mat X,
 			 arma::vec &Y,
 			 arma::vec &weights,
@@ -92,17 +94,22 @@ struct VAASTLogic {
 			 bool biallelic,
 			 arma::uword group_threshold,
 			 double site_penalty,
-			 double soft_maf_filter);
+			 double soft_maf_filter,
+			 bool legacy_);
 
   void check_weights(Gene &gene);
   double Score();
   double Score(const arma::sp_mat &X, const arma::vec &Y, const arma::vec &w);
   arma::vec LRT();
   arma::vec log_likelihood(arma::vec &freq, arma::vec &allele0, arma::vec &allele1);
-  void alt_grouping(const arma::sp_mat &X,
-					const arma::vec &Y,
-					const arma::vec &w,
-					std::vector<std::string> &positions);
+  void variant_grouping(const arma::sp_mat &X,
+					   const arma::vec &Y,
+					   const arma::vec &w,
+					   std::vector<std::string> &positions);
+  void legacy_grouping(const arma::sp_mat &X,
+					   const arma::vec &Y,
+					   const arma::vec &w,
+					   std::vector<std::string> &positions);
   void variant_bitmask(const arma::sp_mat &X, const arma::vec &Y, const arma::vec &w);
 
   static arma::uvec setdiff(arma::uvec x, arma::uvec y);

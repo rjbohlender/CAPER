@@ -11,8 +11,8 @@ FisherTest::FisherTest(Gene &gene, arma::vec &Y, const std::string &ts)
   // Build 2x2 table
   arma::sp_mat &X = gene.get_matrix(ts);
 
-  double ncase = arma::accu(Y);
-  double ncont = arma::accu(1 - Y);
+  double ncase = 2 * arma::accu(Y);
+  double ncont = 2 * arma::accu(1 - Y);
 
   case_alt = arma::accu(arma::vec(arma::sum(X, 1) % Y) > 0);
   cont_alt = arma::accu(arma::vec(arma::sum(X, 1) %  (1 - Y)) > 0);

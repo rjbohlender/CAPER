@@ -61,6 +61,7 @@ struct TaskParams {
 
   double soft_maf_filter;
   double vaast_site_penalty;
+  bool legacy_grouping;
 
   bool verbose;
 
