@@ -18,6 +18,8 @@ struct TaskParams {
   // Permutation paramters
   arma::uword success_threshold;
 
+  boost::optional<int> seed;
+
   arma::uword stage_1_permutations;
   arma::uword stage_2_permutations;
   arma::uword total_permutations;
@@ -56,6 +58,7 @@ struct TaskParams {
   boost::optional<std::string> bed;
   boost::optional<std::string> weight;
 
+  double bin_epsilon;
   double lower_bin_cutoff;
   double upper_bin_cutoff;
 

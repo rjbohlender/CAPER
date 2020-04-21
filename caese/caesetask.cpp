@@ -15,7 +15,11 @@ CAESETask::CAESETask(Stage stage,
   : gene_(gene), cov_(cov), methods_(tp, cov), tp_(tp), permutations_(tp.total_permutations) {
   for (const auto &k : gene_.get_transcripts()) {
 	results[k] = Result(gene_.get_gene(), k, !gene.is_polymorphic(k));
-	permute_[k] = Permute();
+	if(tp.seed) {
+	  permute_[k] = Permute(*tp.seed);
+	} else {
+	  permute_[k] = Permute();
+	}
   }
 }
 CAESETask::CAESETask(Stage stage,
@@ -26,7 +30,11 @@ CAESETask::CAESETask(Stage stage,
 	: gene_(gene), cov_(cov), methods_(tp, cov), tp_(tp), permutations_(tp.total_permutations) {
   for (const auto &k : gene_.get_transcripts()) {
 	results[k] = Result(gene_.get_gene(), k, !gene_.is_polymorphic(k));
-	permute_[k] = Permute();
+	if(tp.seed) {
+	  permute_[k] = Permute(*tp.seed);
+	} else {
+	  permute_[k] = Permute();
+	}
   }
 }
 

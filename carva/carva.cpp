@@ -65,6 +65,7 @@ int main(int argc, char **argv) {
   boost::optional<std::string> permute_set;
   boost::optional<double> pthresh;
   boost::optional<arma::uword> approximate;
+  boost::optional<int> seed;
 
   try {
     required.add_options()
@@ -151,12 +152,18 @@ int main(int argc, char **argv) {
         ("min_variant_count",
          po::value<arma::uword>()->default_value(1),
          "Minimum number of variants to test a gene.")
+		("bin_epsilon",
+		 po::value<double>()->default_value(0.0001),
+		 "Odds closer together than the given value will be collapsed into a single bin for permutation.")
 		("lower_bin_cutoff",
 		 po::value<double>()->default_value(0.5),
 		 "The value at which samples with extremely small odds ratios will be binned separately. These bins are in addition to those specified by the approximation step.")
 		("upper_bin_cutoff",
 		 po::value<double>()->default_value(2),
-		 "The value at which samples with extremely large odds ratios will be binned separately. These bins are in addition to those specified by the approximation step.");
+		 "The value at which samples with extremely large odds ratios will be binned separately. These bins are in addition to those specified by the approximation step.")
+		("seed",
+		 po::value(&seed),
+		 "A defined seed passed to the random number generators used for each gene.");
 	vaast.add_options()
         ("group_size,g",
          po::value<arma::uword>()->default_value(0),
@@ -201,7 +208,6 @@ int main(int argc, char **argv) {
         ("help,h", "Print this help message.")
         ("quiet,q", "Don't print status messages.");
     hidden.add_options()
-        // ("no_adjust,n", "Disable small sample size adjustment for SKATO.")
         ("nocovadj",
          po::bool_switch(&nocovadj),
          "Do Fisher-Yates shuffling instead of covariate adjusted permutation.");
@@ -311,6 +317,7 @@ int main(int argc, char **argv) {
   tp.method = vm["method"].as<std::string>();
   // File paths and option status
   tp.program_path = argv[0];
+  tp.seed = seed;
   tp.genotypes_path = vm["input"].as<std::string>();
   if (vm.count("covariates") > 0) {
     tp.covariates_path = vm["covariates"].as<std::string>();
@@ -331,6 +338,7 @@ int main(int argc, char **argv) {
   tp.permute_set = permute_set;
   tp.lower_bin_cutoff = vm["lower_bin_cutoff"].as<double>();
   tp.upper_bin_cutoff = vm["upper_bin_cutoff"].as<double>();
+  tp.bin_epsilon = vm["bin_epsilon"].as<double>();
   // Threading
   tp.nthreads = vm["nthreads"].as<size_t>();
   // Options
@@ -454,7 +462,11 @@ int main(int argc, char **argv) {
     std::exit(1);
   }
   // Initialize randomization
-  arma::arma_rng::set_seed_random();
+  if(!tp.seed) {
+	arma::arma_rng::set_seed_random();
+  } else {
+    arma::arma_rng::set_seed(*tp.seed);
+  }
 
   std::shared_ptr<Reporter> reporter = nullptr;
   reporter = std::make_shared<Reporter>(tp);

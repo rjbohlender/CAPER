@@ -15,6 +15,7 @@
 
 struct Permute {
   Permute();
+  explicit Permute(int seed);
   Permute(const Permute &other);
   Permute &operator=(const Permute &rhs);
 
@@ -51,6 +52,11 @@ struct Permute {
 														 arma::uword maj_nbins,
 														 double lower_bin_cutoff,
 														 double upper_bin_cutoff);
+  std::vector<std::vector<int32_t>> epsilon_permutation(int nperm,
+														arma::vec &odds,
+														arma::uword ncases,
+														const std::string &transcript,
+														double epsilon = 0.01);
 
   auto unpack(int successes, int bin_size, bool shuffle) -> arma::uvec;
   auto reset() -> void;
@@ -65,6 +71,7 @@ struct Permute {
   std::map<std::string, std::vector<std::vector<int32_t>>> ret;
   std::map<std::string, arma::uvec> sort_mac_idx; // Indices of minor allele carriers in odds sorted order
   std::map<std::string, arma::uvec> sort_maj_idx; // Indices of major allele carriers in odds sorted order
+  std::map<std::string, arma::uvec> sort_idx; // Indices of all samples in odds sorted order
   std::map<std::string, std::vector<arma::uvec>> mac_spans;
   std::map<std::string, std::vector<arma::span>> maj_spans;
   void build_major_bins(const arma::vec &odds,

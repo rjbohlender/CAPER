@@ -30,11 +30,11 @@ auto CARVAOp::run() -> void {
   } else if (stage == Stage::Stage2) {
 	stage2();
   } else if (stage == Stage::Done) {
-    ta_.get_methods().clear(ta_.get_gene().get_transcripts());
-    ta_.get_cov().clear();
-    return;
+	ta_.get_methods().clear(ta_.get_gene().get_transcripts());
+	ta_.get_cov().clear();
+	return;
   } else {
-    throw(std::runtime_error("Incorrect stage in CARVAOp::run()"));
+	throw (std::runtime_error("Incorrect stage in CARVAOp::run()"));
   }
 }
 
@@ -45,18 +45,18 @@ auto CARVAOp::finish() -> void {
 
   // Report results for non-gene_list run
   if (!ta_.get_tp().gene_list) {
-    reporter_->sync_write_simple(ta_.results, ta_.get_tp(), ta_.get_tp().top_only);
-    reporter_->sync_write_detail(ta_.get_gene().get_detail(), ta_.get_gene().is_testable());
-    reporter_->sync_write_vaast(ta_, ta_.get_tp());
+	reporter_->sync_write_simple(ta_.results, ta_.get_tp(), ta_.get_tp().top_only);
+	reporter_->sync_write_detail(ta_.get_gene().get_detail(), ta_.get_gene().is_testable());
+	reporter_->sync_write_vaast(ta_, ta_.get_tp());
   }
 }
 
 auto CARVAOp::stage1() -> void {
   // Set original value
   for (auto &v : ta_.results) {
-    if(!ta_.get_gene().is_polymorphic(v.first)) {
-      continue;
-    }
+	if (!ta_.get_gene().is_polymorphic(v.first)) {
+	  continue;
+	}
 	v.second.original =
 		call_method(ta_.get_methods(),
 					ta_.get_gene(),
@@ -67,7 +67,6 @@ auto CARVAOp::stage1() -> void {
 					false,
 					true);
   }
-
 
   if (verbose_) {
 	if (!ta_.get_tp().alternate_permutation) {
@@ -90,9 +89,9 @@ auto CARVAOp::stage1() -> void {
 	for (auto &v : ta_.results) {
 	  transcript_no++;
 	  const std::string &k = v.second.transcript;
-      if(!ta_.get_gene().is_polymorphic(k)) {
-        continue;
-      }
+	  if (!ta_.get_gene().is_polymorphic(k)) {
+		continue;
+	  }
 
 	  double perm_val;
 
@@ -100,7 +99,7 @@ auto CARVAOp::stage1() -> void {
 	  if (!ta_.get_gene().is_polymorphic(k))
 		continue;
 
-      arma::vec phenotypes;
+	  arma::vec phenotypes;
 	  if (!ta_.get_tp().alternate_permutation) {
 		phenotypes = arma::conv_to<arma::vec>::from(ta_.get_permutations()[iter]);
 		perm_val =
@@ -197,11 +196,11 @@ auto CARVAOp::stage2() -> void {
 
   // Setup
   if (!ta_.get_tp().alternate_permutation) {
-    arma::vec mac_carriers(ta_.get_cov().get_nsamples(), arma::fill::zeros);
+	arma::vec mac_carriers(ta_.get_cov().get_nsamples(), arma::fill::zeros);
 	for (auto &v : ta_.results) {
 	  const std::string &k = v.second.transcript;
-	  if(!ta_.get_gene().is_polymorphic(k)) {
-	    continue;
+	  if (!ta_.get_gene().is_polymorphic(k)) {
+		continue;
 	  }
 
 	  if (std::isnan(v.second.original)) {
@@ -214,7 +213,8 @@ auto CARVAOp::stage2() -> void {
 										false,
 										true);
 	  }
-	  mac_carriers(arma::find(arma::sum(arma::mat(ta_.get_gene().get_matrix(k) + ta_.get_gene().get_missing(k)), 1) > 0)).ones();
+	  mac_carriers(arma::find(
+		  arma::sum(arma::mat(ta_.get_gene().get_matrix(k) + ta_.get_gene().get_missing(k)), 1) > 0)).ones();
 	}
 	// Minor and major allele carrier indices
 	mac_indices = arma::find(mac_carriers > 0);
@@ -235,7 +235,7 @@ auto CARVAOp::stage2() -> void {
 										ta_.get_cov(),
 										ta_.get_cov().get_original_phenotypes(),
 										ta_.get_tp(),
-										 k,
+										k,
 										false,
 										true);
 	  }
@@ -256,9 +256,9 @@ auto CARVAOp::stage2() -> void {
 	  std::vector<std::vector<int32_t>> permutations;
 	  const std::string &k = v.second.transcript;
 
-      if(!ta_.get_gene().is_polymorphic(k)) {
-        continue;
-      }
+	  if (!ta_.get_gene().is_polymorphic(k)) {
+		continue;
+	  }
 
 	  transcript_no++;
 
@@ -266,7 +266,8 @@ auto CARVAOp::stage2() -> void {
 	  if (!ta_.get_gene().is_polymorphic(k))
 		continue;
 
-	  if (transcript_no == 0) { // Run permutation for only the first transcript and reuse to maintain MGIT functionality
+	  if (transcript_no
+		  == 0) { // Run permutation for only the first transcript and reuse to maintain MGIT functionality
 		if (ta_.get_tp().linear || !ta_.get_tp().covadj) {
 		  // Fisher-Yates Shuffle
 		  for (arma::sword i = phenotypes.n_elem - 1; i > 0; --i) {
@@ -277,6 +278,7 @@ auto CARVAOp::stage2() -> void {
 			phenotypes(j) = tmp;
 		  }
 		} else {
+#if 0
 		  if (ta_.get_tp().approximate) {
 			permutations = ta_.get_permute(k).permutations_mac_bin(1,
 																   ta_.get_cov().get_odds(),
@@ -299,8 +301,14 @@ auto CARVAOp::stage2() -> void {
 																   ta_.get_tp().lower_bin_cutoff,
 																   ta_.get_tp().upper_bin_cutoff);
 		  }
+#endif
+		  permutations = ta_.get_permute(k).epsilon_permutation(1,
+																ta_.get_cov().get_odds(),
+																ta_.get_cov().get_ncases(),
+																k,
+																ta_.get_tp().bin_epsilon);
 		  phenotypes = arma::conv_to<arma::vec>::from(permutations[0]);
-		  if(ta_.get_tp().permute_set) {
+		  if (ta_.get_tp().permute_set) {
 			pset_ofs << phenotypes.t();
 		  }
 		}
@@ -310,7 +318,7 @@ auto CARVAOp::stage2() -> void {
 							 ta_.get_cov(),
 							 phenotypes,
 							 ta_.get_tp(),
-							  k,
+							 k,
 							 true,
 							 false);
 
@@ -477,7 +485,7 @@ auto CARVAOp::call_method(Methods &method,
   } else if (tp.method == "CMC") {
 	return method.CMC(gene, phenotypes, k, tp.cmcmaf);
   } else if (tp.method == "CMC1df") {
-    return method.CMC1df(gene, phenotypes, k);
+	return method.CMC1df(gene, phenotypes, k);
   } else if (tp.method == "RVT1") {
 	return method.RVT1(gene, phenotypes, cov.get_covariate_matrix(), cov.get_coef(), k, tp.linear);
   } else if (tp.method == "RVT2") {

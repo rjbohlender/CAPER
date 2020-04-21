@@ -33,13 +33,19 @@ public:
   JobDispatcher(TaskParams &tp, std::shared_ptr<Reporter_t> reporter)
 	  : tp_(tp), tq_(tp_.nthreads - 1, reporter, tp),
 		cov_(std::make_shared<Covariates>(tp.covariates_path, tp.ped_path, tp.linear)) {
+    if (tp_.seed) {
+      permute_ = Permute(*tp_.seed);
+    }
 	// Initialize bed and weights
-	if (tp.gene_list)
+	if (tp.gene_list) {
 	  gene_list_ = RJBUtil::Splitter<std::string>(*tp.gene_list, ",");
-	if (tp.bed)
+	}
+	if (tp.bed) {
 	  bed_ = Bed(*tp.bed);
-	if (tp.weight)
+	}
+	if (tp.weight) {
 	  weight_ = Weight(*tp.weight);
+	}
 
 	// Update case/control count for reporter
 	if(!tp.power) {

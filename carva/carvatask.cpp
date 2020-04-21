@@ -34,7 +34,11 @@ CARVATask::CARVATask(Stage stage,
   for (const auto &k : gene_.get_transcripts()) {
 	results[k] = Result(gene_.get_gene(), k, !gene_.is_polymorphic(k));
 	results[k].output_stats = tp.output_stats;
-	permute[k] = Permute();
+	if(tp.seed) {
+	  permute[k] = Permute(*tp.seed);
+	} else {
+	  permute[k] = Permute();
+	}
   }
 }
 
@@ -57,7 +61,11 @@ CARVATask::CARVATask(Stage stage,
   for (const auto &k : gene_.get_transcripts()) {
 	results.emplace(std::make_pair(k, Result(gene_.get_gene(), k, !gene_.is_polymorphic(k))));
 	results[k].output_stats = tp.output_stats;
-	permute[k] = Permute();
+	if(tp.seed) {
+	  permute[k] = Permute(*tp.seed);
+	} else {
+	  permute[k] = Permute();
+	}
   }
 }
 CARVATask::CARVATask(const CARVATask &ta)
