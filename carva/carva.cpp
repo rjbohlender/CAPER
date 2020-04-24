@@ -134,12 +134,6 @@ int main(int argc, char **argv) {
 		("nodetail",
          po::bool_switch(&nodetail),
          "Don't produce detailed, variant level output.")
-        ("approx,a",
-         po::value(&approximate),
-         "Group minor allele carriers into n bins with shared average odds. This option is useful for very large data sets where the total number of minor allele carriers to be permuted can be very large, and result in extreme run times.")
-        ("maj_nbins",
-         po::value<arma::uword>()->default_value(1),
-         "Group major allele carriers into n bins with shared average odds.")
         ("output_stats",
          po::bool_switch(&stats),
          "Write permuted statistics to .simple file following default output.")
@@ -155,25 +149,13 @@ int main(int argc, char **argv) {
 		("bin_epsilon",
 		 po::value<double>()->default_value(0.0001),
 		 "Odds closer together than the given value will be collapsed into a single bin for permutation.")
-		("lower_bin_cutoff",
-		 po::value<double>()->default_value(0.5),
-		 "The value at which samples with extremely small odds ratios will be binned separately. These bins are in addition to those specified by the approximation step.")
-		("upper_bin_cutoff",
-		 po::value<double>()->default_value(2),
-		 "The value at which samples with extremely large odds ratios will be binned separately. These bins are in addition to those specified by the approximation step.")
 		("seed",
 		 po::value(&seed),
 		 "A defined seed passed to the random number generators used for each gene.");
 	vaast.add_options()
         ("group_size,g",
          po::value<arma::uword>()->default_value(0),
-         "Group size. VAAST can collapse variants into groups of variants, dependent upon the collapse having a higher total VAAST score.")
-        ("score_only_minor",
-         po::bool_switch(&score_only_minor),
-         "Score only minor alleles in VAAST.")
-        ("score_only_alternative",
-         po::bool_switch(&score_only_alternative),
-         "Score only alternative alleles in VAAST.")
+         "Group size, minor allele count threshold for grouping a variant. VAAST can collapse variants into groups of variants, dependent upon the collapse having a higher total VAAST score.")
         ("testable",
          po::bool_switch(&testable),
          "Return scores only for genes with at least scoreable variants in VAAST.")
@@ -336,8 +318,6 @@ int main(int argc, char **argv) {
   tp.bed = bed;
   tp.weight = weight;
   tp.permute_set = permute_set;
-  tp.lower_bin_cutoff = vm["lower_bin_cutoff"].as<double>();
-  tp.upper_bin_cutoff = vm["upper_bin_cutoff"].as<double>();
   tp.bin_epsilon = vm["bin_epsilon"].as<double>();
   // Threading
   tp.nthreads = vm["nthreads"].as<size_t>();
@@ -350,8 +330,6 @@ int main(int argc, char **argv) {
   tp.min_minor_allele_count = vm["min_minor_allele_count"].as<arma::uword>();
   tp.min_variant_count = vm["min_variant_count"].as<arma::uword>();
   tp.pthresh = pthresh;
-  tp.approximate = approximate;
-  tp.maj_nbins = vm["maj_nbins"].as<arma::uword>();
   tp.soft_maf_filter = vm["soft_maf_filter"].as<double>();
   // SKAT Options
   tp.kernel = vm["kernel"].as<std::string>();

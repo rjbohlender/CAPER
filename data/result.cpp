@@ -3,6 +3,7 @@
 //
 
 #include "result.hpp"
+#include "../utility/math.hpp"
 
 #include <boost/math/special_functions/binomial.hpp>
 #include <boost/math/distributions/binomial.hpp>
@@ -183,6 +184,7 @@ void Result::set_odds(double odds) {
 }
 
 void Result::update_ci() {
+#if 0
   double z = 1.96;
   double z2 = z * z;
 
@@ -198,6 +200,11 @@ void Result::update_ci() {
   ci_low = (sp - ci > 0) ? sp - ci : 0;
   ci_hi = (sp + ci > 1) ? 1 : sp + ci;
   empirical_midci = std::make_pair(ci_low, ci_hi);
+#endif
+  double ncase = case_alt + case_ref;
+  double ncont = cont_alt + cont_ref;
+  empirical_ci = ci(ncase + ncont, ncase, static_cast<double>(successes), static_cast<double>(permutations));
+  empirical_midci = ci(ncase + ncont, ncase, static_cast<double>(mid_successes), static_cast<double>(permutations));
 }
 
 void Result::calc_exact_p(double n1, double n2) {

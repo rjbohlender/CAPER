@@ -87,10 +87,11 @@ public:
 	  std::string line;
 	  while(std::getline(ifs, line)) {
 	    permutation_ptr_->push_back({});
-	    RJBUtil::Splitter<std::string> splitter(line, " \t");
-		permutation_ptr_->back().reserve(splitter.size());
-		for (const auto &v : splitter) {
-		  permutation_ptr_->back().emplace_back(std::stoi(v));
+		permutation_ptr_->back().reserve(line.size());
+		for (const auto &v : line) {
+		  if(v == '0' || v == '1') {
+			permutation_ptr_->back().emplace_back(v - '0');
+		  }
 	    }
 	  }
 	  std::cerr << permutation_ptr_->size() << " external stage 1 permutations read in." << std::endl;
@@ -120,7 +121,7 @@ public:
 	  std::ofstream lr_ofs(*tp.permute_set + ".lr");
 	  for (const auto &p : *permutation_ptr_) {
 		for (const auto &v : p) {
-		  pset_ofs << v << "\t";
+		  pset_ofs << static_cast<char>(v + '0');
 		}
 		pset_ofs << "\n";
 	  }

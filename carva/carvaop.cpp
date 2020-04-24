@@ -57,6 +57,10 @@ auto CARVAOp::stage1() -> void {
 	if (!ta_.get_gene().is_polymorphic(v.first)) {
 	  continue;
 	}
+	v.second.case_alt = arma::accu(ta_.get_gene().get_matrix(v.second.transcript).t() * ta_.get_cov().get_original_phenotypes());
+	v.second.case_ref = 2 * arma::accu(ta_.get_cov().get_original_phenotypes()) - v.second.case_alt;
+	v.second.cont_alt = arma::accu(ta_.get_gene().get_matrix(v.second.transcript).t() * (1. - ta_.get_cov().get_original_phenotypes()));
+	v.second.cont_ref = 2 * arma::accu(1. - ta_.get_cov().get_original_phenotypes()) - v.second.case_alt;
 	v.second.original =
 		call_method(ta_.get_methods(),
 					ta_.get_gene(),
@@ -199,6 +203,10 @@ auto CARVAOp::stage2() -> void {
 	arma::vec mac_carriers(ta_.get_cov().get_nsamples(), arma::fill::zeros);
 	for (auto &v : ta_.results) {
 	  const std::string &k = v.second.transcript;
+	  v.second.case_alt = arma::accu(ta_.get_gene().get_matrix(v.second.transcript).t() * ta_.get_cov().get_original_phenotypes());
+	  v.second.case_ref = 2 * arma::accu(ta_.get_cov().get_original_phenotypes()) - v.second.case_alt;
+	  v.second.cont_alt = arma::accu(ta_.get_gene().get_matrix(v.second.transcript).t() * (1. - ta_.get_cov().get_original_phenotypes()));
+	  v.second.cont_ref = 2 * arma::accu(1. - ta_.get_cov().get_original_phenotypes()) - v.second.case_alt;
 	  if (!ta_.get_gene().is_polymorphic(k)) {
 		continue;
 	  }
