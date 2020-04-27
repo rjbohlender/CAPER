@@ -460,17 +460,17 @@ auto Gene::testable(const std::string &k, Covariates &cov, TaskParams &tp) -> bo
   arma::vec Yvec = cov.get_original_phenotypes();
   arma::sp_mat Xmat(genotypes_[k]);
 
-  auto ncase = static_cast<arma::uword>(arma::accu(Yvec));
+  auto ncase = static_cast<arma::sword>(arma::accu(Yvec));
 
   // Most Extreme Phenotype Distribution
   arma::uvec mac_carriers = arma::vec(arma::sum(Xmat, 1)) > 0;
   arma::uvec maj_carriers = 1 - mac_carriers;
 
-  arma::uword nmac = std::min(ncase, arma::accu(mac_carriers));
-  arma::uword nmaj = (ncase - nmac >= 0) ? ncase - nmac : 0;
+  arma::sword nmac = std::min(ncase, static_cast<arma::sword>(arma::accu(mac_carriers)));
+  arma::sword nmaj = std::max(ncase - nmac, 0ll);
 
   mac_carriers = arma::find(mac_carriers > 0);
-  maj_carriers = arma::find(mac_carriers == 0);
+  maj_carriers = arma::find(maj_carriers > 0);
 
   arma::vec extreme_phen(Yvec.n_elem, arma::fill::zeros);
   extreme_phen(mac_carriers(arma::span(0, nmac - 1))).ones();

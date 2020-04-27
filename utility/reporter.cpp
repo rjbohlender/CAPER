@@ -393,7 +393,7 @@ auto Reporter::report_simple(TaskParams &tp) -> void {
   // Report results
   int rank = 1;
   for(auto &v : results_) {
-    v.set_rank(rank);
+    v.rank = rank;
     write_to_stream(simple_file_tmp_, v);
     rank++;
   }

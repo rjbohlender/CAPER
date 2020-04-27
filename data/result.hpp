@@ -26,8 +26,6 @@ struct Result {
   friend std::ostream &operator<<(std::ostream &stream, Result &rhs);
 
   Result &combine(const Result& res);
-  void set_rank(int rank);
-  void set_odds(double odds);
   void update_ci();
   void calc_exact_p();
   void calc_exact_p(double n1, double n2);

@@ -8,7 +8,7 @@
 #include <algorithm>
 
 VAASTLogic::VAASTLogic(Gene &gene,
-					   arma::vec &Y,
+					   arma::vec &Y_,
 					   const std::string &k,
 					   bool score_only_minor,
 					   bool score_only_alternative,
@@ -21,7 +21,7 @@ VAASTLogic::VAASTLogic(Gene &gene,
 	: som(score_only_minor), soa(score_only_alternative), detail(detail), biallelic(biallelic), k(k),
 	  group_threshold(group_threshold), soft_maf_filter(soft_maf_filter),
 	  site_penalty(site_penalty), legacy(legacy_),
-	  X(gene.get_matrix(k)), Y(Y) {
+	  X(gene.get_matrix(k)), Y(Y_) {
 
   // Verify weights are okay
   check_weights(gene);
@@ -83,8 +83,8 @@ VAASTLogic::VAASTLogic(Gene &gene,
   }
 }
 
-VAASTLogic::VAASTLogic(arma::sp_mat X,
-					   arma::vec &Y,
+VAASTLogic::VAASTLogic(arma::sp_mat X_,
+					   arma::vec &Y_,
 					   arma::vec &weights,
 					   std::vector<std::string> &positions_,
 					   std::string k,
@@ -98,7 +98,7 @@ VAASTLogic::VAASTLogic(arma::sp_mat X,
 	: som(score_only_minor), soa(score_only_alternative), detail(true), biallelic(biallelic), k(std::move(k)),
 	  group_threshold(group_threshold), soft_maf_filter(soft_maf_filter),
 	  site_penalty(site_penalty), legacy(legacy_),
-	  X(std::move(X)), Y(Y) {
+	  X(std::move(X_)), Y(Y_) {
 
   if (group_threshold == 0 || X.n_cols == 1) {
 	score = Score(X, Y, weights);

@@ -11,6 +11,13 @@
 
 namespace mp = boost::multiprecision;
 
+/**
+ * @brief Log N choose K function using log gamma function
+ * @tparam T A floating point type
+ * @param n The total number to choose from
+ * @param k The number chosen
+ * @return T of N choose K on the log scale
+ */
 template<typename T>
 T lcnk(T n, T k) {
   if (n == k) {
@@ -19,15 +26,17 @@ T lcnk(T n, T k) {
   return mp::lgamma(n + 1) - (mp::lgamma(k + 1) + mp::lgamma(n - k + 1));
 }
 
+/**
+ * @brief Poisson confidence interval for p-values in permutation
+ * @tparam T A floating point type
+ * @param successes The number of successes counted in permutation
+ * @param permutations The total number of permutations
+ * @return Pair<T, T> containing the confidence interval at 2.5% and 97.5%
+ */
 template<typename T>
-std::pair<T, T> ci(T n, T k, T successes, T permutations) {
-  typedef mp::number<mp::cpp_bin_float<1000, mp::digit_base_10, std::allocator<void> > > cpp_bin_float_1000;
-  cpp_bin_float_1000 n_ = n;
-  cpp_bin_float_1000 k_ = k;
-  cpp_bin_float_1000 log_comb = lcnk(n_, k_);
-
-  cpp_bin_float_1000 lo_ci;
-  cpp_bin_float_1000 hi_ci;
+std::pair<T, T> poisson_ci(T successes, T permutations) {
+  T lo_ci;
+  T hi_ci;
   boost::math::chi_squared hi_dist(2 * successes + 2);
   if(successes > 0) {
 	boost::math::chi_squared lo_dist(2 * successes);
@@ -37,10 +46,7 @@ std::pair<T, T> ci(T n, T k, T successes, T permutations) {
   }
   hi_ci = boost::math::quantile(hi_dist, 0.975) / 2.;
 
-  // 100% guaranteed underflows for any reasonable sample size using double
-  cpp_bin_float_1000 prob = 1. / exp(log_comb);
-
-  return std::make_pair(static_cast<double>(prob + (1. - prob) * (lo_ci / permutations)), static_cast<double>(prob + (1. - prob) * (hi_ci / permutations)));
+  return std::make_pair(lo_ci / permutations, hi_ci / permutations);
 }
 
 #endif //PERMUTE_ASSOCIATE_MATH_HPP

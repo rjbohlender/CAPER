@@ -371,7 +371,7 @@ int main(int argc, char **argv) {
   if (tp.mac <= 0) {
     std::cerr << "Minor allele count cutoff must be greater than zero." << std::endl;
     std::exit(1);
-  } else if (tp.mac > 500 && tp.mac < 100000000) {
+  } else if (tp.mac > 500 && tp.mac < std::numeric_limits<unsigned long long>::max()) {
     std::cerr
         << "WARNING: This software is concerned with evaluating rare events. With a minor allele cutoff > 500, you should consider analyzing those variants using single marker tests."
         << std::endl;
@@ -404,7 +404,7 @@ int main(int argc, char **argv) {
     std::cerr << "stage_1_max_perm: " << tp.stage_1_permutations << "\n";
     std::cerr << "stage_2_max_perm: " << tp.stage_2_permutations << "\n";
     std::cerr << "-r: " << tp.maf << "\n";
-    if (tp.mac < 100000000)
+    if (tp.mac < std::numeric_limits<unsigned long long>::max())
       std::cerr << "--mac: " << tp.mac << "\n";
   }
 

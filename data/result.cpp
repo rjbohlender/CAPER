@@ -8,6 +8,9 @@
 #include <boost/math/special_functions/binomial.hpp>
 #include <boost/math/distributions/binomial.hpp>
 #include <boost/math/quadrature/trapezoidal.hpp>
+#include <boost/multiprecision/cpp_int.hpp>
+
+namespace mp = boost::multiprecision;
 
 Result::Result()
 	: gene(),
@@ -175,16 +178,9 @@ Result &Result::combine(const Result &res) {
   return *this;
 }
 
-void Result::set_rank(int rank) {
-  this->rank = rank;
-}
-
-void Result::set_odds(double odds) {
-  this->odds = odds;
-}
-
 void Result::update_ci() {
 #if 0
+  // Wilson Score Interval Calculation Code
   double z = 1.96;
   double z2 = z * z;
 
@@ -201,65 +197,70 @@ void Result::update_ci() {
   ci_hi = (sp + ci > 1) ? 1 : sp + ci;
   empirical_midci = std::make_pair(ci_low, ci_hi);
 #endif
-  double ncase = case_alt + case_ref;
-  double ncont = cont_alt + cont_ref;
-  empirical_ci = ci(ncase + ncont, ncase, static_cast<double>(successes), static_cast<double>(permutations));
-  empirical_midci = ci(ncase + ncont, ncase, static_cast<double>(mid_successes), static_cast<double>(permutations));
+  empirical_ci = poisson_ci(static_cast<double>(successes), static_cast<double>(permutations));
+  empirical_midci = poisson_ci(static_cast<double>(mid_successes), static_cast<double>(permutations));
 }
 
+/**
+ * @brief Calculate the exact p-value following Phipson and Smyth
+ * @param n1
+ * @param n2
+ * @note Permutation P-values should never be zero: calculating exact P-values when permutations are randomly drawn.
+ * 		 Authors: Phipson B, Smyth GK., 2010
+ */
 void Result::calc_exact_p(double n1, double n2) {
-  double m = permutations;
-  auto b = static_cast<double>(successes);
-  double mt;
-  try {
-	mt = boost::math::binomial_coefficient<double>(n1 + n2, n1);
-  } catch (std::overflow_error &e) {
-	exact_p = (b + 1.) / (m + 1.);
-	return;
-  }
-
+  mp::cpp_bin_float_100 m = permutations;
+  mp::cpp_bin_float_100 b = successes;
+  mp::cpp_bin_float_100 mt = boost::math::binomial_coefficient<mp::cpp_bin_float_100>(n1 + n2, n1);
+#if 0
   if (!std::isfinite(mt)) {
 	exact_p = (b + 1.) / (m + 1.);
 	return;
   }
+#endif
 
   if (n1 == n2) {
 	mt /= 2;
   }
 
-  auto f = [&](double pt) -> double {
-	boost::math::binomial dist(m, pt);
+  auto f = [&](mp::cpp_bin_float_100 pt) -> mp::cpp_bin_float_100 {
+	boost::math::binomial_distribution<mp::cpp_bin_float_100> dist(m, pt);
 	return boost::math::cdf(dist, b);
   };
 
-  double tol = 1e-8;
-  double error_estimate;
-  double L1;
+  mp::cpp_bin_float_100 tol = 1e-8;
+  mp::cpp_bin_float_100 error_estimate;
+  mp::cpp_bin_float_100 L1;
   size_t max_refinements = 15;
-  double I = boost::math::quadrature::trapezoidal(f, 0., 0.5 / (mt + 1), tol, max_refinements, &error_estimate, &L1);
-  exact_p = (b + 1.) / (m + 1.) - I;
+  mp::cpp_bin_float_100 I = boost::math::quadrature::trapezoidal(f, mp::cpp_bin_float_100(0.), mp::cpp_bin_float_100(0.5) / mp::cpp_bin_float_100(mt + 1), tol, max_refinements, &error_estimate, &L1);
+  exact_p = double(mp::cpp_bin_float_100(b + 1.) / mp::cpp_bin_float_100(m + 1.) - I);
 }
 
+/**
+ * @brief Calculate the exact p-value following Phipson and Smyth
+ * @note Permutation P-values should never be zero: calculating exact P-values when permutations are randomly drawn.
+ * 		 Authors: Phipson B, Smyth GK., 2010
+ */
 void Result::calc_exact_p() {
-  double m = permutations;
+  mp::cpp_bin_float_100 m = permutations;
   double n1 = nmac, n2 = nmaj;
-  auto mt = boost::math::binomial_coefficient<double>(n1 + n2, n1);
-  auto b = static_cast<double>(successes);
+  mp::cpp_bin_float_100 mt = boost::math::binomial_coefficient<mp::cpp_bin_float_100>(n1 + n2, n1);
+  mp::cpp_bin_float_100 b = successes;
 
   if (n1 == n2) {
 	mt /= 2;
   }
 
-  auto f = [&](double pt) -> double {
-	boost::math::binomial dist(m, pt);
+  auto f = [&](mp::cpp_bin_float_100 pt) -> mp::cpp_bin_float_100 {
+	boost::math::binomial_distribution<mp::cpp_bin_float_100> dist(m, pt);
 	return boost::math::cdf(dist, b);
   };
 
-  double tol = 1e-8;
-  double error_estimate;
-  double L1;
+  mp::cpp_bin_float_100 tol = 1e-8;
+  mp::cpp_bin_float_100 error_estimate;
+  mp::cpp_bin_float_100 L1;
   size_t max_refinements = 15;
-  exact_p = boost::math::quadrature::trapezoidal(f, 0., 0.5 / (mt + 1), tol, max_refinements, &error_estimate, &L1);
+  exact_p = double(boost::math::quadrature::trapezoidal(f, mp::cpp_bin_float_100 (0.), mp::cpp_bin_float_100(0.5) / mp::cpp_bin_float_100(mt + 1), tol, max_refinements, &error_estimate, &L1));
 }
 
 

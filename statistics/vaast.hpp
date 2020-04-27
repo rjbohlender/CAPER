@@ -74,7 +74,7 @@ struct VAASTLogic {
 
   // Constructors
   VAASTLogic(Gene &gene,
-			 arma::vec &Y,
+			 arma::vec &Y_,
 			 const std::string &k,
 			 bool score_only_minor,
 			 bool score_only_alternative,
@@ -84,8 +84,8 @@ struct VAASTLogic {
 			 bool biallelic,
 			 double soft_maf_filter,
 			 bool legacy_);
-  VAASTLogic(arma::sp_mat X,
-			 arma::vec &Y,
+  VAASTLogic(arma::sp_mat X_,
+			 arma::vec &Y_,
 			 arma::vec &weights,
 			 std::vector<std::string> &positions_,
 			 std::string k,

@@ -165,11 +165,11 @@ void CARVATask::cleanup() {
 	  arma::mat X = arma::mat(arma::sum(gene_.get_matrix(ts).t(), 0).t());
 	  arma::mat D = arma::join_horiz(cov_->get_covariate_matrix(), X);
 	  BayesianGLM<Binomial> fit(D, cov_->get_original_phenotypes(), link);
-	  results[ts].set_odds(std::exp(fit.beta_(fit.beta_.n_elem - 1)));
+	  results[ts].odds = std::exp(fit.beta_(fit.beta_.n_elem - 1));
 	}
   } else {
 	for (const auto &ts : gene_.get_transcripts()) {
-	  results[ts].set_odds(1); // default
+	  results[ts].odds = 1; // default
 	}
   }
   gene_.clear(*cov_, results, tp_);
