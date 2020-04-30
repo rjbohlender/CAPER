@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
         ("method,m",
          po::value<std::string>()->default_value("VAAST"),
          "The statistical method to be used.\n"
-         "Options: {BURDEN, CALPHA, CMC, CMC1df, RVT1, RVT2, SKAT, SKATO, SKAT, SKATO, VAAST, VT, WSS}.")
+         "Options: {BURDEN, CALPHA, CMC, CMC1df, RVT1, RVT2, SKAT, SKATO, VAAST, VT, WSS}.")
         ("range",
          po::value(&gene_range)->multitoken(),
          "A range of genes to analyze from the matrix file. "

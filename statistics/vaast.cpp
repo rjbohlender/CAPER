@@ -31,8 +31,10 @@ VAASTLogic::VAASTLogic(Gene &gene,
 
   if (group_threshold == 0 || X.n_cols == 1) {
 	score = Score(X, Y, weights);
-	if (detail)
+	if (detail) {
 	  gene.set_scores(k, vaast_site_scores);
+	  expanded_scores = vaast_site_scores;
+	}
   } else {
 	score = Score(X, Y, weights);
 	if(legacy) {
@@ -102,6 +104,7 @@ VAASTLogic::VAASTLogic(arma::sp_mat X_,
 
   if (group_threshold == 0 || X.n_cols == 1) {
 	score = Score(X, Y, weights);
+	expanded_scores = vaast_site_scores;
   } else {
 	score = Score(X, Y, weights);
 	if(legacy) {
@@ -143,30 +146,14 @@ VAASTLogic::VAASTLogic(arma::sp_mat X_,
 }
 
 double VAASTLogic::Score() {
-#if 0
   double val = 0;
-  for (const auto &g : groups) {
-	val += arma::accu(g.variant_scores);
-  }
-  return val;
-#else
-  double val = 0;
-#if 0
-  std::cerr << "\n\nSTART:\n";
-#endif
   for (auto &s : vaast_site_scores) {
-	if (s > 2) {
-#if 0
-	  std::cerr << "s: " << s - 2 << std::endl;
-#endif
-	  val += s - 2;
+	if (s > site_penalty) {
+	  s -= site_penalty;
+	  val += s;
 	}
   }
-#if 0
-  std::cerr << "END\n\n";
-#endif
   return val;
-#endif
 }
 
 double VAASTLogic::Score(const arma::sp_mat &X, const arma::vec &Y, const arma::vec &w) {
@@ -220,8 +207,11 @@ double VAASTLogic::Score(const arma::sp_mat &X, const arma::vec &Y, const arma::
   variant_bitmask(X, Y, w); // Mask variants with CASM weight 0
   vaast_site_scores(mask).zeros();
 
+  arma::uvec included = arma::find(vaast_site_scores > 2);
+  vaast_site_scores(included) -= site_penalty;
+
   // vaast_site_scores(arma::find(vaast_site_scores <= 2)).zeros();
-  double val = arma::accu(vaast_site_scores(arma::find(vaast_site_scores > 2)) - site_penalty);
+  double val = arma::accu(vaast_site_scores(included));
   // val += arma::accu(vaast_site_scores(arma::find(vaast_site_scores <= 2)));
   return (val >= 0) ? val : 0; // Mask all negative values
 }
