@@ -69,14 +69,12 @@ public:
   double VAAST(Gene &gene,
 			   arma::vec &Y,
 			   const std::string &k,
-			   bool score_only_minor = true,
-			   bool score_only_alternative = true,
-			   double site_penalty = 2.0,
-			   arma::uword group_threshold = 0,
-			   bool detail = false,
-			   bool biallelic = false,
-			   double control_freq_cutoff = 0.5,
-			   bool legacy = false);
+			   double site_penalty,
+			   arma::uword group_threshold,
+			   bool detail,
+			   bool biallelic,
+			   double control_freq_cutoff,
+			   bool legacy);
   double VT(Gene &gene, const std::string &k, arma::vec &phenotypes);
 
   // Madsen, Browning 2009

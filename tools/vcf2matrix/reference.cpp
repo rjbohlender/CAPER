@@ -54,7 +54,7 @@ void Reference::parse(std::istream &ifs) {
 
 	  // Update fields
 	  try {
-		data_[splitter[chri]].back()->gene = splitter[genei];
+		data_[splitter[chri]].back()->gene_name = splitter[genei];
 		// Checking if a transcript already exists so as to avoid duplicates.
 		if (std::find(data_[splitter[chri]].back()->transcript.begin(), data_[splitter[chri]].back()->transcript.end(), splitter[txi]) == data_[splitter[chri]].back()->transcript.end()) {
 		  data_[splitter[chri]].back()->transcript.push_back(splitter[txi]);
@@ -78,8 +78,8 @@ void Reference::parse(std::istream &ifs) {
 	  }
 	} else { // Add transcript to existing gene
 	  // Update fields
-	  if (gene_map_[splitter[genei]]->gene != splitter[genei]) {
-	    std::cerr << gene_map_[splitter[genei]]->gene << "\t" << splitter[genei] << std::endl;
+	  if (gene_map_[splitter[genei]]->gene_name != splitter[genei]) {
+	    std::cerr << gene_map_[splitter[genei]]->gene_name << "\t" << splitter[genei] << std::endl;
 	    std::cerr << data_[splitter[chri]].size() << std::endl;
 		throw (std::runtime_error("Gene name mismatch."));
 	  }

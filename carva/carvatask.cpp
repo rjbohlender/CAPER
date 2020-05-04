@@ -6,33 +6,23 @@
 #include "../statistics/bayesianglm.hpp"
 #include "../link/binomial.hpp"
 
-const std::set<std::string> CARVATask::pvalue_methods_{
-	"SKAT",
-	"SKATO",
-	"CMC"
-};
-
-CARVATask::CARVATask(Stage stage,
-					 Gene gene,
-					 const std::shared_ptr<Covariates> &cov,
-					 TaskParams &tp,
-					 arma::uword succ_thresh,
-					 arma::uword s1_perm,
-					 arma::uword s2_perm,
-					 std::vector<std::vector<int8_t>> &perm)
-	: stage_(stage),
-	  gene_(std::move(gene)),
-	  cov_(cov),
-	  method_(tp, cov),
-	  stage_1_permutations_(s1_perm),
-	  stage_2_permutations_(s2_perm),
-	  permutations(perm),
-	  success_threshold(succ_thresh),
-	  stop_check_threshold(succ_thresh),
-	  adjust(tp.adjust),
-	  tp_(tp) {
-  for (const auto &k : gene_.get_transcripts()) {
-	results[k] = Result(gene_.get_gene(), k, !gene_.is_polymorphic(k));
+CARVATask::CARVATask(Stage stage_,
+					 Gene gene_,
+					 const std::shared_ptr<Covariates> &cov_,
+					 TaskParams tp_,
+					 arma::uword succ_thresh_,
+					 arma::uword nperm_,
+					 std::vector<std::vector<int8_t>> &perm_)
+	: stage(stage_),
+	  gene(std::move(gene_)),
+	  cov(cov_),
+	  methods(tp_, cov_),
+	  npermutations(nperm_),
+	  permutations(perm_),
+	  success_threshold(succ_thresh_),
+	  tp(std::move(tp_)) {
+  for (const auto &k : gene.get_transcripts()) {
+	results[k] = Result(gene.gene_name, k, !gene.is_polymorphic(k));
 	results[k].output_stats = tp.output_stats;
 	if(tp.seed) {
 	  permute[k] = Permute(*tp.seed);
@@ -42,24 +32,21 @@ CARVATask::CARVATask(Stage stage,
   }
 }
 
-CARVATask::CARVATask(Stage stage,
-					 Gene &gene,
-					 const std::shared_ptr<Covariates> &cov,
-					 TaskParams &tp,
-					 std::vector<std::vector<int8_t>> &perm)
-	: stage_(stage),
-	  gene_(std::move(gene)),
-	  cov_(cov),
-	  method_(tp, cov),
-	  stage_1_permutations_(tp.stage_1_permutations),
-	  stage_2_permutations_(tp.stage_2_permutations),
-	  permutations(perm),
-	  success_threshold(tp.success_threshold),
-	  stop_check_threshold(tp.success_threshold),
-	  adjust(tp.adjust),
-	  tp_(tp) {
-  for (const auto &k : gene_.get_transcripts()) {
-	results.emplace(std::make_pair(k, Result(gene_.get_gene(), k, !gene_.is_polymorphic(k))));
+CARVATask::CARVATask(Stage stage_,
+					 Gene &gene_,
+					 std::shared_ptr<Covariates> cov_,
+					 TaskParams tp_,
+					 std::vector<std::vector<int8_t>> &perm_)
+	: stage(stage_),
+	  gene(std::move(gene_)),
+	  cov(cov_),
+	  methods(tp_, cov_),
+	  npermutations(tp_.nperm),
+	  permutations(perm_),
+	  success_threshold(tp_.success_threshold),
+	  tp(std::move(tp_)) {
+  for (const auto &k : gene.get_transcripts()) {
+	results.emplace(std::make_pair(k, Result(gene.gene_name, k, !gene.is_polymorphic(k))));
 	results[k].output_stats = tp.output_stats;
 	if(tp.seed) {
 	  permute[k] = Permute(*tp.seed);
@@ -67,75 +54,13 @@ CARVATask::CARVATask(Stage stage,
 	  permute[k] = Permute();
 	}
   }
-}
-CARVATask::CARVATask(const CARVATask &ta)
-	: results(ta.results),
-	  permute(ta.permute),
-	  stage_(ta.stage_),
-	  gene_(ta.gene_),
-	  cov_(ta.cov_),
-	  method_(ta.method_),
-	  stage_1_permutations_(ta.stage_1_permutations_),
-	  stage_2_permutations_(ta.stage_2_permutations_),
-	  permutations(ta.permutations),
-	  success_threshold(ta.success_threshold),
-	  stop_check_threshold(ta.stop_check_threshold),
-	  adjust(ta.adjust),
-	  tp_(ta.tp_) {}
-
-CARVATask::CARVATask(CARVATask &&ta) noexcept
-	: results(std::move(ta.results)),
-	  permute(std::move(ta.permute)),
-	  stage_(ta.stage_),
-	  gene_(std::move(ta.gene_)),
-	  cov_(ta.cov_),
-	  method_(std::move(ta.method_)),
-	  stage_1_permutations_(ta.stage_1_permutations_),
-	  stage_2_permutations_(ta.stage_2_permutations_),
-	  permutations(ta.permutations),
-	  success_threshold(ta.success_threshold),
-	  stop_check_threshold(ta.stop_check_threshold),
-	  adjust(ta.adjust),
-	  tp_(ta.tp_) {}
-
-CARVATask &CARVATask::operator=(const CARVATask &rhs) {
-  stage_ = rhs.stage_;
-  gene_ = rhs.gene_;
-  cov_ = rhs.cov_;
-  results = rhs.results;
-  permute = rhs.permute;
-  stage_1_permutations_ = rhs.stage_1_permutations_;
-  stage_2_permutations_ = rhs.stage_2_permutations_;
-  permutations = rhs.permutations;
-  success_threshold = rhs.success_threshold;
-  stop_check_threshold = rhs.stop_check_threshold;
-  adjust = rhs.adjust;
-  tp_ = rhs.tp_;
-
-  return *this;
-}
-
-const Stage &CARVATask::get_stage() const {
-  return stage_;
-}
-
-void CARVATask::set_stage(Stage stage) {
-  this->stage_ = stage;
-}
-
-Gene &CARVATask::get_gene() {
-  return gene_;
 }
 
 Covariates &CARVATask::get_cov() {
-  return *cov_;
+  return *cov;
 }
 
-Methods &CARVATask::get_methods() {
-  return method_;
-}
-
-int CARVATask::get_max_permutations() {
+int CARVATask::max_permutations() {
   auto res = std::max_element(results.cbegin(),
 							  results.cend(),
 							  [](const auto &v1, const auto &v2) {
@@ -144,103 +69,27 @@ int CARVATask::get_max_permutations() {
   return (*res).second.permutations;
 }
 
-int CARVATask::get_npermutations() {
-  if (stage_ == Stage::Stage1) {
-	return stage_1_permutations_;
-  } else if (stage_ == Stage::Stage2) {
-	return stage_2_permutations_ - stage_1_permutations_;
-  } else {
-	return 0;
-  }
-}
-
 std::vector<std::vector<int8_t>> &CARVATask::get_permutations() {
   return permutations;
 }
 
 void CARVATask::cleanup() {
-  if (!tp_.linear) {
+  if (!tp.linear) {
 	Binomial link("logit");
-	for (const auto &ts : gene_.get_transcripts()) {
-	  arma::mat X = arma::mat(arma::sum(gene_.get_matrix(ts).t(), 0).t());
-	  arma::mat D = arma::join_horiz(cov_->get_covariate_matrix(), X);
-	  BayesianGLM<Binomial> fit(D, cov_->get_original_phenotypes(), link);
+	for (const auto &ts : gene.get_transcripts()) {
+	  arma::mat X = arma::mat(arma::sum(gene.get_matrix(ts).t(), 0).t());
+	  arma::mat D = arma::join_horiz(cov->get_covariate_matrix(), X);
+	  BayesianGLM<Binomial> fit(D, cov->get_original_phenotypes(), link);
 	  results[ts].odds = std::exp(fit.beta_(fit.beta_.n_elem - 1));
 	}
   } else {
-	for (const auto &ts : gene_.get_transcripts()) {
+	for (const auto &ts : gene.get_transcripts()) {
 	  results[ts].odds = 1; // default
 	}
   }
-  gene_.clear(*cov_, results, tp_);
+  gene.clear(*cov, results, tp);
   //cov_->clear();
-  method_.clear(gene_.get_transcripts());
-}
-
-Result &CARVATask::max_original_statistic() {
-  auto res = std::max_element(
-	  results.begin(),
-	  results.end(),
-	  [](const auto &res1, const auto &res2) {
-		return res1.second.original < res2.second.original;
-	  });
-  return (*res).second;
-}
-
-Result &CARVATask::min_empirical_pvalue() {
-  auto res = std::min_element(
-	  results.begin(),
-	  results.end(),
-	  [](const auto &res1, const auto &res2) {
-		return res1.second.empirical_p < res2.second.empirical_p;
-	  });
-  return (*res).second;
-}
-
-Result &CARVATask::min_mgit_p() {
-  auto res = std::min_element(
-	  results.begin(),
-	  results.end(),
-	  [](const auto &res1, const auto &res2) {
-		return res1.second.mgit_p < res2.second.mgit_p;
-	  });
-  return (*res).second;
-}
-
-Result &CARVATask::min_transcript_permutations() {
-  auto res = std::min_element(
-	  results.begin(),
-	  results.end(),
-	  [](const auto &res1, const auto &res2) {
-		return res1.second.permutations < res2.second.permutations;
-	  });
-  return (*res).second;
-}
-
-Result &CARVATask::min_transcript_successes() {
-  auto res = std::min_element(
-	  results.begin(),
-	  results.end(),
-	  [](const auto &res1, const auto &res2) {
-		return res1.second.successes < res2.second.successes;
-	  });
-  return (*res).second;
-}
-
-double CARVATask::get_mgit_pvalue(const std::string &k) {
-  if (has_multiple_transcripts()) {
-	return results[k].mgit_p;
-  } else {
-	return results[k].empirical_p;
-  }
-}
-
-int CARVATask::get_remaining() {
-  if (stage_ == Stage::Stage1) {
-	return stage_2_permutations_ > 0 ? stage_2_permutations_ - stage_1_permutations_ : 0;
-  } else {
-	return 0;
-  }
+  methods.clear(gene.get_transcripts());
 }
 
 void CARVATask::calc_multitranscript_pvalues() {
@@ -254,25 +103,25 @@ void CARVATask::calc_multitranscript_pvalues() {
   }
 
   // Shorthand
-  std::vector<std::string> &transcripts = gene_.get_transcripts();
+  std::vector<std::string> &transcripts = gene.get_transcripts();
 
   unsigned long n = transcripts.size();
 
   int i, j, k;
   double successes;
 
-  arma::mat mgit_pval_mat = arma::mat(get_max_permutations() + 1, n);
+  arma::mat mgit_pval_mat = arma::mat(max_permutations() + 1, n);
 
   // For each transcript
   for (i = 0; i < n; i++) {
 	// For each statistic
 	const std::string &ts = transcripts[i];
-	if (!gene_.is_polymorphic(ts)) {
+	if (!gene.is_polymorphic(ts)) {
 	  continue;
 	}
 	int m = static_cast<int>(results[ts].permuted.size());  // Total permutations
 
-	assert(m == get_max_permutations()); // Sanity check - All equal
+	assert(m == max_permutations()); // Sanity check - All equal
 
 	// Append original
 	results[ts].permuted.push_back(results[ts].original);
@@ -282,8 +131,7 @@ void CARVATask::calc_multitranscript_pvalues() {
 	results[ts].permuted.pop_back();
 
 	arma::vec pvals;
-	if (pvalue_methods_.find(method_.str()) != pvalue_methods_.end()) {
-	  // SKATO Returns pvalues so reverse success criteria
+	if (tp.analytic) { // Analytic methods return p-values, so ordering needs to be reversed
 	  pvals = rank(permuted, "ascend");
 	} else {
 	  pvals = rank(permuted, "descend");
@@ -314,13 +162,6 @@ void CARVATask::calc_multitranscript_pvalues() {
 }
 
 bool CARVATask::has_multiple_transcripts() {
-  return gene_.get_transcripts().size() > 1;
+  return gene.get_transcripts().size() > 1;
 }
 
-Permute &CARVATask::get_permute(const std::string &k) {
-  return permute[k];
-}
-
-TaskParams &CARVATask::get_tp() {
-  return tp_;
-}

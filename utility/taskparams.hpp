@@ -20,9 +20,7 @@ struct TaskParams {
 
   boost::optional<int> seed;
 
-  arma::uword stage_1_permutations;
-  arma::uword stage_2_permutations;
-  arma::uword total_permutations;
+  arma::uword nperm;
 
   // For external permutations
   bool external;
@@ -48,7 +46,7 @@ struct TaskParams {
   double min_variant_count;
   double min_minor_allele_count;
   bool covadj;
-  bool cov_adjusted; // Methods that cannot be covariate adjusted permute a subset
+  bool cov_adjusted_method; // Methods that cannot be covariate adjusted permute a subset
 
   boost::optional<arma::uword> approximate;
   arma::uword maj_nbins;
@@ -81,8 +79,6 @@ struct TaskParams {
 
   // VAAST
   arma::uword group_size;
-  bool score_only_minor;
-  bool score_only_alternative;
   bool testable;
   bool biallelic;
 
@@ -104,7 +100,6 @@ struct TaskParams {
 
   // SKAT Parameters
   std::string kernel; // Kernel selection
-  bool adjust; // Sample size adjustment
   int a; // Beta weight parameters
   int b; // Beta weight parameters
 };

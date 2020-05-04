@@ -17,6 +17,7 @@
 Covariates::Covariates(const std::string& ifile, const std::string& pedfile, bool linear)
 	: nsamples_(0),
 	  ncases_(0),
+	  ncontrols_(0),
 	  crand((int)time(nullptr)),
 	  linear_(linear) {
   parse(ifile, pedfile);
@@ -26,6 +27,7 @@ Covariates::Covariates(const std::string& ifile, const std::string& pedfile, boo
 Covariates::Covariates(std::stringstream &ss)
 	: nsamples_(0),
 	  ncases_(0),
+	  ncontrols_(0),
 	  crand((int)time(nullptr)),
 	  linear_(false) {
   parse(ss);
@@ -195,8 +197,11 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
 
 		cov_samples_.push_back(v);
 
-		if (phen == 1)
+		if (phen == 1) {
 		  ncases_++;
+		} else {
+		  ncontrols_++;
+		}
 
 		phenotypes.push_back(phen);
 	  } else {
@@ -205,8 +210,9 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
 	  i++;
 	}
   }
-  std::cerr << "nsamples_: " << nsamples_ << "\n";
+  std::cerr << "nsamples: " << nsamples_ << "\n";
   std::cerr << "ncases: " << ncases_ << "\n";
+  std::cerr << "ncontrols: " << ncontrols_ << "\n";
 
   phenotypes_ = arma::conv_to<arma::colvec>::from(phenotypes);
   original_ = arma::conv_to<arma::colvec>::from(phenotypes);
@@ -251,8 +257,11 @@ void Covariates::parse(std::stringstream &ss) {
 	  if (i == 0) {
 		int phen = std::stoi(v);
 
-		if (phen == 1)
+		if (phen == 1) {
 		  ncases_++;
+		} else {
+		  ncontrols_++;
+		}
 		nsamples_++;
 
 		phenotypes.push_back(std::stoi(v));

@@ -51,7 +51,7 @@ auto CAESEOp::effectsize() -> void {
 	const std::string &k = v.second.transcript;
 
 	if (std::isnan(v.second.original)) {
-	  FisherTest original(ta_.get_gene(), ta_.get_cov().get_original_phenotypes(), k);
+	  FisherTest original(ta_.gene, ta_.get_cov().get_original_phenotypes(), k);
 	  v.second.original = original.get_or();
 	  v.second.or_p = original.get_pval();
 	  v.second.case_alt = original.case_alt;
@@ -60,8 +60,8 @@ auto CAESEOp::effectsize() -> void {
 	  v.second.cont_ref = original.cont_ref;
 	}
 	// Minor allele carrier indices
-	mac_indices[k] = arma::find(arma::sum(arma::mat(ta_.get_gene().get_matrix(k)), 1) > 0);
-	maj_indices[k] = arma::find(arma::sum(arma::mat(ta_.get_gene().get_matrix(k)), 1) == 0);
+	mac_indices[k] = arma::find(arma::sum(arma::mat(ta_.gene.get_matrix(k)), 1) > 0);
+	maj_indices[k] = arma::find(arma::sum(arma::mat(ta_.gene.get_matrix(k)), 1) == 0);
 	assert(mac_indices[k].n_rows + maj_indices[k].n_rows == ta_.get_cov().get_nsamples());
 
 	mac_odds[k] = ta_.get_cov().get_odds()(mac_indices[k]);
@@ -79,38 +79,20 @@ auto CAESEOp::effectsize() -> void {
 	// For each transcript in the gene
 	transcript_no = -1;
 	for (auto &v : ta_.results) {
-	  std::vector<std::vector<int32_t>> permutations;
+	  std::vector<std::vector<int8_t>> permutations;
 	  const std::string &k = v.second.transcript;
 
 	  transcript_no++;
 
 	  // Skip transcripts with no variants
-	  if (!ta_.get_gene().is_polymorphic(k))
+	  if (!ta_.gene.is_polymorphic(k))
 		continue;
 
-	  // SKAT corrects for covariates so we don't use this permutation approach
-	  if (ta_.get_tp().approximate) {
-		permutations = ta_.get_permute(k).permutations_mac_bin(1,
-															   ta_.get_cov().get_odds(),
-															   ta_.get_cov().get_ncases(),
-															   mac_indices[k],
-															   maj_indices[k],
-															   k,
-															   *ta_.get_tp().approximate,
-															   ta_.get_tp().maj_nbins,
-															   ta_.get_tp().lower_bin_cutoff,
-															   ta_.get_tp().upper_bin_cutoff);
-	  } else {
-		permutations = ta_.get_permute(k).permutations_maj_bin(1,
-															   ta_.get_cov().get_odds(),
-															   ta_.get_cov().get_ncases(),
-															   mac_indices[k],
-															   maj_indices[k],
-															   k,
-															   ta_.get_tp().maj_nbins,
-															   ta_.get_tp().lower_bin_cutoff,
-															   ta_.get_tp().upper_bin_cutoff);
-	  }
+	  permutations = ta_.get_permute(k).epsilon_permutation(1,
+															 ta_.get_cov().get_odds(),
+															 ta_.get_cov().get_ncases(),
+															 k,
+															 ta_.get_tp().bin_epsilon);
 	  phenotypes = arma::conv_to<arma::vec>::from(permutations[0]);
 
 	  perm_val = call_method(ta_, phenotypes, ta_.get_tp(), k);
@@ -135,12 +117,12 @@ auto CAESEOp::effectsize() -> void {
 	if (!ta_.get_tp().alternate_permutation) {
 	  for (const auto &v : ta_.results) {
 	    double or_ = v.second.case_alt * v.second.cont_ref / (v.second.case_ref * v.second.cont_alt);
-		std::cerr << "EffectSize: " << ta_.get_gene().get_gene() << "\t" << v.second.transcript << "\t";
+		std::cerr << "EffectSize: " << ta_.gene.gene_name << "\t" << v.second.transcript << "\t";
 		std::cerr << std::defaultfloat << std::setprecision(6) << v.second.original << "\t" << "vs. " << or_ << std::endl;
 	  }
 	} else {
 	  for (const auto &v : ta_.results) {
-		std::cerr << "Stage 2: " << ta_.get_gene().get_gene() << "\t" << v.second.transcript << "\t";
+		std::cerr << "Stage 2: " << ta_.gene.gene_name << "\t" << v.second.transcript << "\t";
 		std::cerr << std::defaultfloat << std::setprecision(6) << v.second.original << std::endl;
 	  }
 	}
@@ -220,5 +202,5 @@ auto CAESEOp::check_perm(const TaskParams &tp,
 }
 
 auto CAESEOp::call_method(CAESETask &ct, arma::vec &phenotypes, TaskParams &tp, const std::string &k) -> double {
-  return FisherTest(ct.get_gene(), phenotypes, k).get_or();
+  return FisherTest(ct.gene, phenotypes, k).get_or();
 }

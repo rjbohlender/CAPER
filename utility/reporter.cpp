@@ -16,7 +16,7 @@ const std::set<std::string> Reporter::pvalue_methods_ {
 };
 
 Reporter::Reporter(TaskParams &tp)
-: method_(tp.method), gene_list_(tp.gene_list), testable_(tp.testable), ncases_(0), ncontrols_(0) {
+: method_(tp.method), gene_list_(tp.gene_list), print_testable_(tp.testable), ncases_(0), ncontrols_(0) {
   std::string header;
 
   if(!check_directory_exists(tp.output_path)) {
@@ -100,7 +100,7 @@ Reporter::Reporter(TaskParams &tp)
 }
 
 Reporter::Reporter(std::vector<CARVATask> &res, TaskParams &tp)
-: method_(tp.method), gene_list_(tp.gene_list), testable_(tp.testable), ncases_(0), ncontrols_(0) {
+: method_(tp.method), gene_list_(tp.gene_list), print_testable_(tp.testable), ncases_(0), ncontrols_(0) {
   if(!check_directory_exists(tp.output_path)) {
     throw(std::runtime_error("Output path is invalid."));
   }
@@ -188,7 +188,7 @@ auto Reporter::extract_results(std::vector<CARVATask> &tq_results, TaskParams &t
           }
         } else {
           results[r.second.gene][r.second.transcript] = r.second;
-		  details_.push_back(v.get_gene().get_detail());
+		  details_.push_back(v.gene.get_detail());
         }
       }
     }
@@ -204,13 +204,13 @@ auto Reporter::extract_results(std::vector<CARVATask> &tq_results, TaskParams &t
     for(auto &v : tq_results) {
       for(auto &r : v.results) {
         results_.emplace_back(std::move(r.second));
-        details_.push_back(v.get_gene().get_detail());
+        details_.push_back(v.gene.get_detail());
       }
     }
   }
 
   // Sort extracted results
-  if(pvalue_methods_.find(method_) != pvalue_methods_.end() && (method_ != "SKAT" || tp.total_permutations == 0 )) {
+  if(pvalue_methods_.find(method_) != pvalue_methods_.end() && (method_ != "SKAT" || tp.nperm == 0 )) {
     // Sort by midp and asymptotic pvalue
     std::sort(results_.begin(), results_.end(), [](auto &a, auto &b) {
       if(a.empirical_midp != b.empirical_midp) {
@@ -414,7 +414,7 @@ auto Reporter::report_detail(std::vector<CARVATask> &res, TaskParams &tp) -> voi
 	if (i == res.size() - 1) {
 	  detail_file_ << "## Sample Index Map" << std::endl;
 	  int j = 0;
-	  for (auto &s : res[0].get_gene().get_samples()) {
+	  for (auto &s : res[0].gene.get_samples()) {
 		detail_file_ << "#\t" << s << "\t" << j << std::endl;
 		j++;
 	  }
@@ -429,7 +429,7 @@ auto Reporter::report_vaast(std::vector<CARVATask> &res, TaskParams &tp) -> void
   vaast_file_ << "## COMMAND\t" << tp.full_command << std::endl;
 
   for (auto &ta : res) {
-	for(auto &ts : ta.get_gene().get_vaast()) {
+	for(auto &ts : ta.gene.get_vaast()) {
 	  double z2 = std::pow(1.96, 2);
 	  double n = ta.results[ts.first].permutations;
 	  double ns = ta.results[ts.first].successes;
@@ -448,14 +448,14 @@ auto Reporter::report_vaast(std::vector<CARVATask> &res, TaskParams &tp) -> void
   // Print sample / index map at the end
   vaast_file_ << "## Sample Index Map" << std::endl;
   int j = 0;
-  for (auto &s : res[0].get_gene().get_samples()) {
+  for (auto &s : res[0].gene.get_samples()) {
     detail_file_ << "#\t" << s << "\t" << j << std::endl;
     j++;
   }
 }
 
 auto Reporter::write_to_stream(std::ostream &os, Result &res) -> void {
-  if(testable_) {
+  if(print_testable_) {
     if(res.testable) {
       os << res;
     }
@@ -464,7 +464,7 @@ auto Reporter::write_to_stream(std::ostream &os, Result &res) -> void {
   }
 }
 
-auto Reporter::sync_write_simple(std::unordered_map<std::string, Result> &results, TaskParams &tp, bool top_only) -> void {
+auto Reporter::sync_write_simple(std::unordered_map<std::string, Result> &results, const TaskParams &tp) -> void {
   std::lock_guard<std::mutex> lock(lock_); // Acquire lock
 
   recalculate_mgit(results);
@@ -477,7 +477,7 @@ auto Reporter::sync_write_simple(std::unordered_map<std::string, Result> &result
       }
     }
   }
-  if(top_only) {
+  if(tp.top_only) {
 	// Find the most significant result.
 	std::unique_ptr<Result> topres;
 	for(auto &r : results) {
@@ -498,7 +498,7 @@ auto Reporter::sync_write_simple(std::unordered_map<std::string, Result> &result
     return;
   }
 
-  if(testable_) {
+  if(print_testable_) {
     for(auto &tr : results) {
       if(tr.second.testable && !tr.second.skippable) {
         simple_file_tmp_ << tr.second;
@@ -516,12 +516,13 @@ auto Reporter::sync_write_simple(std::unordered_map<std::string, Result> &result
   simple_file_tmp_.flush();
 }
 
-auto Reporter::sync_write_detail(const std::string &d, bool testable) -> void {
+auto Reporter::sync_write_detail(const std::string &d, bool gene_testable) -> void {
   std::lock_guard<std::mutex> lock(lock_); // Acquire lock
 
-  if(testable_) {
-    if(testable)
+  if(print_testable_) {
+    if(gene_testable) {
 	  detail_file_ << d;
+    }
   } else {
     detail_file_ << d;
   }
@@ -529,7 +530,7 @@ auto Reporter::sync_write_detail(const std::string &d, bool testable) -> void {
   detail_file_.flush();
 }
 
-auto Reporter::sort_simple(TaskParams &tp) -> void {
+auto Reporter::sort_simple(const TaskParams &tp) -> void {
   std::lock_guard<std::mutex> lock(lock_);
   simple_file_ = std::ofstream(simple_path_ss.str());
   if(!simple_file_.good()) {
@@ -636,7 +637,7 @@ auto Reporter::sort_simple(TaskParams &tp) -> void {
   // Delete tmp file
   std::remove(simple_path_tmp_ss.str().c_str());
 
-  if (!unfinished_.empty() && tp.total_permutations > 0) {
+  if (!unfinished_.empty() && tp.nperm > 0) {
 	// Print command to run unfinished
 	std::stringstream uf_ss;
 	uf_ss << tp.program_path << " ";
@@ -650,8 +651,7 @@ auto Reporter::sort_simple(TaskParams &tp) -> void {
 	if (tp.weight) {
 	  uf_ss << "-w " << *tp.weight << " ";
 	}
-	uf_ss << "-1 0 "; // Skip stage 1
-	uf_ss << "-2 " << tp.total_permutations * 10 << " ";
+	uf_ss << "--nperm " << tp.nperm * 10 << " ";
 	uf_ss << "-m " << tp.method << " ";
 	uf_ss << "-t " << tp.nthreads << " ";
 	if (!tp.verbose) {
@@ -672,11 +672,11 @@ auto Reporter::sort_simple(TaskParams &tp) -> void {
 	if (tp.nodetail) {
 	  uf_ss << "--nodetail ";
 	}
-	if(tp.score_only_minor) {
-	  uf_ss << "--score_only_minor ";
+	if (tp.legacy_grouping) {
+	  uf_ss << "--legacy_grouping ";
 	}
-	if(tp.score_only_alternative) {
-	  uf_ss << "--score_only_alternative ";
+	if (tp.soft_maf_filter != 0.5) {
+	  uf_ss << "--soft_maf_filter " << tp.soft_maf_filter << " ";
 	}
 
 	uf_ss << "-l ";
@@ -701,13 +701,13 @@ auto Reporter::set_ncontrols(int ncontrols) -> void {
   ncontrols_ = ncontrols;
 }
 
-auto Reporter::sync_write_vaast(CARVATask &ct, TaskParams &tp) -> void {
+auto Reporter::sync_write_vaast(CARVATask &ct, const TaskParams &tp) -> void {
   std::lock_guard<std::mutex> lock(lock_); // Acquire lock
   if (tp.method != "VAAST") {
     return;
   }
 
-  for(auto &ts : ct.get_gene().get_vaast()) {
+  for(auto &ts : ct.gene.get_vaast()) {
 	double z2 = std::pow(1.96, 2);
 	double n = ct.results[ts.first].permutations;
 	double ns = ct.results[ts.first].successes;

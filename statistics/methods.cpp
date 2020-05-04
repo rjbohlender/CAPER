@@ -168,7 +168,7 @@ double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &k, double maf) 
     Xnew.insert_cols(Xnew.n_cols, Xcollapse);
   }
 
-  if (tp_.total_permutations < 0) {
+  if (tp_.nperm < 0) {
     // Rescale to -1, 0, 1
     Xnew -= 1;
 
@@ -201,7 +201,7 @@ double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &k, double maf) 
     double stat = arma::as_scalar(ret) * (nA + nU - 1 - p) / (p * (nA + nU - 2)); // F(N, nA + nU - 1 - N) distributed
     if (stat < 0)
       stat = 0;
-    if(tp_.total_permutations > 0) {
+    if(tp_.nperm > 0) {
       return stat;
     }
     boost::math::fisher_f fisher_f(p, nA + nU - 1 - p);
@@ -227,7 +227,7 @@ double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &k, double maf) 
 double Methods::CMC1df(Gene &gene, arma::vec &Y, const std::string &k) {
   // Runtime for MDA OV with just fisher test and 10000 perms = 6544.95
   // Runtime for fast path with 10000 perms = 267.874
-  if(tp_.total_permutations > 0) {
+  if(tp_.nperm > 0) {
     arma::vec X(arma::sum(gene.get_matrix(k), 1));
     X(arma::find(X > 0)).ones();
 
@@ -335,8 +335,6 @@ double Methods::RVT2(Gene &gene,
 double Methods::VAAST(Gene &gene,
 					  arma::vec &Y,
 					  const std::string &k,
-					  bool score_only_minor,
-					  bool score_only_alternative,
 					  double site_penalty,
 					  arma::uword group_threshold,
 					  bool detail,
@@ -347,8 +345,6 @@ double Methods::VAAST(Gene &gene,
 	  (gene,
 	   Y,
 	   k,
-	   score_only_minor,
-	   score_only_alternative,
 	   site_penalty,
 	   group_threshold,
 	   detail,

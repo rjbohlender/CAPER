@@ -21,7 +21,6 @@
 #include "../statistics/methods.hpp"
 #include "../data/permutation.hpp"
 #include "../utility/filesystem.hpp"
-#include "../utility/main_support.hpp"
 #include "../utility/jobdispatcher.hpp"
 #include "../utility/taskparams.hpp"
 #include "../utility/reporter.hpp"
@@ -269,7 +268,7 @@ int main(int argc, char **argv) {
   tp.success_threshold = vm["successes"].as<arma::uword>();
   tp.stage_1_permutations = vm["stage_1_max_perm"].as<arma::uword>();
   tp.stage_2_permutations = vm["stage_2_max_perm"].as<arma::uword>();
-  tp.total_permutations = std::max(tp.stage_1_permutations, tp.stage_2_permutations);
+  tp.nperm = std::max(tp.stage_1_permutations, tp.stage_2_permutations);
   tp.method = vm["method"].as<std::string>();
   // File paths and option status
   tp.program_path = argv[0];

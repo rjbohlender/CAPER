@@ -102,7 +102,7 @@ set(PROJECT_SUPPORT_FILES
     statistics/skat.hpp
     power/powerop.cpp
     power/powerop.hpp
-    utility/taskqueue2.hpp
+    utility/taskqueue.hpp
     carva/carvaop.cpp
     carva/carvaop.hpp
     power/powertask.cpp

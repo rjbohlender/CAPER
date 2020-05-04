@@ -40,11 +40,11 @@ public:
 
   auto cleanup(TaskParams &tp) -> void;
 
-  auto sync_write_simple(std::unordered_map<std::string, Result> &results, TaskParams &tp, bool top_only) -> void;
-  auto sync_write_detail(const std::string &d, bool testable) -> void;
-  auto sync_write_vaast(CARVATask &ct, TaskParams &tp) -> void;
+  auto sync_write_simple(std::unordered_map<std::string, Result> &results, const TaskParams &tp) -> void;
+  auto sync_write_detail(const std::string &d, bool gene_testable) -> void;
+  auto sync_write_vaast(CARVATask &ct, const TaskParams &tp) -> void;
 
-  auto sort_simple(TaskParams &tp) -> void;
+  auto sort_simple(const TaskParams &tp) -> void;
 
   auto set_ncases(int ncases) -> void;
   auto set_ncontrols(int ncontrols) -> void;
@@ -69,7 +69,7 @@ private:
 
   const std::string method_;
   const bool gene_list_;
-  const bool testable_;
+  const bool print_testable_;
   std::vector<Result> results_;
   std::vector<std::string> details_;
   // Holds unfinished genes

@@ -98,7 +98,7 @@ void Parser::parse(std::istream &is, std::ostream &os) { // Parse VCF
 	for (const auto &p : match) {
 	  bool gene_exists = false;
 	  for (auto &g : genes_) {
-	    if (g.gene == p->gene) {
+	    if (g.gene == p->gene_name) {
 		  for (const auto &t : p->transcript) {
 			if (p->positions[t].first <= pos && p->positions[t].second >= pos) {
 			  g.data[t].push_back(var);
@@ -117,7 +117,7 @@ void Parser::parse(std::istream &is, std::ostream &os) { // Parse VCF
 		}
 		// Construct new container
 		GeneContainer gene {
-	      p->gene,
+	      p->gene_name,
 	      p->transcript,
 		  std::map<std::string, std::vector<Variant>>(),
 	      max_pos

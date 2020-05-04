@@ -10,15 +10,13 @@
 VAASTLogic::VAASTLogic(Gene &gene,
 					   arma::vec &Y_,
 					   const std::string &k,
-					   bool score_only_minor,
-					   bool score_only_alternative,
 					   double site_penalty,
 					   arma::uword group_threshold,
 					   bool detail,
 					   bool biallelic,
 					   double soft_maf_filter,
 					   bool legacy_)
-	: som(score_only_minor), soa(score_only_alternative), detail(detail), biallelic(biallelic), k(k),
+	: detail(detail), biallelic(biallelic), k(k),
 	  group_threshold(group_threshold), soft_maf_filter(soft_maf_filter),
 	  site_penalty(site_penalty), legacy(legacy_),
 	  X(gene.get_matrix(k)), Y(Y_) {
@@ -90,14 +88,12 @@ VAASTLogic::VAASTLogic(arma::sp_mat X_,
 					   arma::vec &weights,
 					   std::vector<std::string> &positions_,
 					   std::string k,
-					   bool score_only_minor,
-					   bool score_only_alternative,
 					   bool biallelic,
 					   arma::uword group_threshold,
 					   double site_penalty,
 					   double soft_maf_filter,
 					   bool legacy_)
-	: som(score_only_minor), soa(score_only_alternative), detail(true), biallelic(biallelic), k(std::move(k)),
+	: detail(true), biallelic(biallelic), k(std::move(k)),
 	  group_threshold(group_threshold), soft_maf_filter(soft_maf_filter),
 	  site_penalty(site_penalty), legacy(legacy_),
 	  X(std::move(X_)), Y(Y_) {
@@ -174,8 +170,6 @@ double VAASTLogic::Score(const arma::sp_mat &X, const arma::vec &Y, const arma::
 	// For starters, we can try collapsing all variants with a positive VAAST score into one biallelic term.
 	arma::vec log_lh = LRT();
 	vaast_site_scores = 2.0 * (log_lh + arma::log(w));
-	variant_bitmask(X, Y, w);
-	vaast_site_scores(mask).zeros();
 
 	vaast_site_scores(arma::find(vaast_site_scores <= 2)).zeros();
 	vaast_site_scores(arma::find(vaast_site_scores > 2)) -= site_penalty;
@@ -204,8 +198,6 @@ double VAASTLogic::Score(const arma::sp_mat &X, const arma::vec &Y, const arma::
   vaast_site_scores = 2.0 * (log_lh + arma::log(w));
   vaast_site_scores(arma::find(vaast_site_scores / (-2.) > 0)).zeros();
   vaast_site_scores(unweighted).zeros();
-  variant_bitmask(X, Y, w); // Mask variants with CASM weight 0
-  vaast_site_scores(mask).zeros();
 
   arma::uvec included = arma::find(vaast_site_scores > 2);
   vaast_site_scores(included) -= site_penalty;
@@ -272,66 +264,6 @@ arma::uvec VAASTLogic::setdiff(arma::uvec x, arma::uvec y) {
   }
 
   return x;
-}
-
-void VAASTLogic::variant_bitmask(const arma::sp_mat &X, const arma::vec &Y, const arma::vec &w) {
-  // mask sites where major allele is more common in cases
-  // We can simplify because the 1 is always the minor allele
-  // arma::uvec tmpmask = vaast_site_scores <= 0;
-  // arma::umat scenario1 = case_allele1 > control_allele1;
-  // arma::umat scenario2 =
-
-  /*
-	# scenario 1: 1 is minor allele and it's more frequent in case
-		scenario1= (    (control_allele1 <= control_allele0 )
-			&   (case_allele1 * control_allele0 >= case_allele0 *
-				control_allele1)
-		)
-	# scenario 2: 0 is minor allele and it's more frequent in case
-		scenario2= (    (control_allele1 >= control_allele0 )
-			&   (case_allele1 * control_allele0 <= case_allele0 *
-				control_allele1)
-		)
-    */
-#if 1
-  arma::uvec tmpmask = vaast_site_scores <= 0;
-  arma::uvec scenario1 =
-	  ((control_allele1 > control_allele0) + (case_allele1 % control_allele0 < case_allele0 % control_allele1)) >= 1;
-  mask = arma::find(tmpmask + scenario1 >= 1);
-#else
-  arma::uvec tmpmask = arma::find(vaast_site_scores <= 0);
-  std::vector<arma::uword> scenario;
-  for (arma::uword i = 0; i < case_allele1.n_elem; i++) {
-	bool in_mask = false;
-	for (arma::uword j = 0; j < tmpmask.size(); j++) {
-	  if (i == tmpmask(j)) {
-		in_mask = true;
-		break;
-	  }
-	}
-	// Merge
-	if (in_mask) {
-	  scenario.push_back(i);
-	  continue;
-	}
-	if (som) {
-	  // If both scenarios are false, append to mask
-	  bool scenario1 = !((control_allele1(i) <= control_allele0(i))
-		  & ((case_allele1(i) * control_allele0(i) >= case_allele0(i) * control_allele1(i))));
-	  bool scenario2 = !((control_allele1(i) >= control_allele0(i))
-		  & ((case_allele1(i) * control_allele0(i) <= case_allele0(i) * control_allele1(i))));
-
-	  if (soa) {
-		if (scenario1)
-		  scenario.push_back(i);
-	  } else {
-		if (scenario1 & scenario2)
-		  scenario.push_back(i);
-	  }
-	}
-  }
-  mask = arma::conv_to<arma::uvec>::from(scenario);
-#endif
 }
 
 void VAASTLogic::variant_grouping(const arma::sp_mat &X,

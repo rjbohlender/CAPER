@@ -13,14 +13,12 @@
 #include "reporter.hpp"
 #include "../data/covariates.hpp"
 #include "../carva/carvatask.hpp"
-#include "taskqueue.hpp"
 #include "../data/permutation.hpp"
 #include "../data/bed.hpp"
 #include "../data/weight.hpp"
-#include "taskqueue2.hpp"
+#include "taskqueue.hpp"
 #include "../carva/carvaop.hpp"
 
-#include "main_support.hpp"
 #include "reporter.hpp"
 #include "filesystem.hpp"
 
@@ -57,7 +55,7 @@ public:
 	if (tp_.power) {
 	  stage_ = Stage::Power;
 	} else {
-	  stage_ = (tp_.stage_1_permutations > 0) ? Stage::Stage1 : Stage::Stage2;
+	  stage_ = Stage::Stage1;
 	}
 
 	// Handle zipped input
@@ -95,20 +93,21 @@ public:
 	    }
 	  }
 	  std::cerr << permutation_ptr_->size() << " external stage 1 permutations read in." << std::endl;
-	  tp.stage_1_permutations = permutation_ptr_->size();
+	  tp.nperm = permutation_ptr_->size();
 	} else {
 	  // Generate permutations for stage 1
 	  arma::wall_clock timer;
 	  timer.tic();
-	  if (tp.stage_1_permutations > 0 && !tp.alternate_permutation) {
-		permute_.get_permutations(permutation_ptr_,
-								  cov_->get_odds(),
-								  cov_->get_ncases(),
-								  tp.stage_1_permutations,
-								  tp.nthreads - 1);
+	  if (tp.nperm > 0 && !tp.alternate_permutation) {
+		permute_.generate_permutations(permutation_ptr_,
+									   cov_->get_odds(),
+									   cov_->get_ncases(),
+									   tp.nperm,
+									   tp.nthreads - 1,
+									   tp.bin_epsilon);
 	  }
-	  if (tp.stage_1_permutations > 0) {
-		std::cerr << "Time spent generating stage 1 permutations: " << timer.toc() << std::endl;
+	  if (tp.nperm > 0) {
+		std::cerr << "Time spent generating permutations: " << timer.toc() << std::endl;
 	  } else {
 		timer.toc();
 	  }
@@ -129,10 +128,7 @@ public:
 
 	  cov_->get_fitted().t().print(lr_ofs);
 	  lr_ofs.close();
-	  // Finish if there are no stage 2 permutations.
-	  if (tp.stage_2_permutations == 0) {
-		std::exit(0);
-	  }
+	  std::exit(0);
 	}
 
 	if (!tp.gene_list) {
@@ -298,7 +294,7 @@ private:
 	using namespace std::literals::chrono_literals;
 	// Ensure we have at least one variant for a submitted gene
 	if (std::any_of(nvariants_.cbegin(), nvariants_.cend(), [&](const auto &v) { return v.second > 0; })) {
-	  int total_s1_perm = 0;
+	  int total_perm = 0;
 	  int total_s2_perm = 0;
 	  int total_success = 0;
 
@@ -309,8 +305,7 @@ private:
 				  cov_,
 				  tp_,
 				  tp_.success_threshold,
-				  tp_.stage_1_permutations,
-				  tp_.stage_2_permutations,
+				  tp_.nperm,
 				  *permutation_ptr_);
 		while (tq_.size() > tp_.nthreads - 1) {
 		  std::this_thread::sleep_for(0.001s);
@@ -327,8 +322,7 @@ private:
 					cov_,
 					tp_,
 					tp_.success_threshold - total_success,
-					tp_.stage_1_permutations - total_s1_perm,
-					tp_.stage_2_permutations - total_s2_perm,
+					tp_.nperm - total_perm,
 					*permutation_ptr_);
 
 		  // Limit adding jobs to prevent excessive memory usage
@@ -342,12 +336,10 @@ private:
 					cov_,
 					tp_,
 					tp_.success_threshold / static_cast<int>(tq_.get_nthreads()),
-					tp_.stage_1_permutations / static_cast<int>(tq_.get_nthreads()),
-					tp_.stage_2_permutations / static_cast<int>(tq_.get_nthreads()),
+					tp_.nperm / static_cast<int>(tq_.get_nthreads()),
 					*permutation_ptr_);
 		  // Add current permutations
-		  total_s1_perm += tp_.stage_1_permutations / tq_.get_nthreads();
-		  total_s2_perm += tp_.stage_2_permutations / tq_.get_nthreads();
+		  total_perm += tp_.nperm / tq_.get_nthreads();
 		  total_success += tp_.success_threshold / tq_.get_nthreads();
 
 		  // Limit adding jobs to prevent excessive memory usage
@@ -425,7 +417,7 @@ private:
 
   // Member variables
   TaskParams tp_;
-  TaskQueue2<Operation_t, Task_t, Reporter_t> tq_;
+  TaskQueue<Operation_t, Task_t, Reporter_t> tq_;
   Bed bed_;
   Weight weight_;
   Permute permute_;

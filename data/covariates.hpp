@@ -59,6 +59,7 @@ public:
 private:
   unsigned long nsamples_;
   unsigned long ncases_;
+  unsigned long ncontrols_;
 
   CRandomMersenne crand;
   std::vector<std::string> cov_samples_;

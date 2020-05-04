@@ -7,7 +7,7 @@
 
 #include "carvatask.hpp"
 #include "../utility/reporter.hpp"
-#include "../utility/taskqueue2.hpp"
+#include "../utility/taskqueue.hpp"
 
 class CARVAOp {
 public:
@@ -25,7 +25,6 @@ private:
   std::mt19937 gen_;
 
   auto stage1() -> void;
-  auto stage2() -> void;
 
   static auto check_perm(const TaskParams &tp,
 				  double perm_val,
@@ -33,13 +32,13 @@ private:
 				  std::pair<const std::string, Result> &v) -> void;
 
   auto call_method(Methods &method,
-					 Gene &gene,
-					 Covariates &cov,
-					 arma::vec &phenotypes,
-					 TaskParams &tp,
-					 const std::string &k,
-					 bool shuffle,
-					 bool detail) -> double;
+				   Gene &gene,
+				   Covariates &cov,
+				   arma::vec &phenotypes,
+				   const TaskParams &tp,
+				   const std::string &k,
+				   bool shuffle,
+				   bool detail) -> double;
 
   std::shared_ptr<Reporter> reporter_;
 };
