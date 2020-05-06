@@ -51,8 +51,12 @@ arma::sp_mat &Gene::get_matrix(const std::string &k) {
   return genotypes_[k];
 }
 
+void Gene::set_matrix(const std::string &k, arma::sp_mat &data) {
+  genotypes_[k] = std::move(data);
+}
+
 void Gene::set_matrix(const std::string &k, arma::sp_mat &&data) {
-  genotypes_[k] = data;
+  genotypes_[k] = std::move(data);
 }
 
 std::vector<std::string> &Gene::get_transcripts() {

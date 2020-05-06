@@ -161,3 +161,15 @@ target_link_libraries(caese ${LAPACK_LIBRARIES})
 target_link_libraries(caese ${BLAS_LIBRARIES})
 
 target_compile_definitions(caese PRIVATE MAXCOLORS=10000000)
+
+add_executable(catch_test
+               catch_test/test.cpp
+               ${PROJECT_SUPPORT_FILES})
+
+target_link_libraries(catch_test ${ARMADILLO_LIBRARIES})
+target_link_libraries(catch_test ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(catch_test ${Boost_LIBRARIES})
+target_link_libraries(catch_test ${LAPACK_LIBRARIES})
+target_link_libraries(catch_test ${BLAS_LIBRARIES})
+
+target_compile_definitions(catch_test PRIVATE MAXCOLORS=10000000)

@@ -102,8 +102,6 @@ struct VAASTLogic {
 					   const arma::vec &Y,
 					   const arma::vec &w,
 					   std::vector<std::string> &positions);
-
-  static arma::uvec setdiff(arma::uvec x, arma::uvec y);
 };
 
 #endif //PERMUTE_ASSOCIATE_VAAST_HPP

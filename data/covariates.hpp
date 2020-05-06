@@ -19,8 +19,8 @@
 
 class Covariates {
 public:
-  explicit Covariates(const std::string& ifile, const std::string& pedfile, bool linear=false);
-  explicit Covariates(std::stringstream& ss);
+  Covariates(const std::string& ifile, const std::string& pedfile, bool linear=false);
+  Covariates(std::stringstream &ped_ss, std::stringstream& cov_ss);
 
   Covariates(const Covariates &cov) = default;
 
@@ -83,7 +83,7 @@ private:
   bool linear_;
 
   void parse(const std::string& ifile, const std::string& pedfile);
-  void parse(std::stringstream& ss);
+  void parse(std::stringstream &ped_ss, std::stringstream &cov_ss);
 
   void fit_null();
 };

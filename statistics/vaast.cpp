@@ -251,21 +251,6 @@ void VAASTLogic::check_weights(Gene &gene) {
   gene.set_weights(k, weights);
 }
 
-//! \brief Calculate the set difference between two uvec
-//! \param x uvec with elements to keep
-//! \param y uvec with elements to exclude
-//! \return copy of uvec excluding any element in y
-arma::uvec VAASTLogic::setdiff(arma::uvec x, arma::uvec y) {
-  for (size_t j = 0; j < y.n_elem; j++) {
-	arma::uvec q1 = arma::find(x == y[j]);
-	if (!q1.empty()) {
-	  x.shed_row(q1(0));
-	}
-  }
-
-  return x;
-}
-
 void VAASTLogic::variant_grouping(const arma::sp_mat &X,
 								  const arma::vec &Y,
 								  const arma::vec &w,
@@ -435,7 +420,7 @@ void VAASTLogic::legacy_grouping(const arma::sp_mat &X,
 									i,
 									soft_maf_filter));
 	} else if (splitter.back() == "SPDA") {
-	  deletion.emplace_back(Variant(case_allele1(i),
+	  spda.emplace_back(Variant(case_allele1(i),
 									case_allele0(i),
 									control_allele1(i),
 									control_allele0(i),

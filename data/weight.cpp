@@ -70,3 +70,41 @@ bool Weight::empty() {
   return scores_.empty();
 }
 
+Weight::Weight(std::stringstream &ifile) {
+  std::string line;
+
+  while (std::getline(ifile, line, '\n')) {
+	if(line.empty() || line[0] == '#') {
+	  continue;
+	}
+	RJBUtil::Splitter<std::string> splitter(line, "\t");
+
+	if(splitter.size() < 5) {
+	  std::cerr << "Incorrectly formatted weight line. Line was: " << line << std::endl;
+	  std::cerr << "Line should be tab separated and formatted as <chrom> <start_pos> <end_pos> <type> <weight>" << std::endl;
+	  throw(std::runtime_error("Incorrect line in weight file."));
+	}
+
+	std::stringstream ss;
+
+	if(splitter[3] == "SNP") {
+	  ss << splitter[0] << "-" << splitter[1] << "-" << splitter[2] << "-" << "SNV";
+	} else {
+	  ss << splitter[0] << "-" << splitter[1] << "-" << splitter[2] << "-" << splitter[3];
+	}
+
+
+	double score;
+	try {
+	  score = std::stod(splitter[4]);
+	} catch(std::exception &e) {
+	  std::cerr << "Failed to convert weight to double. Line was: " << line << std::endl;
+	  std::cerr << "Line should be tab separated and formatted as <chrom> <start_pos> <end_pos> <type> <weight>" << std::endl;
+	  throw(e);
+	}
+
+	// Prevent math errors
+	scores_[ss.str()] = score;
+  }
+}
+
