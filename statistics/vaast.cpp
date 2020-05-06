@@ -37,7 +37,7 @@ VAASTLogic::VAASTLogic(Gene &gene,
 	}
   } else {
 	score = Score(X, Y, weights);
-	if(legacy) {
+	if (legacy) {
 	  legacy_grouping(X, Y, weights, gene.get_positions(k));
 	} else {
 	  variant_grouping(X, Y, weights, gene.get_positions(k));
@@ -68,7 +68,7 @@ VAASTLogic::VAASTLogic(Gene &gene,
 		  }
 
 		  Score(Xnew, Y, Wnew); // Do normal individual variant scoring
-		  if(legacy) {
+		  if (legacy) {
 			legacy_grouping(Xnew, Y, Wnew, positions);
 		  } else {
 			variant_grouping(Xnew, Y, Wnew, positions);
@@ -107,7 +107,7 @@ VAASTLogic::VAASTLogic(arma::sp_mat X_,
 	expanded_scores = vaast_site_scores;
   } else {
 	score = Score(X, Y, weights);
-	if(legacy) {
+	if (legacy) {
 	  legacy_grouping(X, Y, weights, positions_);
 	} else {
 	  variant_grouping(X, Y, weights, positions_);
@@ -132,7 +132,7 @@ VAASTLogic::VAASTLogic(arma::sp_mat X_,
 	  }
 
 	  Score(Xnew, Y, Wnew); // Do normal individual variant scoring
-	  if(legacy) {
+	  if (legacy) {
 		legacy_grouping(Xnew, Y, Wnew, positions);
 	  } else {
 		variant_grouping(Xnew, Y, Wnew, positions);
@@ -346,7 +346,7 @@ void VAASTLogic::variant_grouping(const arma::sp_mat &X,
   std::vector<Variant> variants;
 
   for (int i = 0; i < positions.size(); i++) {
-    RJBUtil::Splitter<std::string> splitter(positions[i], "-");
+	RJBUtil::Splitter<std::string> splitter(positions[i], "-");
 	std::stringstream loc;
 	loc << splitter[0] << "-" << splitter[1] << "-" << splitter[2];
 	variants.emplace_back(Variant(case_allele1(i),
@@ -503,15 +503,15 @@ void VAASTLogic::legacy_grouping(const arma::sp_mat &X,
 									i,
 									soft_maf_filter));
 	} else if (splitter.back() == "SPDA") {
-	  deletion.emplace_back(Variant(case_allele1(i),
-									case_allele0(i),
-									control_allele1(i),
-									control_allele0(i),
-									w(i),
-									splitter.back(),
-									loc.str(),
-									i,
-									soft_maf_filter));
+	  spda.emplace_back(Variant(case_allele1(i),
+								case_allele0(i),
+								control_allele1(i),
+								control_allele0(i),
+								w(i),
+								splitter.back(),
+								loc.str(),
+								i,
+								soft_maf_filter));
 	} else if (splitter.back() == "complex_substitution") {
 	  mnp.emplace_back(Variant(case_allele1(i),
 							   case_allele0(i),
