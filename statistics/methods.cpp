@@ -363,7 +363,7 @@ double Methods::WSS(Gene &gene, arma::vec &Y, const std::string &k) {
   arma::vec count = arma::sum(X, 0).t(); // Total count for each variant
   arma::vec freq = (1. + count) / (2. + 2. * n); // Frequency with a prior
   arma::vec weight = 1. / arma::sqrt(freq % (1. - freq)); // Reciprocal of Binomial SD
-  arma::vec count_weight = count % weight;
+  arma::vec count_weight =  arma::vec(X * weight);
 
   return arma::accu(count_weight % Y);
 }
