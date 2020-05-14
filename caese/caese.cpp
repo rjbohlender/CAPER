@@ -295,7 +295,6 @@ int main(int argc, char **argv) {
   tp.top_only = top_only;
   tp.mac = vm["mac"].as<arma::uword>();
   tp.pthresh = pthresh;
-  tp.approximate = approximate;
   // SKAT Options
   tp.kernel = vm["kernel"].as<std::string>();
   tp.adjust = adjust;

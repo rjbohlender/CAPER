@@ -162,6 +162,11 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
     ped_samples_.push_back(sample_id);
     if(ifile.empty()) {
 	  phenotypes.push_back(std::stod(splitter[5]) - 1);
+	  if (phenotypes.back() == 1) {
+		ncases_++;
+	  } else {
+		ncontrols_++;
+	  }
 	}
     nsamples_++;
     if(linear_) {

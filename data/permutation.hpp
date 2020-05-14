@@ -36,6 +36,7 @@ struct Permute {
 													   double epsilon = 0.01);
 
   std::vector<int8_t> unpack(int successes, int bin_size, bool shuffle, StochasticLib3 &rng);
+  static void fisher_yates(std::vector<int8_t> &x, StochasticLib3 &rng);
 
   StochasticLib3 sto;
   // Preserve group info for transcript

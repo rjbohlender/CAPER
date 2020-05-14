@@ -651,7 +651,8 @@ auto Reporter::sort_simple(const TaskParams &tp) -> void {
 	if (tp.weight) {
 	  uf_ss << "-w " << *tp.weight << " ";
 	}
-	uf_ss << "--nperm " << tp.nperm * 10 << " ";
+	uf_ss << "--nperm " << tp.nperm << " ";
+	uf_ss << "--max_perms " << (tp.max_perms ? *tp.max_perms * 10 : tp.nperm * 10) << " ";
 	uf_ss << "-m " << tp.method << " ";
 	uf_ss << "-t " << tp.nthreads << " ";
 	if (!tp.verbose) {

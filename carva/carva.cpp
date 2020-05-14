@@ -62,6 +62,7 @@ int main(int argc, char **argv) {
   boost::optional<double> pthresh;
   boost::optional<arma::uword> approximate;
   boost::optional<int> seed;
+  boost::optional<arma::uword> max_perms;
 
   try {
     required.add_options()
@@ -141,6 +142,9 @@ int main(int argc, char **argv) {
 		("bin_epsilon",
 		 po::value<double>()->default_value(0.0001),
 		 "Odds closer together than the given value will be collapsed into a single bin for permutation.")
+		("max_perms",
+		 po::value(&max_perms),
+		 "Maximum number of permutations. Run permutation in blocks of size nperm, up to the maximum set here. Only genes requiring additional permutation will be permuted.")
 		("seed",
 		 po::value(&seed),
 		 "A defined seed passed to the random number generators used for each gene.");
@@ -273,6 +277,7 @@ int main(int argc, char **argv) {
 
   tp.success_threshold = vm["successes"].as<arma::uword>();
   tp.nperm = vm["nperm"].as<arma::uword>();
+  tp.max_perms = max_perms;
 
   // External permutations for Yao -- XMAT
   if (vm.count("external") > 0) {
@@ -326,12 +331,12 @@ int main(int argc, char **argv) {
   tp.testable = testable;
   tp.biallelic = biallelic;
 
-  tp.covadj = !nocovadj || vm.count("covariates") != 0;
+  tp.nocovadj = nocovadj || tp.covariates_path.empty();
 
   tp.power = false;
 
   // tp.alternate_permutation = tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN";
-  tp.alternate_permutation = !tp.covadj || tp.covariates_path.empty();
+  tp.alternate_permutation = tp.nocovadj || tp.covariates_path.empty();
   tp.quantitative =
       tp.method == "RVT1" || tp.method == "RVT2" || tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN"
           || tp.method == "VT";
@@ -342,9 +347,6 @@ int main(int argc, char **argv) {
               << std::endl;
     std::exit(1);
   }
-  tp.cov_adjusted_method =
-      tp.method == "RVT1" || tp.method == "RVT2" || tp.method == "SKATO" || tp.method == "SKAT" || tp.method ==
-          "BURDEN";
 
   std::vector<int> range_opt;
   if (!vm["range"].empty() && (range_opt = vm["range"].as<std::vector<int>>()).size() == 2) {
@@ -421,6 +423,10 @@ int main(int argc, char **argv) {
 	arma::arma_rng::set_seed_random();
   } else {
     arma::arma_rng::set_seed(*tp.seed);
+  }
+
+  if(tp.external && tp.permute_set) {
+	throw std::runtime_error("Conflicting options. External permutation set will be deleted when permute_set is also included.");
   }
 
   std::shared_ptr<Reporter> reporter = nullptr;

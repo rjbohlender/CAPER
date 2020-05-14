@@ -72,20 +72,6 @@ auto CARVAOp::stage1() -> void {
 					true);
   }
 
-  if (verbose_) {
-	if (!ta_.tp.alternate_permutation) {
-	  for (const auto &v : ta_.results) {
-		std::cerr << ta_.gene.gene_name << "\t" << v.second.transcript << "\t";
-		std::cerr << std::defaultfloat << std::setprecision(6) << v.second.original << std::endl;
-	  }
-	} else {
-	  for (const auto &v : ta_.results) {
-		std::cerr << ta_.gene.gene_name << "\t" << v.second.transcript << "\t";
-		std::cerr << std::defaultfloat << std::setprecision(6) << v.second.original << std::endl;
-	  }
-	}
-  }
-
   int iter = 0;
   while (iter < ta_.npermutations) {
 	int transcript_no = -1;
@@ -104,28 +90,15 @@ auto CARVAOp::stage1() -> void {
 		continue;
 
 	  arma::vec phenotypes;
-	  if (!ta_.tp.alternate_permutation) {
-		phenotypes = arma::conv_to<arma::vec>::from(ta_.get_permutations()[iter]);
-		perm_val =
-			call_method(ta_.methods,
-						ta_.gene,
-						ta_.get_cov(),
-						phenotypes,
-						ta_.tp,
-						v.second.transcript,
-						transcript_no == 0,
-						false);
-	  } else {
-		phenotypes = arma::conv_to<arma::vec>::from(ta_.get_permutations()[iter]);
-		perm_val = call_method(ta_.methods,
-							   ta_.gene,
-							   ta_.get_cov(),
-							   phenotypes,
-							   ta_.tp,
-							   v.second.transcript,
-							   transcript_no == 0,
-							   false);
-	  }
+	  phenotypes = arma::conv_to<arma::vec>::from(ta_.get_permutations()[iter]);
+	  perm_val = call_method(ta_.methods,
+							 ta_.gene,
+							 ta_.get_cov(),
+							 phenotypes,
+							 ta_.tp,
+							 v.second.transcript,
+							 transcript_no == 0,
+							 false);
 
 	  // ta_.increment_permuted(v.second.transcript, perm_val);
 	  v.second.permuted.push_back(perm_val);
@@ -147,6 +120,7 @@ auto CARVAOp::stage1() -> void {
 	iter++;
   }
 
+  int ts_no = 0;
   for (auto &v : ta_.results) {
 	double empirical;
 	double midp;
@@ -170,7 +144,20 @@ auto CARVAOp::stage1() -> void {
 	}
 
 	ta_.stage = Stage::Done;
-	done_ = true;
+	if (ts_no == 0) {
+	  done_ = v.second.done;
+	} else {
+	  done_ &= v.second.done;
+	}
+	if(ta_.tp.max_perms) {
+	  if (v.second.permutations == *ta_.tp.max_perms) {
+		done_ = true;
+	  }
+	} else {
+	  if (v.second.permutations == ta_.tp.nperm) {
+		done_ = true;
+	  }
+	}
 	v.second.empirical_p = empirical;
 	v.second.empirical_midp = midp;
 	v.second.update_ci();
@@ -180,6 +167,18 @@ auto CARVAOp::stage1() -> void {
 	double nmaj = n - nmac;
 
 	v.second.calc_exact_p(nmac, nmaj);
+	ts_no++;
+  }
+  if (done_) { // True only when all are finished.
+	if (verbose_) {
+	  for (const auto &v : ta_.results) {
+		std::cerr << ta_.gene.gene_name << "\t" << v.second.transcript << "\t";
+		std::cerr << std::defaultfloat << std::setprecision(6) << v.second.original << std::endl;
+	  }
+	}
+    ta_.stage = Stage::Done;
+  } else {
+    ta_.stage = Stage::Stage1;
   }
 }
 

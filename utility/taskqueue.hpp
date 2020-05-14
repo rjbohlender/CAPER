@@ -67,6 +67,14 @@ public:
 	}
   }
 
+  void wait() {
+	using namespace std::chrono_literals;
+	// Complete jobs
+	while (!q_.empty() || ntasks_ > 0) {
+	  std::this_thread::sleep_for(0.1s);
+	}
+  }
+
   void dispatch(Task_t &args) {
 	std::unique_lock<std::mutex> lock(lock_);
 
@@ -109,6 +117,24 @@ public:
 	cv_.notify_all();
   }
 
+  void unfinished(Operation_t &op) {
+	std::unique_lock<std::mutex> lock(lock_);
+
+	continue_.emplace(op);
+
+	lock.unlock();
+	cv_.notify_all();
+  }
+
+  void unfinished(Operation_t &&op) {
+	std::unique_lock<std::mutex> lock(lock_);
+
+	continue_.emplace(op);
+
+	lock.unlock();
+	cv_.notify_all();
+  }
+
   // Status
   auto empty() -> bool {
 	return q_.empty();
@@ -126,6 +152,20 @@ public:
     return nthreads_;
   }
 
+  auto redispatch() -> void {
+    using namespace std::chrono_literals;
+	// Complete current jobs
+	while (!q_.empty() || ntasks_ > 0) {
+	  std::this_thread::sleep_for(0.1s);
+	}
+	std::cerr << "Total jobs remaining: " << continue_.size() << std::endl;
+    while(!continue_.empty()) {
+      Operation_t op = continue_.front();
+      continue_.pop();
+      dispatch(op);
+    }
+  }
+
 private:
   // Program arguments
   TaskParams tp_;
@@ -136,6 +176,7 @@ private:
   // Threading
   std::mutex lock_;
   std::queue<Operation_t> q_;
+  std::queue<Operation_t> continue_;
   std::condition_variable cv_;
   std::vector<std::thread> threads_;
   bool quit_;
@@ -169,7 +210,11 @@ private:
 		// Logic for running with OPs
 		if (!op.done_) {
 		  op.run();
-		  dispatch(op);
+		  if(op.done_) {
+		    dispatch(op);
+		  } else {
+		    unfinished(op);
+		  }
 		} else {
 		  op.finish();
 

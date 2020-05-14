@@ -181,3 +181,12 @@ std::vector<std::vector<int8_t>> Permute::epsilon_permutation(int nperm,
   return ret;
 }
 
+void Permute::fisher_yates(std::vector<int8_t> &x, StochasticLib3 &rng) {
+  for (int i = x.size() - 1; i >= 1; --i) {
+	auto j = rng.IRandom(0, i);
+	arma::uword tmp = x[i];
+	x[i] = x[j];
+	x[j] = tmp;
+  }
+}
+

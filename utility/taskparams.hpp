@@ -21,6 +21,7 @@ struct TaskParams {
   boost::optional<int> seed;
 
   arma::uword nperm;
+  boost::optional<arma::uword> max_perms;
 
   // For external permutations
   bool external;
@@ -45,11 +46,8 @@ struct TaskParams {
   double maf;
   double min_variant_count;
   double min_minor_allele_count;
-  bool covadj;
-  bool cov_adjusted_method; // Methods that cannot be covariate adjusted permute a subset
+  bool nocovadj;
 
-  boost::optional<arma::uword> approximate;
-  arma::uword maj_nbins;
   boost::optional<int> range_start;
   boost::optional<int> range_end;
 
@@ -57,8 +55,6 @@ struct TaskParams {
   boost::optional<std::string> weight;
 
   double bin_epsilon;
-  double lower_bin_cutoff;
-  double upper_bin_cutoff;
 
   double soft_maf_filter;
   double vaast_site_penalty;
