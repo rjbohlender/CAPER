@@ -22,6 +22,7 @@ class TaskQueue {
 
 	// Some ideas from https://embeddedartistry.com/blog/2017/2/1/c11-implementing-a-dispatch-queue-using-stdfunction
 public:
+  std::queue<Operation_t> continue_;
   // Construtors
   TaskQueue(size_t thread_cnt, std::shared_ptr<Reporter_t> reporter, TaskParams tp)
   : tp_(tp),
@@ -176,7 +177,6 @@ private:
   // Threading
   std::mutex lock_;
   std::queue<Operation_t> q_;
-  std::queue<Operation_t> continue_;
   std::condition_variable cv_;
   std::vector<std::thread> threads_;
   bool quit_;

@@ -115,7 +115,7 @@ public:
 		  }
 		}
 		if (tp_.nperm > 0 && tp_.verbose) {
-		  std::cerr << "Time spent generating permutations: " << timer.toc() << std::endl;
+		  std::cerr << "Time spent generating unadjusted permutations: " << timer.toc() << std::endl;
 		}
 	  } else {
 		// Generate permutations for stage 1
@@ -130,7 +130,7 @@ public:
 										 tp_.bin_epsilon);
 		}
 		if (tp_.nperm > 0 && tp_.verbose) {
-		  std::cerr << "Time spent generating permutations: " << timer.toc() << std::endl;
+		  std::cerr << "Time spent generating adjusted permutations: " << timer.toc() << std::endl;
 		}
 	  }
 	  // Time for 1000 permutations, 1000 samples -> 0.5s, 10000 samples-> 30s, 100000 samples 3300s
@@ -196,7 +196,7 @@ public:
 		    }
 		  }
 		  if (tp_.nperm > 0 && tp_.verbose) {
-			std::cerr << "Time spent generating permutations: " << timer.toc() << std::endl;
+			std::cerr << "Time spent generating unadjusted permutations: " << timer.toc() << std::endl;
 		  }
 		  remaining -= std::min(tp_.nperm, remaining);
 		} else {
@@ -212,7 +212,7 @@ public:
 										   tp_.bin_epsilon);
 		  }
 		  if (tp_.nperm > 0 && tp_.verbose) {
-			std::cerr << "Time spent generating permutations: " << timer.toc() << std::endl;
+			std::cerr << "Time spent generating adjusted permutations: " << timer.toc() << std::endl;
 		  }
 		  remaining -= std::min(tp_.nperm, remaining);
 		}
@@ -236,9 +236,15 @@ public:
 		  }
 		  gt_ifs_.close();
 		  tq_.wait(); // Need to wait here until all jobs are done, otherwise permutations will update during processing
+		  if(tq_.continue_.size() == 0) { // Terminate if all jobs are done.
+		    remaining = 0;
+		  }
 		} else { // Successive loops will not need to process the gene stream
 		  tq_.redispatch(); // Re-dispatch each job. No need to update anything because the permutations are kept in a pointer.
 		  tq_.wait(); // Need to wait here until all jobs are done, otherwise permutations will update during processing
+		  if(tq_.continue_.size() == 0) { // Terminate if all jobs are done.
+			remaining = 0;
+		  }
 		}
 	  }
 	}

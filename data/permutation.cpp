@@ -8,10 +8,10 @@
 #include "permutation.hpp"
 
 Permute::Permute()
-	: sto(std::random_device{}()) {}
+	: sto(std::random_device{}()), bins_built(false)  {}
 
 Permute::Permute(int seed)
-	: sto(seed) {}
+	: sto(seed), bins_built(false) {}
 
 void Permute::generate_permutations(std::shared_ptr<std::vector<std::vector<int8_t>>> permutations,
 									arma::colvec &odds,
