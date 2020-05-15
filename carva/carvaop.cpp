@@ -143,19 +143,30 @@ auto CARVAOp::stage1() -> void {
 	  midp = 1;
 	}
 
-	ta_.stage = Stage::Done;
 	if (ts_no == 0) {
 	  done_ = v.second.done;
 	} else {
 	  done_ &= v.second.done;
 	}
 	if(ta_.tp.max_perms) {
-	  if (v.second.permutations == *ta_.tp.max_perms) {
-		done_ = true;
+	  if (ta_.tp.gene_list) {
+		if (v.second.permutations >= *ta_.tp.max_perms / (ta_.tp.nthreads - 1)) {
+		  done_ = true;
+		}
+	  } else {
+		if (v.second.permutations >= *ta_.tp.max_perms) {
+		  done_ = true;
+		}
 	  }
 	} else {
-	  if (v.second.permutations == ta_.tp.nperm) {
-		done_ = true;
+	  if (ta_.tp.gene_list) {
+		if (v.second.permutations >= ta_.tp.nperm / (ta_.tp.nthreads - 1)) {
+		  done_ = true;
+		}
+	  } else {
+		if (v.second.permutations >= ta_.tp.nperm) {
+		  done_ = true;
+		}
 	  }
 	}
 	v.second.empirical_p = empirical;
