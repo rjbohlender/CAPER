@@ -402,9 +402,10 @@ private:
 	using namespace std::literals::chrono_literals;
 	// Ensure we have at least one variant for a submitted gene
 	if (std::any_of(nvariants_.cbegin(), nvariants_.cend(), [&](const auto &v) { return v.second > 0; })) {
-	  int total_perm = 0;
-	  int total_s2_perm = 0;
-	  int total_success = 0;
+	  long total_perm = 0;
+	  long total_success = 0;
+	  long perm_step = tp_.nperm / (tp_.nthreads - 1);
+	  long succ_step = tp_.success_threshold / (tp_.nthreads - 1);
 
 	  // Single dispatch of gene list items for power analysis
 	  if (tp_.power) {
@@ -414,6 +415,7 @@ private:
 				  tp_,
 				  tp_.success_threshold,
 				  tp_.nperm,
+				  0,
 				  *permutation_ptr_);
 		while (tq_.size() > tp_.nthreads - 1) {
 		  std::this_thread::sleep_for(0.001s);
@@ -431,6 +433,7 @@ private:
 					tp_,
 					tp_.success_threshold - total_success,
 					tp_.nperm - total_perm,
+					i * perm_step,
 					*permutation_ptr_);
 
 		  // Limit adding jobs to prevent excessive memory usage
@@ -443,12 +446,13 @@ private:
 					gene,
 					cov_,
 					tp_,
-					tp_.success_threshold / static_cast<int>(tq_.get_nthreads()),
-					tp_.nperm / static_cast<int>(tq_.get_nthreads()),
+					succ_step,
+					perm_step,
+					i * perm_step,
 					*permutation_ptr_);
 		  // Add current permutations
-		  total_perm += tp_.nperm / tq_.get_nthreads();
-		  total_success += tp_.success_threshold / tq_.get_nthreads();
+		  total_perm += perm_step;
+		  total_success += succ_step;
 
 		  // Limit adding jobs to prevent excessive memory usage
 		  while (tq_.size() > tp_.nthreads - 1) {

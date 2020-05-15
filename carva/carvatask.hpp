@@ -35,9 +35,10 @@ public:
   Gene gene;
   std::shared_ptr<Covariates> cov;
   Methods methods;
-  int npermutations;
+  long success_threshold;
+  long npermutations;
+  long offset;
   std::vector<std::vector<int8_t>> &permutations;
-  int success_threshold;
   const TaskParams tp;
   std::unordered_map<std::string, Result> results;
   std::unordered_map<std::string, Permute> permute;
@@ -49,6 +50,7 @@ public:
 			TaskParams tp_,
 			arma::uword succ_thresh_,
 			arma::uword nperm_,
+			arma::uword offset_,
 			std::vector<std::vector<int8_t>> &perm_);
   CARVATask(Stage stage_,
 			Gene &gene_,
