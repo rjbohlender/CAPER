@@ -24,8 +24,12 @@ void Permute::generate_permutations(std::shared_ptr<std::vector<std::vector<int8
 	arma::vec odds_sorted = odds(sort_idx);
 
 	for (double cur = arma::min(odds_sorted);;) {
+	  double fudge = 1e-10;
 	  arma::uvec
-		  in_range = arma::find(odds_sorted >= cur && odds_sorted < cur + epsilon + std::numeric_limits<double>::min());
+		  greater = arma::find(odds_sorted >= cur);
+	  arma::uvec
+	      lesser = arma::find(odds_sorted < cur + epsilon + fudge);
+	  arma::uvec in_range = arma::intersect(greater, lesser);
 	  m.push_back(in_range.n_elem);
 	  bin_odds.push_back(arma::mean(odds_sorted(in_range)));
 	  arma::uword next = in_range.max() + 1;
@@ -125,11 +129,10 @@ std::vector<int8_t> Permute::unpack(int successes, int bin_size, bool shuffle, S
   if (shuffle) {
 	for (int i = r.size() - 1; i >= 1; --i) {
 	  auto j = rng.IRandom(0, i);
-	  arma::uword tmp = r[i];
-	  r[i] = r[j];
-	  r[j] = tmp;
+	  std::swap(r[i], r[j]);
 	}
   }
+  assert(std::accumulate(r.begin(), r.end(), 0) == successes);
   return r;
 }
 

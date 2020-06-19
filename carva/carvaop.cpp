@@ -52,14 +52,15 @@ auto CARVAOp::finish() -> void {
 auto CARVAOp::stage1() -> void {
   // Set original value
   for (auto &v : ta_.results) {
-    std::string gene_name = v.first;
-    std::string transcript = v.second.transcript;
+	std::string gene_name = v.first;
+	std::string transcript = v.second.transcript;
 	if (!ta_.gene.is_polymorphic(gene_name)) {
 	  continue;
 	}
 	v.second.case_alt = arma::accu(ta_.gene.get_matrix(transcript).t() * ta_.get_cov().get_original_phenotypes());
 	v.second.case_ref = 2 * arma::accu(ta_.get_cov().get_original_phenotypes()) - v.second.case_alt;
-	v.second.cont_alt = arma::accu(ta_.gene.get_matrix(transcript).t() * (1. - ta_.get_cov().get_original_phenotypes()));
+	v.second.cont_alt =
+		arma::accu(ta_.gene.get_matrix(transcript).t() * (1. - ta_.get_cov().get_original_phenotypes()));
 	v.second.cont_ref = 2 * arma::accu(1. - ta_.get_cov().get_original_phenotypes()) - v.second.case_alt;
 	v.second.original =
 		call_method(ta_.methods,
@@ -83,22 +84,26 @@ auto CARVAOp::stage1() -> void {
 		continue;
 	  }
 
-	  double perm_val;
-
 	  // Skip transcripts with no variants
 	  if (!ta_.gene.is_polymorphic(k))
 		continue;
 
-	  arma::vec phenotypes;
-	  phenotypes = arma::conv_to<arma::vec>::from(ta_.get_permutations()[ta_.offset + iter]);
-	  perm_val = call_method(ta_.methods,
-							 ta_.gene,
-							 ta_.get_cov(),
-							 phenotypes,
-							 ta_.tp,
-							 v.second.transcript,
-							 transcript_no == 0,
-							 false);
+	  arma::vec phenotypes = arma::conv_to<arma::vec>::from(ta_.get_permutations()[ta_.offset + iter]);
+	  if (arma::accu(phenotypes) != arma::accu(ta_.cov->get_original_phenotypes())) {
+	    std::cerr << "vec count: " << std::accumulate(ta_.get_permutations()[ta_.offset + iter].begin(), ta_.get_permutations()[ta_.offset + iter].end(), 0) << std::endl;
+		std::cerr << "Permuted count: " << arma::accu(phenotypes) << std::endl;
+		std::cerr << "Original count: " << arma::accu(ta_.cov->get_original_phenotypes()) << std::endl;
+		throw (std::runtime_error("Failed to properly generate permutation."));
+	  }
+
+	  double perm_val = call_method(ta_.methods,
+									ta_.gene,
+									ta_.get_cov(),
+									phenotypes,
+									ta_.tp,
+									v.second.transcript,
+									transcript_no == 0,
+									false);
 
 	  // ta_.increment_permuted(v.second.transcript, perm_val);
 	  v.second.permuted.push_back(perm_val);
@@ -148,9 +153,9 @@ auto CARVAOp::stage1() -> void {
 	} else {
 	  done_ &= v.second.done;
 	}
-	if(ta_.tp.max_perms) {
+	if (ta_.tp.max_perms) {
 	  if (ta_.tp.gene_list) {
-		if (v.second.permutations >= *ta_.tp.max_perms / (ta_.tp.nthreads - 1)) {
+		if (v.second.permutations >= ta_.termination) {
 		  done_ = true;
 		}
 	  } else {
@@ -160,7 +165,7 @@ auto CARVAOp::stage1() -> void {
 	  }
 	} else {
 	  if (ta_.tp.gene_list) {
-		if (v.second.permutations >= ta_.tp.nperm / (ta_.tp.nthreads - 1)) {
+		if (v.second.permutations >= ta_.termination) {
 		  done_ = true;
 		}
 	  } else {
@@ -187,9 +192,9 @@ auto CARVAOp::stage1() -> void {
 		std::cerr << std::defaultfloat << std::setprecision(6) << v.second.original << std::endl;
 	  }
 	}
-    ta_.stage = Stage::Done;
+	ta_.stage = Stage::Done;
   } else {
-    ta_.stage = Stage::Stage1;
+	ta_.stage = Stage::Stage1;
   }
 }
 

@@ -38,6 +38,7 @@ public:
   long success_threshold;
   long npermutations;
   long offset;
+  long termination;
   std::vector<std::vector<int8_t>> &permutations;
   const TaskParams tp;
   std::unordered_map<std::string, Result> results;
@@ -51,6 +52,7 @@ public:
 			arma::uword succ_thresh_,
 			arma::uword nperm_,
 			arma::uword offset_,
+			arma::uword termination_,
 			std::vector<std::vector<int8_t>> &perm_);
   CARVATask(Stage stage_,
 			Gene &gene_,

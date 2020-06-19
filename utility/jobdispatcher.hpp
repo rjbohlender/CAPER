@@ -406,6 +406,10 @@ private:
 	  long total_success = 0;
 	  long perm_step = tp_.nperm / (tp_.nthreads - 1);
 	  long succ_step = tp_.success_threshold / (tp_.nthreads - 1);
+	  long max_loops = 1;
+	  if(tp_.max_perms) {
+	    max_loops = *tp_.max_perms / tp_.nperm;
+	  }
 
 	  // Single dispatch of gene list items for power analysis
 	  if (tp_.power) {
@@ -416,6 +420,7 @@ private:
 				  tp_.success_threshold,
 				  tp_.nperm,
 				  0,
+				  tp_.nperm,
 				  *permutation_ptr_);
 		while (tq_.size() > tp_.nthreads - 1) {
 		  std::this_thread::sleep_for(0.001s);
@@ -434,6 +439,7 @@ private:
 					tp_.success_threshold - total_success,
 					tp_.nperm - total_perm,
 					i * perm_step,
+					max_loops * (tp_.nperm - total_perm),
 					*permutation_ptr_);
 
 		  // Limit adding jobs to prevent excessive memory usage
@@ -449,6 +455,7 @@ private:
 					succ_step,
 					perm_step,
 					i * perm_step,
+					max_loops * perm_step,
 					*permutation_ptr_);
 		  // Add current permutations
 		  total_perm += perm_step;

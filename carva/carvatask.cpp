@@ -13,15 +13,17 @@ CARVATask::CARVATask(Stage stage_,
 					 arma::uword succ_thresh_,
 					 arma::uword nperm_,
 					 arma::uword offset_,
+					 arma::uword termination_,
 					 std::vector<std::vector<int8_t>> &perm_)
 	: stage(stage_),
 	  gene(std::move(gene_)),
 	  cov(cov_),
 	  methods(tp_, cov_),
+	  success_threshold(succ_thresh_),
 	  npermutations(nperm_),
 	  offset(offset_),
+	  termination(termination_),
 	  permutations(perm_),
-	  success_threshold(succ_thresh_),
 	  tp(std::move(tp_)) {
   for (const auto &k : gene.get_transcripts()) {
 	results[k] = Result(gene.gene_name, k, !gene.is_polymorphic(k));
@@ -47,6 +49,7 @@ CARVATask::CARVATask(Stage stage_,
 	  permutations(perm_),
 	  success_threshold(tp_.success_threshold),
 	  offset(0),
+	  termination(tp_.nperm),
 	  tp(std::move(tp_)) {
   for (const auto &k : gene.get_transcripts()) {
 	results.emplace(std::make_pair(k, Result(gene.gene_name, k, !gene.is_polymorphic(k))));

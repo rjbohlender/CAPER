@@ -3,6 +3,7 @@
 //
 
 #include <algorithm>
+#include <set>
 
 #include "covariates.hpp"
 
@@ -187,8 +188,6 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
     }
   }
 
-
-
   // Parse the PCA matrix file
   while (ifs.good() && std::getline(ifs, line)) {
 	RJBUtil::Splitter<std::string> splitter(line, " \t");
@@ -315,8 +314,8 @@ void Covariates::parse(std::stringstream &ped_ss, std::stringstream &cov_ss) {
   std::cerr << "ncases: " << ncases_ << "\n";
   std::cerr << "ncontrols: " << ncontrols_ << "\n";
 
-  phenotypes_ = arma::conv_to<arma::colvec>::from(phenotypes);
-  original_ = arma::conv_to<arma::colvec>::from(phenotypes);
+  phenotypes_ = arma::conv_to<arma::vec>::from(phenotypes);
+  original_ = arma::conv_to<arma::vec>::from(phenotypes);
 
   // Features are j, samples are i
   if(!covariates.empty()) {
@@ -388,19 +387,50 @@ void Covariates::sort_covariates(std::string &header) {
 
   // Cov order
   if(!cov_samples_.empty()) {
-    arma::uvec indices = arma::uvec(cov_samples_.size(), arma::fill::zeros);
+	if (splitter.size() - 3 != cov_samples_.size()) {
+	  throw(std::runtime_error("The number of samples differs between the covariate file and the matrix file."));
+	}
+	arma::uvec cov_indices = arma::uvec(cov_samples_.size(), arma::fill::zeros);
     for(auto it = cov_samples_.begin(); it != cov_samples_.end(); it++) {
       header_map[*it] = std::distance(cov_samples_.begin(), it);
     }
     for(arma::uword i = 0; i < phenotypes_.n_rows; i++) {
-      indices(i) = header_map[splitter[i + 3]];
+	  cov_indices(i) = header_map[splitter[i + 3]];
+    }
+	arma::uvec ped_indices = arma::uvec(ped_samples_.size(), arma::fill::zeros); // Separate ped indices
+	for(auto it = ped_samples_.begin(); it != ped_samples_.end(); it++) {
+	  header_map[*it] = std::distance(ped_samples_.begin(), it);
+	}
+	for(arma::uword i = 0; i < phenotypes_.n_rows; i++) {
+	  ped_indices(i) = header_map[splitter[i + 3]];
+	}
+	std::set<std::string> seen;
+    for(auto v : cov_samples_) {
+      if(seen.find(v) == seen.end()) {
+		seen.insert(v);
+	  } else {
+        std::cerr << "cov duplicate: " << v << std::endl;
+      }
     }
 
-    // Sort the phenotypes and covariates according to the order in the matrix file.
-    original_ = phenotypes_(indices);
-    phenotypes_ = phenotypes_(indices);
-    design_ = design_.rows(indices);
+    seen.clear();
+	for(auto v : splitter) {
+	  if(seen.find(v) == seen.end()) {
+		seen.insert(v);
+	  } else {
+		std::cerr << "header duplicate: " << v << std::endl;
+	  }
+	}
+
+	// Sort the phenotypes and covariates according to the order in the matrix file.
+    original_ = phenotypes_(ped_indices);
+	phenotypes_ = phenotypes_(ped_indices);
+    design_ = design_.rows(cov_indices);
+    design_.col(0) = original_;
   } else {
+	if (splitter.size() - 3 != ped_samples_.size()) {
+	  throw(std::runtime_error("The number of samples differs between the ped file and the matrix file."));
+	}
     arma::uvec indices = arma::uvec(ped_samples_.size(), arma::fill::zeros);
     for(auto it = ped_samples_.begin(); it != ped_samples_.end(); it++) {
       header_map[*it] = std::distance(ped_samples_.begin(), it);
@@ -411,7 +441,7 @@ void Covariates::sort_covariates(std::string &header) {
 
     // Sort the phenotypes and covariates according to the order in the matrix file.
     original_ = phenotypes_(indices);
-    phenotypes_ = phenotypes_(indices);
+	phenotypes_ = phenotypes_(indices);
     design_ = design_.rows(indices);
   }
 

@@ -119,21 +119,19 @@ public:
   }
 
   void unfinished(Operation_t &op) {
-	std::unique_lock<std::mutex> lock(lock_);
+	std::unique_lock<std::mutex> lock(cont_lock_);
 
 	continue_.emplace(op);
 
 	lock.unlock();
-	cv_.notify_all();
   }
 
   void unfinished(Operation_t &&op) {
-	std::unique_lock<std::mutex> lock(lock_);
+	std::unique_lock<std::mutex> lock(cont_lock_);
 
 	continue_.emplace(op);
 
 	lock.unlock();
-	cv_.notify_all();
   }
 
   // Status
@@ -176,6 +174,7 @@ private:
 
   // Threading
   std::mutex lock_;
+  std::mutex cont_lock_;
   std::queue<Operation_t> q_;
   std::condition_variable cv_;
   std::vector<std::thread> threads_;
@@ -195,9 +194,11 @@ private:
 	std::unique_lock<std::mutex> lock(lock_);
 	do {
 	  // Wait for data
-	  cv_.wait(lock, [this] {
-		return q_.size() || quit_;
-	  });
+	  while(!(q_.size() || quit_)) {
+		cv_.wait(lock, [this] {
+		  return q_.size() || quit_;
+		});
+	  }
 
 	  // After waiting, we have the lock
 	  if (q_.size() && !quit_) {
