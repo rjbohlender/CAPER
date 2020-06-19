@@ -397,6 +397,7 @@ void Covariates::sort_covariates(std::string &header) {
     for(arma::uword i = 0; i < phenotypes_.n_rows; i++) {
 	  cov_indices(i) = header_map[splitter[i + 3]];
     }
+    header_map.clear();
 	arma::uvec ped_indices = arma::uvec(ped_samples_.size(), arma::fill::zeros); // Separate ped indices
 	for(auto it = ped_samples_.begin(); it != ped_samples_.end(); it++) {
 	  header_map[*it] = std::distance(ped_samples_.begin(), it);
@@ -426,7 +427,6 @@ void Covariates::sort_covariates(std::string &header) {
     original_ = phenotypes_(ped_indices);
 	phenotypes_ = phenotypes_(ped_indices);
     design_ = design_.rows(cov_indices);
-    design_.col(0) = original_;
   } else {
 	if (splitter.size() - 3 != ped_samples_.size()) {
 	  throw(std::runtime_error("The number of samples differs between the ped file and the matrix file."));

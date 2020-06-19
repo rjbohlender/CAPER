@@ -121,9 +121,6 @@ int main(int argc, char **argv) {
         ("genes,l",
          po::value(&gene_list),
          "A comma-separated list of genes to analyze.")
-		("features",
-		po::value(&feature_list),
-		"A comma-separated list of transcripts to analyze.")
 		("nodetail",
          po::bool_switch(&nodetail),
          "Don't produce detailed, variant level output.")
