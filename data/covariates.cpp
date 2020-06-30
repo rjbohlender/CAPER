@@ -424,8 +424,8 @@ void Covariates::sort_covariates(std::string &header) {
 	}
 
 	// Sort the phenotypes and covariates according to the order in the matrix file.
-    original_ = phenotypes_(ped_indices);
-	phenotypes_ = phenotypes_(ped_indices);
+    original_ = phenotypes_(cov_indices); // Phenotypes are parsed in covariate order if covariates are provided.
+	phenotypes_ = phenotypes_(cov_indices);
     design_ = design_.rows(cov_indices);
   } else {
 	if (splitter.size() - 3 != ped_samples_.size()) {

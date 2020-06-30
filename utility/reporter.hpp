@@ -16,7 +16,7 @@ struct ResultLine {
   std::string gene;
   std::string transcript;
   double original;
-  double exact_p;
+  // double exact_p;
   double empirical_p;
   std::pair<double, double> empirical_p_ci;
   double empirical_midp;
@@ -70,8 +70,9 @@ private:
   const std::string method_;
   const bool gene_list_;
   const bool print_testable_;
-  std::vector<Result> results_;
   std::vector<std::string> details_;
+  std::map<std::string, std::string> vaast_;
+  std::map<std::string, std::map<std::string, Result>> results_;
   // Holds unfinished genes
   std::vector<std::string> unfinished_;
 

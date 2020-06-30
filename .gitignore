@@ -81,3 +81,6 @@ bernoulli.R
 /bak/
 /cmake-build-debug-system/CMakeFiles/clion-log.txt
 /cmake-build-release-system/CMakeFiles/clion-log.txt
+/cmake-build-debug-system/
+/cmake-build-release-system/
+/R_test/

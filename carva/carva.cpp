@@ -382,6 +382,8 @@ int main(int argc, char **argv) {
 	  std::cerr << "maf filter: " << tp.maf << "\n";
     if (tp.mac < std::numeric_limits<unsigned long long>::max())
       std::cerr << "mac filter: " << tp.mac << "\n";
+    if (tp.gene_list)
+      std::cerr << "gene list: " << *tp.gene_list << std::endl;
   }
 
   // Check for correct file paths

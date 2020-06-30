@@ -177,38 +177,34 @@ auto Reporter::cleanup(TaskParams &tp) -> void {
 auto Reporter::extract_results(std::vector<CARVATask> &tq_results, TaskParams &tp) -> void {
   if(gene_list_) {
     // Combine results
-    std::map<std::string, std::map<std::string, Result>> results;
-    for(auto &v : tq_results) {
-      for(auto &r : v.results) {
-        if (results.find(r.second.gene) != results.end()) {
-          if(results[r.second.gene].find(r.second.transcript) != results[r.second.gene].end()) {
-            results[r.second.gene][r.second.transcript].combine(r.second);
-          } else {
-            results[r.second.gene][r.second.transcript] = r.second;
+    for(auto &task : tq_results) {
+      for(auto &result : task.results) {
+        if (results_.find(result.second.gene) != results_.end()) {
+          if(results_[result.second.gene].find(result.second.transcript) != results_[result.second.gene].end()) {
+            results_[result.second.gene][result.second.transcript].combine(result.second);
+		  } else {
+            results_[result.second.gene][result.second.transcript] = result.second;
+			vaast_.emplace(std::make_pair(result.second.transcript, task.gene.get_vaast()[result.second.transcript]));
           }
         } else {
-          results[r.second.gene][r.second.transcript] = r.second;
-		  details_.push_back(v.gene.get_detail());
+          results_[result.second.gene][result.second.transcript] = result.second;
+		  details_.push_back(task.gene.get_detail());
+		  vaast_.emplace(std::make_pair(result.second.transcript, task.gene.get_vaast()[result.second.transcript]));
         }
       }
     }
     // Recalculate MGIT
-    recalculate_mgit(results);
-    // Extract combined results
-    for(auto &v : results) {
-      for(auto &r : v.second) {
-        results_.emplace_back(std::move(r.second));
-      }
-    }
+    recalculate_mgit(results_);
   } else {
-    for(auto &v : tq_results) {
-      for(auto &r : v.results) {
-        results_.emplace_back(std::move(r.second));
-        details_.push_back(v.gene.get_detail());
+    for(auto &task : tq_results) {
+      for(auto &result : task.results) {
+        results_[result.second.gene][result.second.transcript] = result.second;
+        details_.push_back(task.gene.get_detail());
       }
     }
   }
 
+#if 0
   // Sort extracted results
   if(pvalue_methods_.find(method_) != pvalue_methods_.end() && (method_ != "SKAT" || tp.nperm == 0 )) {
     // Sort by midp and asymptotic pvalue
@@ -229,6 +225,7 @@ auto Reporter::extract_results(std::vector<CARVATask> &tq_results, TaskParams &t
       }
     });
   }
+#endif
 }
 
 auto Reporter::recalculate_mgit(std::map<std::string, std::map<std::string, Result>> &results) -> void {
@@ -379,23 +376,29 @@ auto Reporter::report_simple(TaskParams &tp) -> void {
   double permutation_mean = 0;
   double permutation_variance = 0;
 
-  for (auto &v : results_) {
-	if (v.successes < tp.success_threshold) {
-	  if(std::find(unfinished_.begin(), unfinished_.end(), v.gene) == unfinished_.end())
-		unfinished_.push_back(v.gene);
-	}
-	permutation_mean += v.permutations;
+  for (auto &resmap : results_) {
+    for (auto &result : resmap.second) {
+	  if (result.second.successes < tp.success_threshold) {
+		if(std::find(unfinished_.begin(), unfinished_.end(), result.second.gene) == unfinished_.end())
+		  unfinished_.push_back(result.second.gene);
+	  }
+	  permutation_mean += result.second.permutations;
+    }
   }
   permutation_mean /= results_.size();
-  for (auto &v : results_) {
-	permutation_variance += std::pow(v.permutations - permutation_mean, 2) / results_.size();
+  for (auto &resmap : results_) {
+	for (auto &result : resmap.second) {
+	  permutation_variance += std::pow(result.second.permutations - permutation_mean, 2) / results_.size();
+	}
   }
   // Report results
   int rank = 1;
-  for(auto &v : results_) {
-    v.rank = rank;
-    write_to_stream(simple_file_tmp_, v);
-    rank++;
+  for (auto &resmap : results_) {
+	for (auto &result : resmap.second) {
+	  result.second.rank = rank;
+	  write_to_stream(simple_file_tmp_, result.second);
+	  rank++;
+	}
   }
 
   simple_file_tmp_.flush();
@@ -428,28 +431,26 @@ auto Reporter::report_vaast(std::vector<CARVATask> &res, TaskParams &tp) -> void
   vaast_file_ << "## PA_VERSION\t0.0" << std::endl;
   vaast_file_ << "## COMMAND\t" << tp.full_command << std::endl;
 
-  for (auto &ta : res) {
-	for(auto &ts : ta.gene.get_vaast()) {
-	  double z2 = std::pow(1.96, 2);
-	  double n = ta.results[ts.first].permutations;
-	  double ns = ta.results[ts.first].successes;
-	  double nf = ta.results[ts.first].permutations - ta.results[ts.first].successes;
-	  double p = (ns + 1.) / (n + 1.);
-	  double sp = (p + z2 / (2 * (n + 1.))) / (1. + z2 / (n + 1.));
-	  double ci = 1.96 / (1. + z2 / n) * std::sqrt((p * (1 - p) / (n + 1.) + z2 / (4 * n * n)));
-	  vaast_file_ << ts.second;
-	  vaast_file_ << "SCORE: " << boost::format("%1$.2f") % ta.results[ts.first].original << std::endl;
-	  vaast_file_ << "genome_permutation_p: " << p << std::endl;
-	  vaast_file_ << "genome_permutation_p_ci: " << ((sp - ci > 0) ? sp - ci : 0) << "," << ((sp + ci > 1 ) ? 1 : sp + ci) << std::endl;
-	  vaast_file_ << "num_permutations: " << ta.results[ts.first].permutations << std::endl;
-	  vaast_file_ << "total_success: " << ta.results[ts.first].successes << std::endl;
-	}
+  for (auto &resmap : results_) {
+    for (auto &result : resmap.second) {
+      vaast_file_ << vaast_[result.second.transcript];
+
+	  vaast_file_ << "SCORE: " << boost::format("%1$.2f") % result.second.original << std::endl;
+	  vaast_file_ << "genome_permutation_p: " << result.second.empirical_p << std::endl;
+	  vaast_file_ << "genome_permutation_p_ci: " << result.second.empirical_ci.first << "," << result.second.empirical_ci.second << std::endl;
+	  vaast_file_ << "num_permutations: " << result.second.permutations << std::endl;
+	  vaast_file_ << "total_success: " << result.second.successes << std::endl;
+    }
   }
+
   // Print sample / index map at the end
   vaast_file_ << "## Sample Index Map" << std::endl;
   int j = 0;
+  if (results_.empty()) {
+    return;
+  }
   for (auto &s : res[0].gene.get_samples()) {
-    detail_file_ << "#\t" << s << "\t" << j << std::endl;
+    vaast_file_ << "#\t" << s << "\t" << j << std::endl;
     j++;
   }
 }
@@ -549,7 +550,7 @@ auto Reporter::sort_simple(const TaskParams &tp) -> void {
   simple_file_ << std::setw(25) << "Gene" << " ";
   simple_file_ << std::setw(20) << "Transcript";
   simple_file_ << std::setw(20) << "Test_Statistic";
-  simple_file_ << std::setw(20) << "Exact_P";
+  // simple_file_ << std::setw(20) << "Exact_P";
   simple_file_ << std::setw(20) << "Empirical_P";
   simple_file_ << std::setw(20) << "Empirical_P_CI";
   simple_file_ << std::setw(20) << "Empirical_MidP";
@@ -568,22 +569,22 @@ auto Reporter::sort_simple(const TaskParams &tp) -> void {
       continue;
     }
     RJBUtil::Splitter<std::string> splitter(line, " \t");
-    RJBUtil::Splitter<std::string> emp_ci_splitter(splitter[5], ",");
-	RJBUtil::Splitter<std::string> emp_midci_splitter(splitter[7], ",");
+    RJBUtil::Splitter<std::string> emp_ci_splitter(splitter[4], ",");
+	RJBUtil::Splitter<std::string> emp_midci_splitter(splitter[6], ",");
 
     ResultLine rs = ResultLine {
       splitter[0],
       splitter[1],
       std::stod(splitter[2]),
+      // std::stod(splitter[3]),
       std::stod(splitter[3]),
-      std::stod(splitter[4]),
       std::make_pair(std::stod(emp_ci_splitter[0]), std::stod(emp_ci_splitter[1])),
-      std::stod(splitter[6]),
+      std::stod(splitter[5]),
       std::make_pair(std::stod(emp_midci_splitter[0]), std::stod(emp_midci_splitter[1])),
-      std::stod(splitter[8]),
+      std::stod(splitter[7]),
+      std::stoul(splitter[8]),
       std::stoul(splitter[9]),
-      std::stoul(splitter[10]),
-      std::stoul(splitter[11])
+      std::stoul(splitter[10])
     };
 	for(int i = 12; i < splitter.size(); i++) {
 	  rs.stats.push_back(splitter[i]);
@@ -614,7 +615,7 @@ auto Reporter::sort_simple(const TaskParams &tp) -> void {
     simple_file_ << std::setw(25) << rs.gene << " ";
     simple_file_ << std::setw(20) << rs.transcript;
     simple_file_ << std::setw(20) << rs.original;
-	simple_file_ << std::setw(20) << rs.exact_p;
+	// simple_file_ << std::setw(20) << rs.exact_p;
     simple_file_ << std::setw(20) << rs.empirical_p;
     simple_file_ << std::setw(20) << ci.str();
     simple_file_ << std::setw(20) << rs.empirical_midp;

@@ -127,7 +127,7 @@ std::ostream &operator<<(std::ostream &stream, Result &rhs) {
   stream << std::setw(25) << std::defaultfloat << std::left << rhs.gene << " ";
   stream << std::setw(20) << rhs.transcript;
   stream << std::setw(20) << std::setprecision(8) << rhs.original;
-  stream << std::setw(20) << std::setprecision(8) << rhs.exact_p;
+  // stream << std::setw(20) << std::setprecision(8) << rhs.exact_p;
   stream << std::setw(20) << std::setprecision(8) << rhs.empirical_p;
   stream << std::setw(20) << ci.str();
   stream << std::setw(20) << std::setprecision(8) << rhs.empirical_midp;
@@ -169,7 +169,7 @@ Result &Result::combine(const Result &res) {
   }
 
   update_ci();
-  calc_exact_p();
+  // calc_exact_p();
 
   // Extend permuted values
   permuted.reserve(permuted.size() + res.permuted.size());
@@ -209,6 +209,7 @@ void Result::update_ci() {
  * 		 Authors: Phipson B, Smyth GK., 2010
  */
 void Result::calc_exact_p(double n1, double n2) {
+  return;
   mp::cpp_bin_float_100 m = permutations;
   mp::cpp_bin_float_100 b = successes;
   mp::cpp_bin_float_100 mt = boost::math::binomial_coefficient<mp::cpp_bin_float_100>(n1 + n2, n1);
@@ -242,6 +243,7 @@ void Result::calc_exact_p(double n1, double n2) {
  * 		 Authors: Phipson B, Smyth GK., 2010
  */
 void Result::calc_exact_p() {
+  return;
   mp::cpp_bin_float_100 m = permutations;
   double n1 = nmac, n2 = nmaj;
   mp::cpp_bin_float_100 mt = boost::math::binomial_coefficient<mp::cpp_bin_float_100>(n1 + n2, n1);
