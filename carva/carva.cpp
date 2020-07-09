@@ -141,7 +141,7 @@ int main(int argc, char **argv) {
 		 "Odds closer together than the given value will be collapsed into a single bin for permutation.")
 		("max_perms",
 		 po::value(&max_perms),
-		 "Maximum number of permutations. Run permutation in blocks of size nperm, up to the maximum set here. Only genes requiring additional permutation will be permuted.")
+		 "Maximum number of permutations, used in combination with --nperm to manage memory usage. Run permutation in blocks of size nperm, up to the maximum set here. Only genes requiring additional permutation will be permuted. If you are running a small number of permutations, do not set this option.")
 		("seed",
 		 po::value(&seed),
 		 "A defined seed passed to the random number generators used for each gene.");
@@ -426,6 +426,10 @@ int main(int argc, char **argv) {
 
   if(tp.external && tp.permute_set) {
 	throw std::runtime_error("Conflicting options. External permutation set will be deleted when permute_set is also included.");
+  }
+
+  if(tp.max_perms && *tp.max_perms <= 0) {
+    throw std::runtime_error("If max_perms is set, it must be set to a value greater than zero.");
   }
 
   std::shared_ptr<Reporter> reporter = nullptr;

@@ -261,7 +261,7 @@ auto Reporter::recalculate_mgit(std::map<std::string, std::map<std::string, Resu
       arma::vec permuted = arma::conv_to<arma::vec>::from(tr.second.permuted);
       arma::vec pvals;
 
-      // SKATO and SKAT return pvalues so reverse success criteria
+      // TODO: This is wrong, SKAT only returns a p-value conditionally
       if (pvalue_methods_.find(method_) != pvalue_methods_.end()) {
         pvals = rank(permuted, "ascend");
       } else {

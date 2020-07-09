@@ -91,7 +91,7 @@ void Covariates::refit_permuted() {
   if(linear_) {
 	Gaussian link("identity");
 	GLM<Gaussian> fit(design_, phenotypes_, link);
-	success = fit.success;
+	success = fit.success_;
 	p_fitted_ = fit.mu_;
 	p_eta_ = fit.eta_;
 	p_coef_ = fit.beta_;
@@ -103,7 +103,7 @@ void Covariates::refit_permuted() {
   } else {
 	Binomial link("logit");
 	GLM<Binomial> fit(design_, phenotypes_, link);
-	success = fit.success;
+	success = fit.success_;
 	p_odds_ = fit.mu_ / (1. - fit.mu_);
 	p_fitted_ = fit.mu_;
 	p_eta_ = fit.eta_;

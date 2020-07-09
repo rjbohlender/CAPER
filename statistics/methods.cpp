@@ -562,7 +562,10 @@ double Methods::SKATO(Gene &gene,
   }
 
   arma::vec lam;
-  arma::eig_sym(lam, R - (Rs * Rs.t()) / R1);
+  bool success = arma::eig_sym(lam, R - (Rs * Rs.t()) / R1);
+  if (!success) {
+    return 1.;
+  }
   lam = arma::abs(lam);
 
   if (lam.max() <= 0) {

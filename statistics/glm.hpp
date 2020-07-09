@@ -23,7 +23,7 @@ struct GLM {
   arma::vec n_;
   double dev_;
   arma::uvec indices_;
-  bool success;
+  bool success_;
 
   GLM(arma::mat &X, arma::vec &Y, LinkT &link) {
     indices_ = arma::regspace<arma::uvec>(0, X.n_cols - 1);
@@ -43,8 +43,8 @@ struct GLM {
 	try{
       // beta_ = gradient_descent(X, Y);
       // beta_ = irls_svdnewton(X, Y);
-      beta_ = irls_qr(X, Y);
-      // beta_ = irls_qr_R(X, Y);
+      // beta_ = irls_qr(X, Y);
+      beta_ = irls_qr_R(X, Y);
 	} catch(std::exception &e) {
       std::cerr << "IRLS failed; Using gradient descent." << std::endl;
       //beta_ = gradient_descent(X, Y);
@@ -65,7 +65,7 @@ struct GLM {
     mu_ = link.linkinv(X.cols(indices_), beta_);
     eta_ = link.link(mu_);
 
-    success = !(mu_.has_nan() || eta_.has_nan());
+	success_ = !(mu_.has_nan() || eta_.has_nan());
   }
 
   GLM(arma::mat &X, arma::vec &Y, LinkT &link, arma::vec initial_beta) {
@@ -112,7 +112,7 @@ struct GLM {
     mu_ = link.linkinv(X.cols(indices_), beta_);
     eta_ = link.link(mu_);
 
-    success = !(mu_.has_nan() || eta_.has_nan());
+	success_ = !(mu_.has_nan() || eta_.has_nan());
   }
   // Algorithms for finding the optimum
   auto gradient_descent(arma::mat &X, arma::colvec &Y) -> arma::vec;
@@ -166,7 +166,7 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
   }
 
   // Matrices and Vectors
-  arma::vec eta(m, arma::fill::randn);
+  eta_ = arma::vec (m, arma::fill::randn);
   arma::vec s(n, arma::fill::randn);
   arma::vec weights(m, arma::fill::ones);
   arma::vec s_old = s;
@@ -187,14 +187,14 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
   arma::vec diff = s - s_old;
 
   do {
-    arma::vec g = link.linkinv(eta(good));
+    arma::vec g = link.linkinv(eta_(good));
     arma::vec varg = link.variance(g);
-    arma::vec gprime = link.mueta(eta(good));
+    arma::vec gprime = link.mueta(eta_(good));
 
     arma::vec z(m);
     arma::vec W(m);
 
-    z(good) = eta(good) + (Y(good) - g) / gprime;
+    z(good) = eta_(good) + (Y(good) - g) / gprime;
     W(good) = weights(good) % arma::pow(gprime, 2) / varg;
 
 	good = arma::find(W > arma::datum::eps * 2);
@@ -206,14 +206,6 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
 	Wgood = W(good);
     arma::mat UWU = Ugood.t() * (Ugood.each_col() % Wgood);
     success = arma::chol(C, UWU);
-#if 0
-    double jitter = 1e-9;
-    while(!success && jitter < 1.) {
-      UWU.diag() += jitter;
-      success = arma::chol(C, UWU);
-      jitter *= 10;
-    }
-#endif
     if (!success) {
       throw(std::runtime_error("Cholesky decomposition of UWU matrix failed."));
     }
@@ -222,7 +214,8 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
     s = solve(arma::trimatl(C.t()), Ugood.t() * (Wgood % z));
 	s = solve(arma::trimatu(C), s);
 
-    eta = Ugood * s;
+    eta_ = Ugood * s;
+    mu_ = link.linkinv(eta_);
 
     iter++;
 
@@ -235,7 +228,9 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
     std::cerr << "IRLS failed to converge." << std::endl;
   }
 
-  return (V * (arma::diagmat(1. / S) * (Ugood.t() * eta(good))));
+  dev_ = arma::accu(link.dev_resids(Y, mu_, weights_));
+  beta_ = (V * (arma::diagmat(1. / S) * (Ugood.t() * eta_(good))));
+  return beta_;
 }
 template<typename LinkT>
 
