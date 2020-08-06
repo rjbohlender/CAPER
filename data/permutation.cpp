@@ -6,9 +6,10 @@
 #include <ctime>
 #include <cassert>
 #include "permutation.hpp"
+#include "../utility/jointhreads.hpp"
 
 Permute::Permute()
-	: sto(std::random_device{}()), bins_built(false)  {}
+	: sto(std::random_device{}()), bins_built(false) {}
 
 Permute::Permute(int seed)
 	: sto(seed), bins_built(false) {}
@@ -28,7 +29,7 @@ void Permute::generate_permutations(std::shared_ptr<std::vector<std::vector<int8
 	  arma::uvec
 		  greater = arma::find(odds_sorted >= cur);
 	  arma::uvec
-	      lesser = arma::find(odds_sorted < cur + epsilon + fudge);
+		  lesser = arma::find(odds_sorted < cur + epsilon + fudge);
 	  arma::uvec in_range = arma::intersect(greater, lesser);
 	  m.push_back(in_range.n_elem);
 	  bin_odds.push_back(arma::mean(odds_sorted(in_range)));
@@ -56,36 +57,35 @@ void Permute::generate_permutations(std::shared_ptr<std::vector<std::vector<int8
 
   int step = nperm / nthreads;
   int remaining = nperm;
-  std::vector<std::thread> threads;
-  for (int i = 0; i < nthreads; i++) {
-	int seed = sto.IRandom(0, std::numeric_limits<int>::max());
-	int offset = i * step;
-	if (remaining < 0) {
-	  std::cerr << "Failed during permutation.\n";
-	  std::exit(-1);
+  { // Force scope so that threads automatically join and exit when done via JoinThreads
+	std::vector<std::thread> threads;
+	JoinThreads thread_joiner(threads);
+	for (int i = 0; i < nthreads; i++) {
+	  int seed = sto.IRandom(0, std::numeric_limits<int>::max());
+	  int offset = i * step;
+	  if (remaining < 0) {
+		std::cerr << "Failed during permutation.\n";
+		std::exit(-1);
+	  }
+	  if (i == nthreads - 1) {
+		threads.emplace_back(std::thread(&Permute::permute_thread,
+										 this,
+										 permutations,
+										 ncases,
+										 offset,
+										 remaining,
+										 seed));
+	  } else {
+		threads.emplace_back(std::thread(&Permute::permute_thread,
+										 this,
+										 permutations,
+										 ncases,
+										 offset,
+										 step,
+										 seed));
+	  }
+	  remaining -= step;
 	}
-	if (i == nthreads - 1) {
-	  threads.push_back(std::thread(&Permute::permute_thread,
-									this,
-									permutations,
-									ncases,
-									offset,
-									remaining,
-									seed));
-	} else {
-	  threads.push_back(std::thread(&Permute::permute_thread,
-									this,
-									permutations,
-									ncases,
-									offset,
-									step,
-									seed));
-	}
-	remaining -= step;
-  }
-
-  for (auto &t : threads) {
-	t.join();
   }
 }
 

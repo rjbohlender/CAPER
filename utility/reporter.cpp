@@ -16,7 +16,7 @@ const std::set<std::string> Reporter::pvalue_methods_ {
 };
 
 Reporter::Reporter(TaskParams &tp)
-: method_(tp.method), gene_list_(tp.gene_list), print_testable_(tp.testable), ncases_(0), ncontrols_(0) {
+: method_(tp.method), pvalues_(tp.analytic), gene_list_(tp.gene_list), print_testable_(tp.testable), ncases_(0), ncontrols_(0) {
   std::string header;
 
   if(!check_directory_exists(tp.output_path)) {
@@ -100,7 +100,7 @@ Reporter::Reporter(TaskParams &tp)
 }
 
 Reporter::Reporter(std::vector<CARVATask> &res, TaskParams &tp)
-: method_(tp.method), gene_list_(tp.gene_list), print_testable_(tp.testable), ncases_(0), ncontrols_(0) {
+: method_(tp.method), pvalues_(tp.analytic), gene_list_(tp.gene_list), print_testable_(tp.testable), ncases_(0), ncontrols_(0) {
   if(!check_directory_exists(tp.output_path)) {
     throw(std::runtime_error("Output path is invalid."));
   }
@@ -242,7 +242,7 @@ auto Reporter::recalculate_mgit(std::map<std::string, std::map<std::string, Resu
     // Shorthand
     unsigned long n = g.second.size();
     arma::uword max_perm = 0;
-    arma::uword i, j, k;
+    arma::uword i;
     double successes;
 
     // Get max_perm
@@ -252,17 +252,15 @@ auto Reporter::recalculate_mgit(std::map<std::string, std::map<std::string, Resu
       }
     }
 
-    arma::mat mgit_pval_mat = arma::mat(max_perm + 1, n);
+    arma::mat mgit_pval_mat = arma::mat(max_perm, n);
     i = 0;
     for(auto &tr : g.second) {
       int m = tr.second.permuted.size();
 
-      tr.second.permuted.push_back(tr.second.original);
       arma::vec permuted = arma::conv_to<arma::vec>::from(tr.second.permuted);
       arma::vec pvals;
 
-      // TODO: This is wrong, SKAT only returns a p-value conditionally
-      if (pvalue_methods_.find(method_) != pvalue_methods_.end()) {
+      if (pvalues_) {
         pvals = rank(permuted, "ascend");
       } else {
         pvals = rank(permuted, "descend");
@@ -287,9 +285,8 @@ auto Reporter::recalculate_mgit(std::map<std::string, std::map<std::string, Resu
       }
     }
 
-    for (auto &tr : g.second) {
-      unsigned long m = mgit_pval_dist_.n_rows;  // Total permutations
-
+	unsigned long m = mgit_pval_dist_.n_rows;  // Total permutations
+	for (auto &tr : g.second) {
       successes = arma::find(mgit_pval_dist_ <= min_p).eval().n_rows;
 
       // Store multi-transcript p-value
@@ -322,7 +319,7 @@ auto Reporter::recalculate_mgit(std::unordered_map<std::string, Result> &results
 	}
   }
 
-  arma::mat mgit_pval_mat = arma::mat(max_perm + 1, n);
+  arma::mat mgit_pval_mat = arma::mat(max_perm, n);
   i = 0;
   for(auto &tr : results) {
 	int m = tr.second.permuted.size();
@@ -330,12 +327,11 @@ auto Reporter::recalculate_mgit(std::unordered_map<std::string, Result> &results
 	  continue;
 	}
 
-	  tr.second.permuted.push_back(tr.second.original);
 	arma::vec permuted = arma::conv_to<arma::vec>::from(tr.second.permuted);
 	arma::vec pvals;
 
 	// SKATO and SKAT return pvalues so reverse success criteria
-	if (pvalue_methods_.find(method_) != pvalue_methods_.end()) {
+	if (pvalues_) {
 	  pvals = rank(permuted, "ascend");
 	} else {
 	  pvals = rank(permuted, "descend");

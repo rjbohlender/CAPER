@@ -3,6 +3,7 @@
 //
 
 #include "carvaop.hpp"
+#include "../utility/math.hpp"
 
 CARVAOp::CARVAOp(CARVATask &ct, std::shared_ptr<Reporter> reporter, double seed, bool verbose)
 	: gen_(seed),
@@ -213,14 +214,13 @@ auto CARVAOp::check_perm(const TaskParams &tp,
 		  v.second.mid_successes++;
 		}
 
-		double p = static_cast<double>(v.second.successes) / static_cast<double>(v.second.permutations);
+		double lower, upper;
+		std::tie(lower, upper) = poisson_ci(v.second.successes, v.second.permutations);
 
-		// 95% confidence interval
-		double ci = 1.96 * std::sqrt(p * (1. - p) / v.second.permutations);
 		// Ensure a minimum number of permutations
 		if (v.second.permutations > 10) {
 		  // Stop when the lower bound on the 95% confidence interval is greater than the threshold given
-		  v.second.done = p - ci > *tp.pthresh;
+		  v.second.done = lower > *tp.pthresh;
 		}
 	  } else if (v.second.successes < success_threshold) {
 		v.second.successes++;
@@ -249,14 +249,13 @@ auto CARVAOp::check_perm(const TaskParams &tp,
 		  v.second.mid_successes++;
 		}
 
-		double p = static_cast<double>(v.second.successes) / static_cast<double>(v.second.permutations);
+		double lower, upper;
+		std::tie(lower, upper) = poisson_ci(v.second.successes, v.second.permutations);
 
-		// 95% confidence interval
-		double ci = 1.96 * std::sqrt(p * (1. - p) / v.second.permutations);
 		// Ensure a minimum number of permutations
 		if (v.second.permutations > 10) {
 		  // Stop when the lower bound on the 95% confidence interval is greater than the threshold given
-		  v.second.done = p - ci > *tp.pthresh;
+		  v.second.done = lower > *tp.pthresh;
 		}
 	  } else if (v.second.successes < success_threshold) {
 		v.second.successes++;

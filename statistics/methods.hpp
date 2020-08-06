@@ -38,8 +38,8 @@ public:
   double BURDEN(Gene &gene, const std::string &k, arma::vec &phenotypes, int a, int b);
   double CALPHA(Gene &gene, arma::vec &Y, const std::string &k);
   // Li and Leal 2008
-  double CMC(Gene &gene, arma::vec &Y, const std::string &k, double maf = 0.005);
-  double CMC1df(Gene &gene, arma::vec &Y, const std::string &k);
+  double CMC(Gene &gene, arma::vec &Y, const std::string &k, double maf = 0.005) const;
+  double CMC1df(Gene &gene, arma::vec &Y, const std::string &k) const;
   // Morris and Zeggini 2010
   double RVT1(Gene &gene, arma::vec &Y, arma::mat design, arma::vec &initial_beta, const std::string &k, bool linear);
   double RVT2(Gene &gene,

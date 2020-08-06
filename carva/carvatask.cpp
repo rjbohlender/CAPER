@@ -153,6 +153,7 @@ void CARVATask::calc_multitranscript_pvalues() {
 	}
   }
 
+  // Min value of each row
   arma::vec mgit_pval_dist_ = arma::min(mgit_pval_mat, 1);
 
   for (i = 0; i < n; i++) {

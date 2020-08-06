@@ -34,17 +34,17 @@ T lcnk(T n, T k) {
  * @return Pair<T, T> containing the confidence interval at 2.5% and 97.5%
  */
 template<typename T>
-std::pair<T, T> poisson_ci(T successes, T permutations) {
+std::pair<T, T> poisson_ci(T successes, T permutations, double lower = 0.025, double upper = 0.975) {
   T lo_ci;
   T hi_ci;
   boost::math::chi_squared hi_dist(2 * successes + 2);
   if (successes > 0) {
 	boost::math::chi_squared lo_dist(2 * successes);
-	lo_ci = boost::math::quantile(lo_dist, 0.025) / 2.;
+	lo_ci = boost::math::quantile(lo_dist, lower) / 2.;
   } else {
 	lo_ci = 0;
   }
-  hi_ci = boost::math::quantile(hi_dist, 0.975) / 2.;
+  hi_ci = boost::math::quantile(hi_dist, upper) / 2.;
 
   return std::make_pair(lo_ci / permutations, hi_ci / permutations);
 }

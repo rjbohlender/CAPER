@@ -40,6 +40,7 @@ struct GLM {
       dev_ = arma::accu(link.dev_resids(Y, mu_, arma::vec(X.n_rows, arma::fill::ones)));
     }
 
+#if 0
 	try{
       // beta_ = gradient_descent(X, Y);
       // beta_ = irls_svdnewton(X, Y);
@@ -61,8 +62,11 @@ struct GLM {
 		eta_.fill(arma::datum::nan);
 	  }
     }
+#endif
 
-    mu_ = link.linkinv(X.cols(indices_), beta_);
+	beta_ = irls(X, Y);
+
+	mu_ = link.linkinv(X.cols(indices_), beta_);
     eta_ = link.link(mu_);
 
 	success_ = !(mu_.has_nan() || eta_.has_nan());
@@ -87,6 +91,7 @@ struct GLM {
       dev_ = arma::accu(link.dev_resids(Y, mu_, arma::vec(X.n_rows, arma::fill::ones)));
     }
 
+#if 0
     try{
       // beta_ = gradient_descent(X, Y);
       // beta_ = irls_svdnewton(X, Y);
@@ -108,8 +113,11 @@ struct GLM {
         eta_.fill(arma::datum::nan);
       }
     }
+#endif
 
-    mu_ = link.linkinv(X.cols(indices_), beta_);
+	beta_ = irls(X, Y);
+
+	mu_ = link.linkinv(X.cols(indices_), beta_);
     eta_ = link.link(mu_);
 
 	success_ = !(mu_.has_nan() || eta_.has_nan());
@@ -121,6 +129,7 @@ struct GLM {
   auto irls_qr_R(arma::mat &X, arma::colvec &Y) -> arma::vec;
   auto irls(arma::mat &X, arma::colvec &Y) -> arma::vec;
   auto svd_subset(arma::mat &X) -> arma::uvec;
+  auto newton_rhapson(arma::mat &X, arma::vec &Y) -> arma::vec;
 };
 
 template<typename LinkT>
@@ -395,29 +404,29 @@ auto GLM<LinkT>::irls(arma::mat &X, arma::colvec &Y) -> arma::vec {
   const auto max_iter = 25;
   auto iter = 0;
 
-  arma::vec x(X.n_cols, arma::fill::zeros);
+  beta_ = arma::vec(X.n_cols, arma::fill::zeros);
   arma::vec xold;
   double devold;
   for(iter = 0; iter < max_iter; iter++) {
-    arma::vec eta = X * x;
-    arma::vec g = link.linkinv(eta);
-	arma::vec gprime = link.mueta(eta);
-	arma::vec z = eta + (Y - g) / gprime;
-	arma::vec W = arma::pow(gprime, 2) / link.variance(g);
-	xold = x;
-	x = arma::solve(X.t() * (X.each_col() % W), X.t() * (W % z));
+    eta_ = X * beta_;
+    mu_ = link.linkinv(eta_);
+	arma::vec muprime = link.mueta(eta_);
+	arma::vec z = eta_ + (Y - mu_) / muprime;
+	arma::vec W = arma::pow(muprime, 2) / link.variance(mu_);
+	xold = beta_;
+	beta_ = arma::solve(X.t() * (X.each_col() % W), X.t() * (W % z));
 	devold = dev_;
-    dev_ = arma::sum(link.dev_resids(Y, link.linkinv(X * x), arma::vec(X.n_rows, arma::fill::ones)));
+    dev_ = arma::sum(link.dev_resids(Y, link.linkinv(X * beta_), arma::vec(X.n_rows, arma::fill::ones)));
     if(!std::isfinite(dev_)) {
       int i = 0;
       while (!std::isfinite(dev_)) {
         if(i >= max_iter) {
           throw(std::runtime_error("Unable to correct step size for divergent IRLS step."));
         }
-        x = (x + xold) / 2.;
-        eta = X * x;
-        g = link.linkinv(eta);
-        dev_ = arma::sum(link.dev_resids(Y, g, arma::vec(X.n_rows, arma::fill::ones)));
+		beta_ = (beta_ + xold) / 2.;
+		eta_ = X * beta_;
+		mu_ = link.linkinv(eta_);
+        dev_ = arma::sum(link.dev_resids(Y, mu_, arma::vec(X.n_rows, arma::fill::ones)));
         i++;
       }
     }
@@ -426,7 +435,34 @@ auto GLM<LinkT>::irls(arma::mat &X, arma::colvec &Y) -> arma::vec {
 	  break;
 	}
   }
-  return x;
+  return beta_;
+}
+template<typename LinkT>
+auto GLM<LinkT>::newton_rhapson(arma::mat &X, arma::vec &Y) -> arma::vec {
+  int max_iter = 100;
+  int iter = 0;
+  double last_dev = -99999;
+  beta_ = arma::vec(X.n_cols, arma::fill::zeros);
+  while (iter < max_iter) {
+    eta_ = X * beta_;
+    mu_ = link.linkinv(eta_);
+    var_ = link.variance(mu_);
+
+    arma::mat D = X.t() * arma::diagmat(var_) * X;
+    arma::vec r = X.t() * (Y - mu_);
+    arma::vec delta_beta = arma::solve(D, r);
+
+    beta_ += delta_beta;
+    dev_ = arma::accu(link.dev_resids(Y, mu_, arma::vec(X.n_rows, arma::fill::ones)));
+    if(std::abs(dev_ - last_dev) < 1e-3) {
+      iter = 0;
+      break;
+    }
+
+    last_dev = dev_;
+    iter++;
+  }
+  return beta_;
 }
 
 #endif //PERMUTE_ASSOCIATE_GLM_HPP

@@ -68,6 +68,7 @@ private:
   std::ofstream vaast_file_;
 
   const std::string method_;
+  const bool pvalues_;
   const bool gene_list_;
   const bool print_testable_;
   std::vector<std::string> details_;

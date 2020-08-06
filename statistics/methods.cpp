@@ -12,7 +12,6 @@
 #include <boost/math/special_functions/beta.hpp>
 #include <boost/math/distributions/chi_squared.hpp>
 #include <boost/math/distributions/fisher_f.hpp>
-#include <boost/math/quadrature/trapezoidal.hpp>
 #include <boost/math/quadrature/gauss_kronrod.hpp>
 #include <boost/math/tools/roots.hpp>
 
@@ -35,11 +34,11 @@ arma::vec rank(arma::vec &v, const char *direction) {
 
   arma::uvec sort_indices;
   try {
-	sort_indices = arma::sort_index(v, "ascend");
+	sort_indices = arma::sort_index(v, direction);
   } catch (const std::logic_error &e) {
 	std::cerr << "NANs among ranked values. Replacing with 0.\n";
 	v.replace(arma::datum::nan, 0);
-	sort_indices = arma::sort_index(v, "ascend");
+	sort_indices = arma::sort_index(v, direction);
   }
   arma::vec sorted = v(sort_indices);
 
@@ -62,11 +61,7 @@ arma::vec rank(arma::vec &v, const char *direction) {
 	i = j;
   }
 
-  if (!strcmp(direction, "ascend")) {
 	return ranks;
-  } else {
-	return arma::reverse(ranks);
-  }
 }
 
 Methods::Methods(std::string method)
@@ -142,7 +137,7 @@ double Methods::CALPHA(Gene &gene, arma::vec &Y, const std::string &k) {
   return arma::sum(arma::pow(g - (n * p0), 2) - (n * p0 * (1 - p0)));
 }
 
-double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &k, double maf) {
+double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &k, double maf) const {
   arma::mat X(gene.get_matrix(k));
 
   double N = Y.n_rows;
@@ -207,7 +202,7 @@ double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &k, double maf) 
   return pval;
 }
 
-double Methods::CMC1df(Gene &gene, arma::vec &Y, const std::string &k) {
+double Methods::CMC1df(Gene &gene, arma::vec &Y, const std::string &k) const {
   // Runtime for MDA OV with just fisher test and 10000 perms = 6544.95
   // Runtime for fast path with 10000 perms = 267.874
   if (tp_.nperm > 0) {
@@ -247,7 +242,7 @@ double Methods::RVT1(Gene &gene,
   // Runtime 100 perms single prior initialization on macbook pro, ovarian data -- 1757.13
   if (linear) {
 	// Quantitative trait
-	arma::sp_mat X = gene.get_matrix(k).t();
+	arma::sp_mat X = arma::ceil(gene.get_matrix(k).t() / 2);
 	Gaussian link("identity");
 	GLM<Gaussian> fit1(design, Y, link);
 	arma::mat d2 = arma::join_horiz(design, arma::rowvec(arma::sum(X) / X.n_rows).t());
@@ -264,7 +259,8 @@ double Methods::RVT1(Gene &gene,
 	return boost::math::cdf(boost::math::complement(chisq, stat));
   } else {
 	// Binary trait
-	arma::sp_mat X = gene.get_matrix(k).t();
+	// Convert to 0/1 to make summing the number of carriers easier.
+	arma::sp_mat X = arma::ceil(gene.get_matrix(k).t() / 2);
 	Binomial link("logit");
 	GLM<Binomial> fit1(design, Y, link);
 	arma::mat d2 = arma::join_horiz(design, arma::rowvec(arma::sum(X) / X.n_rows).t());

@@ -119,19 +119,15 @@ public:
   }
 
   void unfinished(Operation_t &op) {
-	std::unique_lock<std::mutex> lock(cont_lock_);
+	std::lock_guard<std::mutex> lock(cont_lock_);
 
 	continue_.emplace(op);
-
-	lock.unlock();
   }
 
   void unfinished(Operation_t &&op) {
-	std::unique_lock<std::mutex> lock(cont_lock_);
+	std::lock_guard<std::mutex> lock(cont_lock_);
 
 	continue_.emplace(op);
-
-	lock.unlock();
   }
 
   // Status
@@ -161,8 +157,10 @@ public:
     while(!continue_.empty()) {
       Operation_t op = continue_.front();
       continue_.pop();
-      dispatch(op);
+      q_.emplace(op);
+      ntasks_++;
     }
+    cv_.notify_all();
   }
 
 private:

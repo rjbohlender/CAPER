@@ -241,6 +241,9 @@ public:
 		  }
 		} else { // Successive loops will not need to process the gene stream
 		  tq_.redispatch(); // Re-dispatch each job. No need to update anything because the permutations are kept in a pointer.
+		  auto cur = std::chrono::system_clock::now();
+		  std::time_t cur_time = std::chrono::system_clock::to_time_t(cur);
+		  std::cerr << "Remaining permutations: " << remaining << " at " << std::ctime(&cur_time);
 		  tq_.wait(); // Need to wait here until all jobs are done, otherwise permutations will update during processing
 		  if(tq_.continue_.size() == 0) { // Terminate if all jobs are done.
 			remaining = 0;
