@@ -16,10 +16,11 @@
 #include "../utility/split.hpp"
 #include "../statistics/logistic_regression.hpp"
 #include "permutation.hpp"
+#include "../utility/taskparams.hpp"
 
 class Covariates {
 public:
-  Covariates(const std::string& ifile, const std::string& pedfile, bool linear=false);
+  Covariates(TaskParams tp);
   Covariates(std::stringstream &ped_ss, std::stringstream& cov_ss);
 
   Covariates(const Covariates &cov) = default;
@@ -57,6 +58,7 @@ public:
   bool is_sorted();
 
 private:
+  TaskParams tp_;
   unsigned long nsamples_;
   unsigned long ncases_;
   unsigned long ncontrols_;

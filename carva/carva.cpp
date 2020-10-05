@@ -92,7 +92,11 @@ int main(int argc, char **argv) {
          po::value<std::string>()->default_value("VAAST"),
          "The statistical method to be used.\n"
          "Options: {BURDEN, CALPHA, CMC, CMC1df, RVT1, RVT2, SKAT, SKATO, VAAST, VT, WSS}.")
-        ("range",
+		("optimizer",
+		 po::value<std::string>()->default_value("irls"),
+		 "The optimizer used to fit the GLM.\n"
+		 "Options: {irls, irls_svdnewton, irls_qr, irls_qr_R, gradient_descent}.")
+		("range",
          po::value(&gene_range)->multitoken(),
          "A range of genes to analyze from the matrix file. "
          "Takes two values, a start gene number, and end gene number.\n"
@@ -236,6 +240,14 @@ int main(int argc, char **argv) {
       "wLinear"
   };
 
+  std::set<std::string> optimizer_choices = {
+  	"irls",
+  	"irls_svdnewton",
+  	"irls_qr",
+  	"irls_qr_R",
+  	"gradient_descent"
+  };
+
   if (method_choices.count(vm["method"].as<std::string>()) == 0) {
     // Method not among choices
     std::cerr
@@ -249,6 +261,11 @@ int main(int argc, char **argv) {
     std::cerr << "Kernel must be one of {Linear, wLinear}.\n";
     std::cerr << visible << "\n";
     return 1;
+  }
+
+  if (optimizer_choices.count(vm["optimizer"].as<std::string>()) == 0) {
+ 	std::cerr << "Optimizer must be one of {irls, irls_svdnewton, irls_qr, irls_qr_R, gradient_descent}.\n";
+ 	std::cerr << visible << "\n";
   }
 
   /**********************
@@ -286,6 +303,7 @@ int main(int argc, char **argv) {
   tp.output_stats = stats;
 
   tp.method = vm["method"].as<std::string>();
+  tp.optimizer = vm["optimizer"].as<std::string>();
   // File paths and option status
   tp.program_path = argv[0];
   tp.seed = seed;

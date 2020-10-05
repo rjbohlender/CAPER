@@ -351,7 +351,7 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
       Gaussian link("identity");
       arma::mat D = arma::join_vert(cov.get_covariate_matrix(),
                                     arma::mat(X).each_row() - maf);
-      GLM<Gaussian> fit(D, Y, link);
+      GLM<Gaussian> fit(D, Y, link, nullptr, TaskParams());
 
       // Transform values
       arma::uword n = cov.get_covariate_matrix().n_rows;

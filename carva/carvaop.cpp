@@ -113,11 +113,6 @@ auto CARVAOp::stage1() -> void {
 	  v.second.permutations++;
 
 	  check_perm(ta_.tp, perm_val, ta_.success_threshold, v);
-
-	  // Track when we reached success threshold
-	  if (v.second.successes == ta_.success_threshold && v.second.min_success_at < 0) {
-		v.second.min_success_at = v.second.permutations;
-	  }
 	}
 	// Stop iterating if everything is done
 	if (std::all_of(ta_.results.cbegin(), ta_.results.cend(), [&](const auto &v) { return v.second.done; })) {
@@ -130,14 +125,23 @@ auto CARVAOp::stage1() -> void {
   for (auto &v : ta_.results) {
 	double empirical;
 	double midp;
-	if (v.second.min_success_at > 0 && v.second.successes == ta_.success_threshold + 1) {
-	  std::uniform_int_distribution<> dis(v.second.min_success_at, v.second.permutations);
-
-	  empirical = v.second.successes / (1. + dis(gen_));
-	  midp = v.second.mid_successes / (1. + dis(gen_));
+	// If we stopped early, use the geometric correction, otherwise calculate for binomial phat
+	if (ta_.tp.max_perms) {
+	  if (v.second.permutations < *ta_.tp.max_perms) {
+		empirical = geometric_p(v.second.successes, v.second.permutations);
+		midp = geometric_p(v.second.mid_successes, static_cast<double>(v.second.permutations));
+	  } else {
+		empirical = (1. + v.second.successes) / (1. + v.second.permutations);
+		midp = (1. + v.second.mid_successes) / (1. + v.second.permutations);
+	  }
 	} else {
-	  empirical = (1. + v.second.successes) / (1. + v.second.permutations);
-	  midp = (1. + v.second.mid_successes) / (1. + v.second.permutations);
+	  if (v.second.permutations < ta_.tp.nperm) {
+		empirical = geometric_p(v.second.successes, v.second.permutations);
+		midp = geometric_p(v.second.mid_successes, static_cast<double>(v.second.permutations));
+	  } else {
+		empirical = (1. + v.second.successes) / (1. + v.second.permutations);
+		midp = (1. + v.second.mid_successes) / (1. + v.second.permutations);
+	  }
 	}
 
 	// Success on every iteration

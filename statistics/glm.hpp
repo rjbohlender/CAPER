@@ -11,6 +11,7 @@
 #include <boost/math/tools/toms748_solve.hpp>
 
 #include "../link/family.hpp"
+#include "../utility/taskparams.hpp"
 
 template <typename LinkT>
 struct GLM {
@@ -25,7 +26,7 @@ struct GLM {
   arma::uvec indices_;
   bool success_;
 
-  GLM(arma::mat &X, arma::vec &Y, LinkT &link) {
+  GLM(arma::mat &X, arma::vec &Y, LinkT &link, TaskParams tp) {
     indices_ = arma::regspace<arma::uvec>(0, X.n_cols - 1);
     weights_ = arma::vec(X.n_rows, arma::fill::ones);
 
@@ -40,31 +41,17 @@ struct GLM {
       dev_ = arma::accu(link.dev_resids(Y, mu_, arma::vec(X.n_rows, arma::fill::ones)));
     }
 
-#if 0
-	try{
-      // beta_ = gradient_descent(X, Y);
-      // beta_ = irls_svdnewton(X, Y);
-      // beta_ = irls_qr(X, Y);
-      beta_ = irls_qr_R(X, Y);
-	} catch(std::exception &e) {
-      std::cerr << "IRLS failed; Using gradient descent." << std::endl;
-      //beta_ = gradient_descent(X, Y);
-      //std::cerr << e.what();
-      try {
-		beta_ = gradient_descent(X, Y);
-		std::cerr << beta_;
-	  } catch(std::exception &e) {
-		beta_ = arma::vec(X.n_cols);
-		mu_ = arma::vec(X.n_rows);
-		eta_ = arma::vec(X.n_rows);
-		beta_.fill(arma::datum::nan);
-		mu_.fill(arma::datum::nan);
-		eta_.fill(arma::datum::nan);
-	  }
-    }
-#endif
-
-	beta_ = irls(X, Y);
+	if (tp.optimizer == "irls") {
+	  beta_ = irls(X, Y);
+	} else if(tp.optimizer == "irls_svdnewton") {
+	  beta_ = irls_svdnewton(X, Y);
+	} else if(tp.optimizer == "irls_qr") {
+	  beta_ = irls_qr(X, Y);
+	} else if(tp.optimizer == "irls_qr_R") {
+	  beta_ = irls_qr_R(X, Y);
+	} else if(tp.optimizer == "gradient_descent") {
+	  beta_ = gradient_descent(X, Y);
+	}
 
 	mu_ = link.linkinv(X.cols(indices_), beta_);
     eta_ = link.link(mu_);
@@ -72,7 +59,7 @@ struct GLM {
 	success_ = !(mu_.has_nan() || eta_.has_nan());
   }
 
-  GLM(arma::mat &X, arma::vec &Y, LinkT &link, arma::vec initial_beta) {
+  GLM(arma::mat &X, arma::vec &Y, LinkT &link, arma::vec initial_beta, TaskParams tp) {
     indices_ = arma::regspace<arma::uvec>(0, X.n_cols - 1);
     weights_ = arma::vec(X.n_rows, arma::fill::ones);
 
@@ -91,31 +78,17 @@ struct GLM {
       dev_ = arma::accu(link.dev_resids(Y, mu_, arma::vec(X.n_rows, arma::fill::ones)));
     }
 
-#if 0
-    try{
-      // beta_ = gradient_descent(X, Y);
-      // beta_ = irls_svdnewton(X, Y);
-      beta_ = irls_qr(X, Y);
-      // beta_ = irls_qr_R(X, Y);
-    } catch(std::exception &e) {
-      std::cerr << "IRLS failed; Using gradient descent." << std::endl;
-      //beta_ = gradient_descent(X, Y);
-      //std::cerr << e.what();
-      try {
-        beta_ = gradient_descent(X, Y);
-        std::cerr << beta_;
-      } catch(std::exception &e) {
-        beta_ = arma::vec(X.n_cols);
-        mu_ = arma::vec(X.n_rows);
-        eta_ = arma::vec(X.n_rows);
-        beta_.fill(arma::datum::nan);
-        mu_.fill(arma::datum::nan);
-        eta_.fill(arma::datum::nan);
-      }
-    }
-#endif
-
-	beta_ = irls(X, Y);
+    if (tp.optimizer == "irls") {
+	  beta_ = irls(X, Y);
+    } else if(tp.optimizer == "irls_svdnewton") {
+      beta_ = irls_svdnewton(X, Y);
+    } else if(tp.optimizer == "irls_qr") {
+	  beta_ = irls_qr(X, Y);
+	} else if(tp.optimizer == "irls_qr_R") {
+	  beta_ = irls_qr_R(X, Y);
+	} else if(tp.optimizer == "gradient_descent") {
+	  beta_ = gradient_descent(X, Y);
+	}
 
 	mu_ = link.linkinv(X.cols(indices_), beta_);
     eta_ = link.link(mu_);

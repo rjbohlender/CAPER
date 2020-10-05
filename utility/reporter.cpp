@@ -4,6 +4,7 @@
 
 #include "reporter.hpp"
 #include "filesystem.hpp"
+#include "math.hpp"
 
 #include <boost/format.hpp>
 
@@ -181,7 +182,7 @@ auto Reporter::extract_results(std::vector<CARVATask> &tq_results, TaskParams &t
       for(auto &result : task.results) {
         if (results_.find(result.second.gene) != results_.end()) {
           if(results_[result.second.gene].find(result.second.transcript) != results_[result.second.gene].end()) {
-            results_[result.second.gene][result.second.transcript].combine(result.second);
+			results_[result.second.gene][result.second.transcript].combine(result.second, tp);
 		  } else {
             results_[result.second.gene][result.second.transcript] = result.second;
 			vaast_.emplace(std::make_pair(result.second.transcript, task.gene.get_vaast()[result.second.transcript]));
@@ -545,7 +546,7 @@ auto Reporter::sort_simple(const TaskParams &tp) -> void {
   simple_file_ << std::setw(20) << std::left << "Rank";
   simple_file_ << std::setw(25) << "Gene" << " ";
   simple_file_ << std::setw(20) << "Transcript";
-  simple_file_ << std::setw(20) << "Test_Statistic";
+  simple_file_ << std::setw(30) << "Test_Statistic";
   // simple_file_ << std::setw(20) << "Exact_P";
   simple_file_ << std::setw(20) << "Empirical_P";
   simple_file_ << std::setw(20) << "Empirical_P_CI";
@@ -610,9 +611,9 @@ auto Reporter::sort_simple(const TaskParams &tp) -> void {
     simple_file_ << std::setw(20) << std::left <<  rank;
     simple_file_ << std::setw(25) << rs.gene << " ";
     simple_file_ << std::setw(20) << rs.transcript;
-    simple_file_ << std::setw(20) << rs.original;
+    simple_file_ << std::setw(30) << std::setprecision(15) << rs.original;
 	// simple_file_ << std::setw(20) << rs.exact_p;
-    simple_file_ << std::setw(20) << rs.empirical_p;
+    simple_file_ << std::setw(20) << std::setprecision(8) << rs.empirical_p;
     simple_file_ << std::setw(20) << ci.str();
     simple_file_ << std::setw(20) << rs.empirical_midp;
 	simple_file_ << std::setw(20) << midci.str();
@@ -621,7 +622,7 @@ auto Reporter::sort_simple(const TaskParams &tp) -> void {
     simple_file_ << std::setw(20) << rs.mgit_successes;
 	simple_file_ << std::setw(20) << rs.permutations;
 	for(const auto &v : rs.stats) {
-	  simple_file_ << std::setw(20) << v;
+	  simple_file_ << std::setw(30) << v;
 	}
 	simple_file_ << std::endl;
 

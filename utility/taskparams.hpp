@@ -68,6 +68,9 @@ struct TaskParams {
   // Alternate p-value threshold
   boost::optional<double> pthresh;
 
+  // Choose optimizer implementation for GLM
+  std::string optimizer;
+
   // Detailed VAAST output
   std::string full_command;
   std::string output_path;

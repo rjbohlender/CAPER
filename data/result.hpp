@@ -12,7 +12,7 @@
 #include <cmath>
 #include <map>
 #include <vector>
-
+#include "../utility/taskparams.hpp"
 
 struct Result {
   Result();
@@ -25,7 +25,7 @@ struct Result {
 
   friend std::ostream &operator<<(std::ostream &stream, Result &rhs);
 
-  Result &combine(const Result& res);
+  Result &combine(const Result &res, const TaskParams &tp);
   void update_ci();
   void calc_exact_p();
   void calc_exact_p(double n1, double n2);

@@ -21,6 +21,7 @@
 
 #include "reporter.hpp"
 #include "filesystem.hpp"
+#include "filevalidator.hpp"
 
 #include <boost/iostreams/filtering_streambuf.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
@@ -30,7 +31,7 @@ class JobDispatcher {
 public:
   JobDispatcher(TaskParams &tp, std::shared_ptr<Reporter_t> reporter)
 	  : tp_(tp), tq_(tp.nthreads - 1, reporter, tp),
-		cov_(std::make_shared<Covariates>(tp.covariates_path, tp.ped_path, tp.linear)) {
+		cov_(std::make_shared<Covariates>(tp)) {
     if (tp_.seed) {
       permute_ = Permute(*tp_.seed);
     }
@@ -275,15 +276,20 @@ private:
   void all_gene_dispatcher(std::istream &gt_stream) {
 	std::string line;
 	std::stringstream current;
+	int lineno = -1;
+	FileValidator fv;
+	fv.set_matrix_header(header_);
 
 	int gene_no = 1;
 
 	while (std::getline(gt_stream, line)) {
+	  lineno++;
 	  RJBUtil::Splitter<std::string> split(line, "\t");
 	  RJBUtil::Splitter<std::string> vsplit(split[2], "-");
 	  if (vsplit.size() < 2) {
 		throw (std::logic_error("Position not formatted correctly. Should be chromosome-start-end-type."));
 	  }
+	  fv.validate_matrix_line(split, lineno);
 
 	  // If this line is part of the same gene
 	  if (split[0] == gene_) {
@@ -348,10 +354,15 @@ private:
   void gene_list_dispatcher(std::istream &gt_stream) {
 	std::string line;
 	std::stringstream current;
+	int lineno = -1;
+	FileValidator fv;
+	fv.set_matrix_header(header_);
 
 	while (std::getline(gt_stream, line)) {
+	  lineno++;
 	  RJBUtil::Splitter<std::string> split(line, "\t");
 	  RJBUtil::Splitter<std::string> vsplit(split[2], "-");
+	  fv.validate_matrix_line(split, lineno);
 
 	  // If this line is part of the same gene
 	  if (split[0] == gene_) {

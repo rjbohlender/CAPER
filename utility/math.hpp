@@ -66,4 +66,20 @@ T setdiff(T x, T y) {
   }
   return x;
 }
+
+/**
+ * @brief Unbiased estimator of p in a geometric trial.
+ * @tparam T A numeric type.
+ * @param m The number of successes.
+ * @param n The number of trials.
+ * @return The unbiased estimate of p.
+ *
+ * @note Needed to correct for p estimation in adaptive permutation. Unbiased
+ * estimate due to J.B.S. Haldane (Biometrika , Nov., 1945, Vol. 33, No. 3
+ * (Nov., 1945), pp. 222-225)
+ */
+template<typename T>
+double geometric_p(T m, T n) {
+  return (m - 1.) / (n - 1.);
+}
 #endif //PERMUTE_ASSOCIATE_MATH_HPP

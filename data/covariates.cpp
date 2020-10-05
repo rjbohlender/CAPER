@@ -12,16 +12,16 @@
 #include "../statistics/glm.hpp"
 #include "../statistics/bayesianglm.hpp"
 #include "../utility/indexsort.hpp"
+#include "../utility/filevalidator.hpp"
 
-
-
-Covariates::Covariates(const std::string& ifile, const std::string& pedfile, bool linear)
-	: nsamples_(0),
+Covariates::Covariates(TaskParams tp)
+	: tp_(std::move(tp)),
+	  nsamples_(0),
 	  ncases_(0),
 	  ncontrols_(0),
 	  crand((int)time(nullptr)),
-	  linear_(linear) {
-  parse(ifile, pedfile);
+	  linear_(tp_.linear) {
+  parse(tp_.covariates_path, tp_.ped_path);
   sorted_ = false;
 }
 
@@ -90,7 +90,7 @@ void Covariates::refit_permuted() {
   bool success;
   if(linear_) {
 	Gaussian link("identity");
-	GLM<Gaussian> fit(design_, phenotypes_, link);
+	GLM<Gaussian> fit(design_, phenotypes_, link, coef_, tp_);
 	success = fit.success_;
 	p_fitted_ = fit.mu_;
 	p_eta_ = fit.eta_;
@@ -102,7 +102,7 @@ void Covariates::refit_permuted() {
 	p_odds_ = temp_mu / (1. - temp_mu); // Individual odds, as if the data were dichotomized
   } else {
 	Binomial link("logit");
-	GLM<Binomial> fit(design_, phenotypes_, link);
+	GLM<Binomial> fit(design_, phenotypes_, link, coef_, tp_);
 	success = fit.success_;
 	p_odds_ = fit.mu_ / (1. - fit.mu_);
 	p_fitted_ = fit.mu_;
@@ -151,13 +151,18 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
   std::map<std::string, double> sample_phen_map;
   std::vector<double> phenotypes;
   std::vector<std::vector<double>> covariates;
+  FileValidator fv;
+  int lineno = -1;
 
   // Parse the phenotype from the ped file.
   while (std::getline(pfs, line)) {
+    lineno++;
     if(line[0] == '#') {
       continue;
     }
     RJBUtil::Splitter<std::string> splitter(line, "\t");
+
+    fv.validate_ped_line(splitter, lineno);
 
     std::string sample_id = splitter[1];
     ped_samples_.push_back(sample_id);
@@ -187,10 +192,12 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
       }
     }
   }
-
+  lineno = -1;
   // Parse the PCA matrix file
   while (ifs.good() && std::getline(ifs, line)) {
+    lineno++;
 	RJBUtil::Splitter<std::string> splitter(line, " \t");
+	fv.validate_cov_line(splitter, lineno);
 	covariates.emplace_back(std::vector<double>());
 
 	unsigned long i = 0;
@@ -282,8 +289,6 @@ void Covariates::parse(std::stringstream &ped_ss, std::stringstream &cov_ss) {
 	}
   }
 
-
-
   // Parse the PCA matrix file
   while (std::getline(cov_ss, line, '\n')) {
 	RJBUtil::Splitter<std::string> splitter(line, " \t");
@@ -342,7 +347,7 @@ void Covariates::parse(std::stringstream &ped_ss, std::stringstream &cov_ss) {
 void Covariates::fit_null() {
   if(linear_) {
 	Gaussian link("identity");
-	GLM<Gaussian> fit(design_, phenotypes_, link);
+	GLM<Gaussian> fit(design_, phenotypes_, link, tp_);
     fitted_ = fit.mu_;
     eta_ = fit.eta_;
     coef_ = fit.beta_;
@@ -359,7 +364,7 @@ void Covariates::fit_null() {
 	p_coef_ = coef_;
   } else {
 	Binomial link("logit");
-	GLM<Binomial> fit(design_, phenotypes_, link);
+	GLM<Binomial> fit(design_, phenotypes_, link, tp_);
 	odds_ = fit.mu_ / (1. - fit.mu_);
 	fitted_ = fit.mu_;
 	eta_ = fit.eta_;

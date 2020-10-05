@@ -13,8 +13,8 @@ FisherTest::FisherTest(Gene &gene, arma::vec &Y, const std::string &ts)
   arma::vec collapse(arma::sum(X, 1));
   collapse(arma::find(collapse > 0)).ones();
 
-  double ncase = 2 * arma::accu(Y);
-  double ncont = 2 * arma::accu(1 - Y);
+  double ncase = arma::accu(Y);
+  double ncont = arma::accu(1 - Y);
 
 #if 0
   case_alt = arma::accu(arma::vec(arma::sum(X, 1) % Y) > 0);
@@ -26,6 +26,7 @@ FisherTest::FisherTest(Gene &gene, arma::vec &Y, const std::string &ts)
   cont_alt = arma::dot(collapse, (1 - Y));
   case_ref = ncase - case_alt;
   cont_ref = ncont - cont_alt;
+
 #endif
   // Following R's implementation
   // 2x2 table
@@ -134,6 +135,7 @@ FisherTest::FisherTest(Gene &gene, arma::vec &Y, const std::string &ts)
   };
 
   or_ = mle(x);
+  std::cerr << "case_alt: " << case_alt << " cont_alt: " << cont_alt << " case_ref: " << case_ref << " cont_ref: " << cont_ref <<  " OR: " << or_ << std::endl;
 }
 
 auto FisherTest::get_or() -> double {

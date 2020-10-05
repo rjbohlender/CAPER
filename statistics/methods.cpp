@@ -209,8 +209,8 @@ double Methods::CMC1df(Gene &gene, arma::vec &Y, const std::string &k) const {
 	arma::vec X(arma::sum(gene.get_matrix(k), 1));
 	X(arma::find(X > 0)).ones();
 
-	arma::uword ncase = 2 * arma::accu(Y);
-	arma::uword ncont = 2 * arma::accu(1 - Y);
+	arma::uword ncase = arma::accu(Y);
+	arma::uword ncont = arma::accu(1 - Y);
 
 	double case_alt = arma::accu(X % Y);
 	double cont_alt = arma::accu(X % (1 - Y));
@@ -224,7 +224,9 @@ double Methods::CMC1df(Gene &gene, arma::vec &Y, const std::string &k) const {
 	  cont_ref += 0.5;
 	}
 
-	return case_alt * cont_ref / (cont_alt * case_ref);
+	double OR = case_alt * cont_ref / (cont_alt * case_ref);
+
+	return OR;
   } else {
 	FisherTest fisherTest(gene, Y, k);
 	return fisherTest.get_pval();
@@ -244,9 +246,9 @@ double Methods::RVT1(Gene &gene,
 	// Quantitative trait
 	arma::sp_mat X = arma::ceil(gene.get_matrix(k).t() / 2);
 	Gaussian link("identity");
-	GLM<Gaussian> fit1(design, Y, link);
+	GLM<Gaussian> fit1(design, Y, link, initial_beta, tp_);
 	arma::mat d2 = arma::join_horiz(design, arma::rowvec(arma::sum(X) / X.n_rows).t());
-	GLM<Gaussian> fit2(d2, Y, link, fit1.beta_);
+	GLM<Gaussian> fit2(d2, Y, link, fit1.beta_, tp_);
 
 	double n = Y.n_elem;
 
@@ -262,9 +264,9 @@ double Methods::RVT1(Gene &gene,
 	// Convert to 0/1 to make summing the number of carriers easier.
 	arma::sp_mat X = arma::ceil(gene.get_matrix(k).t() / 2);
 	Binomial link("logit");
-	GLM<Binomial> fit1(design, Y, link);
+	GLM<Binomial> fit1(design, Y, link, initial_beta, tp_);
 	arma::mat d2 = arma::join_horiz(design, arma::rowvec(arma::sum(X) / X.n_rows).t());
-	GLM<Binomial> fit2(d2, Y, link, fit1.beta_);
+	GLM<Binomial> fit2(d2, Y, link, fit1.beta_, tp_);
 
 	boost::math::chi_squared chisq(1);
 	double stat = fit1.dev_ - fit2.dev_;
@@ -285,10 +287,10 @@ double Methods::RVT2(Gene &gene,
 	// Quantitative trait
 	arma::sp_mat X = gene.get_matrix(k).t();
 	Gaussian link("identity");
-	GLM<Gaussian> fit1(design, Y, link);
+	GLM<Gaussian> fit1(design, Y, link, initial_beta, TaskParams());
 	arma::rowvec r = arma::conv_to<arma::rowvec>::from(arma::rowvec(arma::sum(X)) > 0);
 	arma::mat d2 = arma::join_horiz(design, r.t());
-	GLM<Gaussian> fit2(d2, Y, link, fit1.beta_);
+	GLM<Gaussian> fit2(d2, Y, link, fit1.beta_, TaskParams());
 
 	double n = Y.n_elem;
 
@@ -302,10 +304,10 @@ double Methods::RVT2(Gene &gene,
 	// Binary trait
 	arma::sp_mat X = gene.get_matrix(k).t();
 	Binomial link("logit");
-	GLM<Binomial> fit1(design, Y, link);
+	GLM<Binomial> fit1(design, Y, link, initial_beta, TaskParams());
 	arma::rowvec r = arma::conv_to<arma::rowvec>::from(arma::rowvec(arma::sum(X)) > 0);
 	arma::mat d2 = arma::join_horiz(design, r.t());
-	GLM<Binomial> fit2(d2, Y, link, fit1.beta_);
+	GLM<Binomial> fit2(d2, Y, link, fit1.beta_, TaskParams());
 
 	boost::math::chi_squared chisq(1);
 	double stat = fit1.dev_ - fit2.dev_;
