@@ -11,6 +11,7 @@
 #include <boost/math/tools/toms748_solve.hpp>
 
 #include "../link/family.hpp"
+#include "../utility/taskparams.hpp"
 
 template <typename LinkT>
 struct GLM {
@@ -23,9 +24,9 @@ struct GLM {
   arma::vec n_;
   double dev_;
   arma::uvec indices_;
-  bool success;
+  bool success_;
 
-  GLM(arma::mat &X, arma::vec &Y, LinkT &link) {
+  GLM(arma::mat &X, arma::vec &Y, LinkT &link, TaskParams tp) {
     indices_ = arma::regspace<arma::uvec>(0, X.n_cols - 1);
     weights_ = arma::vec(X.n_rows, arma::fill::ones);
 
@@ -40,35 +41,25 @@ struct GLM {
       dev_ = arma::accu(link.dev_resids(Y, mu_, arma::vec(X.n_rows, arma::fill::ones)));
     }
 
-	try{
-      // beta_ = gradient_descent(X, Y);
-      // beta_ = irls_svdnewton(X, Y);
-      beta_ = irls_qr(X, Y);
-      // beta_ = irls_qr_R(X, Y);
-	} catch(std::exception &e) {
-      std::cerr << "IRLS failed; Using gradient descent." << std::endl;
-      //beta_ = gradient_descent(X, Y);
-      //std::cerr << e.what();
-      try {
-		beta_ = gradient_descent(X, Y);
-		std::cerr << beta_;
-	  } catch(std::exception &e) {
-		beta_ = arma::vec(X.n_cols);
-		mu_ = arma::vec(X.n_rows);
-		eta_ = arma::vec(X.n_rows);
-		beta_.fill(arma::datum::nan);
-		mu_.fill(arma::datum::nan);
-		eta_.fill(arma::datum::nan);
-	  }
-    }
+	if (tp.optimizer == "irls") {
+	  beta_ = irls(X, Y);
+	} else if(tp.optimizer == "irls_svdnewton") {
+	  beta_ = irls_svdnewton(X, Y);
+	} else if(tp.optimizer == "irls_qr") {
+	  beta_ = irls_qr(X, Y);
+	} else if(tp.optimizer == "irls_qr_R") {
+	  beta_ = irls_qr_R(X, Y);
+	} else if(tp.optimizer == "gradient_descent") {
+	  beta_ = gradient_descent(X, Y);
+	}
 
-    mu_ = link.linkinv(X.cols(indices_), beta_);
+	mu_ = link.linkinv(X.cols(indices_), beta_);
     eta_ = link.link(mu_);
 
-    success = !(mu_.has_nan() || eta_.has_nan());
+	success_ = !(mu_.has_nan() || eta_.has_nan());
   }
 
-  GLM(arma::mat &X, arma::vec &Y, LinkT &link, arma::vec initial_beta) {
+  GLM(arma::mat &X, arma::vec &Y, LinkT &link, arma::vec initial_beta, TaskParams tp) {
     indices_ = arma::regspace<arma::uvec>(0, X.n_cols - 1);
     weights_ = arma::vec(X.n_rows, arma::fill::ones);
 
@@ -87,32 +78,22 @@ struct GLM {
       dev_ = arma::accu(link.dev_resids(Y, mu_, arma::vec(X.n_rows, arma::fill::ones)));
     }
 
-    try{
-      // beta_ = gradient_descent(X, Y);
-      // beta_ = irls_svdnewton(X, Y);
-      beta_ = irls_qr(X, Y);
-      // beta_ = irls_qr_R(X, Y);
-    } catch(std::exception &e) {
-      std::cerr << "IRLS failed; Using gradient descent." << std::endl;
-      //beta_ = gradient_descent(X, Y);
-      //std::cerr << e.what();
-      try {
-        beta_ = gradient_descent(X, Y);
-        std::cerr << beta_;
-      } catch(std::exception &e) {
-        beta_ = arma::vec(X.n_cols);
-        mu_ = arma::vec(X.n_rows);
-        eta_ = arma::vec(X.n_rows);
-        beta_.fill(arma::datum::nan);
-        mu_.fill(arma::datum::nan);
-        eta_.fill(arma::datum::nan);
-      }
-    }
+    if (tp.optimizer == "irls") {
+	  beta_ = irls(X, Y);
+    } else if(tp.optimizer == "irls_svdnewton") {
+      beta_ = irls_svdnewton(X, Y);
+    } else if(tp.optimizer == "irls_qr") {
+	  beta_ = irls_qr(X, Y);
+	} else if(tp.optimizer == "irls_qr_R") {
+	  beta_ = irls_qr_R(X, Y);
+	} else if(tp.optimizer == "gradient_descent") {
+	  beta_ = gradient_descent(X, Y);
+	}
 
-    mu_ = link.linkinv(X.cols(indices_), beta_);
+	mu_ = link.linkinv(X.cols(indices_), beta_);
     eta_ = link.link(mu_);
 
-    success = !(mu_.has_nan() || eta_.has_nan());
+	success_ = !(mu_.has_nan() || eta_.has_nan());
   }
   // Algorithms for finding the optimum
   auto gradient_descent(arma::mat &X, arma::colvec &Y) -> arma::vec;
@@ -121,6 +102,7 @@ struct GLM {
   auto irls_qr_R(arma::mat &X, arma::colvec &Y) -> arma::vec;
   auto irls(arma::mat &X, arma::colvec &Y) -> arma::vec;
   auto svd_subset(arma::mat &X) -> arma::uvec;
+  auto newton_rhapson(arma::mat &X, arma::vec &Y) -> arma::vec;
 };
 
 template<typename LinkT>
@@ -166,7 +148,7 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
   }
 
   // Matrices and Vectors
-  arma::vec eta(m, arma::fill::randn);
+  eta_ = arma::vec (m, arma::fill::randn);
   arma::vec s(n, arma::fill::randn);
   arma::vec weights(m, arma::fill::ones);
   arma::vec s_old = s;
@@ -187,14 +169,14 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
   arma::vec diff = s - s_old;
 
   do {
-    arma::vec g = link.linkinv(eta(good));
+    arma::vec g = link.linkinv(eta_(good));
     arma::vec varg = link.variance(g);
-    arma::vec gprime = link.mueta(eta(good));
+    arma::vec gprime = link.mueta(eta_(good));
 
     arma::vec z(m);
     arma::vec W(m);
 
-    z(good) = eta(good) + (Y(good) - g) / gprime;
+    z(good) = eta_(good) + (Y(good) - g) / gprime;
     W(good) = weights(good) % arma::pow(gprime, 2) / varg;
 
 	good = arma::find(W > arma::datum::eps * 2);
@@ -206,14 +188,6 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
 	Wgood = W(good);
     arma::mat UWU = Ugood.t() * (Ugood.each_col() % Wgood);
     success = arma::chol(C, UWU);
-#if 0
-    double jitter = 1e-9;
-    while(!success && jitter < 1.) {
-      UWU.diag() += jitter;
-      success = arma::chol(C, UWU);
-      jitter *= 10;
-    }
-#endif
     if (!success) {
       throw(std::runtime_error("Cholesky decomposition of UWU matrix failed."));
     }
@@ -222,7 +196,8 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
     s = solve(arma::trimatl(C.t()), Ugood.t() * (Wgood % z));
 	s = solve(arma::trimatu(C), s);
 
-    eta = Ugood * s;
+    eta_ = Ugood * s;
+    mu_ = link.linkinv(eta_);
 
     iter++;
 
@@ -235,7 +210,9 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
     std::cerr << "IRLS failed to converge." << std::endl;
   }
 
-  return (V * (arma::diagmat(1. / S) * (Ugood.t() * eta(good))));
+  dev_ = arma::accu(link.dev_resids(Y, mu_, weights_));
+  beta_ = (V * (arma::diagmat(1. / S) * (Ugood.t() * eta_(good))));
+  return beta_;
 }
 template<typename LinkT>
 
@@ -400,29 +377,29 @@ auto GLM<LinkT>::irls(arma::mat &X, arma::colvec &Y) -> arma::vec {
   const auto max_iter = 25;
   auto iter = 0;
 
-  arma::vec x(X.n_cols, arma::fill::zeros);
+  beta_ = arma::vec(X.n_cols, arma::fill::zeros);
   arma::vec xold;
   double devold;
   for(iter = 0; iter < max_iter; iter++) {
-    arma::vec eta = X * x;
-    arma::vec g = link.linkinv(eta);
-	arma::vec gprime = link.mueta(eta);
-	arma::vec z = eta + (Y - g) / gprime;
-	arma::vec W = arma::pow(gprime, 2) / link.variance(g);
-	xold = x;
-	x = arma::solve(X.t() * (X.each_col() % W), X.t() * (W % z));
+    eta_ = X * beta_;
+    mu_ = link.linkinv(eta_);
+	arma::vec muprime = link.mueta(eta_);
+	arma::vec z = eta_ + (Y - mu_) / muprime;
+	arma::vec W = arma::pow(muprime, 2) / link.variance(mu_);
+	xold = beta_;
+	beta_ = arma::solve(X.t() * (X.each_col() % W), X.t() * (W % z));
 	devold = dev_;
-    dev_ = arma::sum(link.dev_resids(Y, link.linkinv(X * x), arma::vec(X.n_rows, arma::fill::ones)));
+    dev_ = arma::sum(link.dev_resids(Y, link.linkinv(X * beta_), arma::vec(X.n_rows, arma::fill::ones)));
     if(!std::isfinite(dev_)) {
       int i = 0;
       while (!std::isfinite(dev_)) {
         if(i >= max_iter) {
           throw(std::runtime_error("Unable to correct step size for divergent IRLS step."));
         }
-        x = (x + xold) / 2.;
-        eta = X * x;
-        g = link.linkinv(eta);
-        dev_ = arma::sum(link.dev_resids(Y, g, arma::vec(X.n_rows, arma::fill::ones)));
+		beta_ = (beta_ + xold) / 2.;
+		eta_ = X * beta_;
+		mu_ = link.linkinv(eta_);
+        dev_ = arma::sum(link.dev_resids(Y, mu_, arma::vec(X.n_rows, arma::fill::ones)));
         i++;
       }
     }
@@ -431,7 +408,34 @@ auto GLM<LinkT>::irls(arma::mat &X, arma::colvec &Y) -> arma::vec {
 	  break;
 	}
   }
-  return x;
+  return beta_;
+}
+template<typename LinkT>
+auto GLM<LinkT>::newton_rhapson(arma::mat &X, arma::vec &Y) -> arma::vec {
+  int max_iter = 100;
+  int iter = 0;
+  double last_dev = -99999;
+  beta_ = arma::vec(X.n_cols, arma::fill::zeros);
+  while (iter < max_iter) {
+    eta_ = X * beta_;
+    mu_ = link.linkinv(eta_);
+    var_ = link.variance(mu_);
+
+    arma::mat D = X.t() * arma::diagmat(var_) * X;
+    arma::vec r = X.t() * (Y - mu_);
+    arma::vec delta_beta = arma::solve(D, r);
+
+    beta_ += delta_beta;
+    dev_ = arma::accu(link.dev_resids(Y, mu_, arma::vec(X.n_rows, arma::fill::ones)));
+    if(std::abs(dev_ - last_dev) < 1e-3) {
+      iter = 0;
+      break;
+    }
+
+    last_dev = dev_;
+    iter++;
+  }
+  return beta_;
 }
 
 #endif //PERMUTE_ASSOCIATE_GLM_HPP

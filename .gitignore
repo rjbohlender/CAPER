@@ -76,3 +76,11 @@ bernoulli.R
 /tools/vcf2matrix/cmake-build-debug/
 /test-sim/
 /carva.img.tar.gz
+/cmake-build-debug-remote-host/
+/cmake-build-release-remote-host/
+/bak/
+/cmake-build-debug-system/CMakeFiles/clion-log.txt
+/cmake-build-release-system/CMakeFiles/clion-log.txt
+/cmake-build-debug-system/
+/cmake-build-release-system/
+/R_test/

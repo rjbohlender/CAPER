@@ -51,12 +51,12 @@ arma::sp_mat &Gene::get_matrix(const std::string &k) {
   return genotypes_[k];
 }
 
-void Gene::set_matrix(const std::string &k, arma::sp_mat &&data) {
-  genotypes_[k] = data;
+void Gene::set_matrix(const std::string &k, arma::sp_mat &data) {
+  genotypes_[k] = std::move(data);
 }
 
-std::string &Gene::get_gene() {
-  return gene_;
+void Gene::set_matrix(const std::string &k, arma::sp_mat &&data) {
+  genotypes_[k] = std::move(data);
 }
 
 std::vector<std::string> &Gene::get_transcripts() {
@@ -75,7 +75,7 @@ std::vector<std::string> &Gene::get_positions(const std::string &k) {
   return positions_[k];
 }
 
-void Gene::clear(Covariates &cov, std::unordered_map<std::string, Result> &results, TaskParams &tp) {
+void Gene::clear(Covariates &cov, std::unordered_map<std::string, Result> &results, const TaskParams &tp) {
   if (!tp.nodetail)
     generate_detail(cov, results, tp);
   if (tp.method == "VAAST") {
@@ -104,8 +104,8 @@ void Gene::parse(std::stringstream &ss) {
     }
     RJBUtil::Splitter<std::string> splitter(line, "\t");
 
-    if (gene_.empty()) {
-      gene_ = splitter[0];
+    if (gene_name.empty()) {
+	  gene_name = splitter[0];
     }
     auto found = std::find(std::begin(transcripts_), std::end(transcripts_), splitter[1]);
     std::string transcript = splitter[1];
@@ -198,10 +198,10 @@ void Gene::parse(std::stringstream &ss) {
       bool bmaf = maf[i] > tp_.maf;
       if (bmac || bmaf) {
         if (tp_.verbose && bmac) {
-          std::cerr << "Removing: " << gene_ << " " << ts << " " << positions_[ts][i] << " | count: "
+          std::cerr << "Removing: " << gene_name << " " << ts << " " << positions_[ts][i] << " | count: "
                     << sums[i] << " due to MAC filter." << std::endl;
         } else if (tp_.verbose && bmaf) {
-          std::cerr << "Removing: " << gene_ << " " << ts << " " << positions_[ts][i] << " | frequency: "
+          std::cerr << "Removing: " << gene_name << " " << ts << " " << positions_[ts][i] << " | frequency: "
                     << maf[i] << " due to MAF filter." << std::endl;
         }
         sums.shed_col(i);
@@ -214,7 +214,7 @@ void Gene::parse(std::stringstream &ss) {
     weights_[ts] = arma::vec(nvariants_[ts], arma::fill::zeros);
     // Check if any polymorphic. Mark transcripts skippable if all fixed.
     if (arma::accu(sums) < tp_.min_minor_allele_count || nvariants_[ts] < tp_.min_variant_count) {
-      std::cerr << "gene: " << gene_ << " marked skippable." << std::endl;
+      std::cerr << "gene: " << gene_name << " marked skippable." << std::endl;
       polymorphic_[ts] = false;
     } else {
       polymorphic_[ts] = true;
@@ -245,7 +245,7 @@ void Gene::set_scores(const std::string &k, arma::vec &scores) {
   variant_scores_[k] = scores;
 }
 
-void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Result> &results, TaskParams &tp) {
+void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Result> &results, const TaskParams &tp) {
   std::stringstream detail;
 
   arma::vec Y = cov.get_original_phenotypes();
@@ -351,7 +351,7 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
       Gaussian link("identity");
       arma::mat D = arma::join_vert(cov.get_covariate_matrix(),
                                     arma::mat(X).each_row() - maf);
-      GLM<Gaussian> fit(D, Y, link);
+      GLM<Gaussian> fit(D, Y, link, nullptr, TaskParams());
 
       // Transform values
       arma::uword n = cov.get_covariate_matrix().n_rows;
@@ -409,7 +409,7 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
   if (tp.linear) {
     // Output for quantitative traits
     for (const auto &v : pos_ts_map) {
-      detail << gene_ << "\t";
+      detail << gene_name << "\t";
       print_comma_sep(v.second, detail);
       detail << "\t";
       detail << boost::format("%1$s\t%2$.2f\t%3$.2f\t%4$d")
@@ -422,7 +422,7 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
   } else {
     // Output for binary traits
     for (const auto &v : pos_ts_map) {
-      detail << gene_ << "\t";
+      detail << gene_name << "\t";
       print_comma_sep(v.second, detail);
       detail << "\t";
       detail << boost::format("%1$s\t%2$.2f\t%3$.2f\t%4$d\t%5$d\t%6$d\t%7$d\t%8$d")
@@ -444,11 +444,11 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
   detail_ = detail.str();
 }
 
-auto Gene::get_detail() -> std::string {
+auto Gene::get_detail() const -> std::string {
   return detail_;
 }
 
-auto Gene::get_vaast() -> std::map<std::string, std::string> {
+auto Gene::get_vaast() const -> std::map<std::string, std::string> {
   return vaast_;
 }
 
@@ -456,7 +456,7 @@ std::vector<std::string> &Gene::get_samples() {
   return samples_;
 }
 
-auto Gene::testable(const std::string &k, Covariates &cov, TaskParams &tp) -> bool {
+auto Gene::testable(const std::string &k, Covariates &cov, const TaskParams &tp) -> bool {
   arma::vec Yvec = cov.get_original_phenotypes();
   arma::sp_mat Xmat(genotypes_[k]);
 
@@ -480,8 +480,7 @@ auto Gene::testable(const std::string &k, Covariates &cov, TaskParams &tp) -> bo
   }
   assert(arma::accu(extreme_phen) == ncase);
 
-  VAASTLogic vaast(genotypes_[k], extreme_phen, weights_[k], positions_[k], k, tp.score_only_minor, tp
-	  .score_only_alternative, false, tp.group_size, 2., 0, false);
+  VAASTLogic vaast(genotypes_[k], extreme_phen, weights_[k], positions_[k], k, false, tp.group_size, 2., 0, false);
 
   return arma::accu(vaast.expanded_scores > 0) >= 4;
 }
@@ -502,7 +501,7 @@ auto Gene::generate_vaast(Covariates &cov) -> void {
   // One entry per transcript
   for (const auto &ts : transcripts_) {
     std::stringstream vaast_ss;
-    vaast_ss << ">" << ts << "\t" << gene_ << std::endl;
+    vaast_ss << ">" << ts << "\t" << gene_name << std::endl;
 
     arma::mat X(genotypes_[ts]);
     arma::vec Y(cov.get_original_phenotypes());

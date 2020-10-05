@@ -33,6 +33,8 @@ void print_semicolon_sep(arma::uvec &x, std::ostream &os);
  */
 class Gene {
 public:
+  std::string gene_name;
+
   Gene(std::stringstream &ss,
 	   unsigned long nsamples,
 	   std::map<std::string, arma::uword> &nvariants,
@@ -41,10 +43,9 @@ public:
 
   void print();
 
-  // Member access
-  std::string &get_gene();
   arma::sp_mat &get_matrix(const std::string &k);
   arma::sp_mat &get_missing(const std::string &k);
+  void set_matrix(const std::string &k, arma::sp_mat &data);
   void set_matrix(const std::string &k, arma::sp_mat &&data);
   std::vector<std::string> &get_transcripts();
   arma::uword get_nvariants(const std::string &k);
@@ -54,22 +55,21 @@ public:
   void set_weights(const std::string &k, arma::vec &weights);
   arma::vec &get_scores(const std::string &k);
   void set_scores(const std::string &k, arma::vec &scores);
-  auto get_detail() -> std::string;
-  auto get_vaast() -> std::map<std::string, std::string>;
+  auto get_detail() const -> std::string;
+  auto get_vaast() const -> std::map<std::string, std::string>;
   auto is_skippable() const -> bool;
   auto is_polymorphic(const std::string &k) -> bool;
   auto is_weighted(const std::string &k) -> bool;
   auto is_testable() const -> bool;
-  auto generate_detail(Covariates &cov, std::unordered_map<std::string, Result> &results, TaskParams &tp) -> void;
+  auto generate_detail(Covariates &cov, std::unordered_map<std::string, Result> &results, const TaskParams &tp) -> void;
   auto generate_vaast(Covariates &cov) -> void;
-  auto clear(Covariates &cov, std::unordered_map<std::string, Result> &results, TaskParams &tp) -> void;
+  auto clear(Covariates &cov, std::unordered_map<std::string, Result> &results, const TaskParams &tp) -> void;
 
 private:
   std::map<std::string, bool> weights_set_;
 
   unsigned long nsamples_;
   std::map<std::string, arma::uword> nvariants_;
-  std::string gene_;
   std::vector<std::string> transcripts_;
   std::map<std::string, std::vector<std::string>> positions_;
 
@@ -93,7 +93,7 @@ private:
 
   void parse(std::stringstream &ss);
 
-  auto testable(const std::string &k, Covariates &cov, TaskParams &tp) -> bool;
+  auto testable(const std::string &k, Covariates &cov, const TaskParams &tp) -> bool;
 };
 
 #endif //PERMUTE_ASSOCIATE_GENE_HPP

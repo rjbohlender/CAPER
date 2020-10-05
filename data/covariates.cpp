@@ -3,6 +3,7 @@
 //
 
 #include <algorithm>
+#include <set>
 
 #include "covariates.hpp"
 
@@ -11,24 +12,26 @@
 #include "../statistics/glm.hpp"
 #include "../statistics/bayesianglm.hpp"
 #include "../utility/indexsort.hpp"
+#include "../utility/filevalidator.hpp"
 
-
-
-Covariates::Covariates(const std::string& ifile, const std::string& pedfile, bool linear)
-	: nsamples_(0),
+Covariates::Covariates(TaskParams tp)
+	: tp_(std::move(tp)),
+	  nsamples_(0),
 	  ncases_(0),
+	  ncontrols_(0),
 	  crand((int)time(nullptr)),
-	  linear_(linear) {
-  parse(ifile, pedfile);
+	  linear_(tp_.linear) {
+  parse(tp_.covariates_path, tp_.ped_path);
   sorted_ = false;
 }
 
-Covariates::Covariates(std::stringstream &ss)
+Covariates::Covariates(std::stringstream &ped_ss, std::stringstream& cov_ss)
 	: nsamples_(0),
 	  ncases_(0),
+	  ncontrols_(0),
 	  crand((int)time(nullptr)),
 	  linear_(false) {
-  parse(ss);
+  parse(ped_ss, cov_ss);
   sorted_ = false;
 }
 
@@ -87,8 +90,8 @@ void Covariates::refit_permuted() {
   bool success;
   if(linear_) {
 	Gaussian link("identity");
-	GLM<Gaussian> fit(design_, phenotypes_, link);
-	success = fit.success;
+	GLM<Gaussian> fit(design_, phenotypes_, link, coef_, tp_);
+	success = fit.success_;
 	p_fitted_ = fit.mu_;
 	p_eta_ = fit.eta_;
 	p_coef_ = fit.beta_;
@@ -99,8 +102,8 @@ void Covariates::refit_permuted() {
 	p_odds_ = temp_mu / (1. - temp_mu); // Individual odds, as if the data were dichotomized
   } else {
 	Binomial link("logit");
-	GLM<Binomial> fit(design_, phenotypes_, link);
-	success = fit.success;
+	GLM<Binomial> fit(design_, phenotypes_, link, coef_, tp_);
+	success = fit.success_;
 	p_odds_ = fit.mu_ / (1. - fit.mu_);
 	p_fitted_ = fit.mu_;
 	p_eta_ = fit.eta_;
@@ -148,18 +151,28 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
   std::map<std::string, double> sample_phen_map;
   std::vector<double> phenotypes;
   std::vector<std::vector<double>> covariates;
+  FileValidator fv;
+  int lineno = -1;
 
   // Parse the phenotype from the ped file.
   while (std::getline(pfs, line)) {
+    lineno++;
     if(line[0] == '#') {
       continue;
     }
     RJBUtil::Splitter<std::string> splitter(line, "\t");
 
+    fv.validate_ped_line(splitter, lineno);
+
     std::string sample_id = splitter[1];
     ped_samples_.push_back(sample_id);
     if(ifile.empty()) {
 	  phenotypes.push_back(std::stod(splitter[5]) - 1);
+	  if (phenotypes.back() == 1) {
+		ncases_++;
+	  } else {
+		ncontrols_++;
+	  }
 	}
     nsamples_++;
     if(linear_) {
@@ -179,12 +192,12 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
       }
     }
   }
-
-
-
+  lineno = -1;
   // Parse the PCA matrix file
   while (ifs.good() && std::getline(ifs, line)) {
+    lineno++;
 	RJBUtil::Splitter<std::string> splitter(line, " \t");
+	fv.validate_cov_line(splitter, lineno);
 	covariates.emplace_back(std::vector<double>());
 
 	unsigned long i = 0;
@@ -195,8 +208,11 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
 
 		cov_samples_.push_back(v);
 
-		if (phen == 1)
+		if (phen == 1) {
 		  ncases_++;
+		} else {
+		  ncontrols_++;
+		}
 
 		phenotypes.push_back(phen);
 	  } else {
@@ -205,8 +221,9 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
 	  i++;
 	}
   }
-  std::cerr << "nsamples_: " << nsamples_ << "\n";
+  std::cerr << "nsamples: " << nsamples_ << "\n";
   std::cerr << "ncases: " << ncases_ << "\n";
+  std::cerr << "ncontrols: " << ncontrols_ << "\n";
 
   phenotypes_ = arma::conv_to<arma::colvec>::from(phenotypes);
   original_ = arma::conv_to<arma::colvec>::from(phenotypes);
@@ -237,57 +254,90 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
  * @brief For debugging
  * @param ss A stringstream to be parsed.
  */
-void Covariates::parse(std::stringstream &ss) {
+void Covariates::parse(std::stringstream &ped_ss, std::stringstream &cov_ss) {
   std::string line;
-
+  std::map<std::string, double> sample_phen_map;
   std::vector<double> phenotypes;
   std::vector<std::vector<double>> covariates;
 
-  while (std::getline(ss, line, '\n')) {
+  // Parse the phenotype from the ped file.
+  while (std::getline(ped_ss, line, '\n')) {
+	if(line[0] == '#') {
+	  continue;
+	}
 	RJBUtil::Splitter<std::string> splitter(line, "\t");
+
+	std::string sample_id = splitter[1];
+	ped_samples_.push_back(sample_id);
+
+	nsamples_++;
+	if(linear_) {
+	  try {
+		sample_phen_map[sample_id] = std::stod(splitter[5]);
+	  } catch(std::exception &e) {
+		std::cerr << "Failed to convert quantitative phenotype in .ped file column 7.\n";
+		throw(e);
+	  }
+	} else {
+	  try {
+		double phen = std::stoi(splitter[5]);
+		sample_phen_map[sample_id] = phen - 1;
+	  } catch(std::exception &e) {
+		std::cerr << "Failed to convert binary phenotype in .ped file column 6.\n";
+		throw(e);
+	  }
+	}
+  }
+
+  // Parse the PCA matrix file
+  while (std::getline(cov_ss, line, '\n')) {
+	RJBUtil::Splitter<std::string> splitter(line, " \t");
+	covariates.emplace_back(std::vector<double>());
 
 	unsigned long i = 0;
 	for (const auto &v : splitter) {
 	  if (i == 0) {
-		int phen = std::stoi(v);
+		// Get phenotype of current sample
+		auto phen = sample_phen_map[v];
 
-		if (phen == 1)
+		cov_samples_.push_back(v);
+
+		if (phen == 1) {
 		  ncases_++;
-		nsamples_++;
-
-		phenotypes.push_back(std::stoi(v));
-	  } else {
-		if (covariates.size() < i) {
-		  covariates.emplace_back(std::vector<double>());
-		  covariates.at(i - 1).push_back(std::stod(v));
 		} else {
-		  covariates.at(i - 1).push_back(std::stod(v));
+		  ncontrols_++;
 		}
+
+		phenotypes.push_back(phen);
+	  } else {
+		covariates.back().push_back(std::stod(v));
 	  }
 	  i++;
 	}
   }
+  std::cerr << "nsamples: " << nsamples_ << "\n";
+  std::cerr << "ncases: " << ncases_ << "\n";
+  std::cerr << "ncontrols: " << ncontrols_ << "\n";
 
-#ifndef NDEBUG
-  std::cerr << "nsamples_: " << nsamples_ << "\n";
-  std::cerr << "ncases_: " << ncases_ << "\n";
-#endif
+  phenotypes_ = arma::conv_to<arma::vec>::from(phenotypes);
+  original_ = arma::conv_to<arma::vec>::from(phenotypes);
 
-  phenotypes_ = arma::conv_to<arma::colvec>::from(phenotypes);
-  original_ = arma::conv_to<arma::colvec>::from(phenotypes);
-
-  // Features are i, samples are j
-  design_ = arma::mat(covariates.size() + 1, covariates[0].size());
-  for (arma::uword i = 0; i < covariates.size() + 1; i++) {
-	for (arma::uword j = 0; j < covariates[0].size(); j++) {
-	  if (i == 0) {
-		// First feature is just 1s, intercept
-		// Do this here
-		design_(i, j) = 1;
-	  } else {
-		design_(i, j) = covariates[i - 1][j];
+  // Features are j, samples are i
+  if(!covariates.empty()) {
+	design_ = arma::mat(covariates.size(), covariates[0].size() + 1, arma::fill::zeros);
+	for (arma::uword i = 0; i < covariates.size(); i++) {
+	  for (arma::uword j = 0; j < covariates[0].size() + 1; j++) {
+		if (j == 0) {
+		  // First feature is just 1s, intercept
+		  // Do this here
+		  design_(i, j) = 1;
+		} else {
+		  design_(i, j) = covariates[i][j - 1];
+		}
 	  }
 	}
+  } else {
+	design_ = arma::mat(nsamples_, 1, arma::fill::ones);
   }
 #ifndef NDEBUG
   std::cerr << "Covariates_ n_rows = " << design_.n_rows << " Covariates_ n_cols = " << design_.n_cols << "\n";
@@ -296,8 +346,8 @@ void Covariates::parse(std::stringstream &ss) {
 
 void Covariates::fit_null() {
   if(linear_) {
-    Gaussian link("identity");
-    GLM<Gaussian> fit(design_, phenotypes_, link);
+	Gaussian link("identity");
+	GLM<Gaussian> fit(design_, phenotypes_, link, tp_);
     fitted_ = fit.mu_;
     eta_ = fit.eta_;
     coef_ = fit.beta_;
@@ -314,7 +364,7 @@ void Covariates::fit_null() {
 	p_coef_ = coef_;
   } else {
 	Binomial link("logit");
-	GLM<Binomial> fit(design_, phenotypes_, link);
+	GLM<Binomial> fit(design_, phenotypes_, link, tp_);
 	odds_ = fit.mu_ / (1. - fit.mu_);
 	fitted_ = fit.mu_;
 	eta_ = fit.eta_;
@@ -342,19 +392,50 @@ void Covariates::sort_covariates(std::string &header) {
 
   // Cov order
   if(!cov_samples_.empty()) {
-    arma::uvec indices = arma::uvec(cov_samples_.size(), arma::fill::zeros);
+	if (splitter.size() - 3 != cov_samples_.size()) {
+	  throw(std::runtime_error("The number of samples differs between the covariate file and the matrix file."));
+	}
+	arma::uvec cov_indices = arma::uvec(cov_samples_.size(), arma::fill::zeros);
     for(auto it = cov_samples_.begin(); it != cov_samples_.end(); it++) {
       header_map[*it] = std::distance(cov_samples_.begin(), it);
     }
     for(arma::uword i = 0; i < phenotypes_.n_rows; i++) {
-      indices(i) = header_map[splitter[i + 3]];
+	  cov_indices(i) = header_map[splitter[i + 3]];
+    }
+    header_map.clear();
+	arma::uvec ped_indices = arma::uvec(ped_samples_.size(), arma::fill::zeros); // Separate ped indices
+	for(auto it = ped_samples_.begin(); it != ped_samples_.end(); it++) {
+	  header_map[*it] = std::distance(ped_samples_.begin(), it);
+	}
+	for(arma::uword i = 0; i < phenotypes_.n_rows; i++) {
+	  ped_indices(i) = header_map[splitter[i + 3]];
+	}
+	std::set<std::string> seen;
+    for(auto v : cov_samples_) {
+      if(seen.find(v) == seen.end()) {
+		seen.insert(v);
+	  } else {
+        std::cerr << "cov duplicate: " << v << std::endl;
+      }
     }
 
-    // Sort the phenotypes and covariates according to the order in the matrix file.
-    original_ = phenotypes_(indices);
-    phenotypes_ = phenotypes_(indices);
-    design_ = design_.rows(indices);
+    seen.clear();
+	for(auto v : splitter) {
+	  if(seen.find(v) == seen.end()) {
+		seen.insert(v);
+	  } else {
+		std::cerr << "header duplicate: " << v << std::endl;
+	  }
+	}
+
+	// Sort the phenotypes and covariates according to the order in the matrix file.
+    original_ = phenotypes_(cov_indices); // Phenotypes are parsed in covariate order if covariates are provided.
+	phenotypes_ = phenotypes_(cov_indices);
+    design_ = design_.rows(cov_indices);
   } else {
+	if (splitter.size() - 3 != ped_samples_.size()) {
+	  throw(std::runtime_error("The number of samples differs between the ped file and the matrix file."));
+	}
     arma::uvec indices = arma::uvec(ped_samples_.size(), arma::fill::zeros);
     for(auto it = ped_samples_.begin(); it != ped_samples_.end(); it++) {
       header_map[*it] = std::distance(ped_samples_.begin(), it);
@@ -365,7 +446,7 @@ void Covariates::sort_covariates(std::string &header) {
 
     // Sort the phenotypes and covariates according to the order in the matrix file.
     original_ = phenotypes_(indices);
-    phenotypes_ = phenotypes_(indices);
+	phenotypes_ = phenotypes_(indices);
     design_ = design_.rows(indices);
   }
 

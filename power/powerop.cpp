@@ -40,7 +40,6 @@ auto PowerOp::power() -> void {
   for (const auto &ts : pt_.gene.get_transcripts()) {
 	if (pt_.tp.alpha.size() > 1) {
 	  for (arma::uword k = 0; k < pt_.tp.ncases.size(); k++) {
-		permute_.reset();
 		// Alpha vector to track the successes
 		success_map_[ts].push_back(arma::vec(pt_.tp.alpha.size(), arma::fill::zeros));
 		arma::uword ncases = pt_.tp.ncases[k];
@@ -66,25 +65,21 @@ auto PowerOp::power() -> void {
 			// We need to permute to get a p-value
 			// Cease permutation if the p-value ci excludes alpha above or below
 			// If below, call it a success
-			int block = static_cast<int>(pt_.tp.stage_2_permutations); // Permutation block size
+			int block = static_cast<int>(pt_.tp.nperm); // Permutation block size
 			double successes = 0;
 			double p;
 			double val;
 
 			arma::uvec idx = arma::join_vert(cases_(case_idx_), controls_(control_idx_));
 			arma::vec bootstrapped_odds = odds(idx);
-			// Indices of minor allele carriers for grouping on non-carriers
-			arma::uvec mac_idx = arma::find(arma::sum(arma::mat(bootstrapped_.get_matrix(ts)), 1) > 0);
-			arma::uvec maj_idx = arma::find(arma::sum(arma::mat(bootstrapped_.get_matrix(ts)), 1) == 0);
 
 			// Shuffle phenotypes
-			std::vector<std::vector<int32_t>> permutations = permute_.permutations_maj_bin(
+			std::vector<std::vector<int8_t>> permutations = permute_.epsilon_permutation(
 				block,
 				bootstrapped_odds,
 				ncases,
-				mac_idx,
-				maj_idx,
-				ts, 0, 0, 0);
+				ts,
+				pt_.tp.bin_epsilon);
 
 			for (arma::uword j = 0; j < block; j++) {
 			  phenotypes_ = arma::conv_to<arma::vec>::from(permutations[j]);
@@ -137,18 +132,14 @@ auto PowerOp::power() -> void {
 
 			  arma::uvec idx = arma::join_vert(cases_(case_idx_), controls_(control_idx_));
 			  arma::vec bootstrapped_odds = odds(idx);
-			  // Indices of minor allele carriers for grouping on non-carriers
-			  arma::uvec mac_idx = arma::find(arma::sum(arma::mat(bootstrapped_.get_matrix(ts)), 1) > 0);
-			  arma::uvec maj_idx = arma::find(arma::sum(arma::mat(bootstrapped_.get_matrix(ts)), 1) == 0);
 			  do {
 				// Shuffle phenotypes
-				std::vector<std::vector<int32_t>> permutations = permute_.permutations_maj_bin(
+				std::vector<std::vector<int8_t>> permutations = permute_.epsilon_permutation(
 					block,
 					bootstrapped_odds,
 					ncases,
-					mac_idx,
-					maj_idx,
-					ts, 0, 0, 0);
+					ts,
+					pt_.tp.bin_epsilon);
 
 				for (arma::uword j = 0; j < block; j++) {
 				  n++;
@@ -179,7 +170,7 @@ auto PowerOp::power() -> void {
   for (const auto &ts : pt_.gene.get_transcripts()) {
 	for (arma::uword i = 0; i < pt_.tp.alpha.n_elem; i++) {
 	  for (arma::uword j = 0; j < pt_.tp.ncases.size(); j++) {
-		PowerRes pr{pt_.gene.get_gene(),
+		PowerRes pr{pt_.gene.gene_name,
 					ts,
 					pt_.tp.method,
 					pt_.tp.ncases[j],
@@ -193,7 +184,7 @@ auto PowerOp::power() -> void {
 	  }
 	}
   }
-  std::cerr << "Finished: " << pt_.gene.get_gene() << std::endl;
+  std::cerr << "Finished: " << pt_.gene.gene_name << std::endl;
   done_ = true;
 }
 
@@ -248,8 +239,6 @@ double PowerOp::call_method(Methods &method,
 		.VAAST(gene,
 			   phenotypes,
 			   k,
-			   tp.score_only_minor,
-			   tp.score_only_alternative,
 			   tp.vaast_site_penalty,
 			   tp.group_size,
 			   detail,

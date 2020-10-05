@@ -14,9 +14,17 @@
 #include "../data/result.hpp"
 #include "../carva/carvatask.hpp"
 
-class CAESETask {
-public:
+struct CAESETask {
   std::map<std::string, Result> results;
+  Gene gene;
+  std::shared_ptr<Covariates> cov;
+  Methods methods;
+  TaskParams tp;
+
+  const int permutations_;
+
+  std::map<std::string, Permute> permute_;
+
   // Constructors
   CAESETask(Stage stage,
 			Gene gene,
@@ -35,24 +43,11 @@ public:
   // Free memory
   auto cleanup() -> void;
 
-  // Getters
-  auto get_gene() -> Gene &;
   auto get_cov() -> Covariates &;
   auto get_methods() -> Methods &;
   auto get_tp() -> TaskParams &;
   auto get_npermutations() -> int;
   auto get_permute(const std::string &k) -> Permute &;
-
-private:
-  Gene gene_;
-  std::shared_ptr<Covariates> cov_;
-  Methods methods_;
-  TaskParams tp_;
-
-  const int permutations_;
-
-  std::map<std::string, Permute> permute_;
-
 };
 
 #endif //PERMUTE_ASSOCIATE_CAESETASK_HPP

@@ -1,5 +1,5 @@
 //
-// Created by Bohlender,Ryan James on 8/1/18.
+// Created by Bohlender,Ryan James on 2019-05-31.
 //
 
 #ifndef PERMUTE_ASSOCIATE_TASKQUEUE_HPP
@@ -11,85 +11,223 @@
 #include <chrono>
 #include <random>
 #include <condition_variable>
+#include <functional>
+#include <atomic>
 
-#include "../carva/carvatask.hpp"
-#include "../data/permutation.hpp"
-#include "reporter.hpp"
+#include "taskparams.hpp"
 
+// Three templated arguments to facilitate different run modes
+template <typename Operation_t, typename Task_t, typename Reporter_t>
 class TaskQueue {
-// Some ideas from https://embeddedartistry.com/blog/2017/2/1/c11-implementing-a-dispatch-queue-using-stdfunction
+
+	// Some ideas from https://embeddedartistry.com/blog/2017/2/1/c11-implementing-a-dispatch-queue-using-stdfunction
 public:
+  std::queue<Operation_t> continue_;
   // Construtors
-  explicit TaskQueue(size_t thread_cnt, std::shared_ptr<Reporter> reporter);
-  TaskQueue(size_t thread_cnt, std::shared_ptr<Reporter> reporter, TaskParams tp, bool verbose);
+  TaskQueue(size_t thread_cnt, std::shared_ptr<Reporter_t> reporter, TaskParams tp)
+  : tp_(tp),
+    threads_(thread_cnt),
+    ntasks_(0),
+    quit_(false),
+    nthreads_(thread_cnt),
+    reporter_(std::move(reporter)) {
+	for (size_t i = 0; i < threads_.size(); i++) {
+	  threads_[i] = std::thread(
+		  std::bind(&TaskQueue::thread_handler, this));
+	}
+  }
 
   // Destructor
-  ~TaskQueue();
+  ~TaskQueue() {
+	quit_ = true;
+	cv_.notify_all();
+
+	// Wait for threads to finish
+	for (size_t i = 0; i < threads_.size(); i++) {
+	  if (threads_[i].joinable()) {
+		threads_[i].join();
+	  }
+	}
+  }
 
   // Job control
-  void join();
-  void dispatch(CARVATask &ta);
-  void dispatch(CARVATask &&ta);
+  void join() {
+	using namespace std::chrono_literals;
+	// Complete jobs
+	while (!q_.empty() || ntasks_ > 0) {
+	  std::this_thread::sleep_for(0.1s);
+	}
+
+	quit_ = true;
+	cv_.notify_all();
+
+	for (size_t i = 0; i < threads_.size(); i++) {
+	  if (threads_[i].joinable()) {
+		threads_[i].join();
+	  }
+	}
+  }
+
+  void wait() {
+	using namespace std::chrono_literals;
+	// Complete jobs
+	while (!q_.empty() || ntasks_ > 0) {
+	  std::this_thread::sleep_for(0.1s);
+	}
+  }
+
+  void dispatch(Task_t &args) {
+	std::unique_lock<std::mutex> lock(lock_);
+
+	Operation_t op(args, reporter_, rd_(), tp_.verbose);
+	q_.push(op);
+	ntasks_++;
+
+	lock.unlock();
+	cv_.notify_all();
+  }
+
+  void dispatch(Task_t &&args) {
+	std::unique_lock<std::mutex> lock(lock_);
+
+	Operation_t op(args, reporter_, rd_(), tp_.verbose);
+	q_.emplace(op);
+	ntasks_++;
+
+	lock.unlock();
+	cv_.notify_all();
+  }
+
+  void dispatch(Operation_t &op) {
+	std::unique_lock<std::mutex> lock(lock_);
+
+	q_.emplace(op);
+	ntasks_++;
+
+	lock.unlock();
+	cv_.notify_all();
+  }
+
+  void dispatch(Operation_t &&op) {
+	std::unique_lock<std::mutex> lock(lock_);
+
+	q_.emplace(op);
+	ntasks_++;
+
+	lock.unlock();
+	cv_.notify_all();
+  }
+
+  void unfinished(Operation_t &op) {
+	std::lock_guard<std::mutex> lock(cont_lock_);
+
+	continue_.emplace(op);
+  }
+
+  void unfinished(Operation_t &&op) {
+	std::lock_guard<std::mutex> lock(cont_lock_);
+
+	continue_.emplace(op);
+  }
 
   // Status
-  bool empty();
-  size_t size();
+  auto empty() -> bool {
+	return q_.empty();
+  }
 
-  // Detail output
-  void duplicate();
+  auto size() -> size_t {
+    return q_.size();
+  }
 
-  std::vector<CARVATask> &get_results();
-  std::vector<CARVATask> &get_results_duplicate();
-  size_t get_nthreads();
+  auto get_results() -> std::vector<Task_t>& {
+	return results_;
+  }
+
+  auto get_nthreads() const -> const size_t {
+    return nthreads_;
+  }
+
+  auto redispatch() -> void {
+    using namespace std::chrono_literals;
+	// Complete current jobs
+	while (!q_.empty() || ntasks_ > 0) {
+	  std::this_thread::sleep_for(0.1s);
+	}
+	std::cerr << "Total jobs remaining: " << continue_.size() << std::endl;
+    while(!continue_.empty()) {
+      Operation_t op = continue_.front();
+      continue_.pop();
+      q_.emplace(op);
+      ntasks_++;
+    }
+    cv_.notify_all();
+  }
 
 private:
-  // Params
+  // Program arguments
   TaskParams tp_;
+
   // PRNG
   std::random_device rd_;
-  std::mt19937 gen_;
-
-  // Messages
-  bool verbose_;
-  std::shared_ptr<Reporter> reporter_;
 
   // Threading
   std::mutex lock_;
-  std::queue<CARVATask> q_;
+  std::mutex cont_lock_;
+  std::queue<Operation_t> q_;
   std::condition_variable cv_;
   std::vector<std::thread> threads_;
   bool quit_;
-  size_t nthreads_;
+  const size_t nthreads_;
 
   // Ensuring all jobs are finished
   std::atomic<int> ntasks_;
 
+  // Messages
+  std::shared_ptr<Reporter_t> reporter_;
+
   // Result storage
-  std::vector<CARVATask> results_;
-  std::vector<CARVATask> results_detail_;
+  std::vector<Task_t> results_;
 
-  void thread_handler();
+  auto thread_handler() -> void {
+	std::unique_lock<std::mutex> lock(lock_);
+	do {
+	  // Wait for data
+	  while(!(q_.size() || quit_)) {
+		cv_.wait(lock, [this] {
+		  return q_.size() || quit_;
+		});
+	  }
 
-  // Support member function
-  void check_perm(const TaskParams &tp,
-				  double perm_val,
-				  int success_threshold,
-				  std::pair<const std::string, Result> &v);
+	  // After waiting, we have the lock
+	  if (q_.size() && !quit_) {
+		auto op = q_.front();
+		q_.pop();
 
-  double call_method(Methods &method,
-					   Gene &gene,
-					   Covariates &cov,
-					   arma::vec &phenotypes,
-					   TaskParams &tp,
-					   const std::string &k,
-					   bool shuffle,
-					   bool detail);
+		// unlock, now that we're done with queue
+		lock.unlock();
 
-  void stage_1(CARVATask &ta);
-  void stage_2(CARVATask &ta);
+		// Logic for running with OPs
+		if (!op.done_) {
+		  op.run();
+		  if(op.done_) {
+		    dispatch(op);
+		  } else {
+		    unfinished(op);
+		  }
+		} else {
+		  op.finish();
 
-  // Bootstrap power analysis
-  void power(CARVATask &ta);
+		  if(tp_.gene_list) {
+			lock.lock();
+			results_.emplace_back(op.ta_);
+			lock.unlock();
+		  }
+		}
+		ntasks_--;
+		lock.lock();
+	  }
+	} while (!quit_ || ntasks_ > 0);
+  }
 };
 
 #endif //PERMUTE_ASSOCIATE_TASKQUEUE_HPP

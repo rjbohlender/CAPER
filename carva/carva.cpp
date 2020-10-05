@@ -17,7 +17,6 @@
 #include "../statistics/methods.hpp"
 #include "../data/permutation.hpp"
 #include "../utility/filesystem.hpp"
-#include "../utility/main_support.hpp"
 #include "../utility/jobdispatcher.hpp"
 #include "../utility/taskparams.hpp"
 #include "../utility/reporter.hpp"
@@ -45,9 +44,6 @@ int main(int argc, char **argv) {
   po::variables_map vm;
 
   bool verbose = true;
-  bool adjust = true;
-  bool score_only_minor = false;
-  bool score_only_alternative = false;
   bool testable = false;
   bool linear = false;
   bool nodetail = false;
@@ -66,6 +62,7 @@ int main(int argc, char **argv) {
   boost::optional<double> pthresh;
   boost::optional<arma::uword> approximate;
   boost::optional<int> seed;
+  boost::optional<arma::uword> max_perms;
 
   try {
     required.add_options()
@@ -95,7 +92,11 @@ int main(int argc, char **argv) {
          po::value<std::string>()->default_value("VAAST"),
          "The statistical method to be used.\n"
          "Options: {BURDEN, CALPHA, CMC, CMC1df, RVT1, RVT2, SKAT, SKATO, VAAST, VT, WSS}.")
-        ("range",
+		("optimizer",
+		 po::value<std::string>()->default_value("irls"),
+		 "The optimizer used to fit the GLM.\n"
+		 "Options: {irls, irls_svdnewton, irls_qr, irls_qr_R, gradient_descent}.")
+		("range",
          po::value(&gene_range)->multitoken(),
          "A range of genes to analyze from the matrix file. "
          "Takes two values, a start gene number, and end gene number.\n"
@@ -103,13 +104,9 @@ int main(int argc, char **argv) {
          "Gene count starts at 1.\n"
          "Useful for starting multiple jobs on a cluster each processing part of a file.\n"
          "Note: Somewhat slower than splitting the input matrix file.")
-        ("stage_1_max_perm,1",
-         po::value<arma::uword>()->default_value(0),
-         "The maximum number of permutations to be performed in "
-         "the first stage permutation. A small number is recommended if your sample is large.")
-        ("stage_2_max_perm,2",
-         po::value<arma::uword>()->default_value(1000000),
-         "The maximum number of permutations to be performed in the second stage, the collapsing step.")
+        ("nperm",
+         po::value<arma::uword>()->default_value(10000),
+         "The maximum number of permutations to be performed.")
         ("mac",
          po::value<arma::uword>(),
          "Minor allele count cutoff.")
@@ -128,9 +125,6 @@ int main(int argc, char **argv) {
         ("genes,l",
          po::value(&gene_list),
          "A comma-separated list of genes to analyze.")
-		("features",
-		po::value(&feature_list),
-		"A comma-separated list of transcripts to analyze.")
 		("nodetail",
          po::bool_switch(&nodetail),
          "Don't produce detailed, variant level output.")
@@ -149,6 +143,9 @@ int main(int argc, char **argv) {
 		("bin_epsilon",
 		 po::value<double>()->default_value(0.0001),
 		 "Odds closer together than the given value will be collapsed into a single bin for permutation.")
+		("max_perms",
+		 po::value(&max_perms),
+		 "Maximum number of permutations, used in combination with --nperm to manage memory usage. Run permutation in blocks of size nperm, up to the maximum set here. Only genes requiring additional permutation will be permuted. If you are running a small number of permutations, do not set this option.")
 		("seed",
 		 po::value(&seed),
 		 "A defined seed passed to the random number generators used for each gene.");
@@ -215,9 +212,6 @@ int main(int argc, char **argv) {
     if (vm.count("quiet")) {
       verbose = false;
     }
-    if (vm.count("no_adjust")) {
-      adjust = false;
-    }
   } catch (po::required_option &e) {
     std::cerr << "Missing required option:\n" << e.what() << "\n";
     std::cerr << visible << "\n";
@@ -246,6 +240,14 @@ int main(int argc, char **argv) {
       "wLinear"
   };
 
+  std::set<std::string> optimizer_choices = {
+  	"irls",
+  	"irls_svdnewton",
+  	"irls_qr",
+  	"irls_qr_R",
+  	"gradient_descent"
+  };
+
   if (method_choices.count(vm["method"].as<std::string>()) == 0) {
     // Method not among choices
     std::cerr
@@ -259,6 +261,11 @@ int main(int argc, char **argv) {
     std::cerr << "Kernel must be one of {Linear, wLinear}.\n";
     std::cerr << visible << "\n";
     return 1;
+  }
+
+  if (optimizer_choices.count(vm["optimizer"].as<std::string>()) == 0) {
+ 	std::cerr << "Optimizer must be one of {irls, irls_svdnewton, irls_qr, irls_qr_R, gradient_descent}.\n";
+ 	std::cerr << visible << "\n";
   }
 
   /**********************
@@ -283,9 +290,8 @@ int main(int argc, char **argv) {
   tp.full_command = cmd_ss.str();
 
   tp.success_threshold = vm["successes"].as<arma::uword>();
-  tp.stage_1_permutations = vm["stage_1_max_perm"].as<arma::uword>();
-  tp.stage_2_permutations = vm["stage_2_max_perm"].as<arma::uword>();
-  tp.total_permutations = std::max(tp.stage_1_permutations, tp.stage_2_permutations);
+  tp.nperm = vm["nperm"].as<arma::uword>();
+  tp.max_perms = max_perms;
 
   // External permutations for Yao -- XMAT
   if (vm.count("external") > 0) {
@@ -297,6 +303,7 @@ int main(int argc, char **argv) {
   tp.output_stats = stats;
 
   tp.method = vm["method"].as<std::string>();
+  tp.optimizer = vm["optimizer"].as<std::string>();
   // File paths and option status
   tp.program_path = argv[0];
   tp.seed = seed;
@@ -313,8 +320,6 @@ int main(int argc, char **argv) {
   tp.group_size = vm["group_size"].as<arma::uword>();
   tp.vaast_site_penalty = vm["site_penalty"].as<double>();
   tp.legacy_grouping = legacy_grouping;
-  tp.score_only_minor = score_only_minor;
-  tp.score_only_alternative = score_only_alternative;
   tp.bed = bed;
   tp.weight = weight;
   tp.permute_set = permute_set;
@@ -333,7 +338,6 @@ int main(int argc, char **argv) {
   tp.soft_maf_filter = vm["soft_maf_filter"].as<double>();
   // SKAT Options
   tp.kernel = vm["kernel"].as<std::string>();
-  tp.adjust = adjust;
   tp.linear = linear;
   // Beta weights
   tp.a = std::stoi(beta_split[0]);
@@ -342,25 +346,22 @@ int main(int argc, char **argv) {
   tp.testable = testable;
   tp.biallelic = biallelic;
 
-  tp.covadj = !nocovadj || vm.count("covariates") != 0;
+  tp.nocovadj = nocovadj || tp.covariates_path.empty();
 
   tp.power = false;
 
   // tp.alternate_permutation = tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN";
-  tp.alternate_permutation = !tp.covadj || tp.covariates_path.empty();
+  tp.alternate_permutation = tp.nocovadj || tp.covariates_path.empty();
   tp.quantitative =
       tp.method == "RVT1" || tp.method == "RVT2" || tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN"
           || tp.method == "VT";
-  tp.analytic = tp.method == "SKATO" || (tp.method == "SKAT" && tp.total_permutations == 0) || tp.method == "RVT1"
-     || tp.method == "RVT2" || (tp.method == "CMC" && tp.total_permutations == 0) || (tp.method == "CMC1df" && tp.total_permutations == 0);
+  tp.analytic = tp.method == "SKATO" || (tp.method == "SKAT" && tp.nperm == 0) || tp.method == "RVT1"
+     || tp.method == "RVT2" || (tp.method == "CMC" && tp.nperm == 0) || (tp.method == "CMC1df" && tp.nperm == 0);
   if (tp.linear && !tp.quantitative) {
     std::cerr << "Quantitative trait analysis is only supported for the RVT1, RVT2, SKATO, SKAT, and BURDEN methods."
               << std::endl;
     std::exit(1);
   }
-  tp.cov_adjusted =
-      tp.method == "RVT1" || tp.method == "RVT2" || tp.method == "SKATO" || tp.method == "SKAT" || tp.method ==
-          "BURDEN";
 
   std::vector<int> range_opt;
   if (!vm["range"].empty() && (range_opt = vm["range"].as<std::vector<int>>()).size() == 2) {
@@ -382,13 +383,6 @@ int main(int argc, char **argv) {
     std::cerr << visible << std::endl;
   }
 
-  if (tp.method == "SKATO") {
-    // Different defaults for SKATO
-    if (vm["stage_2_max_perm"].defaulted()) {
-      tp.stage_2_permutations = 0;
-    }
-  }
-
   if (tp.verbose) {
     std::cerr << "genotypes: " << tp.genotypes_path << "\n";
     std::cerr << "covariates: " << tp.covariates_path << "\n";
@@ -401,11 +395,13 @@ int main(int argc, char **argv) {
     std::cerr << "method: " << tp.method << "\n";
     std::cerr << "success threshold: " << tp.success_threshold << "\n";
     std::cerr << "nthreads: " << tp.nthreads << "\n";
-    std::cerr << "stage_1_max_perm: " << tp.stage_1_permutations << "\n";
-    std::cerr << "stage_2_max_perm: " << tp.stage_2_permutations << "\n";
-    std::cerr << "-r: " << tp.maf << "\n";
+    std::cerr << "permutations: " << tp.nperm << "\n";
+	if (tp.maf < 0.5)
+	  std::cerr << "maf filter: " << tp.maf << "\n";
     if (tp.mac < std::numeric_limits<unsigned long long>::max())
-      std::cerr << "--mac: " << tp.mac << "\n";
+      std::cerr << "mac filter: " << tp.mac << "\n";
+    if (tp.gene_list)
+      std::cerr << "gene list: " << *tp.gene_list << std::endl;
   }
 
   // Check for correct file paths
@@ -444,6 +440,14 @@ int main(int argc, char **argv) {
 	arma::arma_rng::set_seed_random();
   } else {
     arma::arma_rng::set_seed(*tp.seed);
+  }
+
+  if(tp.external && tp.permute_set) {
+	throw std::runtime_error("Conflicting options. External permutation set will be deleted when permute_set is also included.");
+  }
+
+  if(tp.max_perms && *tp.max_perms <= 0) {
+    throw std::runtime_error("If max_perms is set, it must be set to a value greater than zero.");
   }
 
   std::shared_ptr<Reporter> reporter = nullptr;

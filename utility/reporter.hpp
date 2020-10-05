@@ -16,7 +16,7 @@ struct ResultLine {
   std::string gene;
   std::string transcript;
   double original;
-  double exact_p;
+  // double exact_p;
   double empirical_p;
   std::pair<double, double> empirical_p_ci;
   double empirical_midp;
@@ -40,11 +40,11 @@ public:
 
   auto cleanup(TaskParams &tp) -> void;
 
-  auto sync_write_simple(std::unordered_map<std::string, Result> &results, TaskParams &tp, bool top_only) -> void;
-  auto sync_write_detail(const std::string &d, bool testable) -> void;
-  auto sync_write_vaast(CARVATask &ct, TaskParams &tp) -> void;
+  auto sync_write_simple(std::unordered_map<std::string, Result> &results, const TaskParams &tp) -> void;
+  auto sync_write_detail(const std::string &d, bool gene_testable) -> void;
+  auto sync_write_vaast(CARVATask &ct, const TaskParams &tp) -> void;
 
-  auto sort_simple(TaskParams &tp) -> void;
+  auto sort_simple(const TaskParams &tp) -> void;
 
   auto set_ncases(int ncases) -> void;
   auto set_ncontrols(int ncontrols) -> void;
@@ -68,10 +68,12 @@ private:
   std::ofstream vaast_file_;
 
   const std::string method_;
+  const bool pvalues_;
   const bool gene_list_;
-  const bool testable_;
-  std::vector<Result> results_;
+  const bool print_testable_;
   std::vector<std::string> details_;
+  std::map<std::string, std::string> vaast_;
+  std::map<std::string, std::map<std::string, Result>> results_;
   // Holds unfinished genes
   std::vector<std::string> unfinished_;
 

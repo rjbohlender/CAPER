@@ -12,9 +12,9 @@ CAESETask::CAESETask(Stage stage,
 					 arma::uword s1_perm,
 					 arma::uword s2_perm,
 					 std::vector<std::vector<int32_t>> &perm)
-  : gene_(gene), cov_(cov), methods_(tp, cov), tp_(tp), permutations_(tp.total_permutations) {
-  for (const auto &k : gene_.get_transcripts()) {
-	results[k] = Result(gene_.get_gene(), k, !gene.is_polymorphic(k));
+  : gene(gene), cov(cov), methods(tp, cov), tp(tp), permutations_(tp.nperm) {
+  for (const auto &k : gene.get_transcripts()) {
+	results[k] = Result(gene.gene_name, k, !gene.is_polymorphic(k));
 	if(tp.seed) {
 	  permute_[k] = Permute(*tp.seed);
 	} else {
@@ -27,9 +27,9 @@ CAESETask::CAESETask(Stage stage,
 					 const std::shared_ptr<Covariates> &cov,
 					 TaskParams &tp,
 					 std::vector<std::vector<int32_t>> &perm)
-	: gene_(gene), cov_(cov), methods_(tp, cov), tp_(tp), permutations_(tp.total_permutations) {
-  for (const auto &k : gene_.get_transcripts()) {
-	results[k] = Result(gene_.get_gene(), k, !gene_.is_polymorphic(k));
+	: gene(gene), cov(cov), methods(tp, cov), tp(tp), permutations_(tp.nperm) {
+  for (const auto &k : gene.get_transcripts()) {
+	results[k] = Result(gene.gene_name, k, !gene.is_polymorphic(k));
 	if(tp.seed) {
 	  permute_[k] = Permute(*tp.seed);
 	} else {
@@ -42,20 +42,16 @@ auto CAESETask::cleanup() -> void {
 
 }
 
-auto CAESETask::get_gene() -> Gene & {
-  return gene_;
-}
-
 auto CAESETask::get_cov() -> Covariates & {
-  return *cov_;
+  return *cov;
 }
 
 auto CAESETask::get_methods() -> Methods & {
-  return methods_;
+  return methods;
 }
 
 auto CAESETask::get_tp() -> TaskParams & {
-  return tp_;
+  return tp;
 }
 
 auto CAESETask::get_permute(const std::string &k) -> Permute & {

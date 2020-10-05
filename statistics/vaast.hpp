@@ -41,8 +41,6 @@ struct Variant {
 };
 
 struct VAASTLogic {
-  const bool som;      // score_only_minor
-  const bool soa;      // score_only_alternative
   const bool detail;   // Add detailed output
   const bool biallelic; // Biallelic variants get additional score
   const std::string k; // Transcript
@@ -65,8 +63,6 @@ struct VAASTLogic {
   arma::uword n_case;
   arma::uword n_control;
 
-  arma::uvec mask;
-
   arma::vec vaast_site_scores;
   arma::vec expanded_scores;
 
@@ -76,8 +72,6 @@ struct VAASTLogic {
   VAASTLogic(Gene &gene,
 			 arma::vec &Y_,
 			 const std::string &k,
-			 bool score_only_minor,
-			 bool score_only_alternative,
 			 double site_penalty,
 			 arma::uword group_threshold,
 			 bool detail,
@@ -89,8 +83,6 @@ struct VAASTLogic {
 			 arma::vec &weights,
 			 std::vector<std::string> &positions_,
 			 std::string k,
-			 bool score_only_minor,
-			 bool score_only_alternative,
 			 bool biallelic,
 			 arma::uword group_threshold,
 			 double site_penalty,
@@ -110,9 +102,6 @@ struct VAASTLogic {
 					   const arma::vec &Y,
 					   const arma::vec &w,
 					   std::vector<std::string> &positions);
-  void variant_bitmask(const arma::sp_mat &X, const arma::vec &Y, const arma::vec &w);
-
-  static arma::uvec setdiff(arma::uvec x, arma::uvec y);
 };
 
 #endif //PERMUTE_ASSOCIATE_VAAST_HPP

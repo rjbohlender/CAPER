@@ -20,9 +20,8 @@ struct TaskParams {
 
   boost::optional<int> seed;
 
-  arma::uword stage_1_permutations;
-  arma::uword stage_2_permutations;
-  arma::uword total_permutations;
+  arma::uword nperm;
+  boost::optional<arma::uword> max_perms;
 
   // For external permutations
   bool external;
@@ -47,11 +46,8 @@ struct TaskParams {
   double maf;
   double min_variant_count;
   double min_minor_allele_count;
-  bool covadj;
-  bool cov_adjusted; // Methods that cannot be covariate adjusted permute a subset
+  bool nocovadj;
 
-  boost::optional<arma::uword> approximate;
-  arma::uword maj_nbins;
   boost::optional<int> range_start;
   boost::optional<int> range_end;
 
@@ -59,8 +55,6 @@ struct TaskParams {
   boost::optional<std::string> weight;
 
   double bin_epsilon;
-  double lower_bin_cutoff;
-  double upper_bin_cutoff;
 
   double soft_maf_filter;
   double vaast_site_penalty;
@@ -74,6 +68,9 @@ struct TaskParams {
   // Alternate p-value threshold
   boost::optional<double> pthresh;
 
+  // Choose optimizer implementation for GLM
+  std::string optimizer;
+
   // Detailed VAAST output
   std::string full_command;
   std::string output_path;
@@ -81,8 +78,6 @@ struct TaskParams {
 
   // VAAST
   arma::uword group_size;
-  bool score_only_minor;
-  bool score_only_alternative;
   bool testable;
   bool biallelic;
 
@@ -104,7 +99,6 @@ struct TaskParams {
 
   // SKAT Parameters
   std::string kernel; // Kernel selection
-  bool adjust; // Sample size adjustment
   int a; // Beta weight parameters
   int b; // Beta weight parameters
 };

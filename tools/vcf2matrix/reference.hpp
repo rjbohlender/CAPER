@@ -17,7 +17,7 @@
 
 /// \brief Container for row(s) from refFlat
 struct Gene {
-  std::string gene;
+  std::string gene_name;
   std::vector<std::string> transcript;
   std::string chromosome;
   std::string strand;

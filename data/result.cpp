@@ -118,6 +118,9 @@ Result &Result::operator=(Result &&rhs) noexcept {
 }
 
 std::ostream &operator<<(std::ostream &stream, Result &rhs) {
+  std::cerr << "In result: " << rhs.gene << " " << rhs.transcript << " " << rhs.empirical_p << " " << rhs.successes
+			<< " " << rhs.permutations << std::endl;
+
   std::stringstream ci;
   ci << std::defaultfloat << std::setprecision(3) << rhs.empirical_ci.first << "," << std::setprecision(3)
 	 << rhs.empirical_ci.second;
@@ -126,8 +129,8 @@ std::ostream &operator<<(std::ostream &stream, Result &rhs) {
 		<< rhs.empirical_midci.second;
   stream << std::setw(25) << std::defaultfloat << std::left << rhs.gene << " ";
   stream << std::setw(20) << rhs.transcript;
-  stream << std::setw(20) << std::setprecision(8) << rhs.original;
-  stream << std::setw(20) << std::setprecision(8) << rhs.exact_p;
+  stream << std::setw(30) << std::setprecision(15) << rhs.original;
+  // stream << std::setw(20) << std::setprecision(8) << rhs.exact_p;
   stream << std::setw(20) << std::setprecision(8) << rhs.empirical_p;
   stream << std::setw(20) << ci.str();
   stream << std::setw(20) << std::setprecision(8) << rhs.empirical_midp;
@@ -136,16 +139,16 @@ std::ostream &operator<<(std::ostream &stream, Result &rhs) {
   stream << std::setw(20) << rhs.successes;
   stream << std::setw(20) << rhs.mgit_successes;
   stream << std::setw(20) << rhs.permutations;
-  if(rhs.output_stats) {
-    for(const auto &v : rhs.permuted) {
-      stream << std::setw(20) << std::setprecision(5) << v;
-    }
+  if (rhs.output_stats) {
+	for (const auto &v : rhs.permuted) {
+	  stream << std::setw(30) << std::setprecision(15) << v;
+	}
   }
   stream << std::endl;
   return stream;
 }
 
-Result &Result::combine(const Result &res) {
+Result &Result::combine(const Result &res, const TaskParams &tp) {
   if (gene != res.gene) {
 	throw (std::logic_error("Wrong gene in result combine."));
   }
@@ -159,17 +162,26 @@ Result &Result::combine(const Result &res) {
   rand_perms += res.rand_perms;
 
   // Update empirical p and empirical midp
-  // TODO Include randomized permutations
-  if (std::isfinite(rand_perms)) {
-	empirical_p = (1. + successes) / (1. + rand_perms);
-	empirical_midp = (1. + mid_successes) / (1. + rand_perms);
+  if (tp.max_perms) {
+	if (permutations < *tp.max_perms) {
+	  empirical_p = geometric_p(successes, permutations);
+	  empirical_midp = geometric_p(mid_successes, static_cast<double>(permutations));
+	} else {
+	  empirical_p = (1. + successes) / (1. + permutations);
+	  empirical_midp = (1. + mid_successes) / (1. + permutations);
+	}
   } else {
-	empirical_p = (1. + successes) / (1. + permutations);
-	empirical_midp = (1. + mid_successes) / (1. + permutations);
+	if (permutations < tp.nperm) {
+	  empirical_p = geometric_p(successes, permutations);
+	  empirical_midp = geometric_p(mid_successes, static_cast<double>(permutations));
+	} else {
+	  empirical_p = (1. + successes) / (1. + permutations);
+	  empirical_midp = (1. + mid_successes) / (1. + permutations);
+	}
   }
 
   update_ci();
-  calc_exact_p();
+  // calc_exact_p();
 
   // Extend permuted values
   permuted.reserve(permuted.size() + res.permuted.size());
@@ -209,6 +221,7 @@ void Result::update_ci() {
  * 		 Authors: Phipson B, Smyth GK., 2010
  */
 void Result::calc_exact_p(double n1, double n2) {
+  return;
   mp::cpp_bin_float_100 m = permutations;
   mp::cpp_bin_float_100 b = successes;
   mp::cpp_bin_float_100 mt = boost::math::binomial_coefficient<mp::cpp_bin_float_100>(n1 + n2, n1);
@@ -232,7 +245,14 @@ void Result::calc_exact_p(double n1, double n2) {
   mp::cpp_bin_float_100 error_estimate;
   mp::cpp_bin_float_100 L1;
   size_t max_refinements = 15;
-  mp::cpp_bin_float_100 I = boost::math::quadrature::trapezoidal(f, mp::cpp_bin_float_100(0.), mp::cpp_bin_float_100(0.5) / mp::cpp_bin_float_100(mt + 1), tol, max_refinements, &error_estimate, &L1);
+  mp::cpp_bin_float_100 I = boost::math::quadrature::trapezoidal(f,
+																 mp::cpp_bin_float_100(0.),
+																 mp::cpp_bin_float_100(0.5)
+																	 / mp::cpp_bin_float_100(mt + 1),
+																 tol,
+																 max_refinements,
+																 &error_estimate,
+																 &L1);
   exact_p = double(mp::cpp_bin_float_100(b + 1.) / mp::cpp_bin_float_100(m + 1.) - I);
 }
 
@@ -242,6 +262,7 @@ void Result::calc_exact_p(double n1, double n2) {
  * 		 Authors: Phipson B, Smyth GK., 2010
  */
 void Result::calc_exact_p() {
+  return;
   mp::cpp_bin_float_100 m = permutations;
   double n1 = nmac, n2 = nmaj;
   mp::cpp_bin_float_100 mt = boost::math::binomial_coefficient<mp::cpp_bin_float_100>(n1 + n2, n1);
@@ -260,7 +281,13 @@ void Result::calc_exact_p() {
   mp::cpp_bin_float_100 error_estimate;
   mp::cpp_bin_float_100 L1;
   size_t max_refinements = 15;
-  exact_p = double(boost::math::quadrature::trapezoidal(f, mp::cpp_bin_float_100 (0.), mp::cpp_bin_float_100(0.5) / mp::cpp_bin_float_100(mt + 1), tol, max_refinements, &error_estimate, &L1));
+  exact_p = double(boost::math::quadrature::trapezoidal(f,
+														mp::cpp_bin_float_100(0.),
+														mp::cpp_bin_float_100(0.5) / mp::cpp_bin_float_100(mt + 1),
+														tol,
+														max_refinements,
+														&error_estimate,
+														&L1));
 }
 
 

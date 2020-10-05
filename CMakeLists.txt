@@ -13,7 +13,7 @@ message(${CMAKE_CXX_FLAGS_RELEASE}) # print "-O3 -DNDEBUG"
 # remove_cxx_flag("-O3")
 # message(${CMAKE_CXX_FLAGS_RELEASE}) # print "-DNDEBUG"
 #
-# set(CMAKE_CXX_FLAGS_RELEASE  "${CMAKE_CXX_FLAGS_RELEASE} -O2")
+# set(CMAKE_CXX_FLAGS_RELEASE  "${CMAKE_CXX_FLAGS_RELEASE} -Og")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
@@ -102,7 +102,7 @@ set(PROJECT_SUPPORT_FILES
     statistics/skat.hpp
     power/powerop.cpp
     power/powerop.hpp
-    utility/taskqueue2.hpp
+    utility/taskqueue.hpp
     carva/carvaop.cpp
     carva/carvaop.hpp
     power/powertask.cpp
@@ -114,7 +114,7 @@ set(PROJECT_SUPPORT_FILES
     statistics/fishertest.cpp
     statistics/fishertest.hpp
     utility/jointhreads.hpp
-    utility/indexsort.hpp utility/math.hpp)
+    utility/indexsort.hpp utility/math.hpp utility/filevalidator.cpp utility/filevalidator.hpp)
 
 
 include_directories("${CMAKE_CURRENT_LIST_DIR}/third_party")
@@ -161,3 +161,15 @@ target_link_libraries(caese ${LAPACK_LIBRARIES})
 target_link_libraries(caese ${BLAS_LIBRARIES})
 
 target_compile_definitions(caese PRIVATE MAXCOLORS=10000000)
+
+add_executable(catch_test
+               catch_test/test.cpp
+               ${PROJECT_SUPPORT_FILES})
+
+target_link_libraries(catch_test ${ARMADILLO_LIBRARIES})
+target_link_libraries(catch_test ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(catch_test ${Boost_LIBRARIES})
+target_link_libraries(catch_test ${LAPACK_LIBRARIES})
+target_link_libraries(catch_test ${BLAS_LIBRARIES})
+
+target_compile_definitions(catch_test PRIVATE MAXCOLORS=10000000)

@@ -38,8 +38,8 @@ public:
   double BURDEN(Gene &gene, const std::string &k, arma::vec &phenotypes, int a, int b);
   double CALPHA(Gene &gene, arma::vec &Y, const std::string &k);
   // Li and Leal 2008
-  double CMC(Gene &gene, arma::vec &Y, const std::string &k, double maf = 0.005);
-  double CMC1df(Gene &gene, arma::vec &Y, const std::string &k);
+  double CMC(Gene &gene, arma::vec &Y, const std::string &k, double maf = 0.005) const;
+  double CMC1df(Gene &gene, arma::vec &Y, const std::string &k) const;
   // Morris and Zeggini 2010
   double RVT1(Gene &gene, arma::vec &Y, arma::mat design, arma::vec &initial_beta, const std::string &k, bool linear);
   double RVT2(Gene &gene,
@@ -69,14 +69,12 @@ public:
   double VAAST(Gene &gene,
 			   arma::vec &Y,
 			   const std::string &k,
-			   bool score_only_minor = true,
-			   bool score_only_alternative = true,
-			   double site_penalty = 2.0,
-			   arma::uword group_threshold = 0,
-			   bool detail = false,
-			   bool biallelic = false,
-			   double control_freq_cutoff = 0.5,
-			   bool legacy = false);
+			   double site_penalty,
+			   arma::uword group_threshold,
+			   bool detail,
+			   bool biallelic,
+			   double control_freq_cutoff,
+			   bool legacy);
   double VT(Gene &gene, const std::string &k, arma::vec &phenotypes);
 
   // Madsen, Browning 2009

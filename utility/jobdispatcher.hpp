@@ -13,16 +13,15 @@
 #include "reporter.hpp"
 #include "../data/covariates.hpp"
 #include "../carva/carvatask.hpp"
-#include "taskqueue.hpp"
 #include "../data/permutation.hpp"
 #include "../data/bed.hpp"
 #include "../data/weight.hpp"
-#include "taskqueue2.hpp"
+#include "taskqueue.hpp"
 #include "../carva/carvaop.hpp"
 
-#include "main_support.hpp"
 #include "reporter.hpp"
 #include "filesystem.hpp"
+#include "filevalidator.hpp"
 
 #include <boost/iostreams/filtering_streambuf.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
@@ -31,24 +30,24 @@ template<typename Operation_t, typename Task_t, typename Reporter_t>
 class JobDispatcher {
 public:
   JobDispatcher(TaskParams &tp, std::shared_ptr<Reporter_t> reporter)
-	  : tp_(tp), tq_(tp_.nthreads - 1, reporter, tp),
-		cov_(std::make_shared<Covariates>(tp.covariates_path, tp.ped_path, tp.linear)) {
+	  : tp_(tp), tq_(tp.nthreads - 1, reporter, tp),
+		cov_(std::make_shared<Covariates>(tp)) {
     if (tp_.seed) {
       permute_ = Permute(*tp_.seed);
     }
 	// Initialize bed and weights
-	if (tp.gene_list) {
-	  gene_list_ = RJBUtil::Splitter<std::string>(*tp.gene_list, ",");
+	if (tp_.gene_list) {
+	  gene_list_ = RJBUtil::Splitter<std::string>(*tp_.gene_list, ",");
 	}
-	if (tp.bed) {
-	  bed_ = Bed(*tp.bed);
+	if (tp_.bed) {
+	  bed_ = Bed(*tp_.bed);
 	}
-	if (tp.weight) {
-	  weight_ = Weight(*tp.weight);
+	if (tp_.weight) {
+	  weight_ = Weight(*tp_.weight);
 	}
 
 	// Update case/control count for reporter
-	if(!tp.power) {
+	if(!tp_.power) {
 	  reporter->set_ncases(cov_->get_ncases());
 	  reporter->set_ncontrols(cov_->get_nsamples() - cov_->get_ncases());
 	}
@@ -57,16 +56,16 @@ public:
 	if (tp_.power) {
 	  stage_ = Stage::Power;
 	} else {
-	  stage_ = (tp_.stage_1_permutations > 0) ? Stage::Stage1 : Stage::Stage2;
+	  stage_ = Stage::Stage1;
 	}
 
 	// Handle zipped input
-	if (is_gzipped(tp.genotypes_path)) {
-	  gt_ifs_.open(tp.genotypes_path, std::ios_base::in | std::ios_base::binary);
+	if (is_gzipped(tp_.genotypes_path)) {
+	  gt_ifs_.open(tp_.genotypes_path, std::ios_base::in | std::ios_base::binary);
 	  gt_streambuf.push(boost::iostreams::gzip_decompressor());
 	  gt_streambuf.push(gt_ifs_);
 	} else {
-	  gt_ifs_.open(tp.genotypes_path, std::ios_base::in);
+	  gt_ifs_.open(tp_.genotypes_path, std::ios_base::in);
 	  gt_streambuf.push(gt_ifs_);
 	}
 
@@ -74,77 +73,185 @@ public:
 	// Retrieve header line
 	std::getline(gt_stream, header_);
 
+	// Cleanup previous permutations if looping because we append to the file
+	if(tp_.permute_set) {
+	  if(check_file_exists(*tp_.permute_set)) {
+	    std::remove((*tp_.permute_set).c_str());
+	  }
+	}
 
 	// Sort covariates
 	cov_->sort_covariates(header_);
 
 	permutation_ptr_ = std::make_shared<std::vector<std::vector<int8_t>>>();
-	if (tp.external) { // Read in external stage 1 permutations
-	  if(!check_file_exists(tp.external_path)) {
-	    throw(std::runtime_error("ERROR: External permutation file doesn't exist."));
-	  }
-	  std::ifstream ifs(tp.external_path);
-	  std::string line;
-	  while(std::getline(ifs, line)) {
-	    permutation_ptr_->push_back({});
-		permutation_ptr_->back().reserve(line.size());
-		for (const auto &v : line) {
-		  if(v == '0' || v == '1') {
-			permutation_ptr_->back().emplace_back(v - '0');
-		  }
-	    }
-	  }
-	  std::cerr << permutation_ptr_->size() << " external stage 1 permutations read in." << std::endl;
-	  tp.stage_1_permutations = permutation_ptr_->size();
-	} else {
-	  // Generate permutations for stage 1
-	  arma::wall_clock timer;
-	  timer.tic();
-	  if (tp.stage_1_permutations > 0 && !tp.alternate_permutation) {
-		permute_.get_permutations(permutation_ptr_,
-								  cov_->get_odds(),
-								  cov_->get_ncases(),
-								  tp.stage_1_permutations,
-								  tp.nthreads - 1);
-	  }
-	  if (tp.stage_1_permutations > 0) {
-		std::cerr << "Time spent generating stage 1 permutations: " << timer.toc() << std::endl;
-	  } else {
-		timer.toc();
-	  }
-	}
-	// Time for 1000 permutations, 1000 samples -> 0.5s, 10000 samples-> 30s, 100000 samples 3300s
-
-	// Permutation set output | Developer option
-	if (tp.permute_set) {
-	  std::ofstream pset_ofs(*tp.permute_set);
-	  std::ofstream lr_ofs(*tp.permute_set + ".lr");
-	  for (const auto &p : *permutation_ptr_) {
-		for (const auto &v : p) {
-		  pset_ofs << static_cast<char>(v + '0');
+	if(!tp_.max_perms) {
+	  if (tp_.external) { // Read in external stage 1 permutations
+		if (!check_file_exists(tp_.external_path)) {
+		  throw (std::runtime_error("ERROR: External permutation file doesn't exist."));
 		}
-		pset_ofs << "\n";
+		std::ifstream ifs(tp_.external_path);
+		std::string line;
+		while (std::getline(ifs, line)) {
+		  permutation_ptr_->push_back({});
+		  permutation_ptr_->back().reserve(line.size());
+		  for (const auto &v : line) {
+			if (v == '0' || v == '1') {
+			  permutation_ptr_->back().emplace_back(v - '0');
+			}
+		  }
+		}
+		std::cerr << permutation_ptr_->size() << " external stage 1 permutations read in." << std::endl;
+		tp_.nperm = permutation_ptr_->size();
+	  } else if(tp.nocovadj) {
+		// Generate permutations for stage 1
+		arma::wall_clock timer;
+		timer.tic();
+		if (tp_.nperm > 0) {
+		  *permutation_ptr_ = std::vector<std::vector<int8_t>>(tp_.nperm, std::vector<int8_t>(cov_->get_nsamples(), 0));
+		  for(auto &p : *permutation_ptr_) {
+			for(int i = 0; i < cov_->get_ncases(); i++) { // Assign cases
+			  p[i] = 1;
+			}
+			permute_.fisher_yates(p, permute_.sto);
+		  }
+		}
+		if (tp_.nperm > 0 && tp_.verbose) {
+		  std::cerr << "Time spent generating unadjusted permutations: " << timer.toc() << std::endl;
+		}
+	  } else {
+		// Generate permutations for stage 1
+		arma::wall_clock timer;
+		timer.tic();
+		if (tp_.nperm > 0) {
+		  permute_.generate_permutations(permutation_ptr_,
+										 cov_->get_odds(),
+										 cov_->get_ncases(),
+										 tp_.nperm,
+										 tp_.nthreads - 1,
+										 tp_.bin_epsilon);
+		}
+		if (tp_.nperm > 0 && tp_.verbose) {
+		  std::cerr << "Time spent generating adjusted permutations: " << timer.toc() << std::endl;
+		}
 	  }
-	  pset_ofs.close();
+	  // Time for 1000 permutations, 1000 samples -> 0.5s, 10000 samples-> 30s, 100000 samples 3300s
 
-	  cov_->get_fitted().t().print(lr_ofs);
-	  lr_ofs.close();
-	  // Finish if there are no stage 2 permutations.
-	  if (tp.stage_2_permutations == 0) {
-		std::exit(0);
+	  // Permutation set output | Developer option
+	  if (tp_.permute_set) {
+		std::ofstream pset_ofs(*tp_.permute_set);
+		for (const auto &p : *permutation_ptr_) {
+		  for (const auto &v : p) {
+			pset_ofs << static_cast<char>(v + '0');
+		  }
+		  pset_ofs << "\n";
+		}
+		pset_ofs.close();
 	  }
-	}
 
-	if (!tp.gene_list) {
-	  // Parse if no gene_list
-	  all_gene_dispatcher(gt_stream);
+	  if (!tp_.gene_list) {
+		// Parse if no gene_list
+		all_gene_dispatcher(gt_stream);
+	  } else {
+		// Parse with gene_list
+		gene_list_dispatcher(gt_stream);
+	  }
+
+	  gt_ifs_.close();
 	} else {
-	  // Parse with gene_list
-	  gene_list_dispatcher(gt_stream);
+	  arma::uword remaining = *tp_.max_perms;
+	  while(remaining > 0) {
+		if (tp_.external) {
+		  if (!check_file_exists(tp_.external_path)) {
+			throw (std::runtime_error("ERROR: External permutation file doesn't exist."));
+		  }
+		  std::ifstream ifs(tp_.external_path);
+		  ifs.seekg(external_pos); // Doesn't move on first loop.
+		  std::string line;
+		  unsigned lineno = 0;
+		  while (std::getline(ifs, line)) {
+			permutation_ptr_->push_back({});
+			permutation_ptr_->back().reserve(line.size());
+			for (const auto &v : line) {
+			  if (v == '0' || v == '1') {
+				permutation_ptr_->back().emplace_back(v - '0');
+			  }
+			}
+			lineno++;
+			if(lineno >= tp_.nperm) {
+			  break;
+			}
+		  }
+		  external_pos = ifs.tellg(); // Record our position and continue form there
+		  remaining -= lineno;
+		} else if(tp.nocovadj) {
+		  // Generate permutations for stage 1
+		  arma::wall_clock timer;
+		  timer.tic();
+		  if (tp_.nperm > 0) {
+		    *permutation_ptr_ = std::vector<std::vector<int8_t>>(std::min(tp_.nperm, remaining), std::vector<int8_t>(cov_->get_nsamples(), 0));
+		    for(auto &p : *permutation_ptr_) {
+		      for(int i = 0; i < cov_->get_ncases(); i++) { // Assign cases
+		        p[i] = 1;
+		      }
+		      permute_.fisher_yates(p, permute_.sto);
+		    }
+		  }
+		  if (tp_.nperm > 0 && tp_.verbose) {
+			std::cerr << "Time spent generating unadjusted permutations: " << timer.toc() << std::endl;
+		  }
+		  remaining -= std::min(tp_.nperm, remaining);
+		} else {
+		  // Generate permutations for stage 1
+		  arma::wall_clock timer;
+		  timer.tic();
+		  if (tp_.nperm > 0) {
+			permute_.generate_permutations(permutation_ptr_,
+										   cov_->get_odds(),
+										   cov_->get_ncases(),
+										   std::min(tp_.nperm, remaining),
+										   tp_.nthreads - 1,
+										   tp_.bin_epsilon);
+		  }
+		  if (tp_.nperm > 0 && tp_.verbose) {
+			std::cerr << "Time spent generating adjusted permutations: " << timer.toc() << std::endl;
+		  }
+		  remaining -= std::min(tp_.nperm, remaining);
+		}
+		if (tp_.permute_set) {
+		  std::ofstream pset_ofs(*tp_.permute_set, std::ios::app | std::ios::out);
+		  for (const auto &p : *permutation_ptr_) {
+			for (const auto &v : p) {
+			  pset_ofs << static_cast<char>(v + '0');
+			}
+			pset_ofs << "\n";
+		  }
+		  pset_ofs.close();
+		}
+		if(gt_ifs_.is_open()) {
+		  if (!tp_.gene_list) {
+			// Parse if no gene_list
+			all_gene_dispatcher(gt_stream);
+		  } else {
+			// Parse with gene_list
+			gene_list_dispatcher(gt_stream);
+		  }
+		  gt_ifs_.close();
+		  tq_.wait(); // Need to wait here until all jobs are done, otherwise permutations will update during processing
+		  if(tq_.continue_.size() == 0) { // Terminate if all jobs are done.
+		    remaining = 0;
+		  }
+		} else { // Successive loops will not need to process the gene stream
+		  tq_.redispatch(); // Re-dispatch each job. No need to update anything because the permutations are kept in a pointer.
+		  auto cur = std::chrono::system_clock::now();
+		  std::time_t cur_time = std::chrono::system_clock::to_time_t(cur);
+		  std::cerr << "Remaining permutations: " << remaining << " at " << std::ctime(&cur_time);
+		  tq_.wait(); // Need to wait here until all jobs are done, otherwise permutations will update during processing
+		  if(tq_.continue_.size() == 0) { // Terminate if all jobs are done.
+			remaining = 0;
+		  }
+		}
+	  }
 	}
-
-	// Close open files
-	gt_ifs_.close();
 
 	// Wait for queue to finish processing
 	tq_.join();
@@ -169,15 +276,20 @@ private:
   void all_gene_dispatcher(std::istream &gt_stream) {
 	std::string line;
 	std::stringstream current;
+	int lineno = -1;
+	FileValidator fv;
+	fv.set_matrix_header(header_);
 
 	int gene_no = 1;
 
 	while (std::getline(gt_stream, line)) {
+	  lineno++;
 	  RJBUtil::Splitter<std::string> split(line, "\t");
 	  RJBUtil::Splitter<std::string> vsplit(split[2], "-");
 	  if (vsplit.size() < 2) {
 		throw (std::logic_error("Position not formatted correctly. Should be chromosome-start-end-type."));
 	  }
+	  fv.validate_matrix_line(split, lineno);
 
 	  // If this line is part of the same gene
 	  if (split[0] == gene_) {
@@ -218,6 +330,7 @@ private:
 	if (!gene_data.is_skippable())
 	  single_dispatch(gene_data);
   }
+
   void single_dispatch(Gene &gene) {
 	using namespace std::literals::chrono_literals;
 	Task_t ta(stage_,
@@ -241,10 +354,15 @@ private:
   void gene_list_dispatcher(std::istream &gt_stream) {
 	std::string line;
 	std::stringstream current;
+	int lineno = -1;
+	FileValidator fv;
+	fv.set_matrix_header(header_);
 
 	while (std::getline(gt_stream, line)) {
+	  lineno++;
 	  RJBUtil::Splitter<std::string> split(line, "\t");
 	  RJBUtil::Splitter<std::string> vsplit(split[2], "-");
+	  fv.validate_matrix_line(split, lineno);
 
 	  // If this line is part of the same gene
 	  if (split[0] == gene_) {
@@ -298,9 +416,14 @@ private:
 	using namespace std::literals::chrono_literals;
 	// Ensure we have at least one variant for a submitted gene
 	if (std::any_of(nvariants_.cbegin(), nvariants_.cend(), [&](const auto &v) { return v.second > 0; })) {
-	  int total_s1_perm = 0;
-	  int total_s2_perm = 0;
-	  int total_success = 0;
+	  long total_perm = 0;
+	  long total_success = 0;
+	  long perm_step = tp_.nperm / (tp_.nthreads - 1);
+	  long succ_step = tp_.success_threshold / (tp_.nthreads - 1);
+	  long max_loops = 1;
+	  if(tp_.max_perms) {
+	    max_loops = *tp_.max_perms / tp_.nperm;
+	  }
 
 	  // Single dispatch of gene list items for power analysis
 	  if (tp_.power) {
@@ -309,8 +432,9 @@ private:
 				  cov_,
 				  tp_,
 				  tp_.success_threshold,
-				  tp_.stage_1_permutations,
-				  tp_.stage_2_permutations,
+				  tp_.nperm,
+				  0,
+				  tp_.nperm,
 				  *permutation_ptr_);
 		while (tq_.size() > tp_.nthreads - 1) {
 		  std::this_thread::sleep_for(0.001s);
@@ -327,8 +451,9 @@ private:
 					cov_,
 					tp_,
 					tp_.success_threshold - total_success,
-					tp_.stage_1_permutations - total_s1_perm,
-					tp_.stage_2_permutations - total_s2_perm,
+					tp_.nperm - total_perm,
+					i * perm_step,
+					max_loops * (tp_.nperm - total_perm),
 					*permutation_ptr_);
 
 		  // Limit adding jobs to prevent excessive memory usage
@@ -341,14 +466,14 @@ private:
 					gene,
 					cov_,
 					tp_,
-					tp_.success_threshold / static_cast<int>(tq_.get_nthreads()),
-					tp_.stage_1_permutations / static_cast<int>(tq_.get_nthreads()),
-					tp_.stage_2_permutations / static_cast<int>(tq_.get_nthreads()),
+					succ_step,
+					perm_step,
+					i * perm_step,
+					max_loops * perm_step,
 					*permutation_ptr_);
 		  // Add current permutations
-		  total_s1_perm += tp_.stage_1_permutations / tq_.get_nthreads();
-		  total_s2_perm += tp_.stage_2_permutations / tq_.get_nthreads();
-		  total_success += tp_.success_threshold / tq_.get_nthreads();
+		  total_perm += perm_step;
+		  total_success += succ_step;
 
 		  // Limit adding jobs to prevent excessive memory usage
 		  while (tq_.size() > tp_.nthreads - 1) {
@@ -425,7 +550,7 @@ private:
 
   // Member variables
   TaskParams tp_;
-  TaskQueue2<Operation_t, Task_t, Reporter_t> tq_;
+  TaskQueue<Operation_t, Task_t, Reporter_t> tq_;
   Bed bed_;
   Weight weight_;
   Permute permute_;
@@ -443,6 +568,7 @@ private:
   // Counters
   arma::uword ntranscripts_ = 0;
   arma::uword ngenes_ = 0;
+  size_t external_pos = 0;
 
   std::shared_ptr<Covariates> cov_;
   std::shared_ptr<std::vector<std::vector<int8_t>>> permutation_ptr_;

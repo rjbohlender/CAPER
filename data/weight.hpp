@@ -18,6 +18,7 @@ class Weight {
 public:
   Weight() = default;
   explicit Weight(const std::string &ifile);
+  explicit Weight(std::stringstream &ifile);
 
   double get(const std::string &k) const;
   double get(const std::string &k);
