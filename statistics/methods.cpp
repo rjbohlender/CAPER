@@ -623,9 +623,7 @@ double Methods::SKATO(Gene &gene,
 }
 
 void Methods::check_weights(Gene &gene, const std::string &k, int a, int b, bool no_weight) {
-  if (gene.is_weighted(k)) {
-	return;
-  } else if (no_weight) {
+  if (no_weight) {
 	arma::vec weights(gene.get_matrix(k).n_cols, arma::fill::ones);
 	gene.set_weights(k, weights);
 	return;
@@ -639,9 +637,6 @@ void Methods::check_weights(Gene &gene, const std::string &k, int a, int b, bool
 	for (arma::uword i = 0; i < G.n_cols; i++) {
 	  weights(i) = std::pow(maf(i), a - 1) * std::pow(1 - maf(i), b - 1) / boost::math::beta(a, b);
 	  //weights(i) = std::pow(maf(i), a - 1) * std::pow(1 - maf(i), b - 1);
-	}
-	if (method_ == "VAAST") {
-	  weights.replace(0, std::sqrt(std::numeric_limits<double>::min()));
 	}
 	gene.set_weights(k, weights);
   } else {

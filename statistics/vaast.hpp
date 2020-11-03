@@ -89,7 +89,6 @@ struct VAASTLogic {
 			 double soft_maf_filter,
 			 bool legacy_);
 
-  void check_weights(Gene &gene);
   double Score();
   double Score(const arma::sp_mat &X, const arma::vec &Y, const arma::vec &w);
   arma::vec LRT();

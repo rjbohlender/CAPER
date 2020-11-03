@@ -4,22 +4,15 @@
 #include <vector>
 #include <iostream>
 #include <thread>
-#include <ctime>
-#include <iomanip>
 #include <set>
 #include <cassert>
 
 #include <boost/program_options.hpp>
 #include <boost/optional.hpp>
 
-#include "stocc/stocc.h"
-#include "stocc/randomc.h"
 #include "../statistics/methods.hpp"
-#include "../data/permutation.hpp"
 #include "../utility/filesystem.hpp"
 #include "../utility/jobdispatcher.hpp"
-#include "../utility/taskparams.hpp"
-#include "../utility/reporter.hpp"
 #include "../power/powerop.hpp"
 
 namespace po = boost::program_options;

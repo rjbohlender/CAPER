@@ -17,13 +17,9 @@ VAASTLogic::VAASTLogic(Gene &gene,
 					   double soft_maf_filter,
 					   bool legacy_)
 	: detail(detail), biallelic(biallelic), k(k),
-	  group_threshold(group_threshold), soft_maf_filter(soft_maf_filter),
-	  site_penalty(site_penalty), legacy(legacy_),
-	  X(gene.get_matrix(k)), Y(Y_) {
-
-  // Verify weights are okay
-  check_weights(gene);
-
+	  group_threshold(group_threshold), site_penalty(site_penalty),
+	  soft_maf_filter(soft_maf_filter), legacy(legacy_),
+	  X(gene.get_matrix(k)), Y(Y_), weights(gene.get_weights(k)){
   n_case = arma::accu(Y);
   n_control = arma::accu(1. - Y);
 
@@ -245,16 +241,6 @@ arma::vec VAASTLogic::log_likelihood(arma::vec &freq, arma::vec &allele0, arma::
   // arma::vec clamped = arma::clamp(freq, 1e-9, 1.0 - 1e-9);
 
   return allele1 % arma::log(freq) + allele0 % arma::log(1.0 - freq);
-}
-
-void VAASTLogic::check_weights(Gene &gene) {
-  if (gene.is_weighted(k)) {
-	weights = gene.get_weights(k);
-	return;
-  }
-
-  weights = arma::vec(X.n_cols, arma::fill::ones);
-  gene.set_weights(k, weights);
 }
 
 void VAASTLogic::variant_grouping(const arma::sp_mat &X,

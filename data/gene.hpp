@@ -59,15 +59,13 @@ public:
   auto get_vaast() const -> std::map<std::string, std::string>;
   auto is_skippable() const -> bool;
   auto is_polymorphic(const std::string &k) -> bool;
-  auto is_weighted(const std::string &k) -> bool;
   auto is_testable() const -> bool;
   auto generate_detail(Covariates &cov, std::unordered_map<std::string, Result> &results, const TaskParams &tp) -> void;
   auto generate_vaast(Covariates &cov) -> void;
   auto clear(Covariates &cov, std::unordered_map<std::string, Result> &results, const TaskParams &tp) -> void;
 
+  static std::string form_variant_id(RJBUtil::Splitter<std::string> &splitter);
 private:
-  std::map<std::string, bool> weights_set_;
-
   unsigned long nsamples_;
   std::map<std::string, arma::uword> nvariants_;
   std::vector<std::string> transcripts_;
@@ -75,6 +73,8 @@ private:
 
   std::map<std::string, arma::sp_mat> genotypes_;
   std::map<std::string, arma::vec> weights_;
+  std::map<std::string, std::vector<std::string>> function_;
+  std::map<std::string, std::vector<std::string>> annotation_;
   std::vector<std::string> samples_;
 
   std::map<std::string, arma::vec> variant_scores_; // Stored if detail is true
@@ -94,6 +94,7 @@ private:
   void parse(std::stringstream &ss);
 
   auto testable(const std::string &k, Covariates &cov, const TaskParams &tp) -> bool;
+
 };
 
 #endif //PERMUTE_ASSOCIATE_GENE_HPP

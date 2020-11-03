@@ -22,6 +22,7 @@
 #include "reporter.hpp"
 #include "filesystem.hpp"
 #include "filevalidator.hpp"
+#include "indices.hpp"
 
 #include <boost/iostreams/filtering_streambuf.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
@@ -285,15 +286,11 @@ private:
 	while (std::getline(gt_stream, line)) {
 	  lineno++;
 	  RJBUtil::Splitter<std::string> split(line, "\t");
-	  RJBUtil::Splitter<std::string> vsplit(split[2], "-");
-	  if (vsplit.size() < 2) {
-		throw (std::logic_error("Position not formatted correctly. Should be chromosome-start-end-type."));
-	  }
 	  fv.validate_matrix_line(split, lineno);
 
 	  // If this line is part of the same gene
-	  if (split[0] == gene_) {
-		add_line(current, line, split, vsplit);
+	  if (split[static_cast<int>(Indices::gene)] == gene_) {
+		add_line(current, line, split);
 	  } else {
 		// Have we read a gene yet?
 		if (!gene_.empty()) {
@@ -314,14 +311,14 @@ private:
 			}
 			// Reset for next gene
 			gene_no++;
-			new_gene(current, line, split, vsplit);
+			new_gene(current, line, split);
 		  } else {
               gene_no++;
-              new_gene(current, line, split, vsplit);
+              new_gene(current, line, split);
 		  }
 		} else {
 		  // Setup initial gene
-		  new_gene(current, line, split, vsplit);
+		  new_gene(current, line, split);
 		}
 	  }
 	}
@@ -361,12 +358,11 @@ private:
 	while (std::getline(gt_stream, line)) {
 	  lineno++;
 	  RJBUtil::Splitter<std::string> split(line, "\t");
-	  RJBUtil::Splitter<std::string> vsplit(split[2], "-");
 	  fv.validate_matrix_line(split, lineno);
 
 	  // If this line is part of the same gene
-	  if (split[0] == gene_) {
-		add_line(current, line, split, vsplit);
+	  if (split[static_cast<int>(Indices::gene)] == gene_) {
+		add_line(current, line, split);
 	  } else {
 	    ntranscripts_ = nvariants_.size();
 		// Have we read a gene yet?
@@ -378,11 +374,11 @@ private:
 			if (!gene_data.is_skippable())
 			  multiple_dispatch(gene_data);
 
-			auto fit = find_gene(split[0]);
+			auto fit = find_gene(split[static_cast<int>(Indices::gene)]);
 			if (fit != gene_list_.cend()) {
 			  // Next gene is in list
 			  gene_list_.erase(fit);
-			  new_gene(current, line, split, vsplit);
+			  new_gene(current, line, split);
 			} else {
 			  // Check if we're done
 			  if (gene_list_.empty()) {
@@ -394,14 +390,14 @@ private:
 		  }
 		} else {
 		  // Skip until we find the first gene in our list.
-		  auto fit = find_gene(split[0]);
+		  auto fit = find_gene(split[static_cast<int>(Indices::gene)]);
 		  if (fit == gene_list_.cend()) {
 			continue;
 		  } else {
 			gene_list_.erase(fit);
 		  }
 		  // Setup initial gene
-		  new_gene(current, line, split, vsplit);
+		  new_gene(current, line, split);
 		}
 	  }
 	}
@@ -489,8 +485,7 @@ private:
   // Input parsing
   void new_gene(std::stringstream &ss,
 				std::string &line,
-				RJBUtil::Splitter<std::string> &split,
-				RJBUtil::Splitter<std::string> &vsplit) {
+				RJBUtil::Splitter<std::string> &split) {
 	// Reset the read buffer
 	ss.str("");
 	ss.clear();
@@ -500,10 +495,10 @@ private:
 
 	// Append header
 	ss << header_ << "\n";
-	add_line(ss, line, split, vsplit);
+	add_line(ss, line, split);
 
 	// Add gene name
-	gene_ = split[0];
+	gene_ = split[static_cast<int>(Indices::gene)];
   }
   void reset_gene(std::stringstream &ss) {
 	// Reset the read buffer
@@ -520,31 +515,30 @@ private:
 
   void add_line(std::stringstream &ss,
 				std::string &line,
-				RJBUtil::Splitter<std::string> &split,
-				RJBUtil::Splitter<std::string> &vsplit) {
+				RJBUtil::Splitter<std::string> &split) {
 	// Is variant masked?
-	if (vsplit[2] != vsplit[1]) {
-      if (!bed_.check_variant(vsplit[0], std::make_pair(vsplit[1], vsplit[2]))) {
+	if (split[static_cast<int>(Indices::end)] != split[static_cast<int>(Indices::start)]) {
+      if (!bed_.check_variant(split[static_cast<int>(Indices::chrom)], std::make_pair(split[static_cast<int>(Indices::start)], split[static_cast<int>(Indices::end)]))) {
         // Variant not masked
         ss << line << "\n";
         // Track number of variants in each transcript
-        if (nvariants_.find(split[1]) == nvariants_.end()) {
-          nvariants_[split[1]] = 1;
+        if (nvariants_.find(split[static_cast<int>(Indices::transcript)]) == nvariants_.end()) {
+          nvariants_[split[static_cast<int>(Indices::transcript)]] = 1;
         } else {
-          nvariants_[split[1]]++;
+          nvariants_[split[static_cast<int>(Indices::transcript)]]++;
         }
       }
 	} else {
-      if (!bed_.check_variant(vsplit[0], vsplit[1])) {
+      if (!bed_.check_variant(split[static_cast<int>(Indices::chrom)], split[static_cast<int>(Indices::start)])) {
         // Variant not masked
         ss << line << "\n";
         // Track number of variants in each transcript
-        if (nvariants_.find(split[1]) == nvariants_.end()) {
-          nvariants_[split[1]] = 1;
-        } else {
-          nvariants_[split[1]]++;
-        }
-      }
+		if (nvariants_.find(split[static_cast<int>(Indices::transcript)]) == nvariants_.end()) {
+		  nvariants_[split[static_cast<int>(Indices::transcript)]] = 1;
+		} else {
+		  nvariants_[split[static_cast<int>(Indices::transcript)]]++;
+		}
+	  }
 	}
   }
 

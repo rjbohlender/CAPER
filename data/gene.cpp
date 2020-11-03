@@ -13,6 +13,7 @@
 #include "../link/gaussian.hpp"
 #include "../statistics/bayesianglm.hpp"
 #include "../statistics/glm.hpp"
+#include "../utility/indices.hpp"
 
 Gene::Gene(std::stringstream &ss,
 		   unsigned long nsamples,
@@ -33,11 +34,6 @@ Gene::Gene(std::stringstream &ss,
         weights_[k](i) = weight.get(v);
         i++;
       }
-      weights_set_[k] = true;
-    }
-  } else {
-    for (const auto &k : transcripts_) {
-      weights_set_[k] = false;
     }
   }
 }
@@ -96,7 +92,7 @@ void Gene::parse(std::stringstream &ss) {
     if (i == 0) {
       header_ = line;
       RJBUtil::Splitter<std::string> splitter(line, "\t");
-      for (arma::uword j = 3; j < splitter.size(); j++) {
+      for (arma::uword j = static_cast<int>(Indices::first); j < splitter.size(); j++) {
         samples_.push_back(splitter[j]);
       }
       i++;
@@ -105,27 +101,30 @@ void Gene::parse(std::stringstream &ss) {
     RJBUtil::Splitter<std::string> splitter(line, "\t");
 
     if (gene_name.empty()) {
-	  gene_name = splitter[0];
+	  gene_name = splitter[static_cast<int>(Indices::gene)];
     }
-    auto found = std::find(std::begin(transcripts_), std::end(transcripts_), splitter[1]);
-    std::string transcript = splitter[1];
+    auto found = std::find(std::begin(transcripts_), std::end(transcripts_), splitter[static_cast<int>(Indices::transcript)]);
+    std::string transcript = splitter[static_cast<int>(Indices::transcript)];
     if (found == std::end(transcripts_)) {
       // Transcript not found -- add
-      transcripts_.push_back(splitter[1]);
+      transcripts_.push_back(transcript);
       // Start with matrix transposed
       genotypes_.emplace(std::make_pair(transcript, arma::sp_mat(nsamples_, nvariants_[transcript])));
       // Separately record the controls
       missing_variant_carriers_.emplace(std::make_pair(transcript, arma::sp_mat(nsamples_, nvariants_[transcript])));
-      // Reset counter on new transcript
+      // Ensure positions are allocated for current transcript
+	  positions_[transcript] = std::vector<std::string>();
+	  // Ensure weights are the right length
+	  weights_[transcript].reshape(nvariants_[transcript], 1);
+	  // Reset counter on new transcript
       i = 1;
     }
-    if (positions_.find(transcript) == positions_.end()) {
-      positions_[transcript] = std::vector<std::string>();
-    }
-    positions_[transcript].push_back(splitter[2]);
+    std::string var_id = form_variant_id(splitter);
+    positions_[transcript].push_back(var_id);
+    weights_[transcript](i - 1) = std::stod(splitter[static_cast<int>(Indices::weight)]);
 
-    arma::uword ncases = 0;
-    for (arma::uword j = 3; j < splitter.size(); j++) {
+    auto first_idx = static_cast<int>(Indices::first);
+    for (auto j = first_idx; j < splitter.size(); j++) {
       auto val = -1.;
       try {
         val = std::stod(splitter[j]);
@@ -143,17 +142,18 @@ void Gene::parse(std::stringstream &ss) {
         val = -9;
 #else
         val = 0;
-        missing_variant_carriers_[transcript](j - 3, i - 1) = 1;
+        missing_variant_carriers_[transcript](j - first_idx, i - 1) = 1;
 #endif
       }
       if (val != 0) {
         try {
-          genotypes_[transcript](j - 3, i - 1) = val;
+          genotypes_[transcript](j - first_idx, i - 1) = val;
         } catch (std::exception &e) {
-          std::cerr << "Failed to set value for: row = " << j - 3 << " col = " << i - 1
+          std::cerr << "Failed to set value for: row = " << j - first_idx << " col = " << i - 1
                     << std::endl;
-          std::cerr << "Gene: " << splitter[0] << " Transcript: " << splitter[1]
-                    << " Location: " << splitter[2] << std::endl;
+          std::cerr << "Gene: " << splitter[static_cast<int>(Indices::gene)]
+          			<< " Transcript: " << splitter[static_cast<int>(Indices::transcript)]
+                    << " Location: " << form_variant_id(splitter) << std::endl;
           throw (e);
         }
       }
@@ -193,25 +193,25 @@ void Gene::parse(std::stringstream &ss) {
     arma::rowvec sums = arma::rowvec(arma::sum(genotypes_[ts], 0));
 
     arma::rowvec maf = arma::rowvec(arma::mean(genotypes_[ts]) / 2.);
-    for (arma::sword i = sums.n_elem - 1; i >= 0; --i) {
-      bool bmac = sums[i] > tp_.mac;
-      bool bmaf = maf[i] > tp_.maf;
+    for (arma::sword k = sums.n_elem - 1; k >= 0; --k) {
+      bool bmac = sums[k] > tp_.mac;
+      bool bmaf = maf[k] > tp_.maf;
       if (bmac || bmaf) {
         if (tp_.verbose && bmac) {
-          std::cerr << "Removing: " << gene_name << " " << ts << " " << positions_[ts][i] << " | count: "
-                    << sums[i] << " due to MAC filter." << std::endl;
+          std::cerr << "Removing: " << gene_name << " " << ts << " " << positions_[ts][k] << " | count: "
+					<< sums[k] << " due to MAC filter." << std::endl;
         } else if (tp_.verbose && bmaf) {
-          std::cerr << "Removing: " << gene_name << " " << ts << " " << positions_[ts][i] << " | frequency: "
-                    << maf[i] << " due to MAF filter." << std::endl;
+          std::cerr << "Removing: " << gene_name << " " << ts << " " << positions_[ts][k] << " | frequency: "
+					<< maf[k] << " due to MAF filter." << std::endl;
         }
-        sums.shed_col(i);
-        genotypes_[ts].shed_col(i);
-        missing_variant_carriers_[ts].shed_col(i);
-        positions_[ts].erase(positions_[ts].begin() + i);
+        sums.shed_col(k);
+        genotypes_[ts].shed_col(k);
+        weights_[ts].shed_row(k);
+        missing_variant_carriers_[ts].shed_col(k);
+        positions_[ts].erase(positions_[ts].begin() + k);
         nvariants_[ts]--;
       }
     }
-    weights_[ts] = arma::vec(nvariants_[ts], arma::fill::zeros);
     // Check if any polymorphic. Mark transcripts skippable if all fixed.
     if (arma::accu(sums) < tp_.min_minor_allele_count || nvariants_[ts] < tp_.min_variant_count) {
       std::cerr << "gene: " << gene_name << " marked skippable." << std::endl;
@@ -229,12 +229,6 @@ void Gene::set_weights(const std::string &k, arma::vec &weights) {
   }
 
   weights_[k] = weights;
-
-  weights_set_[k] = true;
-}
-
-bool Gene::is_weighted(const std::string &k) {
-  return weights_set_[k];
 }
 
 arma::vec &Gene::get_scores(const std::string &k) {
@@ -593,6 +587,15 @@ auto Gene::generate_vaast(Covariates &cov) -> void {
 
 arma::sp_mat &Gene::get_missing(const std::string &k) {
   return missing_variant_carriers_[k];
+}
+
+std::string Gene::form_variant_id(RJBUtil::Splitter<std::string> &splitter) {
+  std::stringstream ss;
+  ss << splitter[static_cast<int>(Indices::chrom)] << "-"
+  	 << splitter[static_cast<int>(Indices::start)] << "-"
+  	 << splitter[static_cast<int>(Indices::end)] << "-"
+  	 << splitter[static_cast<int>(Indices::type)];
+  return ss.str();
 }
 
 void print_comma_sep(arma::uvec &x, std::ostream &os) {

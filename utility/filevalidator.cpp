@@ -3,6 +3,7 @@
 //
 
 #include "filevalidator.hpp"
+#include "indices.hpp"
 #include <sstream>
 
 const std::set<std::string> FileValidator::matrix_variant_types {
@@ -14,17 +15,12 @@ const std::set<std::string> FileValidator::matrix_variant_types {
 };
 
 void FileValidator::validate_matrix_line(RJBUtil::Splitter<std::string> &line, int lineno) const {
-  if (line.size() < 3) {
+  if (line.size() < static_cast<int>(Indices::first)) {
 	std::string msg = build_error_message(lineno, "ERROR: Matrix Line Validation -- Line appears to be truncated. Line not long enough.");
 	throw(std::runtime_error(msg.c_str()));
   }
-  RJBUtil::Splitter<std::string> loc_splitter(line[2], "-");
-  if(loc_splitter.size() != 4) {
-	std::string msg = build_error_message(lineno, "ERROR: Matrix Line Validation -- Malformed location. Format should be chromosome-start-end-type.");
-    throw(std::runtime_error(msg.c_str()));
-  }
-  if(matrix_variant_types.find(loc_splitter[3]) == matrix_variant_types.end()) {
-	std::string msg = build_error_message(lineno, "ERROR: Matrix Line Validation -- Variant type in location incorrect. Must be one of {SNV, insertion, deletion, SPDA, complex_substitution}.");
+  if(matrix_variant_types.find(line[static_cast<int>(Indices::type)]) == matrix_variant_types.end()) {
+	std::string msg = build_error_message(lineno, "ERROR: Matrix Line Validation -- Variant type incorrect. Must be one of {SNV, insertion, deletion, SPDA, complex_substitution}.");
     throw(std::runtime_error(msg.c_str()));
   }
 }

@@ -114,7 +114,7 @@ set(PROJECT_SUPPORT_FILES
     statistics/fishertest.cpp
     statistics/fishertest.hpp
     utility/jointhreads.hpp
-    utility/indexsort.hpp utility/math.hpp utility/filevalidator.cpp utility/filevalidator.hpp)
+    utility/indexsort.hpp utility/math.hpp utility/filevalidator.cpp utility/filevalidator.hpp utility/indices.hpp)
 
 
 include_directories("${CMAKE_CURRENT_LIST_DIR}/third_party")
