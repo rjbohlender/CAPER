@@ -171,7 +171,7 @@ int main(int argc, char **argv) {
 		 "Match grouping behavior to VAAST 2.0. Off by default. If enabled variants are grouped by type annotation, otherwise grouped all together.");
     skat.add_options()
         ("kernel,k",
-         po::value<std::string>()->default_value("wLinear"),
+         po::value<std::string>()->default_value("Linear"),
          "Kernel for use with SKAT.\nOne of: {Linear, wLinear}.")
         ("qtl",
          po::bool_switch(&linear),

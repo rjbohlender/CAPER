@@ -19,17 +19,12 @@ RVT2, SKAT, and SKATO methods currently.
 
 We have implemented an alternative to the efficient resampling
 approach presented in Lee, Fuchsberger, Kim, and Scott (2016). In
-short, we use covariate adjusted permutation for the minor allele
-carriers in a gene.  We permute the phenotype of all individuals
-according to their odds estimated from logistic regression. This only
-applies to methods that do not use residuals from a linear or glm
-fit. For other methods, phenotypes are uniformly shuffled.
-
-SKAT and SKATO are implemented using the method described by Wu, Guan,
-and Pankow (2016).  The variant based statistic provides significant
-computational speedup over the individual based statistic, especially
-for very large datasets. Even with the computation advantage that this
-approach provides, it is still time consuming to permute SKAT-O.
+short, we use covariate adjusted permutation while binning samples by the
+similarity of their odds of being a case.  We permute the phenotype of all 
+individuals according to their odds estimated from logistic regression. All
+methods can be used with covariate adjusted permutation. If the user doesn't
+supply a covariate file, or disables covariate adjustment, the phenotypes
+are shuffled uniformly.
 
 ## Supported Methods ##
 
@@ -47,6 +42,21 @@ VAAST.
 	- VT (Price et al. 2010)
 	- WSS (Madsen, Browning 2009)
 
+### SKAT / SKAT-O ###
+
+SKAT and SKATO are implemented using the method described by Wu, Guan,
+and Pankow (2016).  The variant based statistic provides significant
+computational speedup over the individual based statistic
+for very large datasets. Additionally, this allows SKAT to be used on very
+large datasets, where otherwise the NxN covariance matrix will exhaust available
+ memory. Even with the computation advantage that this
+approach provides, it is still time consuming to permute SKAT-O.
+
+Note that SKAT can return two different values. When used without permutation,
+SKAT returns an analytic p-value. When used with permutation, the costly 
+calculation of the p-value is skipped, and the test statistic is returned
+instead.
+
 ## Compiling ##
 
 Dependencies: 
@@ -54,7 +64,8 @@ Dependencies:
 - C++ compiler supporting C++14
 - C++ Boost Library > 1.66 (required for quadrature)
 
-The dependencies can be installed via your package manager. Using Homebrew on macOS:
+The dependencies can be installed via your package manager. Using Homebrew on
+macOS:
 
 ```bash
 brew install armadillo
@@ -71,8 +82,8 @@ by Armadillo itself.
 Create a build directory and run cmake.
 
 ```bash
-mkdir pabuild
-cd pabuild
+mkdir build
+cd build
 
 cmake -DCMAKE_BUILD_TYPE=Release ..
 make
@@ -84,11 +95,10 @@ cluster, with packages in non-standard locations. In that case the
 following should work:
 
 ```bash
-mkdir pabuild && cd pabuild
+mkdir build && cd build
 
 cmake -DCMAKE_BUILD_TYPE=Release -DARMADILLO_INCLUDE_DIR=<path_to_armadillo>/include/ -DARMADILLO_LIBRARY=<path_to_armadillo>/lib64/libarmadillo.so
 make
-
 ```
 
 If you're having trouble with cmake detecting the correct compiler.
@@ -99,7 +109,8 @@ make
 
 ```
 
-The location for boost may need to be specified if it isn't installed in a typical location.
+The location for boost may need to be specified if it isn't installed in a
+typical location.
 
 ```bash
 cmake -DBOOST_ROOT=<path_to_boost> ..
@@ -145,16 +156,22 @@ Matrix files may be zipped with gzip, or unzipped. They are provided
 to the program with the "-i" flag. The matrix format used for the
 genotype file includes a header and is is as follows:
 
-	1) Gene (e.g., BRCA1)
-	2) Transcript (e.g., NM_700030) 
-	3) Location (e.g., chr17-41256266-41256266-SNV)
-	4+) Allele count (e.g., 0/1/2 - will be converted to minor allele count)
+	1) Chromosome
+	2) Start position (bp)
+	3) End position (bp)
+	4) Type (SNV) 
+	5) Reference allele
+	6) Alternate allele
+	7) Gene (e.g., BRCA1)
+	8) Transcript (e.g., NM_700030) 
+	9) Region (e.g., exonic, intronic)
+	10) Function (synonymous, nonsynonymous)
+	11) CASM score (function and conservation based weight)
+	12+) Sample genotype (e.g., 0/1/2 - will be converted to minor allele count)
 
-Note that the annotation at the end of the location is used for
-grouping in VAAST, and the program will fail without it if the
-annotation is not present when grouping is used. Because it is assumed
-to be present, if that annotation is missing and you provide weights,
-it will result in the weights not being found.
+Note that the type field is used for
+grouping in VAAST, and the program will fail if the
+annotation is not present when grouping is used.
 
 Variants are expected to be repeated for each transcript they appear
 in. This does increase the size of the file, but simplifies
@@ -178,24 +195,30 @@ file for those variants that fail QC if it is being used.
 
 ### Covariates ###
 
-Covariates can be provided in a matrix format file. The file format is as follows:
+Covariates can be provided in a matrix format file. The file format is as
+follows:
 
     1) Sample ID
     2) First covariate
     3) Second covariate
     4) ...
 
-There is no limit on the number of covariates that can be provided but they are assumed
-to be numeric.
+There is no limit on the number of covariates that can be provided but they are
+assumed to be numeric.
 
 ### Weights ###
 
-Essentially a bed format file, with the 4th column the variant annotation and 5th column 
-with the weight that will be converted to a log scale for VAAST. Weights will be used by VAAST, and SKAT /
-SKAT-O if the weighted linear kernel is used.
+Essentially a bed format file, with the 4th column the variant annotation and 
+5th column the weight, which will be converted to a log scale for VAAST. Weights
+will be used by VAAST, and SKAT / SKAT-O if the linear kernel is used.
 
     1) Chromosome
     2) Start position
     3) End position
     4) Annotation (e.g. SNV, Deletion, Insertion, etc.)
     5) Weight
+
+Weights provided via this option overwrite the CASM scores, which are used for
+weighting by default. Passing the --no_weights option will remove all weights.
+Using SKAT or SKAT-O with the weighted Linear kernel option will overwrite the
+weights with those calculated from a beta distribution.
