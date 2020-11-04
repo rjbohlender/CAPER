@@ -14,13 +14,13 @@ class FileValidator {
 
 public:
 	FileValidator() = default;
-	void validate_matrix_line(RJBUtil::Splitter<std::string> &line, int lineno) const;
-	void validate_cov_line(RJBUtil::Splitter<std::string> &line, int lineno) const;
-  	void validate_ped_line(RJBUtil::Splitter<std::string> &line, int lineno) const;
-	void validate_bed_line(RJBUtil::Splitter<std::string> &line, int lineno) const;
-	void validate_weight_line(RJBUtil::Splitter<std::string> &line, int lineno) const;
+	static void validate_matrix_line(RJBUtil::Splitter<std::string> &line, int lineno) ;
+	static void validate_cov_line(RJBUtil::Splitter<std::string> &line, int lineno) ;
+  	static void validate_ped_line(RJBUtil::Splitter<std::string> &line, int lineno) ;
+	static void validate_bed_line(RJBUtil::Splitter<std::string> &line, int lineno) ;
+	static void validate_weight_line(RJBUtil::Splitter<std::string> &line, int lineno) ;
 	void set_matrix_header(const std::string &header);
-	static std::string build_error_message(int lineno, const std::string &message);
+	static std::string build_error_message(const std::string &message, int lineno);
 };
 
 #endif //PERMUTE_ASSOCIATE_FILEVALIDATOR_HPP

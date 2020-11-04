@@ -291,7 +291,7 @@ int main(int argc, char **argv) {
   // Options
   tp.verbose = verbose;
   tp.gene_list = gene_list;
-  tp.nodetail = nodetail;
+  tp.no_detail = nodetail;
   tp.top_only = top_only;
   tp.mac = vm["mac"].as<arma::uword>();
   tp.pthresh = pthresh;

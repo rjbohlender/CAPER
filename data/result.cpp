@@ -38,9 +38,9 @@ Result::Result()
 	  output_stats(false) {
 }
 
-Result::Result(const std::string &gene, const std::string &transcript, bool skippable)
-	: gene(gene),
-	  transcript(transcript),
+Result::Result(std::string gene, std::string transcript, bool skippable)
+	: gene(std::move(gene)),
+	  transcript(std::move(transcript)),
 	  successes(0),
 	  mid_successes(0),
 	  permutations(0),
@@ -118,9 +118,6 @@ Result &Result::operator=(Result &&rhs) noexcept {
 }
 
 std::ostream &operator<<(std::ostream &stream, Result &rhs) {
-  std::cerr << "In result: " << rhs.gene << " " << rhs.transcript << " " << rhs.empirical_p << " " << rhs.successes
-			<< " " << rhs.permutations << std::endl;
-
   std::stringstream ci;
   ci << std::defaultfloat << std::setprecision(3) << rhs.empirical_ci.first << "," << std::setprecision(3)
 	 << rhs.empirical_ci.second;

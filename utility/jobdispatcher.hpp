@@ -113,7 +113,7 @@ public:
 			for(int i = 0; i < cov_->get_ncases(); i++) { // Assign cases
 			  p[i] = 1;
 			}
-			permute_.fisher_yates(p, permute_.sto);
+			Permute::fisher_yates(p, permute_.sto);
 		  }
 		}
 		if (tp_.nperm > 0 && tp_.verbose) {
@@ -182,7 +182,7 @@ public:
 			  break;
 			}
 		  }
-		  external_pos = ifs.tellg(); // Record our position and continue form there
+		  external_pos = ifs.tellg(); // Record our position and continue from there
 		  remaining -= lineno;
 		} else if(tp.nocovadj) {
 		  // Generate permutations for stage 1
@@ -194,7 +194,7 @@ public:
 		      for(int i = 0; i < cov_->get_ncases(); i++) { // Assign cases
 		        p[i] = 1;
 		      }
-		      permute_.fisher_yates(p, permute_.sto);
+		      Permute::fisher_yates(p, permute_.sto);
 		    }
 		  }
 		  if (tp_.nperm > 0 && tp_.verbose) {
@@ -296,7 +296,7 @@ private:
 		if (!gene_.empty()) {
 		  if (std::any_of(nvariants_.cbegin(), nvariants_.cend(), [&](const auto &v) { return v.second > 0; })) {
 			// Dispatch gene
-			Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_, tp_);
+			Gene gene_data(current, cov_, cov_->get_nsamples(), nvariants_, weight_, tp_);
 
 			if(!gene_data.is_skippable()) {
               if (tp_.range_start && tp_.range_end) {
@@ -322,7 +322,7 @@ private:
 		}
 	  }
 	}
-	Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_, tp_);
+	Gene gene_data(current, cov_, cov_->get_nsamples(), nvariants_, weight_, tp_);
 
 	if (!gene_data.is_skippable())
 	  single_dispatch(gene_data);
@@ -369,7 +369,7 @@ private:
 		if (!gene_.empty()) {
 		  if (std::any_of(nvariants_.cbegin(), nvariants_.cend(), [&](const auto &v) { return v.second > 0; })) {
 			// Dispatch gene
-			Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_, tp_);
+			Gene gene_data(current, cov_, cov_->get_nsamples(), nvariants_, weight_, tp_);
 
 			if (!gene_data.is_skippable())
 			  multiple_dispatch(gene_data);
@@ -402,7 +402,7 @@ private:
 	  }
 	}
 	if (!current.str().empty()) {
-	  Gene gene_data(current, cov_->get_nsamples(), nvariants_, weight_, tp_);
+	  Gene gene_data(current, cov_, cov_->get_nsamples(), nvariants_, weight_, tp_);
 
 	  if (!gene_data.is_skippable())
 		multiple_dispatch(gene_data);

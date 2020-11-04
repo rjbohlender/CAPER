@@ -16,7 +16,7 @@
 
 struct Result {
   Result();
-  Result(const std::string &gene, const std::string &transcript, bool skippable);
+  Result(std::string gene, std::string transcript, bool skippable);
   Result(const Result &res) = default;
   Result(Result &&res) noexcept;
 

@@ -47,6 +47,8 @@ struct TaskParams {
   double min_variant_count;
   double min_minor_allele_count;
   bool nocovadj;
+  bool no_weights;
+  bool impute_to_mean;
 
   boost::optional<int> range_start;
   boost::optional<int> range_end;
@@ -88,7 +90,7 @@ struct TaskParams {
 
   // Gene list
   boost::optional<std::string> gene_list;
-  bool nodetail;
+  bool no_detail;
 
   // Run power analysis
   bool power;

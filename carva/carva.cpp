@@ -39,16 +39,18 @@ int main(int argc, char **argv) {
   bool verbose = true;
   bool testable = false;
   bool linear = false;
-  bool nodetail = false;
+  bool no_detail = false;
   bool top_only = false;
   bool biallelic = false;
   bool nocovadj = false;
   bool stats = false;
   bool legacy_grouping = false;
+  bool no_weights = false;
+  bool impute_to_mean = false;
   std::vector<int> gene_range;
   std::vector<std::string> power;
   boost::optional<std::string> bed;
-  boost::optional<std::string> weight;
+  boost::optional<std::string> weights;
   boost::optional<std::string> gene_list;
   boost::optional<std::string> feature_list;
   boost::optional<std::string> permute_set;
@@ -72,13 +74,19 @@ int main(int argc, char **argv) {
         ("covariates,c",
          po::value<std::string>(),
          "The covariate matrix file, tab or space separated.\nFormat = sample_id cov1 ...")
-        ("bed-file,b",
+        ("bed_filter,b",
          po::value(&bed),
          "A bed file to be used as a filter. All specified regions will be excluded.")
-        ("weight-file,w",
-         po::value(&weight),
-         "A file providing weights.")
-        ("nthreads,t",
+        ("weights,w",
+         po::value(&weights),
+         "A file providing weights. Replaces the CASM scores provided in the matrix file.")
+		("no_weights",
+		 po::bool_switch(&no_weights),
+		 "Disable weights. Disables default CASM weights.")
+		("impute_to_mean",
+		 po::bool_switch(&impute_to_mean),
+		 "Impute the to mean AF of cases for case samples, and the mean AF of controls for control samples.")
+		("nthreads,t",
          po::value<size_t>()->default_value(std::thread::hardware_concurrency() / 2 + 1),
          "The number of threads. Minimum number of threads = 2. n + 1 threads, with one parent thread and n threads processing genes.")
         ("method,m",
@@ -118,8 +126,8 @@ int main(int argc, char **argv) {
         ("genes,l",
          po::value(&gene_list),
          "A comma-separated list of genes to analyze.")
-		("nodetail",
-         po::bool_switch(&nodetail),
+		("no_detail",
+         po::bool_switch(&no_detail),
          "Don't produce detailed, variant level output.")
         ("output_stats",
          po::bool_switch(&stats),
@@ -259,6 +267,13 @@ int main(int argc, char **argv) {
   if (optimizer_choices.count(vm["optimizer"].as<std::string>()) == 0) {
  	std::cerr << "Optimizer must be one of {irls, irls_svdnewton, irls_qr, irls_qr_R, gradient_descent}.\n";
  	std::cerr << visible << "\n";
+ 	return 1;
+  }
+
+  if (testable && vm["method"].as<std::string>() != "VAAST") {
+    std::cerr << "Testable option only works with VAAST.\n";
+    std::cerr << visible << "\n";
+    return 1;
   }
 
   /**********************
@@ -314,7 +329,7 @@ int main(int argc, char **argv) {
   tp.vaast_site_penalty = vm["site_penalty"].as<double>();
   tp.legacy_grouping = legacy_grouping;
   tp.bed = bed;
-  tp.weight = weight;
+  tp.weight = weights;
   tp.permute_set = permute_set;
   tp.bin_epsilon = vm["bin_epsilon"].as<double>();
   // Threading
@@ -322,8 +337,10 @@ int main(int argc, char **argv) {
   // Options
   tp.verbose = verbose;
   tp.gene_list = gene_list;
-  tp.nodetail = nodetail;
+  tp.no_detail = no_detail;
   tp.top_only = top_only;
+  tp.no_weights = no_weights;
+  tp.impute_to_mean = impute_to_mean;
   tp.mac = vm.count("mac") > 0 ? vm["mac"].as<arma::uword>() : std::numeric_limits<unsigned long long>::max();
   tp.min_minor_allele_count = vm["min_minor_allele_count"].as<arma::uword>();
   tp.min_variant_count = vm["min_variant_count"].as<arma::uword>();

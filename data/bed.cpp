@@ -6,6 +6,7 @@
 
 #include "bed.hpp"
 #include "../utility/filesystem.hpp"
+#include "../utility/filevalidator.hpp"
 
 BedRange::BedRange(std::pair<int, int> &range) : range(range) {}
 
@@ -20,14 +21,17 @@ int BedRange::operator-(int rhs) const { return range.second - rhs; }
 
 Bed::Bed(const std::string &ifile) {
   if(!check_file_exists(ifile)) {
-    std::cerr << "No mask file provided or incorrect path."  << std::endl;
+    std::cerr << "No mask file provided or incorrect path to mask file."  << std::endl;
     return;
   }
   std::ifstream ifs(ifile);
   std::string line;
+  int lineno = -1;
 
   while (std::getline(ifs, line)) {
+    lineno++;
 	RJBUtil::Splitter<std::string> splitter(line, "\t");
+	FileValidator::validate_bed_line(splitter, lineno);
 
 	int first = std::stoi(splitter[1]);
 	int second = std::stoi(splitter[2]);
@@ -56,16 +60,20 @@ Bed::Bed(const std::string &ifile) {
 
 Bed::Bed(std::stringstream &ss) {
   std::string line;
+  int lineno = -1;
 
   while (std::getline(ss, line, '\n')) {
+    lineno++;
 	RJBUtil::Splitter<std::string> splitter(line, "\t");
+	FileValidator::validate_bed_line(splitter, lineno);
 
 	int first = std::stoi(splitter[1]);
 	int second = std::stoi(splitter[2]);
 
 	// Initialize vector for chromosome
-	if (ranges_.find(splitter[0]) == ranges_.end())
+	if (ranges_.find(splitter[0]) == ranges_.end()) {
 	  ranges_[splitter[0]] = std::vector<BedRange>();
+	}
 
 	auto it = std::lower_bound(ranges_[splitter[0]].begin(), ranges_[splitter[0]].end(), first);
 

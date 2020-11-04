@@ -36,6 +36,7 @@ public:
   std::string gene_name;
 
   Gene(std::stringstream &ss,
+	   std::shared_ptr<Covariates> cov,
 	   unsigned long nsamples,
 	   std::map<std::string, arma::uword> &nvariants,
 	   const Weight &weight,
@@ -75,23 +76,24 @@ private:
   std::map<std::string, arma::vec> weights_;
   std::map<std::string, std::vector<std::string>> function_;
   std::map<std::string, std::vector<std::string>> annotation_;
+  std::map<std::string, std::vector<std::string>> reference_;
+  std::map<std::string, std::vector<std::string>> alternate_;
+  std::map<std::string, std::vector<std::string>> type_;
   std::vector<std::string> samples_;
 
   std::map<std::string, arma::vec> variant_scores_; // Stored if detail is true
-  std::map<std::string, double> odds_;
   bool testable_;
   bool skippable_;
   std::map<std::string, bool> polymorphic_;
 
   TaskParams tp_;
 
-  std::string header_;
   std::string detail_;
   std::map<std::string, std::string> vaast_;
 
   std::map<std::string, arma::sp_mat> missing_variant_carriers_;
 
-  void parse(std::stringstream &ss);
+  void parse(std::stringstream &ss, std::shared_ptr<Covariates> cov);
 
   auto testable(const std::string &k, Covariates &cov, const TaskParams &tp) -> bool;
 

@@ -2,10 +2,11 @@
 // Created by Bohlender,Ryan James on 8/21/18.
 //
 
+#include <boost/algorithm/string/predicate.hpp>
 #include "weight.hpp"
 #include "../utility/filesystem.hpp"
+#include "../utility/filevalidator.hpp"
 
-// TODO: Add check for lines in the wrong format.
 Weight::Weight(const std::string &ifile) {
   if (!check_file_exists(ifile)) {
     std::cerr << "No weights provided." << std::endl;
@@ -13,14 +14,19 @@ Weight::Weight(const std::string &ifile) {
   }
   std::ifstream ifs(ifile);
   std::string line;
+  int lineno = -1;
+  FileValidator fileValidator;
 
   while (std::getline(ifs, line)) {
-    if(line.empty() || line[0] == '#') {
+	lineno++;
+    if(line.empty() || boost::starts_with(line, "#")) {
       continue;
     }
-	RJBUtil::Splitter<std::string> splitter(line, "\t");
 
-    if(splitter.size() < 5) {
+	RJBUtil::Splitter<std::string> splitter(line, "\t");
+	fileValidator.validate_weight_line(splitter, lineno);
+
+	if(splitter.size() < 5) {
 	  std::cerr << "Incorrectly formatted weight line. Line was: " << line << std::endl;
 	  std::cerr << "Line should be tab separated and formatted as <chrom> <start_pos> <end_pos> <type> <weight>" << std::endl;
 	  throw(std::runtime_error("Incorrect line in weight file."));

@@ -101,7 +101,7 @@ double Methods::BURDEN(Gene &gene, const std::string &k, arma::vec &phenotypes, 
 
   arma::sp_mat G(gene.get_matrix(k));
 
-  check_weights(gene, k, a, b);
+  check_weights(gene, k, a, b, tp_.no_weights);
 
   arma::mat W = arma::diagmat(gene.get_weights(k));
 
@@ -400,7 +400,7 @@ double Methods::SKAT(Gene &gene,
 	}
   }
 
-  check_weights(gene, k, a, b);
+  check_weights(gene, k, a, b, tp_.no_weights);
   arma::vec weights = gene.get_weights(k);
 
   arma::mat W = arma::diagmat(weights);
@@ -470,7 +470,7 @@ double Methods::SKATO(Gene &gene,
   arma::sp_mat G(gene.get_matrix(k));
   arma::uword N = G.n_cols; // Variant count
 
-  check_weights(gene, k, a, b);
+  check_weights(gene, k, a, b, tp_.no_weights);
   arma::vec weights = gene.get_weights(k);
 
   arma::mat W = arma::diagmat(weights);
@@ -629,7 +629,7 @@ void Methods::check_weights(Gene &gene, const std::string &k, int a, int b, bool
 	return;
   }
   arma::mat G(gene.get_matrix(k));
-  arma::vec weights(G.n_cols, arma::fill::ones);
+  arma::vec weights = gene.get_weights(k);
 
   if (kernel_ == Kernel::wLinear) {
 	arma::vec maf = arma::mean(G, 0).t() / 2.;

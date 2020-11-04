@@ -149,7 +149,7 @@ Reporter::Reporter(std::vector<CARVATask> &res, TaskParams &tp)
   // Write output
   if (tp.gene_list) {
 	report_simple(tp);
-	if (!tp.nodetail) {
+	if (!tp.no_detail) {
 	  report_detail(res, tp);
 	}
   }
@@ -162,7 +162,7 @@ auto Reporter::report(std::vector<CARVATask> &res, TaskParams &tp) -> void {
   // Write output
   if (tp.gene_list) {
 	report_simple(tp);
-	if (!tp.nodetail) {
+	if (!tp.no_detail) {
 	  report_detail(res, tp);
 	  if (tp.method == "VAAST") {
 		report_vaast(res, tp);
@@ -668,7 +668,7 @@ auto Reporter::sort_simple(const TaskParams &tp) -> void {
 	if (tp.mac < std::numeric_limits<unsigned long long>::max()) {
 	  uf_ss << "--mac " << tp.mac << " ";
 	}
-	if (tp.nodetail) {
+	if (tp.no_detail) {
 	  uf_ss << "--nodetail ";
 	}
 	if (tp.legacy_grouping) {
