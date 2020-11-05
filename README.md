@@ -222,3 +222,27 @@ Weights provided via this option overwrite the CASM scores, which are used for
 weighting by default. Passing the --no_weights option will remove all weights.
 Using SKAT or SKAT-O with the weighted Linear kernel option will overwrite the
 weights with those calculated from a beta distribution.
+
+## Filter Whitelist ##
+
+This is a list of variant types and functions to include for each method. Any
+types or functions not in the list will be ignored / removed during parsing. The
+whitelist format is simple. It is the method matched with the type / function.
+Example:
+
+- BURDEN:SNV
+- BURDEN:insertion
+- BURDEN:deletion
+- BURDEN:SPDA
+- BURDEN:complex_substitution
+- BURDEN:synonymous
+- BURDEN:nonsynonymous
+- BURDEN:frameshift
+- BURDEN:nonframeshift
+- BURDEN:stopgain
+- BURDEN:stoploss
+- BURDEN:unknown
+
+This is the default allowed set of variant types and functions for the BURDEN
+test. Remove the SPDA line would result in all variants labelled as splicing
+donor / acceptor being removed.
