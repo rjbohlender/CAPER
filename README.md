@@ -244,5 +244,5 @@ Example:
 - BURDEN:unknown
 
 This is the default allowed set of variant types and functions for the BURDEN
-test. Remove the SPDA line would result in all variants labelled as splicing
+test. Removing the SPDA line would result in all variants labelled as splicing
 donor / acceptor being removed.
