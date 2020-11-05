@@ -10,6 +10,7 @@ BURDEN:nonframeshift
 BURDEN:stopgain
 BURDEN:stoploss
 BURDEN:unknown
+BURDEN:-
 CALPHA:SNV
 CALPHA:insertion
 CALPHA:deletion
@@ -22,6 +23,7 @@ CALPHA:nonframeshift
 CALPHA:stopgain
 CALPHA:stoploss
 CALPHA:unknown
+CALPHA:-
 CMC:SNV
 CMC:insertion
 CMC:deletion
@@ -34,6 +36,7 @@ CMC:nonframeshift
 CMC:stopgain
 CMC:stoploss
 CMC:unknown
+CMC:-
 CMC1df:SNV
 CMC1df:insertion
 CMC1df:deletion
@@ -46,6 +49,7 @@ CMC1df:nonframeshift
 CMC1df:stopgain
 CMC1df:stoploss
 CMC1df:unknown
+CMC1df:-
 VT:SNV
 VT:insertion
 VT:deletion
@@ -58,6 +62,7 @@ VT:nonframeshift
 VT:stopgain
 VT:stoploss
 VT:unknown
+VT:-
 WSS:SNV
 WSS:insertion
 WSS:deletion
@@ -70,6 +75,7 @@ WSS:nonframeshift
 WSS:stopgain
 WSS:stoploss
 WSS:unknown
+WSS:-
 RVT1:SNV
 RVT1:insertion
 RVT1:deletion
@@ -82,6 +88,7 @@ RVT1:nonframeshift
 RVT1:stopgain
 RVT1:stoploss
 RVT1:unknown
+RVT1:-
 RVT2:SNV
 RVT2:insertion
 RVT2:deletion
@@ -94,6 +101,7 @@ RVT2:nonframeshift
 RVT2:stopgain
 RVT2:stoploss
 RVT2:unknown
+RVT2:-
 SKAT:SNV
 SKAT:insertion
 SKAT:deletion
@@ -106,6 +114,7 @@ SKAT:nonframeshift
 SKAT:stopgain
 SKAT:stoploss
 SKAT:unknown
+SKAT:-
 SKATO:SNV
 SKATO:insertion
 SKATO:deletion
@@ -118,6 +127,7 @@ SKATO:nonframeshift
 SKATO:stopgain
 SKATO:stoploss
 SKATO:unknown
+SKATO:-
 VAAST:SNV
 VAAST:insertion
 VAAST:deletion
@@ -130,3 +140,4 @@ VAAST:nonframeshift
 VAAST:stopgain
 VAAST:stoploss
 VAAST:unknown
+VAAST:-

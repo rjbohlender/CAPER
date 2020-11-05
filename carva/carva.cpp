@@ -314,6 +314,13 @@ int main(int argc, char **argv) {
   tp.optimizer = vm["optimizer"].as<std::string>();
   // File paths and option status
   tp.program_path = argv[0];
+  int i = strlen(argv[0]);
+  for (; i > 0; i--) {
+    if (argv[0][i] == '/') {
+      break;
+    }
+  }
+  tp.program_directory = std::string(argv[0]).substr(0, i + 1);
   tp.seed = seed;
   tp.genotypes_path = vm["input"].as<std::string>();
   if (vm.count("covariates") > 0) {

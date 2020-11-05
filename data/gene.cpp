@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include <boost/format.hpp>
+#include <stack>
 
 #include "gene.hpp"
 #include "../statistics/vaast.hpp"
@@ -14,19 +15,21 @@
 #include "../statistics/bayesianglm.hpp"
 #include "../statistics/glm.hpp"
 #include "../utility/indices.hpp"
+#include "filter.hpp"
 
 Gene::Gene(std::stringstream &ss,
 		   std::shared_ptr<Covariates> cov,
 		   unsigned long nsamples,
 		   std::map<std::string, arma::uword> &nvariants,
 		   const Weight &weight,
-		   TaskParams tp)
+		   TaskParams tp,
+		   Filter &filter)
     : nsamples_(nsamples),
       nvariants_(nvariants),
       testable_(false),
       skippable_(false),
       tp_(std::move(tp)) {
-  parse(ss, cov);
+  parse(ss, cov, filter);
   if (!weight.empty()) {
     for (const auto &k : transcripts_) {
       weights_[k].reshape(nvariants_[k], 1);
@@ -85,10 +88,11 @@ void Gene::clear(Covariates &cov, std::unordered_map<std::string, Result> &resul
   }
 }
 
-void Gene::parse(std::stringstream &ss, std::shared_ptr<Covariates> cov) {
+void Gene::parse(std::stringstream &ss, std::shared_ptr<Covariates> cov, Filter &filter) {
   std::string line;
   arma::uword i = 0;
   std::vector<bool> rarest;
+  std::map<std::string, std::stack<int>> to_remove;
 
   while (std::getline(ss, line, '\n')) {
     if (i == 0) {
@@ -127,15 +131,17 @@ void Gene::parse(std::stringstream &ss, std::shared_ptr<Covariates> cov) {
 	  function_.emplace(std::make_pair(transcript, std::vector<std::string>()));
 	  // Add transcript to the variant annotation map
 	  annotation_.emplace(std::make_pair(transcript, std::vector<std::string>()));
+	  // Add filtering stack for transcript
+	  to_remove.emplace(std::make_pair(transcript, std::stack<int>()));
 	  // Reset counter on new transcript
       i = 1;
     }
-    std::string var_id = form_variant_id(splitter);
-	// Handle multiple copies of a variant e.g. triallelic. We only take the rarest.
-    if(std::find(positions_[transcript].begin(), positions_[transcript].end(), var_id) != positions_[transcript].end()) {
-    } else {
-	  positions_[transcript].push_back(var_id);
-	}
+    if (!filter.allow_variant(tp_.method, splitter)) {
+      to_remove[transcript].push(i - 1);
+    }
+
+	std::string var_id = form_variant_id(splitter);
+	positions_[transcript].push_back(var_id);
     weights_[transcript](i - 1) = std::stod(splitter[static_cast<int>(Indices::weight)]);
 
 	// Record other info in line
@@ -230,13 +236,23 @@ void Gene::parse(std::stringstream &ss, std::shared_ptr<Covariates> cov) {
     for (arma::sword k = sums.n_elem - 1; k >= 0; --k) {
       bool bmac = sums[k] > tp_.mac;
       bool bmaf = maf[k] > tp_.maf;
-      if (bmac || bmaf) {
+      bool bwht = false; // whitelist bool
+      if (!to_remove[ts].empty()) {
+        bwht = k == to_remove[ts].top();
+      }
+      if (bmac || bmaf || bwht) {
         if (tp_.verbose && bmac) {
           std::cerr << "Removing: " << gene_name << " " << ts << " " << positions_[ts][k] << " | count: "
 					<< sums[k] << " due to MAC filter." << std::endl;
         } else if (tp_.verbose && bmaf) {
           std::cerr << "Removing: " << gene_name << " " << ts << " " << positions_[ts][k] << " | frequency: "
 					<< maf[k] << " due to MAF filter." << std::endl;
+        } else if (tp_.verbose && bwht) {
+		  std::cerr << "Removing: " << gene_name << " " << ts << " " << positions_[ts][k] << " | type: "
+					<< type_[ts][k] << " | function: " << function_[ts][k] << " due to variant whitelist." << std::endl;
+		}
+        if (bwht) {
+          to_remove[ts].pop();
         }
         sums.shed_col(k);
         genotypes_[ts].shed_col(k);

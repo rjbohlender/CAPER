@@ -23,6 +23,7 @@
 #include "filesystem.hpp"
 #include "filevalidator.hpp"
 #include "indices.hpp"
+#include "../data/filter.hpp"
 
 #include <boost/iostreams/filtering_streambuf.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
@@ -46,6 +47,8 @@ public:
 	if (tp_.weight) {
 	  weight_ = Weight(*tp_.weight);
 	}
+	Filter filter(tp_.program_directory + "../filter/filter_whitelist.txt");
+
 
 	// Update case/control count for reporter
 	if(!tp_.power) {
@@ -151,10 +154,10 @@ public:
 
 	  if (!tp_.gene_list) {
 		// Parse if no gene_list
-		all_gene_dispatcher(gt_stream);
+		all_gene_dispatcher(gt_stream, filter);
 	  } else {
 		// Parse with gene_list
-		gene_list_dispatcher(gt_stream);
+		gene_list_dispatcher(gt_stream, filter);
 	  }
 
 	  gt_ifs_.close();
@@ -231,10 +234,10 @@ public:
 		if(gt_ifs_.is_open()) {
 		  if (!tp_.gene_list) {
 			// Parse if no gene_list
-			all_gene_dispatcher(gt_stream);
+			all_gene_dispatcher(gt_stream, filter);
 		  } else {
 			// Parse with gene_list
-			gene_list_dispatcher(gt_stream);
+			gene_list_dispatcher(gt_stream, filter);
 		  }
 		  gt_ifs_.close();
 		  tq_.wait(); // Need to wait here until all jobs are done, otherwise permutations will update during processing
@@ -274,7 +277,7 @@ public:
 private:
   // Member functions
   // Dispatch
-  void all_gene_dispatcher(std::istream &gt_stream) {
+  void all_gene_dispatcher(std::istream &gt_stream, Filter &filter) {
 	std::string line;
 	std::stringstream current;
 	int lineno = -1;
@@ -296,7 +299,7 @@ private:
 		if (!gene_.empty()) {
 		  if (std::any_of(nvariants_.cbegin(), nvariants_.cend(), [&](const auto &v) { return v.second > 0; })) {
 			// Dispatch gene
-			Gene gene_data(current, cov_, cov_->get_nsamples(), nvariants_, weight_, tp_);
+			Gene gene_data(current, cov_, cov_->get_nsamples(), nvariants_, weight_, tp_, filter);
 
 			if(!gene_data.is_skippable()) {
               if (tp_.range_start && tp_.range_end) {
@@ -322,7 +325,7 @@ private:
 		}
 	  }
 	}
-	Gene gene_data(current, cov_, cov_->get_nsamples(), nvariants_, weight_, tp_);
+	Gene gene_data(current, cov_, cov_->get_nsamples(), nvariants_, weight_, tp_, filter);
 
 	if (!gene_data.is_skippable())
 	  single_dispatch(gene_data);
@@ -348,7 +351,7 @@ private:
 	return std::find(gene_list_.cbegin(), gene_list_.cend(), gene);
   }
 
-  void gene_list_dispatcher(std::istream &gt_stream) {
+  void gene_list_dispatcher(std::istream &gt_stream, Filter &filter) {
 	std::string line;
 	std::stringstream current;
 	int lineno = -1;
@@ -369,7 +372,7 @@ private:
 		if (!gene_.empty()) {
 		  if (std::any_of(nvariants_.cbegin(), nvariants_.cend(), [&](const auto &v) { return v.second > 0; })) {
 			// Dispatch gene
-			Gene gene_data(current, cov_, cov_->get_nsamples(), nvariants_, weight_, tp_);
+			Gene gene_data(current, cov_, cov_->get_nsamples(), nvariants_, weight_, tp_, filter);
 
 			if (!gene_data.is_skippable())
 			  multiple_dispatch(gene_data);
@@ -402,7 +405,7 @@ private:
 	  }
 	}
 	if (!current.str().empty()) {
-	  Gene gene_data(current, cov_, cov_->get_nsamples(), nvariants_, weight_, tp_);
+	  Gene gene_data(current, cov_, cov_->get_nsamples(), nvariants_, weight_, tp_, filter);
 
 	  if (!gene_data.is_skippable())
 		multiple_dispatch(gene_data);

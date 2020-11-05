@@ -64,7 +64,13 @@ TEST_CASE("Data Construction & Methods") {
   std::map<std::string, arma::uword> nvariants{{"test_transcript1", 4},
 											   {"test_transcript2", 4}};
 
-  Gene gene(test_data, std::make_shared<Covariates>(test_ped, test_cov), cov.get_nsamples(), nvariants, casm, tp);
+  Gene gene(test_data,
+			std::make_shared<Covariates>(test_ped, test_cov),
+			cov.get_nsamples(),
+			nvariants,
+			casm,
+			tp,
+			<#initializer#>);
 
   SECTION("Data Construction") {
 

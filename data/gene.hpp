@@ -20,6 +20,7 @@
 #include "covariates.hpp"
 #include "result.hpp"
 #include "../utility/taskparams.hpp"
+#include "filter.hpp"
 
 arma::uvec setdiff(arma::uvec x, arma::uvec y);
 
@@ -40,7 +41,8 @@ public:
 	   unsigned long nsamples,
 	   std::map<std::string, arma::uword> &nvariants,
 	   const Weight &weight,
-	   TaskParams tp);
+	   TaskParams tp,
+	   Filter &filter);
 
   void print();
 
@@ -93,7 +95,7 @@ private:
 
   std::map<std::string, arma::sp_mat> missing_variant_carriers_;
 
-  void parse(std::stringstream &ss, std::shared_ptr<Covariates> cov);
+  void parse(std::stringstream &ss, std::shared_ptr<Covariates> cov, Filter &filter);
 
   auto testable(const std::string &k, Covariates &cov, const TaskParams &tp) -> bool;
 

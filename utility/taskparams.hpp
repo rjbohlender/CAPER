@@ -15,6 +15,7 @@
 struct TaskParams {
   // Base command
   std::string base;
+  std::string program_directory;
   // Permutation paramters
   arma::uword success_threshold;
 
