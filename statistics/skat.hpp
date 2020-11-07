@@ -22,7 +22,7 @@ int sgn(T x) {
 
 class SKATR_Null {
 public:
-  explicit SKATR_Null(std::shared_ptr<Covariates> cov);
+  explicit SKATR_Null(Covariates cov);
 
   // Handle permutation
   auto shuffle(arma::vec &phenotypes) -> void;

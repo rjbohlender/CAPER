@@ -270,12 +270,6 @@ int main(int argc, char **argv) {
  	return 1;
   }
 
-  if (testable && vm["method"].as<std::string>() != "VAAST") {
-    std::cerr << "Testable option only works with VAAST.\n";
-    std::cerr << visible << "\n";
-    return 1;
-  }
-
   /**********************
    * Setup task parameters
    **********************/

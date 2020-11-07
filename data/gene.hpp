@@ -47,7 +47,7 @@ public:
   void print();
 
   arma::sp_mat &get_matrix(const std::string &k);
-  arma::sp_mat &get_missing(const std::string &k);
+  __unused arma::sp_mat &get_missing(const std::string &k);
   void set_matrix(const std::string &k, arma::sp_mat &data);
   void set_matrix(const std::string &k, arma::sp_mat &&data);
   std::vector<std::string> &get_transcripts();
@@ -58,14 +58,14 @@ public:
   void set_weights(const std::string &k, arma::vec &weights);
   arma::vec &get_scores(const std::string &k);
   void set_scores(const std::string &k, arma::vec &scores);
-  auto get_detail() const -> std::string;
-  auto get_vaast() const -> std::map<std::string, std::string>;
-  auto is_skippable() const -> bool;
-  auto is_polymorphic(const std::string &k) -> bool;
-  auto is_testable() const -> bool;
-  auto generate_detail(Covariates &cov, std::unordered_map<std::string, Result> &results, const TaskParams &tp) -> void;
-  auto generate_vaast(Covariates &cov) -> void;
-  auto clear(Covariates &cov, std::unordered_map<std::string, Result> &results, const TaskParams &tp) -> void;
+  std::string get_detail() const;
+  std::map<std::string, std::string> get_vaast() const;
+  bool is_skippable() const;
+  bool is_polymorphic(const std::string &k);
+  bool is_testable() const;
+  void generate_detail(Covariates &cov, std::unordered_map<std::string, Result> &results, const TaskParams &tp);
+  void generate_vaast(Covariates &cov);
+  void clear(Covariates &cov, std::unordered_map<std::string, Result> &results, const TaskParams &tp);
 
   static std::string form_variant_id(RJBUtil::Splitter<std::string> &splitter);
 private:
@@ -97,8 +97,7 @@ private:
 
   void parse(std::stringstream &ss, std::shared_ptr<Covariates> cov, Filter &filter);
 
-  auto testable(const std::string &k, Covariates &cov, const TaskParams &tp) -> bool;
-
+  bool testable(const std::string &transcript, Covariates &cov, const std::vector<double> &permuted);
 };
 
 #endif //PERMUTE_ASSOCIATE_GENE_HPP

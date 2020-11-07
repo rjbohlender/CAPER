@@ -82,4 +82,21 @@ template<typename T>
 double geometric_p(T m, T n) {
   return (m - 1.) / (n - 1.);
 }
+
+/**
+ * @brief Find the percentile of a score given a distribution.
+ * @tparam T Floating point numeric type.
+ * @param score The score to find the percentile of.
+ * @param dist The distribution to find the percentile of the score in.
+ * @param greater Should values greater than the score be counted, or values less than the score?
+ * @return The percentile of the score.
+ */
+template<typename T>
+double percentile_of_score(T score, std::vector<T> dist, bool greater=true) {
+  double ret;
+  T init = 0.;
+  ret = std::accumulate(dist.begin(), dist.end(), init, [&](T &a, T &b) { if (greater) { return a + (score >= b); } else { return a + (score <= b); } });
+  ret = (ret + 1.) / (dist.size() + 1.);
+  return ret;
+}
 #endif //PERMUTE_ASSOCIATE_MATH_HPP

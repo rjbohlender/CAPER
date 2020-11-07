@@ -29,6 +29,9 @@ class Methods {
 public:
   explicit Methods(std::string method);
   Methods(TaskParams &tp, const std::shared_ptr<Covariates> &cov);
+  Methods(TaskParams &tp, const Covariates &cov);
+
+  double call(Gene &gene, Covariates &cov, arma::vec &phenotypes, const std::string &k, bool detail);
 
   std::string str();
 

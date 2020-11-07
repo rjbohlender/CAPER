@@ -11,6 +11,7 @@
 #include <boost/math/distributions/non_central_chi_squared.hpp>
 
 #include <boost/math/tools/roots.hpp>
+#include <utility>
 
 
 double SKAT_pval(double Q, const arma::vec &lambda) {
@@ -197,8 +198,8 @@ double Saddlepoint(double Q, const arma::vec &lambda) {
 }
 
 
-SKATR_Null::SKATR_Null(std::shared_ptr<Covariates> cov)
-: crand(std::random_device{}()), cov_(*cov) {
+SKATR_Null::SKATR_Null(Covariates cov)
+: crand(std::random_device{}()), cov_(std::move(cov)) {
   X = cov_.get_covariate_matrix();
   Y = cov_.get_phenotype_vector();
   pi0 = cov_.get_fitted();
@@ -275,7 +276,7 @@ auto SKATR_Null::get_X() noexcept -> const arma::mat & {
 }
 
 SKATR_Linear_Null::SKATR_Linear_Null(Covariates cov)
-: cov_(cov) {
+: cov_(std::move(cov)) {
   X = cov_.get_covariate_matrix();
   Y = cov_.get_phenotype_vector();
 

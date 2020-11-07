@@ -1,3 +1,4 @@
+#include <lzma.h>
 //
 // Created by Bohlender,Ryan James on 8/21/18.
 //
@@ -9,13 +10,14 @@
 #include <stack>
 
 #include "gene.hpp"
-#include "../statistics/vaast.hpp"
+#include "filter.hpp"
 #include "../link/binomial.hpp"
 #include "../link/gaussian.hpp"
 #include "../statistics/bayesianglm.hpp"
 #include "../statistics/glm.hpp"
 #include "../utility/indices.hpp"
-#include "filter.hpp"
+#include "../utility/math.hpp"
+#include "../statistics/methods.hpp"
 
 Gene::Gene(std::stringstream &ss,
 		   std::shared_ptr<Covariates> cov,
@@ -392,7 +394,7 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
         i++;
       }
       if (tp.testable)
-        results[ts].testable = testable(ts, cov, tp);
+        results[ts].testable = testable(ts, cov, results[ts].permuted);
       if (!testable_)
         testable_ = results[ts].testable;
     } else {
@@ -493,11 +495,11 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
   detail_ = detail.str();
 }
 
-auto Gene::get_detail() const -> std::string {
+std::string Gene::get_detail() const {
   return detail_;
 }
 
-auto Gene::get_vaast() const -> std::map<std::string, std::string> {
+std::map<std::string, std::string> Gene::get_vaast() const {
   return vaast_;
 }
 
@@ -505,11 +507,14 @@ std::vector<std::string> &Gene::get_samples() {
   return samples_;
 }
 
-auto Gene::testable(const std::string &k, Covariates &cov, const TaskParams &tp) -> bool {
+bool Gene::testable(const std::string &transcript, Covariates &cov, const std::vector<double> &permuted) {
+  double alpha = 0.05;
   arma::vec Yvec = cov.get_original_phenotypes();
-  arma::sp_mat Xmat(genotypes_[k]);
+  arma::sp_mat Xmat(genotypes_[transcript]);
 
   auto ncase = static_cast<arma::sword>(arma::accu(Yvec));
+
+  Methods methods(tp_, cov);
 
   // Most Extreme Phenotype Distribution
   arma::uvec mac_carriers = arma::vec(arma::sum(Xmat, 1)) > 0;
@@ -529,24 +534,28 @@ auto Gene::testable(const std::string &k, Covariates &cov, const TaskParams &tp)
   }
   assert(arma::accu(extreme_phen) == ncase);
 
-  VAASTLogic vaast(genotypes_[k], extreme_phen, weights_[k], positions_[k], k, false, tp.group_size, 2., 0, false);
+  double score = methods.call(*this, cov, extreme_phen, transcript, false);
 
-  return arma::accu(vaast.expanded_scores > 0) >= 4;
+  if (tp_.analytic) {
+    return score < alpha;
+  } else {
+    return percentile_of_score(score, permuted) < alpha;
+  }
 }
 
-auto Gene::is_testable() const -> bool {
+bool Gene::is_testable() const {
   return testable_;
 }
 
-auto Gene::is_skippable() const -> bool {
+bool Gene::is_skippable() const {
   return skippable_;
 }
 
-auto Gene::is_polymorphic(const std::string &k) -> bool {
+bool Gene::is_polymorphic(const std::string &k) {
   return polymorphic_[k];
 }
 
-auto Gene::generate_vaast(Covariates &cov) -> void {
+void Gene::generate_vaast(Covariates &cov) {
   // One entry per transcript
   for (const auto &ts : transcripts_) {
     std::stringstream vaast_ss;
@@ -667,7 +676,7 @@ auto Gene::generate_vaast(Covariates &cov) -> void {
   }
 }
 
-arma::sp_mat &Gene::get_missing(const std::string &k) {
+__unused arma::sp_mat &Gene::get_missing(const std::string &k) {
   return missing_variant_carriers_[k];
 }
 

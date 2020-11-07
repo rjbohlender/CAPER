@@ -230,6 +230,8 @@ types or functions not in the list will be ignored / removed during parsing. The
 whitelist format is simple. It is the method matched with the type / function.
 Example:
 
+Convert to matrix csv format.
+
 - BURDEN:SNV
 - BURDEN:insertion
 - BURDEN:deletion
@@ -246,3 +248,10 @@ Example:
 This is the default allowed set of variant types and functions for the BURDEN
 test. Removing the SPDA line would result in all variants labelled as splicing
 donor / acceptor being removed.
+
+## Testability ##
+
+We compare the score of the most extreme phenotype distribution against the
+distribution of permuted statistics for methods without an analytical p-value.
+The testability of this gene is then determined based upon the achievable
+p-value for the gene.

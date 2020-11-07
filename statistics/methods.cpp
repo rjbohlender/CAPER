@@ -61,7 +61,7 @@ arma::vec rank(arma::vec &v, const char *direction) {
 	i = j;
   }
 
-	return ranks;
+  return ranks;
 }
 
 Methods::Methods(std::string method)
@@ -78,11 +78,30 @@ Methods::Methods(TaskParams &tp, const std::shared_ptr<Covariates> &cov)
   }
 
   if ((tp.method == "SKAT" || tp.method == "SKATO" || tp.method == "BURDEN") && !tp.linear) {
-	obj_ = std::make_shared<SKATR_Null>(cov);
+	obj_ = std::make_shared<SKATR_Null>(*cov);
 	lin_obj_ = nullptr;
   } else if ((tp.method == "SKAT" || tp.method == "SKATO" || tp.method == "BURDEN") && tp.linear) {
 	obj_ = nullptr;
 	lin_obj_ = std::make_shared<SKATR_Linear_Null>(*cov);
+  } else if (tp.method == "VT") {
+	vt_obj_ = std::make_shared<VT_Res>();
+  }
+}
+
+Methods::Methods(TaskParams &tp, const Covariates &cov)
+	: method_(tp.method), tp_(tp) {
+  if (tp.kernel == "Linear") {
+	kernel_ = Kernel::Linear;
+  } else if (tp.kernel == "wLinear") {
+	kernel_ = Kernel::wLinear;
+  }
+
+  if ((tp.method == "SKAT" || tp.method == "SKATO" || tp.method == "BURDEN") && !tp.linear) {
+	obj_ = std::make_shared<SKATR_Null>(cov);
+	lin_obj_ = nullptr;
+  } else if ((tp.method == "SKAT" || tp.method == "SKATO" || tp.method == "BURDEN") && tp.linear) {
+	obj_ = nullptr;
+	lin_obj_ = std::make_shared<SKATR_Linear_Null>(cov);
   } else if (tp.method == "VT") {
 	vt_obj_ = std::make_shared<VT_Res>();
   }
@@ -361,7 +380,7 @@ double Methods::WSS(Gene &gene, arma::vec &Y, const std::string &k) {
   arma::vec count = arma::sum(X, 0).t(); // Total count for each variant
   arma::vec freq = (1. + count) / (2. + 2. * n); // Frequency with a prior
   arma::vec weight = 1. / arma::sqrt(freq % (1. - freq)); // Reciprocal of Binomial SD
-  arma::vec count_weight =  arma::vec(X * weight);
+  arma::vec count_weight = arma::vec(X * weight);
 
   return arma::accu(count_weight % Y);
 }
@@ -392,12 +411,10 @@ double Methods::SKAT(Gene &gene,
 					 bool shuffle) {
   arma::sp_mat G(gene.get_matrix(k));
 
-  if (shuffle) {
-	if (linear) {
-	  lin_obj_->shuffle(phenotypes);
-	} else {
-	  obj_->shuffle(phenotypes);
-	}
+  if (linear) {
+	lin_obj_->shuffle(phenotypes);
+  } else {
+	obj_->shuffle(phenotypes);
   }
 
   check_weights(gene, k, a, b, tp_.no_weights);
@@ -562,7 +579,7 @@ double Methods::SKATO(Gene &gene,
   arma::vec lam;
   bool success = arma::eig_sym(lam, R - (Rs * Rs.t()) / R1);
   if (!success) {
-    return 1.;
+	return 1.;
   }
   lam = arma::abs(lam);
 
@@ -641,6 +658,42 @@ void Methods::check_weights(Gene &gene, const std::string &k, int a, int b, bool
 	gene.set_weights(k, weights);
   } else {
 	gene.set_weights(k, weights);
+  }
+}
+
+double Methods::call(Gene &gene, Covariates &cov, arma::vec &phenotypes, const std::string &k, bool detail) {
+  if (method_ == "BURDEN") {
+	return BURDEN(gene, k, phenotypes, tp_.a, tp_.b);
+  } else if (method_ == "CALPHA") {
+	return CALPHA(gene, phenotypes, k);
+  } else if (method_ == "CMC") {
+	return CMC(gene, phenotypes, k, tp_.cmcmaf);
+  } else if (method_ == "CMC1df") {
+	return CMC1df(gene, phenotypes, k);
+  } else if (method_ == "RVT1") {
+	return RVT1(gene, phenotypes, cov.get_covariate_matrix(), cov.get_coef(), k, tp_.linear);
+  } else if (method_ == "RVT2") {
+	return RVT2(gene, phenotypes, cov.get_covariate_matrix(), cov.get_coef(), k, tp_.linear);
+  } else if (method_ == "SKAT") {
+	return SKAT(gene, k, phenotypes, tp_.a, tp_.b, detail, tp_.linear, tp_.nperm > 0, true);
+  } else if (method_ == "SKATO") {
+	return SKATO(gene, k, phenotypes, tp_.a, tp_.b, detail, tp_.linear);
+  } else if (method_ == "VAAST") {
+	return VAAST(gene,
+				 phenotypes,
+				 k,
+				 tp_.vaast_site_penalty,
+				 tp_.group_size,
+				 detail,
+				 tp_.biallelic,
+				 tp_.soft_maf_filter,
+				 tp_.legacy_grouping);
+  } else if (method_ == "VT") {
+	return VT(gene, k, phenotypes);
+  } else if (method_ == "WSS") {
+	return WSS(gene, phenotypes, k);
+  } else {
+	throw (std::logic_error("Failed to find "));
   }
 }
 

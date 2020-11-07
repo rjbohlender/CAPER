@@ -20,12 +20,12 @@
 
 class Covariates {
 public:
-  Covariates(TaskParams tp);
+  explicit Covariates(TaskParams tp);
   Covariates(std::stringstream &ped_ss, std::stringstream& cov_ss);
 
   Covariates(const Covariates &cov) = default;
 
-  Covariates(Covariates &&cov) = delete; // Covariates should never be moved and always copied.
+  // Covariates(Covariates &&cov) = delete; // Covariates should never be moved and always copied.
 
   Covariates &operator=(const Covariates &cov) = default;
 

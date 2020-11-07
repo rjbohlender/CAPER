@@ -6,8 +6,7 @@
 #include "../utility/math.hpp"
 
 CARVAOp::CARVAOp(CARVATask &ct, std::shared_ptr<Reporter> reporter, double seed, bool verbose)
-	: gen_(seed),
-	  ta_(ct),
+	: ta_(ct),
 	  done_(false),
 	  verbose_(verbose),
 	  reporter_(std::move(reporter)) {
@@ -15,8 +14,7 @@ CARVAOp::CARVAOp(CARVATask &ct, std::shared_ptr<Reporter> reporter, double seed,
 }
 
 CARVAOp::CARVAOp(CARVATask &&ct, std::shared_ptr<Reporter> reporter, double seed, bool verbose)
-	: gen_(seed),
-	  ta_(std::move(ct)),
+	: ta_(std::move(ct)),
 	  done_(false),
 	  verbose_(verbose),
 	  reporter_(std::move(reporter)) {
@@ -64,14 +62,7 @@ auto CARVAOp::stage1() -> void {
 		arma::accu(ta_.gene.get_matrix(transcript).t() * (1. - ta_.get_cov().get_original_phenotypes()));
 	v.second.cont_ref = 2 * arma::accu(1. - ta_.get_cov().get_original_phenotypes()) - v.second.case_alt;
 	v.second.original =
-		call_method(ta_.methods,
-					ta_.gene,
-					ta_.get_cov(),
-					ta_.get_cov().get_original_phenotypes(),
-					ta_.tp,
-					transcript,
-					false,
-					true);
+		ta_.methods.call(ta_.gene, ta_.get_cov(), ta_.get_cov().get_original_phenotypes(), transcript, true);
   }
 
   int iter = 0;
@@ -91,22 +82,16 @@ auto CARVAOp::stage1() -> void {
 
 	  arma::vec phenotypes = arma::conv_to<arma::vec>::from(ta_.get_permutations()[ta_.offset + iter]);
 	  if (arma::accu(phenotypes) != arma::accu(ta_.cov->get_original_phenotypes())) {
-	    std::cerr << "vec count: " << std::accumulate(ta_.get_permutations()[ta_.offset + iter].begin(), ta_.get_permutations()[ta_.offset + iter].end(), 0) << std::endl;
+		std::cerr << "vec count: " << std::accumulate(ta_.get_permutations()[ta_.offset + iter].begin(),
+													  ta_.get_permutations()[ta_.offset + iter].end(),
+													  0) << std::endl;
 		std::cerr << "Permuted count: " << arma::accu(phenotypes) << std::endl;
 		std::cerr << "Original count: " << arma::accu(ta_.cov->get_original_phenotypes()) << std::endl;
 		throw (std::runtime_error("Failed to properly generate permutation."));
 	  }
 
-	  double perm_val = call_method(ta_.methods,
-									ta_.gene,
-									ta_.get_cov(),
-									phenotypes,
-									ta_.tp,
-									v.second.transcript,
-									transcript_no == 0,
-									false);
+	  double perm_val = ta_.methods.call(ta_.gene, ta_.get_cov(), phenotypes, v.second.transcript, false);
 
-	  // ta_.increment_permuted(v.second.transcript, perm_val);
 	  v.second.permuted.push_back(perm_val);
 
 	  // Update total number of permutations
@@ -205,9 +190,9 @@ auto CARVAOp::stage1() -> void {
 
 auto CARVAOp::check_perm(const TaskParams &tp,
 						 double perm_val,
-						 int success_threshold,
+						 long success_threshold,
 						 std::pair<const std::string, Result> &v) -> void {
-  // SKATO returns a pvalue so we need to reverse the successes
+  // Some methods return a pvalue so we need to reverse the success inequality
   if (tp.analytic) {
 	if (perm_val <= v.second.original) {
 	  if (tp.pthresh) {
@@ -281,45 +266,3 @@ auto CARVAOp::check_perm(const TaskParams &tp,
   }
 }
 
-auto CARVAOp::call_method(Methods &method,
-						  Gene &gene,
-						  Covariates &cov,
-						  arma::vec &phenotypes,
-						  const TaskParams &tp,
-						  const std::string &k,
-						  bool shuffle,
-						  bool detail) -> double {
-  if (tp.method == "BURDEN") {
-	return method.BURDEN(gene, k, phenotypes, tp.a, tp.b);
-  } else if (tp.method == "CALPHA") {
-	return method.CALPHA(gene, phenotypes, k);
-  } else if (tp.method == "CMC") {
-	return method.CMC(gene, phenotypes, k, tp.cmcmaf);
-  } else if (tp.method == "CMC1df") {
-	return method.CMC1df(gene, phenotypes, k);
-  } else if (tp.method == "RVT1") {
-	return method.RVT1(gene, phenotypes, cov.get_covariate_matrix(), cov.get_coef(), k, tp.linear);
-  } else if (tp.method == "RVT2") {
-	return method.RVT2(gene, phenotypes, cov.get_covariate_matrix(), cov.get_coef(), k, tp.linear);
-  } else if (tp.method == "SKAT") {
-	return method.SKAT(gene, k, phenotypes, tp.a, tp.b, detail, tp.linear, tp.nperm > 0, true);
-  } else if (tp.method == "SKATO") {
-	return method.SKATO(gene, k, phenotypes, tp.a, tp.b, detail, tp.linear);
-  } else if (tp.method == "VAAST") {
-	return method.VAAST(gene,
-						phenotypes,
-						k,
-						tp.vaast_site_penalty,
-						tp.group_size,
-						detail,
-						tp.biallelic,
-						tp.soft_maf_filter,
-						tp.legacy_grouping);
-  } else if (tp.method == "VT") {
-	return method.VT(gene, k, phenotypes);
-  } else if (tp.method == "WSS") {
-	return method.WSS(gene, phenotypes, k);
-  } else {
-	throw (std::logic_error("Failed to find method."));
-  }
-}
