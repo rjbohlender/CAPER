@@ -231,7 +231,7 @@ double PowerOp::call_method(Methods &method,
   } else if (tp.method == "RVT2") {
 	return method.RVT2(gene, phenotypes, cov.get_covariate_matrix(), cov.get_coef(), k, tp.linear);
   } else if (tp.method == "SKAT") {
-	return method.SKAT(gene, k, phenotypes, tp.a, tp.b, detail, tp.linear, false, false);
+	return method.SKAT(gene, k, phenotypes, tp.a, tp.b, detail, tp.linear, false);
   } else if (tp.method == "SKATO") {
 	return method.SKATO(gene, k, phenotypes, tp.a, tp.b, detail, tp.linear);
   } else if (tp.method == "VAAST") {

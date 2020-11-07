@@ -14,16 +14,25 @@ Filter::Filter(const std::string &file_path) {
   }
   std::string line;
   std::ifstream ifs(file_path);
+  int lineno = -1;
+  std::vector<std::string> methods;
 
   while(std::getline(ifs, line)) {
-    RJBUtil::Splitter<std::string> splitter(line, ":");
-    if (splitter.size() != 2) {
-      throw(std::runtime_error("ERROR: Whitelist malformed. Expected TEST:type."));
+    lineno++;
+    RJBUtil::Splitter<std::string> splitter(line, ",");
+    if (lineno == 0) {
+      std::copy(splitter.begin() + 1, splitter.end(), std::back_inserter(methods));
+      continue;
     }
     if (boost::starts_with(line, "#")) { // Skip commented lines
       continue;
     }
-    method_type_map[splitter[0]].insert(splitter[1]);
+    RJBUtil::Splitter<std::string> variant(splitter[0], ":");
+    for (int i = 1; i < splitter.size(); i++) {
+      if (splitter[i] == "1") {
+		method_type_map[methods[i]].insert(variant[1]);
+	  }
+	}
   }
 }
 

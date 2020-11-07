@@ -165,10 +165,10 @@ TEST_CASE("Data Construction & Methods") {
 	std::shared_ptr<Covariates> cov_ptr = std::make_shared<Covariates>(test_ped, test_cov);
 	Methods methods(tp, cov_ptr);
 
-	double skat = methods.SKAT(gene, "test_transcript1", cov.get_phenotype_vector(), 1, 25, false, false, false, false);
+	double skat = methods.SKAT(gene, "test_transcript1", cov.get_phenotype_vector(), 1, 25, false, false, false);
 	REQUIRE(skat == Approx(0.625000));
 
-	skat = methods.SKAT(gene, "test_transcript2", cov.get_phenotype_vector(), 1, 25, false, false, false, false);
+	skat = methods.SKAT(gene, "test_transcript2", cov.get_phenotype_vector(), 1, 25, false, false, false);
 	REQUIRE(skat == Approx(0.750000));
   }
 

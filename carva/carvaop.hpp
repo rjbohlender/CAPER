@@ -19,7 +19,7 @@ public:
 
   bool done_;
   bool verbose_;
-  CARVATask ta_;
+  CARVATask carvaTask;
 private:
 
   auto stage1() -> void;

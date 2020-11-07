@@ -31,7 +31,7 @@ public:
   Methods(TaskParams &tp, const std::shared_ptr<Covariates> &cov);
   Methods(TaskParams &tp, const Covariates &cov);
 
-  double call(Gene &gene, Covariates &cov, arma::vec &phenotypes, const std::string &k, bool detail);
+  double call(Gene &gene, Covariates &cov, arma::vec &phenotypes, const std::string &transcript, bool detail);
 
   std::string str();
 
@@ -39,13 +39,13 @@ public:
 
   // Wu, Guan, and Pankow 2016
   double BURDEN(Gene &gene, const std::string &k, arma::vec &phenotypes, int a, int b);
-  double CALPHA(Gene &gene, arma::vec &Y, const std::string &k);
+  static double CALPHA(Gene &gene, arma::vec &Y, const std::string &k);
   // Li and Leal 2008
   double CMC(Gene &gene, arma::vec &Y, const std::string &k, double maf = 0.005) const;
   double CMC1df(Gene &gene, arma::vec &Y, const std::string &k) const;
   // Morris and Zeggini 2010
   double RVT1(Gene &gene, arma::vec &Y, arma::mat design, arma::vec &initial_beta, const std::string &k, bool linear);
-  double RVT2(Gene &gene,
+  static double RVT2(Gene &gene,
               arma::vec &Y,
               arma::mat design,
               arma::vec &initial_beta,
@@ -53,23 +53,22 @@ public:
               bool linear);
   // Wu, Guan, and Pankow 2016
   double SKAT(Gene &gene,
-              const std::string &k,
-              arma::vec &phenotypes,
-              int a,
-              int b,
-              bool detail,
-              bool linear,
-              bool permute,
-              bool shuffle);
+			  const std::string &transcript,
+			  arma::vec &phenotypes,
+			  int a,
+			  int b,
+			  bool detail,
+			  bool linear,
+			  bool permute);
   // Wu, Guan, and Pankow 2016
   double SKATO(Gene &gene,
-               const std::string &k,
+               const std::string &transcript,
                arma::vec &phenotypes,
                int a,
                int b,
                bool detail = false,
                bool linear = false);
-  double VAAST(Gene &gene,
+  static double VAAST(Gene &gene,
 			   arma::vec &Y,
 			   const std::string &k,
 			   double site_penalty,
@@ -81,7 +80,7 @@ public:
   double VT(Gene &gene, const std::string &k, arma::vec &phenotypes);
 
   // Madsen, Browning 2009
-  double WSS(Gene &gene, arma::vec &Y, const std::string &k);
+  static double WSS(Gene &gene, arma::vec &Y, const std::string &k);
 
 private:
   const std::string method_;
@@ -92,7 +91,7 @@ private:
   static constexpr std::array<double, 8> rho_{0, 0.01, 0.04, 0.09, 0.16, 0.25, 0.5, 1};
 
   // Check weighting
-  void check_weights(Gene &gene, const std::string &k, int a = 1, int b = 25, bool no_weight = false);
+  void check_weights(Gene &gene, const std::string &transcript, int a = 1, int b = 25, bool no_weight = false);
 
   // SKAT Null Model
   std::shared_ptr<SKATR_Null> obj_;

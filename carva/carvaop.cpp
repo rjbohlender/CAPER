@@ -6,28 +6,28 @@
 #include "../utility/math.hpp"
 
 CARVAOp::CARVAOp(CARVATask &ct, std::shared_ptr<Reporter> reporter, double seed, bool verbose)
-	: ta_(ct),
-	  done_(false),
+	: done_(false),
 	  verbose_(verbose),
+	  carvaTask(ct),
 	  reporter_(std::move(reporter)) {
 
 }
 
 CARVAOp::CARVAOp(CARVATask &&ct, std::shared_ptr<Reporter> reporter, double seed, bool verbose)
-	: ta_(std::move(ct)),
-	  done_(false),
+	: done_(false),
 	  verbose_(verbose),
+	  carvaTask(std::move(ct)),
 	  reporter_(std::move(reporter)) {
 
 }
 
 auto CARVAOp::run() -> void {
-  Stage stage = ta_.stage;
+  Stage stage = carvaTask.stage;
 
   if (stage == Stage::Stage1) {
 	stage1();
   } else if (stage == Stage::Done) {
-	ta_.methods.clear(ta_.gene.get_transcripts());
+	carvaTask.methods.clear(carvaTask.gene.get_transcripts());
 	this->done_ = true;
 	return;
   } else {
@@ -36,83 +36,83 @@ auto CARVAOp::run() -> void {
 }
 
 auto CARVAOp::finish() -> void {
-  ta_.calc_multitranscript_pvalues();
+  carvaTask.calc_multitranscript_pvalues();
   // Finalize result calculations and free memory
-  ta_.cleanup();
+  carvaTask.cleanup();
 
   // Report results for non-gene_list run
-  if (!ta_.tp.gene_list) {
-	reporter_->sync_write_simple(ta_.results, ta_.tp);
-	reporter_->sync_write_detail(ta_.gene.get_detail(), ta_.gene.is_testable());
-	reporter_->sync_write_vaast(ta_, ta_.tp);
+  if (!carvaTask.tp.gene_list) {
+	reporter_->sync_write_simple(carvaTask.results, carvaTask.tp);
+	reporter_->sync_write_detail(carvaTask.gene.get_detail(), carvaTask.gene.is_testable());
+	reporter_->sync_write_vaast(carvaTask, carvaTask.tp);
   }
 }
 
 auto CARVAOp::stage1() -> void {
   // Set original value
-  for (auto &v : ta_.results) {
+  for (auto &v : carvaTask.results) {
 	std::string gene_name = v.first;
 	std::string transcript = v.second.transcript;
-	if (!ta_.gene.is_polymorphic(gene_name)) {
+	if (!carvaTask.gene.is_polymorphic(gene_name)) {
 	  continue;
 	}
-	v.second.case_alt = arma::accu(ta_.gene.get_matrix(transcript).t() * ta_.get_cov().get_original_phenotypes());
-	v.second.case_ref = 2 * arma::accu(ta_.get_cov().get_original_phenotypes()) - v.second.case_alt;
+	v.second.case_alt = arma::accu(carvaTask.gene.get_matrix(transcript).t() * carvaTask.get_cov().get_original_phenotypes());
+	v.second.case_ref = 2 * arma::accu(carvaTask.get_cov().get_original_phenotypes()) - v.second.case_alt;
 	v.second.cont_alt =
-		arma::accu(ta_.gene.get_matrix(transcript).t() * (1. - ta_.get_cov().get_original_phenotypes()));
-	v.second.cont_ref = 2 * arma::accu(1. - ta_.get_cov().get_original_phenotypes()) - v.second.case_alt;
+		arma::accu(carvaTask.gene.get_matrix(transcript).t() * (1. - carvaTask.get_cov().get_original_phenotypes()));
+	v.second.cont_ref = 2 * arma::accu(1. - carvaTask.get_cov().get_original_phenotypes()) - v.second.case_alt;
 	v.second.original =
-		ta_.methods.call(ta_.gene, ta_.get_cov(), ta_.get_cov().get_original_phenotypes(), transcript, true);
+		carvaTask.methods.call(carvaTask.gene, carvaTask.get_cov(), carvaTask.get_cov().get_original_phenotypes(), transcript, true);
   }
 
   int iter = 0;
-  while (iter < ta_.npermutations) {
+  while (iter < carvaTask.npermutations) {
 	int transcript_no = -1;
 
-	for (auto &v : ta_.results) {
+	for (auto &v : carvaTask.results) {
 	  transcript_no++;
 	  const std::string &k = v.second.transcript;
-	  if (!ta_.gene.is_polymorphic(k)) {
+	  if (!carvaTask.gene.is_polymorphic(k)) {
 		continue;
 	  }
 
 	  // Skip transcripts with no variants
-	  if (!ta_.gene.is_polymorphic(k))
+	  if (!carvaTask.gene.is_polymorphic(k))
 		continue;
 
-	  arma::vec phenotypes = arma::conv_to<arma::vec>::from(ta_.get_permutations()[ta_.offset + iter]);
-	  if (arma::accu(phenotypes) != arma::accu(ta_.cov->get_original_phenotypes())) {
-		std::cerr << "vec count: " << std::accumulate(ta_.get_permutations()[ta_.offset + iter].begin(),
-													  ta_.get_permutations()[ta_.offset + iter].end(),
+	  arma::vec phenotypes = arma::conv_to<arma::vec>::from(carvaTask.get_permutations()[carvaTask.offset + iter]);
+	  if (arma::accu(phenotypes) != arma::accu(carvaTask.cov->get_original_phenotypes())) {
+		std::cerr << "vec count: " << std::accumulate(carvaTask.get_permutations()[carvaTask.offset + iter].begin(),
+													  carvaTask.get_permutations()[carvaTask.offset + iter].end(),
 													  0) << std::endl;
 		std::cerr << "Permuted count: " << arma::accu(phenotypes) << std::endl;
-		std::cerr << "Original count: " << arma::accu(ta_.cov->get_original_phenotypes()) << std::endl;
+		std::cerr << "Original count: " << arma::accu(carvaTask.cov->get_original_phenotypes()) << std::endl;
 		throw (std::runtime_error("Failed to properly generate permutation."));
 	  }
 
-	  double perm_val = ta_.methods.call(ta_.gene, ta_.get_cov(), phenotypes, v.second.transcript, false);
+	  double perm_val = carvaTask.methods.call(carvaTask.gene, carvaTask.get_cov(), phenotypes, v.second.transcript, false);
 
 	  v.second.permuted.push_back(perm_val);
 
 	  // Update total number of permutations
 	  v.second.permutations++;
 
-	  check_perm(ta_.tp, perm_val, ta_.success_threshold, v);
+	  check_perm(carvaTask.tp, perm_val, carvaTask.success_threshold, v);
 	}
 	// Stop iterating if everything is done
-	if (std::all_of(ta_.results.cbegin(), ta_.results.cend(), [&](const auto &v) { return v.second.done; })) {
+	if (std::all_of(carvaTask.results.cbegin(), carvaTask.results.cend(), [&](const auto &v) { return v.second.done; })) {
 	  break;
 	}
 	iter++;
   }
 
   int ts_no = 0;
-  for (auto &v : ta_.results) {
+  for (auto &v : carvaTask.results) {
 	double empirical;
 	double midp;
 	// If we stopped early, use the geometric correction, otherwise calculate for binomial phat
-	if (ta_.tp.max_perms) {
-	  if (v.second.permutations < *ta_.tp.max_perms) {
+	if (carvaTask.tp.max_perms) {
+	  if (v.second.permutations < *carvaTask.tp.max_perms) {
 		empirical = geometric_p(v.second.successes, v.second.permutations);
 		midp = geometric_p(v.second.mid_successes, static_cast<double>(v.second.permutations));
 	  } else {
@@ -120,7 +120,7 @@ auto CARVAOp::stage1() -> void {
 		midp = (1. + v.second.mid_successes) / (1. + v.second.permutations);
 	  }
 	} else {
-	  if (v.second.permutations < ta_.tp.nperm) {
+	  if (v.second.permutations < carvaTask.tp.nperm) {
 		empirical = geometric_p(v.second.successes, v.second.permutations);
 		midp = geometric_p(v.second.mid_successes, static_cast<double>(v.second.permutations));
 	  } else {
@@ -143,23 +143,23 @@ auto CARVAOp::stage1() -> void {
 	} else {
 	  done_ &= v.second.done;
 	}
-	if (ta_.tp.max_perms) {
-	  if (ta_.tp.gene_list) {
-		if (v.second.permutations >= ta_.termination) {
+	if (carvaTask.tp.max_perms) {
+	  if (carvaTask.tp.gene_list) {
+		if (v.second.permutations >= carvaTask.termination) {
 		  done_ = true;
 		}
 	  } else {
-		if (v.second.permutations >= *ta_.tp.max_perms) {
+		if (v.second.permutations >= *carvaTask.tp.max_perms) {
 		  done_ = true;
 		}
 	  }
 	} else {
-	  if (ta_.tp.gene_list) {
-		if (v.second.permutations >= ta_.termination) {
+	  if (carvaTask.tp.gene_list) {
+		if (v.second.permutations >= carvaTask.termination) {
 		  done_ = true;
 		}
 	  } else {
-		if (v.second.permutations >= ta_.tp.nperm) {
+		if (v.second.permutations >= carvaTask.tp.nperm) {
 		  done_ = true;
 		}
 	  }
@@ -168,8 +168,8 @@ auto CARVAOp::stage1() -> void {
 	v.second.empirical_midp = midp;
 	v.second.update_ci();
 
-	double n = 2 * ta_.gene.get_samples().size();
-	double nmac = arma::accu(arma::sum(arma::mat(ta_.gene.get_matrix(v.second.transcript)), 1) > 0);
+	double n = 2 * carvaTask.gene.get_samples().size();
+	double nmac = arma::accu(arma::sum(arma::mat(carvaTask.gene.get_matrix(v.second.transcript)), 1) > 0);
 	double nmaj = n - nmac;
 
 	v.second.calc_exact_p(nmac, nmaj);
@@ -177,14 +177,14 @@ auto CARVAOp::stage1() -> void {
   }
   if (done_) { // True only when all are finished.
 	if (verbose_) {
-	  for (const auto &v : ta_.results) {
-		std::cerr << ta_.gene.gene_name << "\t" << v.second.transcript << "\t";
+	  for (const auto &v : carvaTask.results) {
+		std::cerr << carvaTask.gene.gene_name << "\t" << v.second.transcript << "\t";
 		std::cerr << std::defaultfloat << std::setprecision(6) << v.second.original << std::endl;
 	  }
 	}
-	ta_.stage = Stage::Done;
+	carvaTask.stage = Stage::Done;
   } else {
-	ta_.stage = Stage::Stage1;
+	carvaTask.stage = Stage::Stage1;
   }
 }
 
