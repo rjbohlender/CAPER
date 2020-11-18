@@ -81,7 +81,7 @@ struct TaskParams {
 
   // VAAST
   arma::uword group_size;
-  bool testable;
+  boost::optional<double> testable;
   bool biallelic;
 
   // CMC

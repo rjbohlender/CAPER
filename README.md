@@ -89,7 +89,7 @@ cmake -DCMAKE_BUILD_TYPE=Release ..
 make
 ```
 
-If cmake fails to detect armadillo, but you're sure it is available,
+If cmake fails to detect Armadillo, but you're sure it is available,
 you may need to direct cmake to the library, e.g., when compiling on a
 cluster, with packages in non-standard locations. In that case the
 following should work:

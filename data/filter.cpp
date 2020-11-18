@@ -29,8 +29,8 @@ Filter::Filter(const std::string &file_path) {
     }
     RJBUtil::Splitter<std::string> variant(splitter[0], ":");
     for (int i = 1; i < splitter.size(); i++) {
-      if (splitter[i] == "1") {
-		method_type_map[methods[i]].insert(variant[1]);
+      if (strcmp(splitter[i].c_str(), "1") == 0) {
+		method_type_map[methods[i - 1]].insert(variant[1]);
 	  }
 	}
   }

@@ -37,7 +37,6 @@ int main(int argc, char **argv) {
   po::variables_map vm;
 
   bool verbose = true;
-  bool testable = false;
   bool linear = false;
   bool no_detail = false;
   bool top_only = false;
@@ -58,6 +57,7 @@ int main(int argc, char **argv) {
   boost::optional<arma::uword> approximate;
   boost::optional<int> seed;
   boost::optional<arma::uword> max_perms;
+  boost::optional<double> testable;
 
   try {
     required.add_options()
@@ -149,14 +149,14 @@ int main(int argc, char **argv) {
 		 "Maximum number of permutations, used in combination with --nperm to manage memory usage. Run permutation in blocks of size nperm, up to the maximum set here. Only genes requiring additional permutation will be permuted. If you are running a small number of permutations, do not set this option.")
 		("seed",
 		 po::value(&seed),
-		 "A defined seed passed to the random number generators used for each gene.");
+		 "A defined seed passed to the random number generators used for each gene.")
+        ("testable",
+         po::value(&testable),
+         "Return results for genes with a minimum achievable p-value less than or equal to what is given.");
 	vaast.add_options()
         ("group_size,g",
          po::value<arma::uword>()->default_value(0),
          "Group size, minor allele count threshold for grouping a variant. VAAST can collapse variants into groups of variants, dependent upon the collapse having a higher total VAAST score.")
-        ("testable",
-         po::bool_switch(&testable),
-         "Return scores only for genes with at least scoreable variants in VAAST.")
 	    ("soft_maf_filter",
 		 po::value<double>()->default_value(0.5),
 		 "Caps the highest allele frequency for the control set in the likelihood calculation. Penalizes common variants without removing them.")

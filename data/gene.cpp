@@ -511,7 +511,7 @@ bool Gene::testable(const std::string &transcript, Covariates &cov, const std::v
   if (!is_polymorphic(transcript)) {
     return false;
   }
-  double alpha = 0.05;
+  double alpha = *tp_.testable;
   arma::vec Yvec = cov.get_original_phenotypes();
   arma::sp_mat Xmat(genotypes_[transcript]);
 
