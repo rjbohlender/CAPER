@@ -35,10 +35,10 @@ public:
   Gene gene;
   std::shared_ptr<Covariates> cov;
   Methods methods;
-  long success_threshold;
-  long npermutations;
-  long offset;
-  long termination;
+  size_t success_threshold;
+  size_t npermutations;
+  size_t offset;
+  size_t termination;
   std::vector<std::vector<int8_t>> &permutations;
   const TaskParams tp;
   std::unordered_map<std::string, Result> results;

@@ -25,13 +25,13 @@ CARVATask::CARVATask(Stage stage_,
 	  termination(termination_),
 	  permutations(perm_),
 	  tp(std::move(tp_)) {
-  for (const auto &k : gene.get_transcripts()) {
-	results[k] = Result(gene.gene_name, k, !gene.is_polymorphic(k));
-	results[k].output_stats = tp.output_stats;
+  for (const auto &transcript : gene.get_transcripts()) {
+	results[transcript] = Result(gene.gene_name, transcript, !gene.is_polymorphic(transcript));
+	results[transcript].output_stats = tp.output_stats;
 	if(tp.seed) {
-	  permute[k] = Permute(*tp.seed);
+	  permute[transcript] = Permute(*tp.seed);
 	} else {
-	  permute[k] = Permute();
+	  permute[transcript] = Permute();
 	}
   }
 }
@@ -51,13 +51,13 @@ CARVATask::CARVATask(Stage stage_,
 	  offset(0),
 	  termination(tp_.nperm),
 	  tp(std::move(tp_)) {
-  for (const auto &k : gene.get_transcripts()) {
-	results.emplace(std::make_pair(k, Result(gene.gene_name, k, !gene.is_polymorphic(k))));
-	results[k].output_stats = tp.output_stats;
+  for (const auto &transcript : gene.get_transcripts()) {
+	results.emplace(std::make_pair(transcript, Result(gene.gene_name, transcript, !gene.is_polymorphic(transcript))));
+	results[transcript].output_stats = tp.output_stats;
 	if(tp.seed) {
-	  permute[k] = Permute(*tp.seed);
+	  permute[transcript] = Permute(*tp.seed);
 	} else {
-	  permute[k] = Permute();
+	  permute[transcript] = Permute();
 	}
   }
 }

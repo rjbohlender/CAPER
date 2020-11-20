@@ -25,7 +25,7 @@ auto CARVAOp::run() -> void {
   Stage stage = carvaTask.stage;
 
   if (stage == Stage::Stage1) {
-	stage1();
+	op();
   } else if (stage == Stage::Done) {
 	carvaTask.methods.clear(carvaTask.gene.get_transcripts());
 	this->done_ = true;
@@ -48,21 +48,24 @@ auto CARVAOp::finish() -> void {
   }
 }
 
-auto CARVAOp::stage1() -> void {
+auto CARVAOp::op() -> void {
+  auto &gene = carvaTask.gene;
+  auto &cov = carvaTask.get_cov();
+
   // Set original value
   for (auto &v : carvaTask.results) {
-	std::string gene_name = v.first;
-	std::string transcript = v.second.transcript;
-	if (!carvaTask.gene.is_polymorphic(gene_name)) {
+	std::string transcript = v.first;
+	Result &res = v.second;
+	if (!gene.is_polymorphic(transcript)) {
 	  continue;
 	}
-	v.second.case_alt = arma::accu(carvaTask.gene.get_matrix(transcript).t() * carvaTask.get_cov().get_original_phenotypes());
-	v.second.case_ref = 2 * arma::accu(carvaTask.get_cov().get_original_phenotypes()) - v.second.case_alt;
-	v.second.cont_alt =
-		arma::accu(carvaTask.gene.get_matrix(transcript).t() * (1. - carvaTask.get_cov().get_original_phenotypes()));
-	v.second.cont_ref = 2 * arma::accu(1. - carvaTask.get_cov().get_original_phenotypes()) - v.second.case_alt;
-	v.second.original =
-		carvaTask.methods.call(carvaTask.gene, carvaTask.get_cov(), carvaTask.get_cov().get_original_phenotypes(), transcript, true);
+	res.case_alt = arma::accu(gene.get_matrix(transcript).t() * cov.get_original_phenotypes());
+	res.case_ref = 2 * arma::accu(cov.get_original_phenotypes()) - res.case_alt;
+	res.cont_alt =
+		arma::accu(gene.get_matrix(transcript).t() * (1. - cov.get_original_phenotypes()));
+	res.cont_ref = 2 * arma::accu(1. - cov.get_original_phenotypes()) - res.case_alt;
+	res.original =
+		carvaTask.methods.call(gene, cov, cov.get_original_phenotypes(), transcript, true);
   }
 
   int iter = 0;
@@ -71,17 +74,20 @@ auto CARVAOp::stage1() -> void {
 
 	for (auto &v : carvaTask.results) {
 	  transcript_no++;
-	  const std::string &k = v.second.transcript;
-	  if (!carvaTask.gene.is_polymorphic(k)) {
+	  std::string transcript = v.first;
+	  Result &res = v.second;
+	  if (!carvaTask.gene.is_polymorphic(transcript)) {
 		continue;
 	  }
 
 	  // Skip transcripts with no variants
-	  if (!carvaTask.gene.is_polymorphic(k))
+	  if (!gene.is_polymorphic(transcript)) {
 		continue;
+	  }
 
 	  arma::vec phenotypes = arma::conv_to<arma::vec>::from(carvaTask.get_permutations()[carvaTask.offset + iter]);
-	  if (arma::accu(phenotypes) != arma::accu(carvaTask.cov->get_original_phenotypes())) {
+#ifndef NDEBUG
+	  if (arma::accu(phenotypes) != arma::accu(cov.get_original_phenotypes())) {
 		std::cerr << "vec count: " << std::accumulate(carvaTask.get_permutations()[carvaTask.offset + iter].begin(),
 													  carvaTask.get_permutations()[carvaTask.offset + iter].end(),
 													  0) << std::endl;
@@ -89,18 +95,22 @@ auto CARVAOp::stage1() -> void {
 		std::cerr << "Original count: " << arma::accu(carvaTask.cov->get_original_phenotypes()) << std::endl;
 		throw (std::runtime_error("Failed to properly generate permutation."));
 	  }
+#endif
 
-	  double perm_val = carvaTask.methods.call(carvaTask.gene, carvaTask.get_cov(), phenotypes, v.second.transcript, false);
+	  double perm_val =
+		  carvaTask.methods.call(gene, cov, phenotypes, transcript, false);
 
-	  v.second.permuted.push_back(perm_val);
+	  res.permuted.push_back(perm_val);
 
 	  // Update total number of permutations
-	  v.second.permutations++;
+	  res.permutations++;
 
 	  check_perm(carvaTask.tp, perm_val, carvaTask.success_threshold, v);
 	}
 	// Stop iterating if everything is done
-	if (std::all_of(carvaTask.results.cbegin(), carvaTask.results.cend(), [&](const auto &v) { return v.second.done; })) {
+	if (std::all_of(carvaTask.results.cbegin(),
+					carvaTask.results.cend(),
+					[](const auto &v) { return v.second.done; })) {
 	  break;
 	}
 	iter++;
@@ -108,24 +118,26 @@ auto CARVAOp::stage1() -> void {
 
   int ts_no = 0;
   for (auto &v : carvaTask.results) {
+    std::string transcript = v.first;
+    Result &res = v.second;
 	double empirical;
 	double midp;
-	// If we stopped early, use the geometric correction, otherwise calculate for binomial phat
-	if (carvaTask.tp.max_perms) {
-	  if (v.second.permutations < *carvaTask.tp.max_perms) {
-		empirical = geometric_p(v.second.successes, v.second.permutations);
-		midp = geometric_p(v.second.mid_successes, static_cast<double>(v.second.permutations));
+	// If we stopped early, use the geometric correction, otherwise calculate for binomial p-hat
+	if (carvaTask.tp.max_perms) { // We're looping multiple times
+	  if (res.permutations < *carvaTask.tp.max_perms) {
+		empirical = geometric_p(res.successes, res.permutations);
+		midp = geometric_p(res.mid_successes, static_cast<double>(res.permutations));
 	  } else {
-		empirical = (1. + v.second.successes) / (1. + v.second.permutations);
-		midp = (1. + v.second.mid_successes) / (1. + v.second.permutations);
+		empirical = (1. + res.successes) / (1. + res.permutations);
+		midp = (1. + res.mid_successes) / (1. + res.permutations);
 	  }
-	} else {
-	  if (v.second.permutations < carvaTask.tp.nperm) {
-		empirical = geometric_p(v.second.successes, v.second.permutations);
-		midp = geometric_p(v.second.mid_successes, static_cast<double>(v.second.permutations));
+	} else { // We're looping a single time
+	  if (res.permutations < carvaTask.tp.nperm) {
+		empirical = geometric_p(res.successes, res.permutations);
+		midp = geometric_p(res.mid_successes, static_cast<double>(res.permutations));
 	  } else {
-		empirical = (1. + v.second.successes) / (1. + v.second.permutations);
-		midp = (1. + v.second.mid_successes) / (1. + v.second.permutations);
+		empirical = (1. + res.successes) / (1. + res.permutations);
+		midp = (1. + res.mid_successes) / (1. + res.permutations);
 	  }
 	}
 
@@ -145,40 +157,40 @@ auto CARVAOp::stage1() -> void {
 	}
 	if (carvaTask.tp.max_perms) {
 	  if (carvaTask.tp.gene_list) {
-		if (v.second.permutations >= carvaTask.termination) {
+		if (res.permutations >= carvaTask.termination) {
 		  done_ = true;
 		}
 	  } else {
-		if (v.second.permutations >= *carvaTask.tp.max_perms) {
+		if (res.permutations >= *carvaTask.tp.max_perms) {
 		  done_ = true;
 		}
 	  }
 	} else {
 	  if (carvaTask.tp.gene_list) {
-		if (v.second.permutations >= carvaTask.termination) {
+		if (res.permutations >= carvaTask.termination) {
 		  done_ = true;
 		}
 	  } else {
-		if (v.second.permutations >= carvaTask.tp.nperm) {
+		if (res.permutations >= carvaTask.tp.nperm) {
 		  done_ = true;
 		}
 	  }
 	}
-	v.second.empirical_p = empirical;
-	v.second.empirical_midp = midp;
-	v.second.update_ci();
+	res.empirical_p = empirical;
+	res.empirical_midp = midp;
+	res.update_ci();
 
-	double n = 2 * carvaTask.gene.get_samples().size();
-	double nmac = arma::accu(arma::sum(arma::mat(carvaTask.gene.get_matrix(v.second.transcript)), 1) > 0);
+	double n = 2. * gene.get_samples().size();
+	double nmac = arma::accu(arma::sum(arma::mat(gene.get_matrix(transcript)), 1) > 0);
 	double nmaj = n - nmac;
 
-	v.second.calc_exact_p(nmac, nmaj);
+	res.calc_exact_p(nmac, nmaj);
 	ts_no++;
   }
   if (done_) { // True only when all are finished.
 	if (verbose_) {
 	  for (const auto &v : carvaTask.results) {
-		std::cerr << carvaTask.gene.gene_name << "\t" << v.second.transcript << "\t";
+		std::cerr << gene.gene_name << "\t" << v.second.transcript << "\t";
 		std::cerr << std::defaultfloat << std::setprecision(6) << v.second.original << std::endl;
 	  }
 	}
@@ -192,75 +204,77 @@ auto CARVAOp::check_perm(const TaskParams &tp,
 						 double perm_val,
 						 long success_threshold,
 						 std::pair<const std::string, Result> &v) -> void {
+  std::string ts = v.first;
+  Result &res = v.second;
   // Some methods return a pvalue so we need to reverse the success inequality
   if (tp.analytic) {
-	if (perm_val <= v.second.original) {
+	if (perm_val <= res.original) {
 	  if (tp.pthresh) {
-		v.second.successes++;
-		if (perm_val == v.second.original) {
-		  v.second.mid_successes += 0.5;
+		res.successes++;
+		if (perm_val == res.original) {
+		  res.mid_successes += 0.5;
 		} else {
-		  v.second.mid_successes++;
+		  res.mid_successes++;
 		}
 
 		double lower, upper;
-		std::tie(lower, upper) = poisson_ci(v.second.successes, v.second.permutations);
+		std::tie(lower, upper) = poisson_ci(res.successes, res.permutations);
 
 		// Ensure a minimum number of permutations
-		if (v.second.permutations > 10) {
+		if (res.permutations > 10) {
 		  // Stop when the lower bound on the 95% confidence interval is greater than the threshold given
-		  v.second.done = lower > *tp.pthresh;
+		  res.done = lower > *tp.pthresh;
 		}
-	  } else if (v.second.successes < success_threshold) {
-		v.second.successes++;
-		if (perm_val == v.second.original) {
-		  v.second.mid_successes += 0.5;
+	  } else if (res.successes < success_threshold) {
+		res.successes++;
+		if (perm_val == res.original) {
+		  res.mid_successes += 0.5;
 		} else {
-		  v.second.mid_successes++;
+		  res.mid_successes++;
 		}
 	  } else {
-		v.second.successes++;
-		if (perm_val == v.second.original) {
-		  v.second.mid_successes += 0.5;
+		res.successes++;
+		if (perm_val == res.original) {
+		  res.mid_successes += 0.5;
 		} else {
-		  v.second.mid_successes++;
+		  res.mid_successes++;
 		}
-		v.second.done = true;
+		res.done = true;
 	  }
 	}
   } else {
-	if (perm_val >= v.second.original) {
+	if (perm_val >= res.original) {
 	  if (tp.pthresh) {
-		v.second.successes++;
-		if (perm_val == v.second.original) {
-		  v.second.mid_successes += 0.5;
+		res.successes++;
+		if (perm_val == res.original) {
+		  res.mid_successes += 0.5;
 		} else {
-		  v.second.mid_successes++;
+		  res.mid_successes++;
 		}
 
 		double lower, upper;
-		std::tie(lower, upper) = poisson_ci(v.second.successes, v.second.permutations);
+		std::tie(lower, upper) = poisson_ci(res.successes, res.permutations);
 
 		// Ensure a minimum number of permutations
-		if (v.second.permutations > 10) {
+		if (res.permutations > 10) {
 		  // Stop when the lower bound on the 95% confidence interval is greater than the threshold given
-		  v.second.done = lower > *tp.pthresh;
+		  res.done = lower > *tp.pthresh;
 		}
-	  } else if (v.second.successes < success_threshold) {
-		v.second.successes++;
-		if (perm_val == v.second.original) {
-		  v.second.mid_successes += 0.5;
+	  } else if (res.successes < success_threshold) {
+		res.successes++;
+		if (perm_val == res.original) {
+		  res.mid_successes += 0.5;
 		} else {
-		  v.second.mid_successes++;
+		  res.mid_successes++;
 		}
 	  } else {
-		v.second.successes++;
-		if (perm_val == v.second.original) {
-		  v.second.mid_successes += 0.5;
+		res.successes++;
+		if (perm_val == res.original) {
+		  res.mid_successes += 0.5;
 		} else {
-		  v.second.mid_successes++;
+		  res.mid_successes++;
 		}
-		v.second.done = true;
+		res.done = true;
 	  }
 	}
   }

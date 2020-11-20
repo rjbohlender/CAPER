@@ -22,7 +22,7 @@ public:
   CARVATask carvaTask;
 private:
 
-  auto stage1() -> void;
+  auto op() -> void;
 
   static auto check_perm(const TaskParams &tp,
 						 double perm_val,

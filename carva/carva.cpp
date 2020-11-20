@@ -407,6 +407,8 @@ int main(int argc, char **argv) {
     std::cerr << "success threshold: " << tp.success_threshold << "\n";
     std::cerr << "nthreads: " << tp.nthreads << "\n";
     std::cerr << "permutations: " << tp.nperm << "\n";
+	if (tp.testable)
+	  std::cerr << "testable filter: " << *tp.testable << "\n";
 	if (tp.maf < 0.5)
 	  std::cerr << "maf filter: " << tp.maf << "\n";
     if (tp.mac < std::numeric_limits<unsigned long long>::max())
