@@ -95,9 +95,11 @@ private:
 
   std::map<std::string, arma::sp_mat> missing_variant_carriers_;
 
-  void parse(std::stringstream &ss, std::shared_ptr<Covariates> cov, Filter &filter);
+  void parse(std::stringstream &ss, const std::shared_ptr<Covariates>& cov, Filter &filter);
 
   bool testable(const std::string &transcript, Covariates &cov, const std::vector<double> &permuted);
+
+  std::stringstream transcript_union(std::stringstream &ss, const std::shared_ptr<Covariates>& cov, Filter &filter);
 };
 
 #endif //PERMUTE_ASSOCIATE_GENE_HPP

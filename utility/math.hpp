@@ -92,7 +92,7 @@ double geometric_p(T m, T n) {
  * @return The percentile of the score.
  */
 template<typename T>
-double percentile_of_score(T score, std::vector<T> dist, bool greater=true) {
+double percentile_of_score(T score, std::vector<T> dist, bool greater=false) {
   double ret;
   T init = 0.;
   ret = std::accumulate(dist.begin(), dist.end(), init, [&](T &a, T &b) { if (greater) { return a + (score >= b); } else { return a + (score <= b); } });

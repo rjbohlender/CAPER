@@ -491,7 +491,13 @@ auto Reporter::sync_write_simple(std::unordered_map<std::string, Result> &result
 	  }
 	}
 	if(topres != nullptr) {
-      simple_file_tmp_ << *topres;
+	  if (print_testable_) {
+	    if(topres->testable) {
+		  simple_file_tmp_ << *topres;
+		}
+	  } else {
+		simple_file_tmp_ << *topres;
+	  }
 	}
     return;
   }

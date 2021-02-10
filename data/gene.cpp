@@ -90,11 +90,15 @@ void Gene::clear(Covariates &cov, std::unordered_map<std::string, Result> &resul
   }
 }
 
-void Gene::parse(std::stringstream &ss, std::shared_ptr<Covariates> cov, Filter &filter) {
+void Gene::parse(std::stringstream &ss, const std::shared_ptr<Covariates>& cov, Filter &filter) {
   std::string line;
   arma::uword i = 0;
   std::vector<bool> rarest;
   std::map<std::string, std::stack<int>> to_remove;
+
+  if (tp_.whole_gene) {
+	ss = transcript_union(ss, cov, filter);
+  }
 
   while (std::getline(ss, line, '\n')) {
     if (i == 0) {
@@ -537,12 +541,22 @@ bool Gene::testable(const std::string &transcript, Covariates &cov, const std::v
   }
   assert(arma::accu(extreme_phen) == ncase);
 
-  double score = methods.call(*this, cov, extreme_phen, transcript, false);
+  Gene tmp = *this;
+  double score = methods.call(tmp, cov, extreme_phen, transcript, true);
 
-  if (tp_.analytic) {
-    return score < alpha;
+  if (tp_.method == "VAAST" || tp_.method == "SKAT") {
+    bool testable_variants = arma::accu(tmp.variant_scores_[transcript] > 0) >= 8;
+	if (tp_.analytic) {
+	  return score < alpha && testable_variants;
+	} else {
+	  return (percentile_of_score(score, permuted, false) < alpha) && testable_variants;
+	}
   } else {
-    return percentile_of_score(score, permuted) < alpha;
+	if (tp_.analytic) {
+	  return score < alpha;
+	} else {
+	  return percentile_of_score(score, permuted, false) < alpha;
+	}
   }
 }
 
@@ -690,6 +704,17 @@ std::string Gene::form_variant_id(RJBUtil::Splitter<std::string> &splitter) {
   	 << splitter[static_cast<int>(Indices::end)] << "-"
   	 << splitter[static_cast<int>(Indices::type)];
   return ss.str();
+}
+
+std::stringstream Gene::transcript_union(std::stringstream &ss, const std::shared_ptr<Covariates>& cov, Filter &filter) {
+  std::stringstream res_ss;
+  std::string line;
+
+  while(std::getline(ss, line, '\n')) {
+
+  }
+
+  return res_ss;
 }
 
 void print_comma_sep(arma::uvec &x, std::ostream &os) {

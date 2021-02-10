@@ -24,6 +24,8 @@ struct TaskParams {
   arma::uword nperm;
   boost::optional<arma::uword> max_perms;
 
+  bool whole_gene;
+
   // For external permutations
   bool external;
   std::string external_path;

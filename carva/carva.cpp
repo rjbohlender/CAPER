@@ -46,6 +46,7 @@ int main(int argc, char **argv) {
   bool legacy_grouping = false;
   bool no_weights = false;
   bool impute_to_mean = false;
+  bool whole_gene = false;
   std::vector<int> gene_range;
   std::vector<std::string> power;
   boost::optional<std::string> bed;
@@ -86,6 +87,9 @@ int main(int argc, char **argv) {
 		("impute_to_mean",
 		 po::bool_switch(&impute_to_mean),
 		 "Impute the to mean AF of cases for case samples, and the mean AF of controls for control samples.")
+		("whole_gene",
+		 po::bool_switch(&whole_gene),
+		 "Analyze the union of all transcripts for a gene.")
 		("nthreads,t",
          po::value<size_t>()->default_value(std::thread::hardware_concurrency() / 2 + 1),
          "The number of threads. Minimum number of threads = 2. n + 1 threads, with one parent thread and n threads processing genes.")
@@ -329,6 +333,7 @@ int main(int argc, char **argv) {
   tp.group_size = vm["group_size"].as<arma::uword>();
   tp.vaast_site_penalty = vm["site_penalty"].as<double>();
   tp.legacy_grouping = legacy_grouping;
+  tp.whole_gene = whole_gene;
   tp.bed = bed;
   tp.weight = weights;
   tp.permute_set = permute_set;
