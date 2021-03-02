@@ -345,6 +345,7 @@ double Methods::VAAST(Gene &gene,
 					  bool biallelic,
 					  double control_freq_cutoff,
 					  bool legacy) {
+  check_weights(gene, k, tp_.a, tp_.b, tp_.no_weights);
   VAASTLogic vaast_logic
 	  (gene,
 	   Y,

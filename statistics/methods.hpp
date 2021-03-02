@@ -68,7 +68,7 @@ public:
                int b,
                bool detail = false,
                bool linear = false);
-  static double VAAST(Gene &gene,
+  double VAAST(Gene &gene,
 			   arma::vec &Y,
 			   const std::string &k,
 			   double site_penalty,

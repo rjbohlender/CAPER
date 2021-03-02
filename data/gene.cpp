@@ -114,16 +114,16 @@ void Gene::parse(std::stringstream &ss, const std::shared_ptr<Covariates>& cov, 
     if (gene_name.empty()) {
 	  gene_name = splitter[static_cast<int>(Indices::gene)];
     }
-    auto iter = std::find(std::begin(transcripts_), std::end(transcripts_), splitter[static_cast<int>(Indices::transcript)]);
-    std::string transcript = splitter[static_cast<int>(Indices::transcript)];
-    if (iter == std::end(transcripts_)) {
-      // Transcript not found -- add
-      transcripts_.push_back(transcript);
-      // Start with matrix transposed
-      genotypes_.emplace(std::make_pair(transcript, arma::sp_mat(nsamples_, nvariants_[transcript])));
-      // Separately record the controls
-      missing_variant_carriers_.emplace(std::make_pair(transcript, arma::sp_mat(nsamples_, nvariants_[transcript])));
-      // Ensure positions are allocated for current transcript
+	std::string transcript = tp_.whole_gene ? gene_name : splitter[static_cast<int>(Indices::transcript)];
+	auto iter = std::find(std::begin(transcripts_), std::end(transcripts_), transcript);
+	if (iter == std::end(transcripts_)) {
+	  // Transcript not found -- add
+	  transcripts_.push_back(transcript);
+	  // Start with matrix transposed
+	  genotypes_.emplace(std::make_pair(transcript, arma::sp_mat(nsamples_, nvariants_[transcript])));
+	  // Separately record the controls
+	  missing_variant_carriers_.emplace(std::make_pair(transcript, arma::sp_mat(nsamples_, nvariants_[transcript])));
+	  // Ensure positions are allocated for current transcript
 	  positions_[transcript] = std::vector<std::string>();
 	  // Ensure weights are the right length
 	  weights_[transcript].reshape(nvariants_[transcript], 1);
@@ -140,9 +140,9 @@ void Gene::parse(std::stringstream &ss, const std::shared_ptr<Covariates>& cov, 
 	  // Add filtering stack for transcript
 	  to_remove.emplace(std::make_pair(transcript, std::stack<int>()));
 	  // Reset counter on new transcript
-      i = 1;
-    }
-    if (!filter.allow_variant(tp_.method, splitter)) {
+	  i = 1;
+	}
+	if (!filter.allow_variant(tp_.method, splitter)) {
       to_remove[transcript].push(i - 1);
     }
 
@@ -707,11 +707,39 @@ std::string Gene::form_variant_id(RJBUtil::Splitter<std::string> &splitter) {
 }
 
 std::stringstream Gene::transcript_union(std::stringstream &ss, const std::shared_ptr<Covariates>& cov, Filter &filter) {
+  std::map<std::string, std::string> variants;
   std::stringstream res_ss;
   std::string line;
+  arma::uword line_no = 0;
+
+  std::map<std::string, double> casm_scores;
 
   while(std::getline(ss, line, '\n')) {
+    if (line_no == 0) {
+      line_no++;
+	  res_ss << line << "\n";
+	  continue;
+    }
+    RJBUtil::Splitter<std::string> splitter(line, "\t");
+    std::string vid = form_variant_id(splitter);
+    if (gene_name.empty()) {
+	  gene_name = splitter[static_cast<int>(Indices::gene)];
+    }
+	if (variants.find(vid) == variants.end()) {
+	  variants[vid] = line;
+	} else {
+	  double casm = std::stod(splitter[static_cast<int>(Indices::weight)]);
+	  if (casm > casm_scores[vid]) {
+		variants[vid] = line;
+	  }
+	}
+	line_no++;
+  }
 
+  nvariants_[gene_name] = variants.size();
+
+  for (const auto &s : variants) {
+    res_ss << s.second << "\n";
   }
 
   return res_ss;
