@@ -10,7 +10,7 @@
 #include <boost/math/quadrature/trapezoidal.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 
-namespace mp = boost::multiprecision;
+namespace multi = boost::multiprecision;
 
 Result::Result()
 	: gene(),
@@ -219,9 +219,9 @@ void Result::update_ci() {
  */
 void Result::calc_exact_p(double n1, double n2) {
   return;
-  mp::cpp_bin_float_100 m = permutations;
-  mp::cpp_bin_float_100 b = successes;
-  mp::cpp_bin_float_100 mt = boost::math::binomial_coefficient<mp::cpp_bin_float_100>(n1 + n2, n1);
+  multi::cpp_bin_float_100 m = permutations;
+  multi::cpp_bin_float_100 b = successes;
+  multi::cpp_bin_float_100 mt = boost::math::binomial_coefficient<multi::cpp_bin_float_100>(n1 + n2, n1);
 #if 0
   if (!std::isfinite(mt)) {
 	exact_p = (b + 1.) / (m + 1.);
@@ -233,24 +233,24 @@ void Result::calc_exact_p(double n1, double n2) {
 	mt /= 2;
   }
 
-  auto f = [&](mp::cpp_bin_float_100 pt) -> mp::cpp_bin_float_100 {
-	boost::math::binomial_distribution<mp::cpp_bin_float_100> dist(m, pt);
+  auto f = [&](multi::cpp_bin_float_100 pt) -> multi::cpp_bin_float_100 {
+	boost::math::binomial_distribution<multi::cpp_bin_float_100> dist(m, pt);
 	return boost::math::cdf(dist, b);
   };
 
-  mp::cpp_bin_float_100 tol = 1e-8;
-  mp::cpp_bin_float_100 error_estimate;
-  mp::cpp_bin_float_100 L1;
+  multi::cpp_bin_float_100 tol = 1e-8;
+  multi::cpp_bin_float_100 error_estimate;
+  multi::cpp_bin_float_100 L1;
   size_t max_refinements = 15;
-  mp::cpp_bin_float_100 I = boost::math::quadrature::trapezoidal(f,
-																 mp::cpp_bin_float_100(0.),
-																 mp::cpp_bin_float_100(0.5)
-																	 / mp::cpp_bin_float_100(mt + 1),
+  multi::cpp_bin_float_100 I = boost::math::quadrature::trapezoidal(f, multi::cpp_bin_float_100(0.),
+      multi::cpp_bin_float_100(0.5)
+																	 / multi::cpp_bin_float_100(mt + 1),
 																 tol,
 																 max_refinements,
 																 &error_estimate,
 																 &L1);
-  exact_p = double(mp::cpp_bin_float_100(b + 1.) / mp::cpp_bin_float_100(m + 1.) - I);
+  exact_p = double(
+      multi::cpp_bin_float_100(b + 1.) / multi::cpp_bin_float_100(m + 1.) - I);
 }
 
 /**
@@ -260,27 +260,26 @@ void Result::calc_exact_p(double n1, double n2) {
  */
 void Result::calc_exact_p() {
   return;
-  mp::cpp_bin_float_100 m = permutations;
+  multi::cpp_bin_float_100 m = permutations;
   double n1 = nmac, n2 = nmaj;
-  mp::cpp_bin_float_100 mt = boost::math::binomial_coefficient<mp::cpp_bin_float_100>(n1 + n2, n1);
-  mp::cpp_bin_float_100 b = successes;
+  multi::cpp_bin_float_100 mt = boost::math::binomial_coefficient<multi::cpp_bin_float_100>(n1 + n2, n1);
+  multi::cpp_bin_float_100 b = successes;
 
   if (n1 == n2) {
 	mt /= 2;
   }
 
-  auto f = [&](mp::cpp_bin_float_100 pt) -> mp::cpp_bin_float_100 {
-	boost::math::binomial_distribution<mp::cpp_bin_float_100> dist(m, pt);
+  auto f = [&](multi::cpp_bin_float_100 pt) -> multi::cpp_bin_float_100 {
+	boost::math::binomial_distribution<multi::cpp_bin_float_100> dist(m, pt);
 	return boost::math::cdf(dist, b);
   };
 
-  mp::cpp_bin_float_100 tol = 1e-8;
-  mp::cpp_bin_float_100 error_estimate;
-  mp::cpp_bin_float_100 L1;
+  multi::cpp_bin_float_100 tol = 1e-8;
+  multi::cpp_bin_float_100 error_estimate;
+  multi::cpp_bin_float_100 L1;
   size_t max_refinements = 15;
-  exact_p = double(boost::math::quadrature::trapezoidal(f,
-														mp::cpp_bin_float_100(0.),
-														mp::cpp_bin_float_100(0.5) / mp::cpp_bin_float_100(mt + 1),
+  exact_p = double(boost::math::quadrature::trapezoidal(f, multi::cpp_bin_float_100(0.),
+      multi::cpp_bin_float_100(0.5) / multi::cpp_bin_float_100(mt + 1),
 														tol,
 														max_refinements,
 														&error_estimate,

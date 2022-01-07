@@ -9,7 +9,7 @@
 #include <boost/math/distributions/chi_squared.hpp>
 #include <boost/multiprecision/cpp_bin_float.hpp>
 
-namespace mp = boost::multiprecision;
+namespace multi = boost::multiprecision;
 
 /**
  * @brief Log N choose K function using log gamma function
@@ -23,7 +23,7 @@ T lcnk(T n, T k) {
   if (n == k) {
 	return 0;
   }
-  return mp::lgamma(n + 1) - (mp::lgamma(k + 1) + mp::lgamma(n - k + 1));
+  return multi::lgamma(n + 1) - (multi::lgamma(k + 1) + multi::lgamma(n - k + 1));
 }
 
 /**

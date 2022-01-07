@@ -693,7 +693,7 @@ void Gene::generate_vaast(Covariates &cov) {
   }
 }
 
-__unused arma::sp_mat &Gene::get_missing(const std::string &k) {
+arma::sp_mat &Gene::get_missing(const std::string &k) {
   return missing_variant_carriers_[k];
 }
 
