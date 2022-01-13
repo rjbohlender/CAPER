@@ -5,9 +5,13 @@ TYPE:deletion,1,1,1,1,1,1,1,1,1,1,1
 TYPE:SPDA,1,1,1,1,1,1,1,1,1,1,1
 TYPE:complex_substitution,1,1,1,1,1,1,1,1,1,1,1
 FUNCTION:synonymous,1,1,1,1,1,1,1,1,1,1,1
+FUNCTION:synonymous SNV,1,1,1,1,1,1,1,1,1,1,1
 FUNCTION:nonsynonymous,1,1,1,1,1,1,1,1,1,1,1
+FUNCTION:nonsynonymous SNV,1,1,1,1,1,1,1,1,1,1,1
 FUNCTION:frameshift,1,1,1,1,1,1,1,1,1,1,1
+FUNCTION:frameshift substitution,1,1,1,1,1,1,1,1,1,1,1
 FUNCTION:nonframeshift,1,1,1,1,1,1,1,1,1,1,1
+FUNCTION:nonframeshift substitution,1,1,1,1,1,1,1,1,1,1,1
 FUNCTION:stopgain,1,1,1,1,1,1,1,1,1,1,1
 FUNCTION:stoploss,1,1,1,1,1,1,1,1,1,1,1
 FUNCTION:unknown,1,1,1,1,1,1,1,1,1,1,1
