@@ -9,28 +9,22 @@
 #include <boost/format.hpp>
 #include <stack>
 
-#include "gene.hpp"
-#include "filter.hpp"
 #include "../link/binomial.hpp"
 #include "../link/gaussian.hpp"
 #include "../statistics/bayesianglm.hpp"
 #include "../statistics/glm.hpp"
+#include "../statistics/methods.hpp"
 #include "../utility/indices.hpp"
 #include "../utility/math.hpp"
-#include "../statistics/methods.hpp"
+#include "filter.hpp"
+#include "gene.hpp"
 
-Gene::Gene(std::stringstream &ss,
-		   std::shared_ptr<Covariates> cov,
-		   unsigned long nsamples,
-		   std::map<std::string, arma::uword> &nvariants,
-		   const Weight &weight,
-		   TaskParams tp,
-		   Filter &filter)
-    : nsamples_(nsamples),
-      nvariants_(nvariants),
-      testable_(false),
-      skippable_(false),
-      tp_(std::move(tp)) {
+Gene::Gene(std::stringstream &ss, std::shared_ptr<Covariates> cov,
+           unsigned long nsamples,
+           std::map<std::string, arma::uword> &nvariants, const Weight &weight,
+           TaskParams tp, Filter &filter)
+    : nsamples_(nsamples), nvariants_(nvariants), testable_(false),
+      skippable_(false), tp_(std::move(tp)) {
   parse(ss, cov, filter);
   if (!weight.empty()) {
     for (const auto &k : transcripts_) {
@@ -49,9 +43,7 @@ void Gene::print() {
     std::cout << v.second;
 }
 
-arma::sp_mat &Gene::get_matrix(const std::string &k) {
-  return genotypes_[k];
-}
+arma::sp_mat &Gene::get_matrix(const std::string &k) { return genotypes_[k]; }
 
 void Gene::set_matrix(const std::string &k, arma::sp_mat &data) {
   genotypes_[k] = std::move(data);
@@ -61,23 +53,19 @@ void Gene::set_matrix(const std::string &k, arma::sp_mat &&data) {
   genotypes_[k] = std::move(data);
 }
 
-std::vector<std::string> &Gene::get_transcripts() {
-  return transcripts_;
-}
+std::vector<std::string> &Gene::get_transcripts() { return transcripts_; }
 
-arma::vec &Gene::get_weights(const std::string &k) {
-  return weights_[k];
-}
+arma::vec &Gene::get_weights(const std::string &k) { return weights_[k]; }
 
-arma::uword Gene::get_nvariants(const std::string &k) {
-  return nvariants_[k];
-}
+arma::uword Gene::get_nvariants(const std::string &k) { return nvariants_[k]; }
 
 std::vector<std::string> &Gene::get_positions(const std::string &k) {
   return positions_[k];
 }
 
-void Gene::clear(Covariates &cov, std::unordered_map<std::string, Result> &results, const TaskParams &tp) {
+void Gene::clear(Covariates &cov,
+                 std::unordered_map<std::string, Result> &results,
+                 const TaskParams &tp) {
   if (!tp.no_detail)
     generate_detail(cov, results, tp);
   if (tp.method == "VAAST") {
@@ -90,20 +78,22 @@ void Gene::clear(Covariates &cov, std::unordered_map<std::string, Result> &resul
   }
 }
 
-void Gene::parse(std::stringstream &ss, const std::shared_ptr<Covariates>& cov, Filter &filter) {
+void Gene::parse(std::stringstream &ss, const std::shared_ptr<Covariates> &cov,
+                 Filter &filter) {
   std::string line;
   arma::uword i = 0;
   std::vector<bool> rarest;
   std::map<std::string, std::stack<int>> to_remove;
 
   if (tp_.whole_gene) {
-	ss = transcript_union(ss, cov, filter);
+    ss = transcript_union(ss, cov, filter);
   }
 
   while (std::getline(ss, line, '\n')) {
     if (i == 0) {
-	  RJBUtil::Splitter<std::string> splitter(line, "\t");
-      for (arma::uword j = static_cast<int>(Indices::first); j < splitter.size(); j++) {
+      RJBUtil::Splitter<std::string> splitter(line, "\t");
+      for (arma::uword j = static_cast<int>(Indices::first);
+           j < splitter.size(); j++) {
         samples_.push_back(splitter[j]);
       }
       i++;
@@ -112,60 +102,71 @@ void Gene::parse(std::stringstream &ss, const std::shared_ptr<Covariates>& cov, 
     RJBUtil::Splitter<std::string> splitter(line, "\t");
 
     if (gene_name.empty()) {
-	  gene_name = splitter[static_cast<int>(Indices::gene)];
+      gene_name = splitter[static_cast<int>(Indices::gene)];
     }
-	std::string transcript = tp_.whole_gene ? gene_name : splitter[static_cast<int>(Indices::transcript)];
-	auto iter = std::find(std::begin(transcripts_), std::end(transcripts_), transcript);
-	if (iter == std::end(transcripts_)) {
-	  // Transcript not found -- add
-	  transcripts_.push_back(transcript);
-	  // Start with matrix transposed
-	  genotypes_.emplace(std::make_pair(transcript, arma::sp_mat(nsamples_, nvariants_[transcript])));
-	  // Separately record the controls
-	  missing_variant_carriers_.emplace(std::make_pair(transcript, arma::sp_mat(nsamples_, nvariants_[transcript])));
-	  // Ensure positions are allocated for current transcript
-	  positions_[transcript] = std::vector<std::string>();
-	  // Ensure weights are the right length
-	  weights_[transcript].reshape(nvariants_[transcript], 1);
-	  // Add transcript to the type map
-	  type_.emplace(std::make_pair(transcript, std::vector<std::string>()));
-	  // Add transcript to the reference allele map
-	  reference_.emplace(std::make_pair(transcript, std::vector<std::string>()));
-	  // Add transcript to the alternate allele map
-	  alternate_.emplace(std::make_pair(transcript, std::vector<std::string>()));
-	  // Add transcript to the variant function map
-	  function_.emplace(std::make_pair(transcript, std::vector<std::string>()));
-	  // Add transcript to the variant annotation map
-	  annotation_.emplace(std::make_pair(transcript, std::vector<std::string>()));
-	  // Add filtering stack for transcript
-	  to_remove.emplace(std::make_pair(transcript, std::stack<int>()));
-	  // Reset counter on new transcript
-	  i = 1;
-	}
-	if (!filter.allow_variant(tp_.method, splitter)) {
+    std::string transcript =
+        tp_.whole_gene ? gene_name
+                       : splitter[static_cast<int>(Indices::transcript)];
+    auto iter =
+        std::find(std::begin(transcripts_), std::end(transcripts_), transcript);
+    if (iter == std::end(transcripts_)) {
+      // Transcript not found -- add
+      transcripts_.push_back(transcript);
+      // Start with matrix transposed
+      genotypes_.emplace(std::make_pair(
+          transcript, arma::sp_mat(nsamples_, nvariants_[transcript])));
+      // Separately record the controls
+      missing_variant_carriers_.emplace(std::make_pair(
+          transcript, arma::sp_mat(nsamples_, nvariants_[transcript])));
+      // Ensure positions are allocated for current transcript
+      positions_[transcript] = std::vector<std::string>();
+      // Ensure weights are the right length
+      weights_[transcript].reshape(nvariants_[transcript], 1);
+      // Add transcript to the type map
+      type_.emplace(std::make_pair(transcript, std::vector<std::string>()));
+      // Add transcript to the reference allele map
+      reference_.emplace(
+          std::make_pair(transcript, std::vector<std::string>()));
+      // Add transcript to the alternate allele map
+      alternate_.emplace(
+          std::make_pair(transcript, std::vector<std::string>()));
+      // Add transcript to the variant function map
+      function_.emplace(std::make_pair(transcript, std::vector<std::string>()));
+      // Add transcript to the variant annotation map
+      annotation_.emplace(
+          std::make_pair(transcript, std::vector<std::string>()));
+      // Add filtering stack for transcript
+      to_remove.emplace(std::make_pair(transcript, std::stack<int>()));
+      // Reset counter on new transcript
+      i = 1;
+    }
+    if (!filter.allow_variant(tp_.method, splitter)) {
       to_remove[transcript].push(i - 1);
     }
 
-	std::string var_id = form_variant_id(splitter);
-	positions_[transcript].push_back(var_id);
-    weights_[transcript](i - 1) = std::stod(splitter[static_cast<int>(Indices::weight)]);
+    std::string var_id = form_variant_id(splitter);
+    positions_[transcript].push_back(var_id);
+    weights_[transcript](i - 1) =
+        std::stod(splitter[static_cast<int>(Indices::weight)]);
 
-	// Record other info in line
-	function_[transcript].push_back(splitter[static_cast<int>(Indices::function)]);
-	annotation_[transcript].push_back(splitter[static_cast<int>(Indices::annotation)]);
-	reference_[transcript].push_back(splitter[static_cast<int>(Indices::ref)]);
-	alternate_[transcript].push_back(splitter[static_cast<int>(Indices::alt)]);
-	type_[transcript].push_back(splitter[static_cast<int>(Indices::type)]);
+    // Record other info in line
+    function_[transcript].push_back(
+        splitter[static_cast<int>(Indices::function)]);
+    annotation_[transcript].push_back(
+        splitter[static_cast<int>(Indices::annotation)]);
+    reference_[transcript].push_back(splitter[static_cast<int>(Indices::ref)]);
+    alternate_[transcript].push_back(splitter[static_cast<int>(Indices::alt)]);
+    type_[transcript].push_back(splitter[static_cast<int>(Indices::type)]);
 
-	auto first_idx = static_cast<int>(Indices::first);
+    auto first_idx = static_cast<int>(Indices::first);
     for (auto j = first_idx; j < splitter.size(); j++) {
       double val;
       try {
         val = std::stod(splitter[j]);
-      }
-      catch (std::exception &e) {
+      } catch (std::exception &e) {
         std::cerr << "Full buffer: " << ss.str() << std::endl;
-        std::cerr << "Failed to convert data to double: " << splitter[j] << std::endl;
+        std::cerr << "Failed to convert data to double: " << splitter[j]
+                  << std::endl;
         std::cerr << "Line: " << line << std::endl;
         std::cerr << "j: " << j << std::endl;
         std::exit(-1);
@@ -173,53 +174,54 @@ void Gene::parse(std::stringstream &ss, const std::shared_ptr<Covariates>& cov, 
       // Handle missing data
       if (val > 2 || val < 0) {
         if (tp_.impute_to_mean) {
-		  val = -9;
-		} else {
-		  val = 0;
-		  missing_variant_carriers_[transcript](j - first_idx, i - 1) = 1;
-		}
+          val = -9;
+        } else {
+          val = 0;
+          missing_variant_carriers_[transcript](j - first_idx, i - 1) = 1;
+        }
       }
       if (val != 0) {
         try {
           genotypes_[transcript](j - first_idx, i - 1) = val;
         } catch (std::exception &e) {
-          std::cerr << "Failed to set value for: row = " << j - first_idx << " col = " << i - 1
-                    << std::endl;
+          std::cerr << "Failed to set value for: row = " << j - first_idx
+                    << " col = " << i - 1 << std::endl;
           std::cerr << "Gene: " << splitter[static_cast<int>(Indices::gene)]
-          			<< " Transcript: " << splitter[static_cast<int>(Indices::transcript)]
+                    << " Transcript: "
+                    << splitter[static_cast<int>(Indices::transcript)]
                     << " Location: " << form_variant_id(splitter) << std::endl;
-          throw (e);
+          throw(e);
         }
       }
     }
     i++;
   }
   if (tp_.impute_to_mean) {
-	// Impute missing
-	for (auto &v : genotypes_) {
-	  arma::mat X(v.second);
-	  arma::vec Y(cov->get_original_phenotypes());
-	  arma::uvec cases = arma::find(Y == 1);
-	  arma::uvec controls = arma::find(Y == 0);
-	  for(arma::uword i = 0; i < X.n_cols; i++) {
-		arma::vec Xc = X.col(i);
-		arma::uvec nonmissing = arma::find(Xc != -9);
-		arma::uvec missing = arma::find(Xc == -9);
+    // Impute missing
+    for (auto &v : genotypes_) {
+      arma::mat X(v.second);
+      arma::vec Y(cov->get_original_phenotypes());
+      arma::uvec cases = arma::find(Y == 1);
+      arma::uvec controls = arma::find(Y == 0);
+      for (arma::uword i = 0; i < X.n_cols; i++) {
+        arma::vec Xc = X.col(i);
+        arma::uvec nonmissing = arma::find(Xc != -9);
+        arma::uvec missing = arma::find(Xc == -9);
 
-		arma::uvec keep = arma::intersect(cases, nonmissing);
-		if (keep.n_elem > 0) {
-		  double maf = arma::sum(Xc(keep)) / (2. * keep.n_elem);
-		  Xc(arma::intersect(cases, missing)).replace(-9, maf);
-		}
-		keep = arma::intersect(controls, nonmissing);
-		if (keep.n_elem > 0) {
-		  double maf = arma::sum(Xc(keep)) / (2. * keep.n_elem);
-		  Xc(arma::intersect(controls, missing)).replace(-9, maf);
-		}
-		X.col(i) = Xc;
-	  }
-	  v.second = arma::sp_mat(X);
-	}
+        arma::uvec keep = arma::intersect(cases, nonmissing);
+        if (keep.n_elem > 0) {
+          double maf = arma::sum(Xc(keep)) / (2. * keep.n_elem);
+          Xc(arma::intersect(cases, missing)).replace(-9, maf);
+        }
+        keep = arma::intersect(controls, nonmissing);
+        if (keep.n_elem > 0) {
+          double maf = arma::sum(Xc(keep)) / (2. * keep.n_elem);
+          Xc(arma::intersect(controls, missing)).replace(-9, maf);
+        }
+        X.col(i) = Xc;
+      }
+      v.second = arma::sp_mat(X);
+    }
   }
   // Switch to counting minor allele
   for (auto &v : genotypes_) {
@@ -248,15 +250,19 @@ void Gene::parse(std::stringstream &ss, const std::shared_ptr<Covariates>& cov, 
       }
       if (bmac || bmaf || bwht) {
         if (tp_.verbose && bmac) {
-          std::cerr << "Removing: " << gene_name << " " << ts << " " << positions_[ts][k] << " | count: "
-					<< sums[k] << " due to MAC filter." << std::endl;
+          std::cerr << "Removing: " << gene_name << " " << ts << " "
+                    << positions_[ts][k] << " | count: " << sums[k]
+                    << " due to MAC filter." << std::endl;
         } else if (tp_.verbose && bmaf) {
-          std::cerr << "Removing: " << gene_name << " " << ts << " " << positions_[ts][k] << " | frequency: "
-					<< maf[k] << " due to MAF filter." << std::endl;
+          std::cerr << "Removing: " << gene_name << " " << ts << " "
+                    << positions_[ts][k] << " | frequency: " << maf[k]
+                    << " due to MAF filter." << std::endl;
         } else if (tp_.verbose && bwht) {
-		  std::cerr << "Removing: " << gene_name << " " << ts << " " << positions_[ts][k] << " | type: "
-					<< type_[ts][k] << " | function: " << function_[ts][k] << " due to variant whitelist." << std::endl;
-		}
+          std::cerr << "Removing: " << gene_name << " " << ts << " "
+                    << positions_[ts][k] << " | type: " << type_[ts][k]
+                    << " | function: " << function_[ts][k]
+                    << " due to variant whitelist." << std::endl;
+        }
         if (bwht) {
           to_remove[ts].pop();
         }
@@ -266,15 +272,16 @@ void Gene::parse(std::stringstream &ss, const std::shared_ptr<Covariates>& cov, 
         missing_variant_carriers_[ts].shed_col(k);
         positions_[ts].erase(positions_[ts].begin() + k);
         function_[ts].erase(function_[ts].begin() + k);
-		reference_[ts].erase(reference_[ts].begin() + k);
-		alternate_[ts].erase(alternate_[ts].begin() + k);
-		annotation_[ts].erase(annotation_[ts].begin() + k);
-		type_[ts].erase(type_[ts].begin() + k);
+        reference_[ts].erase(reference_[ts].begin() + k);
+        alternate_[ts].erase(alternate_[ts].begin() + k);
+        annotation_[ts].erase(annotation_[ts].begin() + k);
+        type_[ts].erase(type_[ts].begin() + k);
         nvariants_[ts]--;
       }
     }
     // Check if any polymorphic. Mark transcripts skippable if all fixed.
-    if (arma::accu(sums) < tp_.min_minor_allele_count || nvariants_[ts] < tp_.min_variant_count) {
+    if (arma::accu(sums) < tp_.min_minor_allele_count ||
+        nvariants_[ts] < tp_.min_variant_count) {
       std::cerr << "gene: " << gene_name << " marked skippable." << std::endl;
       polymorphic_[ts] = false;
     } else {
@@ -286,21 +293,21 @@ void Gene::parse(std::stringstream &ss, const std::shared_ptr<Covariates>& cov, 
 
 void Gene::set_weights(const std::string &k, arma::vec &weights) {
   if (weights.n_rows != genotypes_[k].n_cols) {
-    throw (std::logic_error("Weights do not match number of variants."));
+    throw(std::logic_error("Weights do not match number of variants."));
   }
 
   weights_[k] = weights;
 }
 
-arma::vec &Gene::get_scores(const std::string &k) {
-  return variant_scores_[k];
-}
+arma::vec &Gene::get_scores(const std::string &k) { return variant_scores_[k]; }
 
 void Gene::set_scores(const std::string &k, arma::vec &scores) {
   variant_scores_[k] = scores;
 }
 
-void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Result> &results, const TaskParams &tp) {
+void Gene::generate_detail(Covariates &cov,
+                           std::unordered_map<std::string, Result> &results,
+                           const TaskParams &tp) {
   std::stringstream detail;
 
   arma::vec Y = cov.get_original_phenotypes();
@@ -358,9 +365,12 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
           if (!fit.beta_.has_nan()) {
             pos_score_map[pos] = variant_scores_[ts](i);
             pos_weight_map[pos] = weights_[ts](i);
-            pos_odds_map[pos] = fit.beta_(cov.get_covariate_matrix().n_cols + i);
-            pos_serr_map[pos] = fit.s_err_(cov.get_covariate_matrix().n_cols + i);
-            pos_odds_pval_map[pos] = fit.pval_(cov.get_covariate_matrix().n_cols + i);
+            pos_odds_map[pos] =
+                fit.beta_(cov.get_covariate_matrix().n_cols + i);
+            pos_serr_map[pos] =
+                fit.s_err_(cov.get_covariate_matrix().n_cols + i);
+            pos_odds_pval_map[pos] =
+                fit.pval_(cov.get_covariate_matrix().n_cols + i);
           } else {
             // Regression failed -- too many features
             pos_score_map[pos] = variant_scores_[ts](i);
@@ -402,7 +412,8 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
       if (!testable_)
         testable_ = results[ts].testable;
     } else {
-      // Get odds via Moser & Coombs (2004) -- Rather than dichotomizing, we fit normally and recover OR
+      // Get odds via Moser & Coombs (2004) -- Rather than dichotomizing, we fit
+      // normally and recover OR
       Gaussian link("identity");
       arma::mat D = arma::join_vert(cov.get_covariate_matrix(),
                                     arma::mat(X).each_row() - maf);
@@ -413,8 +424,10 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
       double lambda = arma::datum::pi / std::sqrt(3);
       arma::vec var = link.variance(fit.mu_);
       arma::mat fisher_info = arma::inv(D * arma::diagmat(var) * D.t());
-      arma::mat A = arma::eye(Y.n_elem, Y.n_elem) - D.t() * arma::inv(D * D.t()) * D;
-      double sd = arma::as_scalar(arma::sqrt(Y.t() * A * Y / (Y.n_elem - D.n_rows)));
+      arma::mat A =
+          arma::eye(Y.n_elem, Y.n_elem) - D.t() * arma::inv(D * D.t()) * D;
+      double sd =
+          arma::as_scalar(arma::sqrt(Y.t() * A * Y / (Y.n_elem - D.n_rows)));
 
       for (const auto &pos : positions_[ts]) {
         // Get transcripts
@@ -467,11 +480,9 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
       detail << gene_name << "\t";
       print_comma_sep(v.second, detail);
       detail << "\t";
-      detail << boost::format("%1$s\t%2$.2f\t%3$.2f\t%4$d")
-          % v.first
-          % pos_score_map[v.first]
-          % pos_weight_map[v.first]
-          % pos_freq_map[v.first];
+      detail << boost::format("%1$s\t%2$.2f\t%3$.2f\t%4$d") % v.first %
+                    pos_score_map[v.first] % pos_weight_map[v.first] %
+                    pos_freq_map[v.first];
       detail << std::endl;
     }
   } else {
@@ -480,15 +491,12 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
       detail << gene_name << "\t";
       print_comma_sep(v.second, detail);
       detail << "\t";
-      detail << boost::format("%1$s\t%2$.2f\t%3$.2f\t%4$d\t%5$d\t%6$d\t%7$d\t%8$d")
-          % v.first
-          % pos_score_map[v.first]
-          % pos_weight_map[v.first]
-          % pos_freq_map[v.first]
-          % pos_caseref_map[v.first]
-          % pos_casealt_map[v.first]
-          % pos_contref_map[v.first]
-          % pos_contalt_map[v.first];
+      detail << boost::format(
+                    "%1$s\t%2$.2f\t%3$.2f\t%4$d\t%5$d\t%6$d\t%7$d\t%8$d") %
+                    v.first % pos_score_map[v.first] % pos_weight_map[v.first] %
+                    pos_freq_map[v.first] % pos_caseref_map[v.first] %
+                    pos_casealt_map[v.first] % pos_contref_map[v.first] %
+                    pos_contalt_map[v.first];
       detail << "\t";
       print_semicolon_sep(pos_caseidx_map[v.first], detail);
       detail << "\t";
@@ -499,19 +507,14 @@ void Gene::generate_detail(Covariates &cov, std::unordered_map<std::string, Resu
   detail_ = detail.str();
 }
 
-std::string Gene::get_detail() const {
-  return detail_;
-}
+std::string Gene::get_detail() const { return detail_; }
 
-std::map<std::string, std::string> Gene::get_vaast() const {
-  return vaast_;
-}
+std::map<std::string, std::string> Gene::get_vaast() const { return vaast_; }
 
-std::vector<std::string> &Gene::get_samples() {
-  return samples_;
-}
+std::vector<std::string> &Gene::get_samples() { return samples_; }
 
-bool Gene::testable(const std::string &transcript, Covariates &cov, const std::vector<double> &permuted) {
+bool Gene::testable(const std::string &transcript, Covariates &cov,
+                    const std::vector<double> &permuted) {
   if (!is_polymorphic(transcript)) {
     return false;
   }
@@ -527,7 +530,8 @@ bool Gene::testable(const std::string &transcript, Covariates &cov, const std::v
   arma::uvec mac_carriers = arma::vec(arma::sum(Xmat, 1)) > 0;
   arma::uvec maj_carriers = 1 - mac_carriers;
 
-  arma::sword nmac = std::min(ncase, static_cast<arma::sword>(arma::accu(mac_carriers)));
+  arma::sword nmac =
+      std::min(ncase, static_cast<arma::sword>(arma::accu(mac_carriers)));
   arma::sword nmaj = std::max(ncase - nmac, 0ll);
 
   mac_carriers = arma::find(mac_carriers > 0);
@@ -545,32 +549,28 @@ bool Gene::testable(const std::string &transcript, Covariates &cov, const std::v
   double score = methods.call(tmp, cov, extreme_phen, transcript, true);
 
   if (tp_.method == "VAAST" || tp_.method == "SKAT") {
-    bool testable_variants = arma::accu(tmp.variant_scores_[transcript] > 0) >= 8;
-	if (tp_.analytic) {
-	  return score < alpha && testable_variants;
-	} else {
-	  return (percentile_of_score(score, permuted, false) < alpha) && testable_variants;
-	}
+    bool testable_variants =
+        arma::accu(tmp.variant_scores_[transcript] > 0) >= 8;
+    if (tp_.analytic) {
+      return score < alpha && testable_variants;
+    } else {
+      return (percentile_of_score(score, permuted, false) < alpha) &&
+             testable_variants;
+    }
   } else {
-	if (tp_.analytic) {
-	  return score < alpha;
-	} else {
-	  return percentile_of_score(score, permuted, false) < alpha;
-	}
+    if (tp_.analytic) {
+      return score < alpha;
+    } else {
+      return percentile_of_score(score, permuted, false) < alpha;
+    }
   }
 }
 
-bool Gene::is_testable() const {
-  return testable_;
-}
+bool Gene::is_testable() const { return testable_; }
 
-bool Gene::is_skippable() const {
-  return skippable_;
-}
+bool Gene::is_skippable() const { return skippable_; }
 
-bool Gene::is_polymorphic(const std::string &k) {
-  return polymorphic_[k];
-}
+bool Gene::is_polymorphic(const std::string &k) { return polymorphic_[k]; }
 
 void Gene::generate_vaast(Covariates &cov) {
   // One entry per transcript
@@ -612,33 +612,37 @@ void Gene::generate_vaast(Covariates &cov) {
       vaast_ss << boost::format("%1$s\t") % reference_[ts][i];
       vaast_ss << boost::format("%1$s\t") % annotation_[ts][i];
 
-	  arma::uvec het_carriers = arma::find(X.col(i) % Y == 1);
-	  arma::uvec hom_carriers = arma::find(X.col(i) % Y == 2);
+      arma::uvec het_carriers = arma::find(X.col(i) % Y == 1);
+      arma::uvec hom_carriers = arma::find(X.col(i) % Y == 2);
 
-	  if(het_carriers.n_elem > 0) {
-		for (arma::uword j = 0; j < het_carriers.n_elem; j++) {
-		  if (j < het_carriers.n_elem - 1) {
-			vaast_ss << het_carriers(j) << ",";
-		  } else {
-			vaast_ss << het_carriers(j) << "|";
-		  }
-		}
-		// Variant
-		vaast_ss << boost::format("%1$s:%2$s") % reference_[ts][i] % alternate_[ts][i] << std::endl;
-	  }
-	  if(hom_carriers.n_elem > 0) {
-		vaast_ss << "\t";
-		for (arma::uword j = 0; j < hom_carriers.n_elem; j++) {
-		  if (j < hom_carriers.n_elem - 1) {
-			vaast_ss << hom_carriers(j) << ",";
-		  } else {
-			vaast_ss << hom_carriers(j) << "|";
-		  }
-		}
-		// Variant
-		vaast_ss << boost::format("%1$s:%2$s") % alternate_[ts][i] % alternate_[ts][i] << std::endl;
-	  }
-	}
+      if (het_carriers.n_elem > 0) {
+        for (arma::uword j = 0; j < het_carriers.n_elem; j++) {
+          if (j < het_carriers.n_elem - 1) {
+            vaast_ss << het_carriers(j) << ",";
+          } else {
+            vaast_ss << het_carriers(j) << "|";
+          }
+        }
+        // Variant
+        vaast_ss << boost::format("%1$s:%2$s") % reference_[ts][i] %
+                        alternate_[ts][i]
+                 << std::endl;
+      }
+      if (hom_carriers.n_elem > 0) {
+        vaast_ss << "\t";
+        for (arma::uword j = 0; j < hom_carriers.n_elem; j++) {
+          if (j < hom_carriers.n_elem - 1) {
+            vaast_ss << hom_carriers(j) << ",";
+          } else {
+            vaast_ss << hom_carriers(j) << "|";
+          }
+        }
+        // Variant
+        vaast_ss << boost::format("%1$s:%2$s") % alternate_[ts][i] %
+                        alternate_[ts][i]
+                 << std::endl;
+      }
+    }
     // Add background variants
     for (int i = 0; i < positions_[ts].size(); i++) {
       double case_alt = arma::as_scalar(X.col(i).t() * Y);
@@ -659,37 +663,41 @@ void Gene::generate_vaast(Covariates &cov) {
       vaast_ss << pos_splitter[1] << "@" << pos_splitter[0] << "\t";
 
       // Placeholder for Reference alleles
-	  vaast_ss << boost::format("%1$s\t") % reference_[ts][i];
-	  vaast_ss << boost::format("%1$s\t") % annotation_[ts][i];
+      vaast_ss << boost::format("%1$s\t") % reference_[ts][i];
+      vaast_ss << boost::format("%1$s\t") % annotation_[ts][i];
 
       arma::uvec het_carriers = arma::find(X.col(i) % (1. - Y) == 1);
-	  arma::uvec hom_carriers = arma::find(X.col(i) % (1. - Y) == 2);
+      arma::uvec hom_carriers = arma::find(X.col(i) % (1. - Y) == 2);
 
-	  if(het_carriers.n_elem > 0) {
-		for (arma::uword j = 0; j < het_carriers.n_elem; j++) {
-		  if (j < het_carriers.n_elem - 1) {
-			vaast_ss << het_carriers(j) << ",";
-		  } else {
-			vaast_ss << het_carriers(j) << "|";
-		  }
-		}
-		// Variant
-		vaast_ss << boost::format("%1$s:%2$s") % reference_[ts][i] % alternate_[ts][i] << std::endl;
-	  }
-	  if(hom_carriers.n_elem > 0) {
-	    vaast_ss << "\t";
-		for (arma::uword j = 0; j < hom_carriers.n_elem; j++) {
-		  if (j < hom_carriers.n_elem - 1) {
-			vaast_ss << hom_carriers(j) << ",";
-		  } else {
-			vaast_ss << hom_carriers(j) << "|";
-		  }
-		}
-		// Variant
-		vaast_ss << boost::format("%1$s:%2$s") % alternate_[ts][i] % alternate_[ts][i] << std::endl;
-	  }
-	}
-	vaast_[ts] = vaast_ss.str();
+      if (het_carriers.n_elem > 0) {
+        for (arma::uword j = 0; j < het_carriers.n_elem; j++) {
+          if (j < het_carriers.n_elem - 1) {
+            vaast_ss << het_carriers(j) << ",";
+          } else {
+            vaast_ss << het_carriers(j) << "|";
+          }
+        }
+        // Variant
+        vaast_ss << boost::format("%1$s:%2$s") % reference_[ts][i] %
+                        alternate_[ts][i]
+                 << std::endl;
+      }
+      if (hom_carriers.n_elem > 0) {
+        vaast_ss << "\t";
+        for (arma::uword j = 0; j < hom_carriers.n_elem; j++) {
+          if (j < hom_carriers.n_elem - 1) {
+            vaast_ss << hom_carriers(j) << ",";
+          } else {
+            vaast_ss << hom_carriers(j) << "|";
+          }
+        }
+        // Variant
+        vaast_ss << boost::format("%1$s:%2$s") % alternate_[ts][i] %
+                        alternate_[ts][i]
+                 << std::endl;
+      }
+    }
+    vaast_[ts] = vaast_ss.str();
   }
 }
 
@@ -700,13 +708,15 @@ arma::sp_mat &Gene::get_missing(const std::string &k) {
 std::string Gene::form_variant_id(RJBUtil::Splitter<std::string> &splitter) {
   std::stringstream ss;
   ss << splitter[static_cast<int>(Indices::chrom)] << "-"
-  	 << splitter[static_cast<int>(Indices::start)] << "-"
-  	 << splitter[static_cast<int>(Indices::end)] << "-"
-  	 << splitter[static_cast<int>(Indices::type)];
+     << splitter[static_cast<int>(Indices::start)] << "-"
+     << splitter[static_cast<int>(Indices::end)] << "-"
+     << splitter[static_cast<int>(Indices::type)];
   return ss.str();
 }
 
-std::stringstream Gene::transcript_union(std::stringstream &ss, const std::shared_ptr<Covariates>& cov, Filter &filter) {
+std::stringstream Gene::transcript_union(std::stringstream &ss,
+                                         const std::shared_ptr<Covariates> &cov,
+                                         Filter &filter) {
   std::map<std::string, std::string> variants;
   std::stringstream res_ss;
   std::string line;
@@ -714,26 +724,26 @@ std::stringstream Gene::transcript_union(std::stringstream &ss, const std::share
 
   std::map<std::string, double> casm_scores;
 
-  while(std::getline(ss, line, '\n')) {
+  while (std::getline(ss, line, '\n')) {
     if (line_no == 0) {
       line_no++;
-	  res_ss << line << "\n";
-	  continue;
+      res_ss << line << "\n";
+      continue;
     }
     RJBUtil::Splitter<std::string> splitter(line, "\t");
     std::string vid = form_variant_id(splitter);
     if (gene_name.empty()) {
-	  gene_name = splitter[static_cast<int>(Indices::gene)];
+      gene_name = splitter[static_cast<int>(Indices::gene)];
     }
-	if (variants.find(vid) == variants.end()) {
-	  variants[vid] = line;
-	} else {
-	  double casm = std::stod(splitter[static_cast<int>(Indices::weight)]);
-	  if (casm > casm_scores[vid]) {
-		variants[vid] = line;
-	  }
-	}
-	line_no++;
+    if (variants.find(vid) == variants.end()) {
+      variants[vid] = line;
+    } else {
+      double casm = std::stod(splitter[static_cast<int>(Indices::weight)]);
+      if (casm > casm_scores[vid]) {
+        variants[vid] = line;
+      }
+    }
+    line_no++;
   }
 
   nvariants_[gene_name] = variants.size();
@@ -809,4 +819,3 @@ arma::uvec setdiff(arma::uvec x, arma::uvec y) {
 
   return x;
 }
-
