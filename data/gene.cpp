@@ -316,9 +316,6 @@ void Gene::generate_detail(Covariates &cov,
   std::unordered_map<std::string, double> pos_score_map;
   std::unordered_map<std::string, double> pos_weight_map;
   std::unordered_map<std::string, double> pos_freq_map;
-  std::unordered_map<std::string, double> pos_odds_map;
-  std::unordered_map<std::string, double> pos_serr_map;
-  std::unordered_map<std::string, double> pos_odds_pval_map;
 
   // Case/Control Ref and Alt counts
   std::unordered_map<std::string, double> pos_caseref_map;
@@ -346,11 +343,6 @@ void Gene::generate_detail(Covariates &cov,
     arma::vec cont_alt = X.t() * (1. - Y);
     arma::vec cont_ref = 2 * controls.n_elem - cont_alt;
     if (!tp.linear) {
-      // Get odds
-      Binomial link("logit");
-      arma::mat D = arma::join_horiz(cov.get_covariate_matrix(),
-                                     arma::mat(X).each_row() - 2 * maf);
-      BayesianGLM<Binomial> fit(D, Y, link);
       for (const auto &pos : positions_[ts]) {
         // Get transcripts
         if (pos_ts_map.find(pos) == pos_ts_map.end()) {
@@ -362,23 +354,8 @@ void Gene::generate_detail(Covariates &cov,
         if (pos_score_map.find(pos) == pos_score_map.end()) {
           if (variant_scores_[ts].empty())
             variant_scores_[ts].zeros(positions_[ts].size());
-          if (!fit.beta_.has_nan()) {
             pos_score_map[pos] = variant_scores_[ts](i);
             pos_weight_map[pos] = weights_[ts](i);
-            pos_odds_map[pos] =
-                fit.beta_(cov.get_covariate_matrix().n_cols + i);
-            pos_serr_map[pos] =
-                fit.s_err_(cov.get_covariate_matrix().n_cols + i);
-            pos_odds_pval_map[pos] =
-                fit.pval_(cov.get_covariate_matrix().n_cols + i);
-          } else {
-            // Regression failed -- too many features
-            pos_score_map[pos] = variant_scores_[ts](i);
-            pos_weight_map[pos] = weights_[ts](i);
-            pos_odds_map[pos] = 1.;
-            pos_serr_map[pos] = 1.;
-            pos_odds_pval_map[pos] = 1.;
-          }
         }
         // Get frequency
         if (pos_freq_map.find(pos) == pos_freq_map.end()) {
@@ -412,23 +389,6 @@ void Gene::generate_detail(Covariates &cov,
       if (!testable_)
         testable_ = results[ts].testable;
     } else {
-      // Get odds via Moser & Coombs (2004) -- Rather than dichotomizing, we fit
-      // normally and recover OR
-      Gaussian link("identity");
-      arma::mat D = arma::join_vert(cov.get_covariate_matrix(),
-                                    arma::mat(X).each_row() - maf);
-      GLM<Gaussian> fit(D, Y, link, nullptr, TaskParams());
-
-      // Transform values
-      arma::uword n = cov.get_covariate_matrix().n_rows;
-      double lambda = arma::datum::pi / std::sqrt(3);
-      arma::vec var = link.variance(fit.mu_);
-      arma::mat fisher_info = arma::inv(D * arma::diagmat(var) * D.t());
-      arma::mat A =
-          arma::eye(Y.n_elem, Y.n_elem) - D.t() * arma::inv(D * D.t()) * D;
-      double sd =
-          arma::as_scalar(arma::sqrt(Y.t() * A * Y / (Y.n_elem - D.n_rows)));
-
       for (const auto &pos : positions_[ts]) {
         // Get transcripts
         if (pos_ts_map.find(pos) == pos_ts_map.end()) {
@@ -441,9 +401,6 @@ void Gene::generate_detail(Covariates &cov,
           if (variant_scores_[ts].empty())
             variant_scores_[ts].zeros(positions_[ts].size());
           pos_score_map[pos] = variant_scores_[ts](i);
-          pos_odds_map[pos] = lambda * fit.beta_(n + i - 1) / sd;
-          pos_serr_map[pos] = std::sqrt(fisher_info.diag()(n + i));
-          pos_odds_pval_map[pos] = arma::datum::nan;
         }
         // Get frequency
         if (pos_freq_map.find(pos) == pos_freq_map.end()) {
@@ -578,7 +535,7 @@ void Gene::generate_vaast(Covariates &cov) {
     std::stringstream vaast_ss;
     vaast_ss << ">" << ts << "\t" << gene_name << std::endl;
 
-    arma::mat X(genotypes_[ts]);
+    arma::sp_mat X(genotypes_[ts]);
     arma::vec Y(cov.get_original_phenotypes());
 
     arma::uvec cases = arma::find(Y == 1);
@@ -612,8 +569,10 @@ void Gene::generate_vaast(Covariates &cov) {
       vaast_ss << boost::format("%1$s\t") % reference_[ts][i];
       vaast_ss << boost::format("%1$s\t") % annotation_[ts][i];
 
-      arma::uvec het_carriers = arma::find(X.col(i) % Y == 1);
-      arma::uvec hom_carriers = arma::find(X.col(i) % Y == 2);
+      arma::vec Xcol(X.col(i));
+
+      arma::uvec het_carriers = arma::find(Xcol % Y == 1);
+      arma::uvec hom_carriers = arma::find(Xcol % Y == 2);
 
       if (het_carriers.n_elem > 0) {
         for (arma::uword j = 0; j < het_carriers.n_elem; j++) {
@@ -666,8 +625,10 @@ void Gene::generate_vaast(Covariates &cov) {
       vaast_ss << boost::format("%1$s\t") % reference_[ts][i];
       vaast_ss << boost::format("%1$s\t") % annotation_[ts][i];
 
-      arma::uvec het_carriers = arma::find(X.col(i) % (1. - Y) == 1);
-      arma::uvec hom_carriers = arma::find(X.col(i) % (1. - Y) == 2);
+      arma::vec Xcol(X.col(i));
+
+      arma::uvec het_carriers = arma::find(Xcol % (1. - Y) == 1);
+      arma::uvec hom_carriers = arma::find(Xcol % (1. - Y) == 2);
 
       if (het_carriers.n_elem > 0) {
         for (arma::uword j = 0; j < het_carriers.n_elem; j++) {

@@ -645,11 +645,11 @@ void Methods::check_weights(Gene &gene, const std::string &transcript, int a, in
 	gene.set_weights(transcript, weights);
 	return;
   }
-  arma::mat G(gene.get_matrix(transcript));
+  arma::sp_mat G(gene.get_matrix(transcript));
   arma::vec weights = gene.get_weights(transcript);
 
   if (kernel_ == Kernel::wLinear) {
-	arma::vec maf = arma::mean(G, 0).t() / 2.;
+	arma::vec maf(arma::mean(G, 0).t() / 2.);
 
 	for (arma::uword i = 0; i < G.n_cols; i++) {
 	  weights(i) = std::pow(maf(i), a - 1) * std::pow(1 - maf(i), b - 1) / boost::math::beta(a, b);
