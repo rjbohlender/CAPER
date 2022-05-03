@@ -1,22 +1,21 @@
-FROM debian:bullseye AS builder
+# FROM debian:bullseye AS builder
+FROM alpine AS builder
 
-ENV DEBIAN_FRONTEND noninteractive
+# ENV DEBIAN_FRONTEND noninteractive
 
-RUN apt-get -y update && apt-get install -y --no-install-recommends apt-utils
+# RUN apt-get -y update && apt-get install -y --no-install-recommends apt-utils
+RUN apk update
 
-RUN apt-get install -y --no-install-recommends \
-      ca-certificates \
-      file \
-      sudo \
-      unzip \
-      wget
+# RUN apk add \
+#      ca-certificates \
+#      file \
+#      sudo \
+#      unzip \
+#      wget
 
-RUN apt-get install -y --no-install-recommends \
-      build-essential \
-      cmake \
-      lcov
+RUN apk add make g++ cmake
 
-RUN apt-get install -y --no-install-recommends libboost-program-options-dev libboost-iostreams-dev libarmadillo-dev cmake
+RUN apk add boost-dev armadillo-dev blas-dev lapack-dev
 
 COPY . /src/
 
@@ -25,16 +24,15 @@ WORKDIR /src/build
 RUN cmake -DCMAKE_BUILD_TYPE=Release ../.
 
 RUN make carva
-RUN make vcf2matrix
 
-FROM debian:bullseye
+FROM alpine
 
-ENV DEBIAN_FRONTEND noninteractive
+# ENV DEBIAN_FRONTEND noninteractive
 
 WORKDIR /
 
 COPY --from=builder /src/build/carva /bin
 
-RUN apt-get -y update && apt-get install -y --no-install-recommends apt-utils
+RUN apk update
 
-RUN apt-get install -y --no-install-recommends libboost-program-options-dev libboost-iostreams-dev libarmadillo-dev
+RUN apk add boost blas lapack armadillo

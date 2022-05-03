@@ -7,7 +7,7 @@
 #include <iomanip>
 
 PowerOp::PowerOp(PowerTask &pt, std::shared_ptr<PowerReporter> reporter, double seed, bool verbose)
-	: pt_(pt), reporter_(reporter), gen_(seed), bootstrapped_(pt_.gene), done_(false) {
+	: carvaTask(pt), reporter_(reporter), gen_(seed), bootstrapped_(carvaTask.gene), done_(false) {
 }
 
 auto PowerOp::run() -> void {
@@ -16,8 +16,8 @@ auto PowerOp::run() -> void {
 
 auto PowerOp::finish() -> void {
   // cleanup
-  if (!pt_.tp.gene_list) {
-    reporter_->sync_write_power(pt_.power_res_);
+  if (!carvaTask.tp.gene_list) {
+    reporter_->sync_write_power(carvaTask.power_res_);
   }
 }
 
@@ -26,38 +26,44 @@ auto PowerOp::is_done() const -> bool {
 }
 
 auto PowerOp::get_task() -> PowerTask {
-  return pt_;
+  return carvaTask;
 }
 
 auto PowerOp::power() -> void {
   if (cases_.empty()) {
-	cases_ = arma::find(pt_.cov->get_original_phenotypes() > 0);
+	cases_ = arma::find(carvaTask.cov->get_original_phenotypes() > 0);
   }
   if (controls_.empty()) {
-	controls_ = arma::find(pt_.cov->get_original_phenotypes() == 0);
+	controls_ = arma::find(carvaTask.cov->get_original_phenotypes() == 0);
   }
 
-  for (const auto &ts : pt_.gene.get_transcripts()) {
-	if (pt_.tp.alpha.size() > 1) {
-	  for (arma::uword k = 0; k < pt_.tp.ncases.size(); k++) {
+  for (const auto &ts : carvaTask.gene.get_transcripts()) {
+	if (carvaTask.tp.alpha.size() > 1) {
+	  for (arma::uword k = 0; k < carvaTask.tp.ncases.size(); k++) {
 		// Alpha vector to track the successes
-		success_map_[ts].push_back(arma::vec(pt_.tp.alpha.size(), arma::fill::zeros));
-		arma::uword ncases = pt_.tp.ncases[k];
-		arma::uword ncontrols = pt_.tp.ncontrols[k];
+		success_map_[ts].push_back(arma::vec(carvaTask.tp.alpha.size(), arma::fill::zeros));
+		arma::uword ncases = carvaTask.tp.ncases[k];
+		arma::uword ncontrols = carvaTask.tp.ncontrols[k];
 
 		phenotypes_.zeros(ncases + ncontrols);
 		phenotypes_(arma::span(0, ncases - 1)).fill(1);
 
-		arma::vec odds = pt_.cov->get_odds();
-		for (arma::uword i = 0; i < pt_.nreps; i++) {
-		  bootstrapped_.set_matrix(ts, sample(pt_.gene.get_matrix(ts), ncases, ncontrols));
+		arma::vec odds = carvaTask.cov->get_odds();
+		for (arma::uword i = 0; i < carvaTask.nreps; i++) {
+		  bootstrapped_.set_matrix(ts, sample(carvaTask.gene.get_matrix(ts), ncases, ncontrols));
 		  // Original for this bootstrap replicate
-		  double original = call_method(pt_.method, bootstrapped_, *pt_.cov, phenotypes_, pt_.tp, ts);
+		  double original = call_method(carvaTask.method, bootstrapped_, *carvaTask.cov, phenotypes_,
+                                                carvaTask.tp, ts);
 		  // Need to get a p-value via permutation for some methods
 		  // If the method returns a p-value
-		  if (pt_.tp.method == "SKATO" || pt_.tp.method == "SKAT" || pt_.tp.method == "CMC" || pt_.tp.method == "RVT1"
-			  || pt_.tp.method == "RVT2") {
-			double val = call_method(pt_.method, bootstrapped_, *pt_.cov, phenotypes_, pt_.tp, ts);
+		  if (carvaTask.tp.method == "SKATO" ||
+                      carvaTask.tp.method == "SKAT" ||
+                      carvaTask.tp.method == "CMC" ||
+                      carvaTask.tp.method == "RVT1"
+			  ||
+                      carvaTask.tp.method == "RVT2") {
+			double val = call_method(carvaTask.method, bootstrapped_, *carvaTask.cov, phenotypes_,
+                                             carvaTask.tp, ts);
 			if (val < original) {
 			  success_map_[ts][k]++;
 			}
@@ -65,7 +71,8 @@ auto PowerOp::power() -> void {
 			// We need to permute to get a p-value
 			// Cease permutation if the p-value ci excludes alpha above or below
 			// If below, call it a success
-			int block = static_cast<int>(pt_.tp.nperm); // Permutation block size
+			int block = static_cast<int>(
+                            carvaTask.tp.nperm); // Permutation block size
 			double successes = 0;
 			double p;
 			double val;
@@ -79,42 +86,49 @@ auto PowerOp::power() -> void {
 				bootstrapped_odds,
 				ncases,
 				ts,
-				pt_.tp.bin_epsilon);
+                                carvaTask.tp.bin_epsilon);
 
 			for (arma::uword j = 0; j < block; j++) {
 			  phenotypes_ = arma::conv_to<arma::vec>::from(permutations[j]);
-			  pt_.cov->set_phenotype_vector(phenotypes_);
-			  val = call_method(pt_.method, bootstrapped_, *pt_.cov, phenotypes_, pt_.tp, ts);
+                          carvaTask.cov->set_phenotype_vector(phenotypes_);
+			  val = call_method(carvaTask.method, bootstrapped_, *carvaTask.cov, phenotypes_,
+                                            carvaTask.tp, ts);
 			  if (val >= original) {
 				successes++;
 			  }
 			}
 
 			p = (successes + 2.) / (block + 4.); // Wilson Score estimate
-			success_map_[ts][k](arma::find(pt_.tp.alpha >= p)) += 1;
+			success_map_[ts][k](arma::find(carvaTask.tp.alpha >= p)) += 1;
 		  }
 		}
 	  }
 	} else {
 	  // Single alpha value,
-	  for (const auto &a : pt_.tp.alpha) {
-		for (arma::uword k = 0; k < pt_.tp.ncases.size(); k++) {
-		  arma::uword ncases = pt_.tp.ncases[k];
-		  arma::uword ncontrols = pt_.tp.ncontrols[k];
+	  for (const auto &a : carvaTask.tp.alpha) {
+		for (arma::uword k = 0; k < carvaTask.tp.ncases.size(); k++) {
+		  arma::uword ncases = carvaTask.tp.ncases[k];
+		  arma::uword ncontrols = carvaTask.tp.ncontrols[k];
 
 		  phenotypes_.zeros(ncases + ncontrols);
 		  phenotypes_(arma::span(0, ncases - 1)).fill(1);
 
-		  arma::vec odds = pt_.cov->get_odds();
-		  for (arma::uword i = 0; i < pt_.nreps; i++) {
-			bootstrapped_.set_matrix(ts, sample(pt_.gene.get_matrix(ts), ncases, ncontrols));
+		  arma::vec odds = carvaTask.cov->get_odds();
+		  for (arma::uword i = 0; i < carvaTask.nreps; i++) {
+			bootstrapped_.set_matrix(ts, sample(carvaTask.gene.get_matrix(ts), ncases, ncontrols));
 			// Original for this bootstrap replicate
-			double original = call_method(pt_.method, bootstrapped_, *pt_.cov, phenotypes_, pt_.tp, ts);
+			double original = call_method(
+                            carvaTask.method, bootstrapped_, *carvaTask.cov, phenotypes_, carvaTask.tp, ts);
 			// Need to get a p-value via permutation for some methods
 			// If the method returns a p-value
-			if (pt_.tp.method == "SKATO" || pt_.tp.method == "SKAT" || pt_.tp.method == "CMC" || pt_.tp.method == "RVT1"
-				|| pt_.tp.method == "RVT2") {
-			  double val = call_method(pt_.method, bootstrapped_, *pt_.cov, phenotypes_, pt_.tp, ts);
+			if (carvaTask.tp.method == "SKATO" ||
+                            carvaTask.tp.method == "SKAT" ||
+                            carvaTask.tp.method == "CMC" ||
+                            carvaTask.tp.method == "RVT1"
+				||
+                            carvaTask.tp.method == "RVT2") {
+			  double val = call_method(
+                              carvaTask.method, bootstrapped_, *carvaTask.cov, phenotypes_, carvaTask.tp, ts);
 			  if (val < original) {
 				success_map_[ts][k]++;
 			  }
@@ -139,17 +153,19 @@ auto PowerOp::power() -> void {
 					bootstrapped_odds,
 					ncases,
 					ts,
-					pt_.tp.bin_epsilon);
+                                        carvaTask.tp.bin_epsilon);
 
 				for (arma::uword j = 0; j < block; j++) {
 				  n++;
 				  phenotypes_ = arma::conv_to<arma::vec>::from(permutations[j]);
-				  pt_.cov->set_phenotype_vector(phenotypes_);
-				  val = call_method(pt_.method, bootstrapped_, *pt_.cov, phenotypes_, pt_.tp, ts);
+                                  carvaTask.cov->set_phenotype_vector(phenotypes_);
+				  val = call_method(carvaTask.method, bootstrapped_, *carvaTask.cov, phenotypes_,
+                                                    carvaTask.tp, ts);
 				  if (val >= original) {
 					successes++;
 				  }
 				}
+                                // TODO replace with chisq CI for p-value, remove Wilson score
 				// Burn in 10 reps, then start checking the p-value confidence interval
 				p = (successes + 2.) / (n + 4.); // Wilson Score estimate
 				z = 1.96;
@@ -167,24 +183,25 @@ auto PowerOp::power() -> void {
 	  }
 	}
   }
-  for (const auto &ts : pt_.gene.get_transcripts()) {
-	for (arma::uword i = 0; i < pt_.tp.alpha.n_elem; i++) {
-	  for (arma::uword j = 0; j < pt_.tp.ncases.size(); j++) {
-		PowerRes pr{pt_.gene.gene_name,
+  for (const auto &ts : carvaTask.gene.get_transcripts()) {
+	for (arma::uword i = 0; i < carvaTask.tp.alpha.n_elem; i++) {
+	  for (arma::uword j = 0; j < carvaTask.tp.ncases.size(); j++) {
+		PowerRes pr{carvaTask.gene.gene_name,
 					ts,
-					pt_.tp.method,
-					pt_.tp.ncases[j],
-					pt_.tp.ncontrols[j],
+                        carvaTask.tp.method,
+                        carvaTask.tp.ncases[j],
+                        carvaTask.tp.ncontrols[j],
 					static_cast<double>(success_map_[ts][j](i)),
-					static_cast<double>(pt_.nreps),
-					static_cast<double>(success_map_[ts][j](i)) / pt_.nreps,
-					pt_.tp.alpha(i)
+					static_cast<double>(carvaTask.nreps),
+					static_cast<double>(success_map_[ts][j](i)) /
+                            carvaTask.nreps,
+                        carvaTask.tp.alpha(i)
 		};
-		pt_.power_res_.emplace_back(pr);
+                carvaTask.power_res_.emplace_back(pr);
 	  }
 	}
   }
-  std::cerr << "Finished: " << pt_.gene.gene_name << std::endl;
+  std::cerr << "Finished: " << carvaTask.gene.gene_name << std::endl;
   done_ = true;
 }
 

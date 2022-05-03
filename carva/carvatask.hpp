@@ -7,27 +7,22 @@
 
 #define ARMA_DONT_USE_WRAPPER
 
-#include <string>
-#include <cmath>
-#include <unordered_map>
-#include <cassert>
 #include <armadillo>
+#include <cassert>
+#include <cmath>
 #include <set>
+#include <string>
+#include <unordered_map>
 
 #include <boost/optional.hpp>
 
-#include "../data/gene.hpp"
 #include "../data/covariates.hpp"
-#include "../statistics/methods.hpp"
-#include "../data/result.hpp"
+#include "../data/gene.hpp"
 #include "../data/permutation.hpp"
+#include "../data/result.hpp"
+#include "../statistics/methods.hpp"
 
-enum class Stage {
-  Stage1,
-  Stage2,
-  Done,
-  Power
-};
+enum class Stage { Stage1, Stage2, Done, Power };
 
 class CARVATask {
 public:
@@ -45,20 +40,12 @@ public:
   std::unordered_map<std::string, Permute> permute;
 
   // Constructors
-  CARVATask(Stage stage_,
-			Gene gene_,
-			const std::shared_ptr<Covariates> &cov_,
-			TaskParams tp_,
-			arma::uword succ_thresh_,
-			arma::uword nperm_,
-			arma::uword offset_,
-			arma::uword termination_,
-			std::vector<std::vector<int8_t>> &perm_);
-  CARVATask(Stage stage_,
-			Gene &gene_,
-			std::shared_ptr<Covariates> cov_,
-			TaskParams tp_,
-			std::vector<std::vector<int8_t>> &perm_);
+  CARVATask(Stage stage_, Gene gene_, const std::shared_ptr<Covariates> &cov_,
+            TaskParams tp_, arma::uword succ_thresh_, arma::uword nperm_,
+            arma::uword offset_, arma::uword termination_,
+            std::vector<std::vector<int8_t>> &perm_);
+  CARVATask(Stage stage_, Gene &gene_, std::shared_ptr<Covariates> cov_,
+            TaskParams tp_, std::vector<std::vector<int8_t>> &perm_);
 
   // Free memory
   void cleanup();
@@ -71,4 +58,4 @@ public:
   bool has_multiple_transcripts();
 };
 
-#endif //PERMUTE_ASSOCIATE_CARVATASK_HPP
+#endif // PERMUTE_ASSOCIATE_CARVATASK_HPP

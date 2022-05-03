@@ -266,10 +266,8 @@ int main(int argc, char **argv) {
   tp.full_command = cmd_ss.str();
 
   tp.success_threshold = vm["successes"].as<arma::uword>();
-  tp.stage_1_permutations = vm["stage_1_max_perm"].as<arma::uword>();
-  tp.stage_2_permutations = vm["stage_2_max_perm"].as<arma::uword>();
-  tp.nperm = std::max(tp.stage_1_permutations, tp.stage_2_permutations);
   tp.method = vm["method"].as<std::string>();
+  tp.nperm = vm["nperm"].as<arma::uword>();
   // File paths and option status
   tp.program_path = argv[0];
   tp.genotypes_path = vm["input"].as<std::string>();
@@ -279,8 +277,6 @@ int main(int argc, char **argv) {
   tp.maf = vm["maf"].as<double>();
   tp.cmcmaf = vm["cmcmaf"].as<double>();
   tp.group_size = vm["group_size"].as<arma::uword>();
-  tp.score_only_minor = score_only_minor;
-  tp.score_only_alternative = score_only_alternative;
   tp.bed = bed;
   tp.weight = weight;
   tp.permute_set = permute_set;
@@ -295,7 +291,6 @@ int main(int argc, char **argv) {
   tp.pthresh = pthresh;
   // SKAT Options
   tp.kernel = vm["kernel"].as<std::string>();
-  tp.adjust = adjust;
   tp.linear = linear;
   // Beta weights
   tp.a = std::stoi(beta_split[0]);
@@ -361,11 +356,6 @@ int main(int argc, char **argv) {
 	std::cerr << "method: " << tp.method << "\n";
 	std::cerr << "success threshold: " << tp.success_threshold << "\n";
 	std::cerr << "nthreads: " << tp.nthreads << "\n";
-	std::cerr << "stage_1_max_perm: " << tp.stage_1_permutations << "\n";
-	std::cerr << "stage_2_max_perm: " << tp.stage_2_permutations << "\n";
-	if (tp.method == "SKATO") {
-	  std::cerr << "adjust: " << tp.adjust << "\n";
-	}
   }
 
   // Check for correct file paths

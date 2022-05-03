@@ -5,13 +5,13 @@
 #ifndef PERMUTE_ASSOCIATE_POWERTASK_HPP
 #define PERMUTE_ASSOCIATE_POWERTASK_HPP
 
-#include <string>
-#include <armadillo>
-#include "../utility/taskparams.hpp"
-#include "../data/gene.hpp"
-#include "../data/covariates.hpp"
-#include "../statistics/methods.hpp"
 #include "../carva/carvatask.hpp"
+#include "../data/covariates.hpp"
+#include "../data/gene.hpp"
+#include "../statistics/methods.hpp"
+#include "../utility/taskparams.hpp"
+#include <armadillo>
+#include <string>
 
 struct PowerRes {
   std::string gene;
@@ -26,19 +26,12 @@ struct PowerRes {
 };
 
 struct PowerTask {
-  PowerTask(Stage stage,
-			Gene gene,
-			const std::shared_ptr<Covariates> &cov,
-			TaskParams &tp,
-			std::vector<std::vector<int32_t>> &perm);
-  PowerTask(Stage stage,
-			Gene gene,
-			const std::shared_ptr<Covariates> &cov,
-			TaskParams &tp,
-			arma::uword succ_thresh,
-			arma::uword s1_perm,
-			arma::uword s2_perm,
-			std::vector<std::vector<int32_t>> &perm);
+  PowerTask(Stage stage, Gene gene, std::shared_ptr<Covariates> cov,
+            TaskParams &tp, std::vector<std::vector<int8_t>> &perm);
+  PowerTask(Stage stage, Gene gene, const std::shared_ptr<Covariates> &cov,
+            TaskParams &tp, arma::uword succ_thresh, arma::uword nperm_,
+            arma::uword offset_, arma::uword termination_,
+            std::vector<std::vector<int8_t>> &perm);
   TaskParams &tp;
   Gene gene;
   std::shared_ptr<Covariates> cov;
@@ -49,4 +42,4 @@ struct PowerTask {
   std::vector<PowerRes> power_res_;
 };
 
-#endif //PERMUTE_ASSOCIATE_POWERTASK_HPP
+#endif // PERMUTE_ASSOCIATE_POWERTASK_HPP
