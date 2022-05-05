@@ -4,13 +4,16 @@
 
 #include <fstream>
 #include <boost/algorithm/string/predicate.hpp>
+#include <sstream>
 #include "filter.hpp"
 #include "../utility/indices.hpp"
 #include "../utility/filesystem.hpp"
 
 Filter::Filter(const std::string &file_path) {
   if (!check_file_exists(file_path)) {
-	throw(std::runtime_error("ERROR: Path to whitelist is incorrect."));
+        std::stringstream ss;
+        ss << "ERROR: Path to whitelist is incorrect. " << file_path << std::endl;
+	throw(std::runtime_error(ss.str().c_str()));
   }
   std::string line;
   std::ifstream ifs(file_path);

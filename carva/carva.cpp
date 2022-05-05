@@ -9,11 +9,16 @@
 
 #include <boost/program_options.hpp>
 #include <boost/optional.hpp>
+#include <unistd.h>
 
 #include "../statistics/methods.hpp"
 #include "../utility/filesystem.hpp"
 #include "../utility/jobdispatcher.hpp"
 #include "../power/powerop.hpp"
+
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
 
 namespace po = boost::program_options;
 
@@ -311,14 +316,25 @@ int main(int argc, char **argv) {
   tp.method = vm["method"].as<std::string>();
   tp.optimizer = vm["optimizer"].as<std::string>();
   // File paths and option status
-  tp.program_path = argv[0];
-  int i = strlen(argv[0]);
-  for (; i > 0; i--) {
+  uint32_t pathbufsize = 1000;
+  char pathbuf[pathbufsize];
+  for(int i = 0; i < pathbufsize; i++) {
+    pathbuf[i] = '\0';
+  }
+#ifdef __APPLE__
+  int ret = _NSGetExecutablePath(pathbuf, &pathbufsize);
+#else
+  ssize_t len = readlink("/proc/self/exe", pathbuf, 1000);
+#endif
+  tp.program_path = pathbuf;
+  int i = strlen(pathbuf);
+  for (; i >= 0; i--) {
     if (argv[0][i] == '/') {
       break;
     }
   }
-  tp.program_directory = std::string(argv[0]).substr(0, i + 1);
+  tp.program_directory = std::string(pathbuf).substr(0, i + 1);
+  std::cerr << "Program directory: " << tp.program_directory << std::endl;
   tp.seed = seed;
   tp.genotypes_path = vm["input"].as<std::string>();
   if (vm.count("covariates") > 0) {
