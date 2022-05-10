@@ -7,6 +7,7 @@
 
 #define ARMA_DONT_USE_WRAPPER
 
+#include <set>
 #include <string>
 #include <vector>
 #include <fstream>
@@ -35,6 +36,7 @@ public:
   arma::colvec &get_phenotype_vector();
   void set_phenotype_vector(const arma::vec &vec);
   void set_phenotype_vector(const std::vector<int32_t> &vec);
+  bool contains(const std::string &sample);
 
   arma::uword get_nsamples() const;
   arma::uword get_ncases() const;
@@ -55,7 +57,7 @@ public:
 
   // Sort covariates
   void sort_covariates(std::string &header);
-  bool is_sorted();
+  bool is_sorted() const;
 
 private:
   TaskParams tp_;
@@ -65,7 +67,7 @@ private:
 
   CRandomMersenne crand;
   std::vector<std::string> cov_samples_;
-  std::vector<std::string> ped_samples_;
+  std::set<std::string> ped_samples_;
   arma::vec phenotypes_; // Possibly permuted phenotype vector
   arma::vec original_; // Original phenotype vector
   arma::mat design_; // Design matrix

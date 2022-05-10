@@ -93,11 +93,15 @@ void Gene::parse(std::stringstream &ss, const std::shared_ptr<Covariates> &cov,
       RJBUtil::Splitter<std::string> splitter(line, "\t");
       for (arma::uword j = static_cast<int>(Indices::first);
            j < splitter.size(); j++) {
-        samples_.push_back(splitter[j]);
+        if (cov->contains(splitter[j])) {
+          samples_.push_back(splitter[j]);
+          columns_.push_back(j);
+        }
       }
       i++;
       continue;
     }
+    assert(columns_.size() == cov->get_nsamples() && "Not all samples in ped file are represented in matrix file.\n");
     RJBUtil::Splitter<std::string> splitter(line, "\t");
 
     if (gene_name.empty()) {
@@ -158,7 +162,7 @@ void Gene::parse(std::stringstream &ss, const std::shared_ptr<Covariates> &cov,
     type_[transcript].push_back(splitter[static_cast<int>(Indices::type)]);
 
     auto first_idx = static_cast<int>(Indices::first);
-    for (auto j = first_idx; j < splitter.size(); j++) {
+    for (const auto &j : columns_) {
       double val;
       try {
         val = std::stod(splitter[j]);

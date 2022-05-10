@@ -73,6 +73,7 @@ private:
   std::map<std::string, arma::uword> nvariants_;
   std::vector<std::string> transcripts_;
   std::map<std::string, std::vector<std::string>> positions_;
+  std::vector<arma::uword> columns_;
 
   std::map<std::string, arma::sp_mat> genotypes_;
   std::map<std::string, arma::vec> weights_;

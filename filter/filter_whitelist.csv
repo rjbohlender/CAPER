@@ -16,3 +16,4 @@ FUNCTION:stopgain,1,1,1,1,1,1,1,1,1,1,1
 FUNCTION:stoploss,1,1,1,1,1,1,1,1,1,1,1
 FUNCTION:unknown,1,1,1,1,1,1,1,1,1,1,1
 FUNCTION:-,1,1,1,1,1,1,1,1,1,1,1
+FUNCTION:splicing,1,1,1,1,1,1,1,1,1,1,1

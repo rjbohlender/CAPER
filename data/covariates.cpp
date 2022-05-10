@@ -147,7 +147,7 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
     fv.validate_ped_line(splitter, lineno);
 
     std::string sample_id = splitter[1];
-    ped_samples_.push_back(sample_id);
+    ped_samples_.insert(sample_id);
     if (ifile.empty()) {
       phenotypes.push_back(std::stod(splitter[5]) - 1);
       if (phenotypes.back() == 1) {
@@ -182,29 +182,31 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
     lineno++;
     RJBUtil::Splitter<std::string> splitter(line, " \t");
     fv.validate_cov_line(splitter, lineno);
-    covariates.emplace_back(std::vector<double>());
+    if(this->contains(splitter[0])) {
+      covariates.emplace_back(std::vector<double>());
+      unsigned long i = 0;
+      for (const auto &v : splitter) {
+        if (i == 0) {
+          // Get phenotype of current sample
+          auto phen = sample_phen_map[v];
 
-    unsigned long i = 0;
-    for (const auto &v : splitter) {
-      if (i == 0) {
-        // Get phenotype of current sample
-        auto phen = sample_phen_map[v];
+          cov_samples_.push_back(v);
 
-        cov_samples_.push_back(v);
+          if (phen == 1) {
+            ncases_++;
+          } else {
+            ncontrols_++;
+          }
 
-        if (phen == 1) {
-          ncases_++;
+          phenotypes.push_back(phen);
         } else {
-          ncontrols_++;
+          covariates.back().push_back(std::stod(v));
         }
-
-        phenotypes.push_back(phen);
-      } else {
-        covariates.back().push_back(std::stod(v));
+        i++;
       }
-      i++;
     }
   }
+  assert(nsamples_ == ncases_ + ncontrols_ && "Number of samples differs between ped and covariates after parsing.");
   std::cerr << "nsamples: " << nsamples_ << "\n";
   std::cerr << "ncases: " << ncases_ << "\n";
   std::cerr << "ncontrols: " << ncontrols_ << "\n";
@@ -254,7 +256,7 @@ void Covariates::parse(std::stringstream &ped_ss, std::stringstream &cov_ss) {
     RJBUtil::Splitter<std::string> splitter(line, "\t");
 
     std::string sample_id = splitter[1];
-    ped_samples_.push_back(sample_id);
+    ped_samples_.insert(sample_id);
 
     nsamples_++;
     if (linear_) {
@@ -280,27 +282,29 @@ void Covariates::parse(std::stringstream &ped_ss, std::stringstream &cov_ss) {
   // Parse the PCA matrix file
   while (std::getline(cov_ss, line, '\n')) {
     RJBUtil::Splitter<std::string> splitter(line, " \t");
-    covariates.emplace_back(std::vector<double>());
+    if (ped_samples_.count(splitter[0]) > 0) {
+      covariates.emplace_back(std::vector<double>());
 
-    unsigned long i = 0;
-    for (const auto &v : splitter) {
-      if (i == 0) {
-        // Get phenotype of current sample
-        auto phen = sample_phen_map[v];
+      unsigned long i = 0;
+      for (const auto &v : splitter) {
+        if (i == 0) {
+          // Get phenotype of current sample
+          auto phen = sample_phen_map[v];
 
-        cov_samples_.push_back(v);
+          cov_samples_.push_back(v);
 
-        if (phen == 1) {
-          ncases_++;
+          if (phen == 1) {
+            ncases_++;
+          } else {
+            ncontrols_++;
+          }
+
+          phenotypes.push_back(phen);
         } else {
-          ncontrols_++;
+          covariates.back().push_back(std::stod(v));
         }
-
-        phenotypes.push_back(phen);
-      } else {
-        covariates.back().push_back(std::stod(v));
+        i++;
       }
-      i++;
     }
   }
   std::cerr << "nsamples: " << nsamples_ << "\n";
@@ -458,8 +462,12 @@ void Covariates::sort_covariates(std::string &header) {
   sorted_ = true;
 }
 
-bool Covariates::is_sorted() { return sorted_; }
+bool Covariates::is_sorted() const { return sorted_; }
 
 arma::vec &Covariates::get_coef() { return p_coef_; }
 
 arma::vec Covariates::get_residuals() const { return phenotypes_ - p_fitted_; }
+
+bool Covariates::contains(const std::string &sample) {
+  return (ped_samples_.count(sample) > 0);
+}
