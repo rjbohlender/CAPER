@@ -162,6 +162,7 @@ void Gene::parse(std::stringstream &ss, const std::shared_ptr<Covariates> &cov,
     type_[transcript].push_back(splitter[static_cast<int>(Indices::type)]);
 
     auto first_idx = static_cast<int>(Indices::first);
+    arma::uword k = 0;
     for (const auto &j : columns_) {
       double val;
       try {
@@ -180,12 +181,12 @@ void Gene::parse(std::stringstream &ss, const std::shared_ptr<Covariates> &cov,
           val = -9;
         } else {
           val = 0;
-          missing_variant_carriers_[transcript](j - first_idx, i - 1) = 1;
+          missing_variant_carriers_[transcript](k, i - 1) = 1;
         }
       }
       if (val != 0) {
         try {
-          genotypes_[transcript](j - first_idx, i - 1) = val;
+          genotypes_[transcript](k, i - 1) = val;
         } catch (std::exception &e) {
           std::cerr << "Failed to set value for: row = " << j - first_idx
                     << " col = " << i - 1 << std::endl;
@@ -196,6 +197,7 @@ void Gene::parse(std::stringstream &ss, const std::shared_ptr<Covariates> &cov,
           throw(e);
         }
       }
+      k++;
     }
     i++;
   }
