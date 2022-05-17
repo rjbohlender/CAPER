@@ -148,14 +148,6 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
 
     std::string sample_id = splitter[1];
     ped_samples_.insert(sample_id);
-    if (ifile.empty()) {
-      phenotypes.push_back(std::stod(splitter[5]) - 1);
-      if (phenotypes.back() == 1) {
-        ncases_++;
-      } else {
-        ncontrols_++;
-      }
-    }
     nsamples_++;
     if (linear_) {
       try {
@@ -173,6 +165,17 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
         std::cerr
             << "Failed to convert binary phenotype in .ped file column 6.\n";
         throw(e);
+      }
+    }
+  }
+  // Ensure phenotypes are in ped_samples_ order when covariates are not provided
+  if (ifile.empty()) {
+    for (const auto &s : ped_samples_) {
+      phenotypes.push_back(sample_phen_map[s]);
+      if (phenotypes.back() == 1) {
+        ncases_++;
+      } else {
+        ncontrols_++;
       }
     }
   }
@@ -386,8 +389,6 @@ void Covariates::sort_covariates(std::string &header) {
   RJBUtil::Splitter<std::string> splitter(header, "\t");
 
   std::map<std::string, arma::uword> header_map;
-
-  // Header order
 
   // Cov order
   if (!cov_samples_.empty()) {
