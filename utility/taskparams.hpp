@@ -45,6 +45,7 @@ struct TaskParams {
   std::string genotypes_path;
   std::string covariates_path;
   std::string ped_path;
+  std::string whitelist_path;
   arma::uword mac;
   double maf;
   double min_variant_count;

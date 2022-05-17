@@ -83,6 +83,9 @@ int main(int argc, char **argv) {
         ("bed_filter,b",
          po::value(&bed),
          "A bed file to be used as a filter. All specified regions will be excluded.")
+        ("filter,f",
+         po::value<std::string>(),
+         "A csv whitelist of TYPE and FUNCTION annotations. Default whitelist can be found in the filter directory.")
         ("weights,w",
          po::value(&weights),
          "A file providing weights. Replaces the CASM scores provided in the matrix file.")
@@ -327,13 +330,18 @@ int main(int argc, char **argv) {
   ssize_t len = readlink("/proc/self/exe", pathbuf, 1000);
 #endif
   tp.program_path = pathbuf;
-  int i = strlen(pathbuf);
+  ssize_t i = strlen(pathbuf);
   for (; i >= 0; i--) {
-    if (argv[0][i] == '/') {
+    if (pathbuf[i] == '/') {
       break;
     }
   }
   tp.program_directory = std::string(pathbuf).substr(0, i + 1);
+  if (vm.count("filter") > 0) {
+    tp.whitelist_path = vm["filter"].as<std::string>();
+  } else {
+    tp.whitelist_path = tp.program_directory + "../filter/filter_whitelist.csv";
+  }
   std::cerr << "Program directory: " << tp.program_directory << std::endl;
   tp.seed = seed;
   tp.genotypes_path = vm["input"].as<std::string>();
