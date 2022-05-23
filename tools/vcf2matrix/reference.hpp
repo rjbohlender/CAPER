@@ -78,17 +78,31 @@ struct Gene {
 
 /// \brief Parse and store RefFlat entries
 class Reference {
-  const int genei = 0;
-  const int txi = 1;
-  const int chri = 2;
-  const int strandi = 3;
-  const int starti = 4;
-  const int endi = 5;
-  const int cds_starti = 6;
-  const int cds_endi = 7;
-  const int exonsi = 8;
-  const int exon_starti = 9;
-  const int exon_endi = 10;
+  enum class refFlat {
+    genei = 0,
+    txi = 1,
+    chri = 2,
+    strandi = 3,
+    starti = 4,
+    endi = 5,
+    cds_starti = 6,
+    cds_endi = 7,
+    exonsi = 8,
+    exon_starti = 9,
+    exon_endi = 10
+  };
+
+  enum class refGene {
+    seqid = 0,
+    source = 1,
+    type = 2,
+    start = 3,
+    end = 4,
+    score = 5,
+    strand = 6,
+    phase = 7,
+    attributes = 8
+  };
 
   const std::array<std::string, 24> chromosomes {
 	"chr1", "chr2", "chr3", "chr4", "chr5", "chr6",
@@ -103,7 +117,10 @@ public:
   std::vector<std::shared_ptr<Gene>> get_gene(const std::string &chr, long pos);
 
 private:
-  void parse(std::istream &ifs);
+  void parse_refFlat(std::istream &ifs);
+  void parse_refGene(std::istream &ifs);
+
+  std::string standardize_chromosome(const std::string &chr);
 
   // Need data structure to be searchable by position, recovering all matching transcripts
   std::map<std::string, std::vector<std::shared_ptr<Gene>>> data_;
