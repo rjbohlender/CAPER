@@ -20,6 +20,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 find_package(Armadillo 8.6 REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Boost 1.66.0 COMPONENTS program_options iostreams REQUIRED)
+find_package(ZLIB REQUIRED)
 
 if (APPLE)
     # -fsanitize=address -fsanitize=undefined -Wall -pedantic
@@ -114,7 +115,7 @@ set(PROJECT_SUPPORT_FILES
     statistics/fishertest.cpp
     statistics/fishertest.hpp
     utility/jointhreads.hpp
-    utility/indexsort.hpp utility/math.hpp utility/filevalidator.cpp utility/filevalidator.hpp utility/indices.hpp data/filter.cpp data/filter.hpp)
+    utility/indexsort.hpp utility/math.hpp utility/filevalidator.cpp utility/filevalidator.hpp utility/index.hpp data/filter.cpp data/filter.hpp data/matrix_indices.hpp)
 
 
 include_directories("${CMAKE_CURRENT_LIST_DIR}/third_party")
@@ -122,6 +123,8 @@ include_directories(${ARMADILLO_INCLUDE_DIRS})
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${LAPACK_INCLUDE_DIRS})
 include_directories(${BLAS_INCLUDE_DIRS})
+include_directories(${ZLIB_INCLUDE_DIRS})
+include_directories("third_party/zstr/src")
 
 add_executable(carva
                carva/carva.cpp
@@ -135,6 +138,7 @@ target_link_libraries(carva ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(carva ${Boost_LIBRARIES})
 target_link_libraries(carva ${LAPACK_LIBRARIES})
 target_link_libraries(carva ${BLAS_LIBRARIES})
+target_link_libraries(carva ${ZLIB_LIBRARIES})
 
 target_compile_definitions(carva PRIVATE MAXCOLORS=10000000)
 

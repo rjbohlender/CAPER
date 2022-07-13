@@ -2,12 +2,13 @@
 // Created by Bohlender,Ryan James on 11/5/20.
 //
 
-#include <fstream>
-#include <boost/algorithm/string/predicate.hpp>
-#include <sstream>
 #include "filter.hpp"
-#include "../utility/indices.hpp"
+#include "matrix_indices.hpp"
 #include "../utility/filesystem.hpp"
+#include "../utility/index.hpp"
+#include <boost/algorithm/string/predicate.hpp>
+#include <fstream>
+#include <sstream>
 
 Filter::Filter(const std::string &file_path) {
   if (!check_file_exists(file_path)) {

@@ -5,6 +5,7 @@
 #ifndef PERMUTE_ASSOCIATE_FILESYSTEM_HPP
 #define PERMUTE_ASSOCIATE_FILESYSTEM_HPP
 
+#include <boost/iostreams/filtering_streambuf.hpp>
 #include <string>
 
 bool check_file_exists(const std::string &path);

@@ -13,7 +13,6 @@
 #include "../statistics/bayesianglm.hpp"
 #include "../statistics/glm.hpp"
 #include "../statistics/methods.hpp"
-#include "../utility/indices.hpp"
 #include "../utility/math.hpp"
 #include "filter.hpp"
 #include "gene.hpp"
@@ -149,8 +148,6 @@ void Gene::parse(std::stringstream &ss, const std::shared_ptr<Covariates> &cov,
 
     std::string var_id = form_variant_id(splitter);
     positions_[transcript].push_back(var_id);
-    weights_[transcript](i - 1) =
-        std::stod(splitter[static_cast<int>(Indices::weight)]);
 
     // Record other info in line
     function_[transcript].push_back(
@@ -194,6 +191,7 @@ void Gene::parse(std::stringstream &ss, const std::shared_ptr<Covariates> &cov,
                     << " Transcript: "
                     << splitter[static_cast<int>(Indices::transcript)]
                     << " Location: " << form_variant_id(splitter) << std::endl;
+          std::cerr << e.what();
           throw(e);
         }
       }
@@ -703,11 +701,6 @@ std::stringstream Gene::transcript_union(std::stringstream &ss,
     }
     if (variants.find(vid) == variants.end()) {
       variants[vid] = line;
-    } else {
-      double casm = std::stod(splitter[static_cast<int>(Indices::weight)]);
-      if (casm > casm_scores[vid]) {
-        variants[vid] = line;
-      }
     }
     line_no++;
   }

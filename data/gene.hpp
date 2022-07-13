@@ -21,6 +21,7 @@
 #include "result.hpp"
 #include "../utility/taskparams.hpp"
 #include "filter.hpp"
+#include "matrix_indices.hpp"
 
 arma::uvec setdiff(arma::uvec x, arma::uvec y);
 
@@ -28,6 +29,7 @@ void print_comma_sep(arma::uvec &x, std::ostream &os);
 void print_comma_sep(std::vector<std::string> &x, std::ostream &os);
 void print_comma_sep(const std::vector<std::string> &x, std::ostream &os);
 void print_semicolon_sep(arma::uvec &x, std::ostream &os);
+
 
 /**
  * @brief Container for single gene multiple transcript data

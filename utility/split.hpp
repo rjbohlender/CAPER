@@ -7,116 +7,114 @@
 #ifndef PGEN_SPLIT_HPP
 #define PGEN_SPLIT_HPP 1
 
+#include <algorithm>
 #include <string>
 #include <vector>
-#include <algorithm>
 
 namespace RJBUtil {
 /**
  * @class Splitter split.hpp "src/util/split.hpp"
- * @brief A utility for quickly splitting strings into readable substring segments.
+ * @brief A utility for quickly splitting strings into readable substring
+ * segments.
  *
  * @remark  Removed string_view, as string_views can't be built from iterators.
  */
-template<typename _String_t>
-class Splitter {
+template <typename String_t, typename Integral_t = size_t> class Splitter {
 public:
   /** Aliases */
-  using string_type = _String_t;
+  using string_type = String_t;
+  using int_type = Integral_t;
   using const_iter = typename string_type::const_iterator;
-  using size_type = typename _String_t::size_type;
+  using size_type = typename String_t::size_type;
 
   /** Constructors */
   Splitter() = default;
-  Splitter(const string_type &str, const string_type &delim)
-	  : data_(str), delim_(delim) {
-	split();
+  Splitter(const string_type &str, const string_type &delim, int_type n = 0)
+      : data_(str), delim_(delim), n_(n) {
+    if (n > 0) {
+      split_up_to_n();
+    } else {
+      split();
+    }
   }
 
-  Splitter(const string_type &&str, const string_type &&delim)
-	  : data_(str), delim_(delim) {
-	split();
+  Splitter(const string_type &&str, const string_type &&delim, int_type n = 0)
+      : data_(str), delim_(delim), n_(n) {
+    if (n > 0) {
+      split_up_to_n();
+    } else {
+      split();
+    }
   }
 
-  Splitter(const string_type &str, const string_type &&delim)
-	  : data_(str), delim_(delim) {
-	split();
+  Splitter(const string_type &str, const string_type &&delim, int_type n = 0)
+      : data_(str), delim_(delim), n_(n) {
+    if (n > 0) {
+      split_up_to_n();
+    } else {
+      split();
+    }
   }
 
-  Splitter(const string_type &&str, const string_type &delim)
-	  : data_(str), delim_(delim) {
-	split();
+  Splitter(const string_type &&str, const string_type &delim, int_type n = 0)
+      : data_(str), delim_(delim), n_(n) {
+    if (n > 0) {
+      split_up_to_n();
+    } else {
+      split();
+    }
   }
 
   Splitter &operator=(const Splitter &rhs) {
-	data_ = rhs.data_;
-	delim_ = rhs.delim_;
-	tokens_ = rhs.tokens_;
+    data_ = rhs.data_;
+    delim_ = rhs.delim_;
+    tokens_ = rhs.tokens_;
+    n_ = rhs.n;
 
-	return *this;
+    return *this;
   }
 
   Splitter &operator=(Splitter &&rhs) noexcept {
-	data_ = std::move(rhs.data_);
-	delim_ = std::move(rhs.delim_);
-	tokens_ = std::move(rhs.tokens_);
+    data_ = std::move(rhs.data_);
+    delim_ = std::move(rhs.delim_);
+    tokens_ = std::move(rhs.tokens_);
+    n_ = rhs.n_;
 
-	return *this;
+    return *this;
   }
 
-  auto begin() {
-	return tokens_.begin();
-  }
+  auto begin() { return tokens_.begin(); }
 
-  auto cbegin() {
-	return tokens_.cbegin();
-  }
+  auto cbegin() { return tokens_.cbegin(); }
 
-  auto end() {
-	return tokens_.end();
-  }
+  auto end() { return tokens_.end(); }
 
-  auto cend() {
-	return tokens_.cend();
-  }
+  auto cend() { return tokens_.cend(); }
 
-  auto size() {
-	return tokens_.size();
-  }
+  auto size() { return tokens_.size(); }
 
-  auto empty() {
-	return tokens_.empty();
-  }
+  auto empty() { return tokens_.empty(); }
 
-  auto erase(std::vector<std::string>::iterator &pos) {
+  auto erase(std::vector<std::string>::iterator &pos) { tokens_.erase(pos); }
+
+  auto erase(std::vector<std::string>::const_iterator &pos) {
     tokens_.erase(pos);
   }
 
-  auto erase(std::vector<std::string>::const_iterator &pos) {
-	tokens_.erase(pos);
+  auto front() { return tokens_.front(); }
+
+  auto back() { return tokens_.back(); }
+
+  auto operator[](int_type i) {
+    return tokens_[i];
   }
 
-  auto front() {
-    return tokens_.front();
-  }
-
-  auto back() {
-    return tokens_.back();
-  }
-
-  template<typename _Integer>
-  auto operator[](_Integer i) {
-	return tokens_[i];
-  }
-
-  template<typename _Integer>
-  auto at(_Integer i) {
-	return tokens_.at(i);
-  }
+  auto at(int_type i) { return tokens_.at(i); }
 
 private:
   /**
-   * @brief A split member function to simplify multiple constructors should be need them.
+   * @brief A split member function to simplify multiple constructors should be
+   * need them.
    */
   void split() {
 #if 0
@@ -147,20 +145,43 @@ private:
 
 	}
 #else
-	// Faster version described at: https://www.bfilipek.com/2018/07/string-view-perf-followup.html
-	for(auto first = data_.data(), second = data_.data(), last = first + data_.size(); second != last && first != last; first = second + 1) {
-	  second = std::find_first_of(first, last, std::cbegin(delim_), std::cend(delim_));
+    // Faster version described at:
+    // https://www.bfilipek.com/2018/07/string-view-perf-followup.html
+    for (auto first = data_.data(), second = data_.data(),
+              last = first + data_.size();
+         second != last && first != last; first = second + 1) {
+      second = std::find_first_of(first, last, std::cbegin(delim_),
+                                  std::cend(delim_));
 
-	  if(first != second)
-	    tokens_.emplace_back(first, second-first);
-	}
+      if (first != second)
+        tokens_.emplace_back(first, second - first);
+    }
 #endif
+  }
+  void split_up_to_n() {
+    int cur = 0;
+    // Faster version described at:
+    // https://www.bfilipek.com/2018/07/string-view-perf-followup.html
+    for (auto first = data_.data(), second = data_.data(),
+              last = first + data_.size();
+         second != last && first != last; first = second + 1) {
+      second = std::find_first_of(first, last, std::cbegin(delim_),
+                                  std::cend(delim_));
+
+      if (first != second)
+        tokens_.emplace_back(first, second - first);
+      cur++;
+      if (cur >= n_) {
+        break;
+      }
+    }
   }
 
   /** Private members */
+  size_t n_;
   string_type data_;
   string_type delim_;
   std::vector<std::string> tokens_;
 };
-}
+} // namespace RJBUtil
 #endif // PGEN_SPLIT_HPP

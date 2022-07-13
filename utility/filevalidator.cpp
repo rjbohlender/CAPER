@@ -3,7 +3,8 @@
 //
 
 #include "filevalidator.hpp"
-#include "indices.hpp"
+#include "index.hpp"
+#include "../data/matrix_indices.hpp"
 #include <sstream>
 
 const std::set<std::string> FileValidator::matrix_variant_types {

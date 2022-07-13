@@ -2,7 +2,9 @@
 // Created by Bohlender,Ryan James on 8/14/18.
 //
 
+#include <boost/iostreams/filter/bzip2.hpp>
 #include <fstream>
+#include <sstream>
 #include <sys/stat.h>
 
 #include "filesystem.hpp"

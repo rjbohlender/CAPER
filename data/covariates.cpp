@@ -12,8 +12,9 @@
 #include "../statistics/bayesianglm.hpp"
 #include "../statistics/glm.hpp"
 #include "../utility/filevalidator.hpp"
+#include "../utility/index.hpp"
 #include "../utility/indexsort.hpp"
-#include "../utility/indices.hpp"
+#include "matrix_indices.hpp"
 
 Covariates::Covariates(TaskParams tp)
     : tp_(std::move(tp)), nsamples_(0), ncases_(0), ncontrols_(0),

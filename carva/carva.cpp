@@ -89,27 +89,27 @@ int main(int argc, char **argv) {
         ("weights,w",
          po::value(&weights),
          "A file providing weights. Replaces the CASM scores provided in the matrix file.")
-		("no_weights",
-		 po::bool_switch(&no_weights),
-		 "Disable weights. Disables default CASM weights.")
-		("impute_to_mean",
-		 po::bool_switch(&impute_to_mean),
-		 "Impute the to mean AF of cases for case samples, and the mean AF of controls for control samples.")
-		("whole_gene",
-		 po::bool_switch(&whole_gene),
-		 "Analyze the union of all transcripts for a gene.")
-		("nthreads,t",
+        ("no_weights",
+         po::bool_switch(&no_weights),
+         "Disable weights. Disables default CASM weights.")
+        ("impute_to_mean",
+         po::bool_switch(&impute_to_mean),
+         "Impute the to mean AF of cases for case samples, and the mean AF of controls for control samples.")
+        ("whole_gene",
+         po::bool_switch(&whole_gene),
+         "Analyze the union of all transcripts for a gene.")
+        ("nthreads,t",
          po::value<size_t>()->default_value(std::thread::hardware_concurrency() / 2 + 1),
          "The number of threads. Minimum number of threads = 2. n + 1 threads, with one parent thread and n threads processing genes.")
         ("method,m",
          po::value<std::string>()->default_value("VAAST"),
          "The statistical method to be used.\n"
          "Options: {BURDEN, CALPHA, CMC, CMC1df, RVT1, RVT2, SKAT, SKATO, VAAST, VT, WSS}.")
-		("optimizer",
-		 po::value<std::string>()->default_value("irls"),
-		 "The optimizer used to fit the GLM.\n"
-		 "Options: {irls, irls_svdnewton, irls_qr, irls_qr_R, gradient_descent}.")
-		("range",
+        ("optimizer",
+         po::value<std::string>()->default_value("irls"),
+         "The optimizer used to fit the GLM.\n"
+         "Options: {irls, irls_svdnewton, irls_qr, irls_qr_R, gradient_descent}.")
+        ("range",
          po::value(&gene_range)->multitoken(),
          "A range of genes to analyze from the matrix file. "
          "Takes two values, a start gene number, and end gene number.\n"
@@ -138,7 +138,7 @@ int main(int argc, char **argv) {
         ("genes,l",
          po::value(&gene_list),
          "A comma-separated list of genes to analyze.")
-		("no_detail",
+        ("no_detail",
          po::bool_switch(&no_detail),
          "Don't produce detailed, variant level output.")
         ("output_stats",
@@ -153,15 +153,15 @@ int main(int argc, char **argv) {
         ("min_variant_count",
          po::value<arma::uword>()->default_value(1),
          "Minimum number of variants to test a gene.")
-		("bin_epsilon",
-		 po::value<double>()->default_value(0.0001),
-		 "Odds closer together than the given value will be collapsed into a single bin for permutation.")
-		("max_perms",
-		 po::value(&max_perms),
-		 "Maximum number of permutations, used in combination with --nperm to manage memory usage. Run permutation in blocks of size nperm, up to the maximum set here. Only genes requiring additional permutation will be permuted. If you are running a small number of permutations, do not set this option.")
-		("seed",
-		 po::value(&seed),
-		 "A defined seed passed to the random number generators used for each gene.")
+        ("bin_epsilon",
+         po::value<double>()->default_value(0.0001),
+         "Odds closer together than the given value will be collapsed into a single bin for permutation.")
+        ("max_perms",
+         po::value(&max_perms),
+         "Maximum number of permutations, used in combination with --nperm to manage memory usage. Run permutation in blocks of size nperm, up to the maximum set here. Only genes requiring additional permutation will be permuted. If you are running a small number of permutations, do not set this option.")
+        ("seed",
+         po::value(&seed),
+         "A defined seed passed to the random number generators used for each gene.")
         ("testable",
          po::value(&testable),
          "Return results for genes with a minimum achievable p-value less than or equal to what is given.");
@@ -169,18 +169,18 @@ int main(int argc, char **argv) {
         ("group_size,g",
          po::value<arma::uword>()->default_value(0),
          "Group size, minor allele count threshold for grouping a variant. VAAST can collapse variants into groups of variants, dependent upon the collapse having a higher total VAAST score.")
-	    ("soft_maf_filter",
-		 po::value<double>()->default_value(0.5),
-		 "Caps the highest allele frequency for the control set in the likelihood calculation. Penalizes common variants without removing them.")
-		("biallelic",
+        ("soft_maf_filter",
+         po::value<double>()->default_value(0.5),
+         "Caps the highest allele frequency for the control set in the likelihood calculation. Penalizes common variants without removing them.")
+        ("biallelic",
          po::bool_switch(&biallelic),
          "Additional term for biallelic variants. For detecting potentially recessive variants.")
         ("site_penalty",
-		 po::value<double>()->default_value(2.0),
-		 "VAAST site penalty. AIC penalty applied to each site in VAAST.")
-		("legacy_grouping",
-		 po::bool_switch(&legacy_grouping),
-		 "Match grouping behavior to VAAST 2.0. Off by default. If enabled variants are grouped by type annotation, otherwise grouped all together.");
+         po::value<double>()->default_value(2.0),
+         "VAAST site penalty. AIC penalty applied to each site in VAAST.")
+        ("legacy_grouping",
+         po::bool_switch(&legacy_grouping),
+         "Match grouping behavior to VAAST 2.0. Off by default. If enabled variants are grouped by type annotation, otherwise grouped all together.");
     skat.add_options()
         ("kernel,k",
          po::value<std::string>()->default_value("Linear"),
