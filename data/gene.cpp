@@ -565,7 +565,7 @@ void Gene::generate_vaast(Covariates &cov) {
       }
       vaast_ss << boost::format("%1$.2f") % variant_scores_[ts][i] << "\t";
 
-      RJBUtil::Splitter<std::string> pos_splitter(positions_[ts][i], "-");
+      RJBUtil::Splitter<std::string> pos_splitter(positions_[ts][i], ",");
       vaast_ss << pos_splitter[1] << "@" << pos_splitter[0] << "\t";
 
       // Placeholder for Reference alleles
@@ -621,7 +621,7 @@ void Gene::generate_vaast(Covariates &cov) {
       }
       vaast_ss << boost::format("%1$.2f") % variant_scores_[ts][i] << "\t";
 
-      RJBUtil::Splitter<std::string> pos_splitter(positions_[ts][i], "-");
+      RJBUtil::Splitter<std::string> pos_splitter(positions_[ts][i], ",");
       vaast_ss << pos_splitter[1] << "@" << pos_splitter[0] << "\t";
 
       // Placeholder for Reference alleles
