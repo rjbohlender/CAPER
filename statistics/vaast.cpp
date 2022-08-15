@@ -255,7 +255,7 @@ void VAASTLogic::variant_grouping(const arma::sp_mat &X,
   std::vector<Variant> variants;
 
   for (int i = 0; i < positions.size(); i++) {
-	RJBUtil::Splitter<std::string> splitter(positions[i], "-");
+	RJBUtil::Splitter<std::string> splitter(positions[i], ",");
 	std::stringstream loc;
 	loc << splitter[0] << "-" << splitter[1] << "-" << splitter[2];
 	variants.emplace_back(Variant(case_allele1(i),
@@ -263,7 +263,7 @@ void VAASTLogic::variant_grouping(const arma::sp_mat &X,
 								  control_allele1(i),
 								  control_allele0(i),
 								  w(i),
-								  splitter.back(),
+								  splitter[5],
 								  loc.str(),
 								  i,
 								  soft_maf_filter));
@@ -378,56 +378,57 @@ void VAASTLogic::legacy_grouping(const arma::sp_mat &X,
   std::vector<Variant> spda;
 
   for (int i = 0; i < positions.size(); i++) {
-	RJBUtil::Splitter<std::string> splitter(positions[i], "-");
+	RJBUtil::Splitter<std::string> splitter(positions[i], ",");
 	std::stringstream loc;
 	loc << splitter[0] << "-" << splitter[1] << "-" << splitter[2];
-	if (splitter.back() == "SNV") {
+        std::string type = splitter[5];
+	if (type == "SNV") {
 	  SNVs.emplace_back(Variant(case_allele1(i),
 								case_allele0(i),
 								control_allele1(i),
 								control_allele0(i),
 								w(i),
-								splitter.back(),
+								type,
 								loc.str(),
 								i,
 								soft_maf_filter));
-	} else if (splitter.back() == "insertion") {
+	} else if (type == "insertion") {
 	  insertion.emplace_back(Variant(case_allele1(i),
 									 case_allele0(i),
 									 control_allele1(i),
 									 control_allele0(i),
 									 w(i),
-									 splitter.back(),
+									 type,
 									 loc.str(),
 									 i,
 									 soft_maf_filter));
-	} else if (splitter.back() == "deletion") {
+	} else if (type == "deletion") {
 	  deletion.emplace_back(Variant(case_allele1(i),
 									case_allele0(i),
 									control_allele1(i),
 									control_allele0(i),
 									w(i),
-									splitter.back(),
+									type,
 									loc.str(),
 									i,
 									soft_maf_filter));
-	} else if (splitter.back() == "SPDA") {
+	} else if (type == "SPDA") {
 	  spda.emplace_back(Variant(case_allele1(i),
 								case_allele0(i),
 								control_allele1(i),
 								control_allele0(i),
 								w(i),
-								splitter.back(),
+								type,
 								loc.str(),
 								i,
 								soft_maf_filter));
-	} else if (splitter.back() == "complex_substitution") {
+	} else if (type == "complex_substitution") {
 	  mnp.emplace_back(Variant(case_allele1(i),
 							   case_allele0(i),
 							   control_allele1(i),
 							   control_allele0(i),
 							   w(i),
-							   splitter.back(),
+							   type,
 							   loc.str(),
 							   i,
 							   soft_maf_filter));

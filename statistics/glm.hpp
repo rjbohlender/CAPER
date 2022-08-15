@@ -113,7 +113,7 @@ auto GLM<LinkT>::gradient_descent(arma::mat &X, arma::colvec &Y) -> arma::vec {
   auto alpha = 0.0005; // Learning rate
   auto tol = 1e-10;
   auto m = static_cast<double>(X.n_cols);
-  arma::mat A = X;
+  arma::mat &A = X;
   auto b = arma::vec(A.n_cols, arma::fill::randn);
   auto grad = b;
   do {

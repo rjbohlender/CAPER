@@ -33,17 +33,17 @@ Weight::Weight(const std::string &ifile) {
     }
 
 	std::stringstream ss;
-
+// chr13   114326148       114326148       G       A       SNV     CHAMP1  NM_032436       2.55051363
     if(splitter[3] == "SNP") {
-	  ss << splitter[0] << "-" << splitter[1] << "-" << splitter[2] << "-" << "SNV";
+	  ss << splitter[0] << "," << splitter[1] << "," << splitter[2] << "," << splitter[3] << "," << splitter[4] << ",SNV," << splitter[6] << "," << splitter[7];
     } else {
-	  ss << splitter[0] << "-" << splitter[1] << "-" << splitter[2] << "-" << splitter[3];
+          ss << splitter[0] << "," << splitter[1] << "," << splitter[2] << "," << splitter[3] << "," << splitter[4] << "," << splitter[5] << "," << splitter[6] << "," << splitter[7];
     }
 
 
 	double score;
 	try {
-		score = std::stod(splitter[4]);
+		score = std::stod(splitter.back());
 	} catch(std::exception &e) {
 		std::cerr << "Failed to convert weight to double. Line was: " << line << std::endl;
 		std::cerr << "Line should be tab separated and formatted as <chrom> <start_pos> <end_pos> <type> <weight>" << std::endl;

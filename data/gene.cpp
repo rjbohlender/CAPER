@@ -671,10 +671,14 @@ arma::sp_mat &Gene::get_missing(const std::string &k) {
 
 std::string Gene::form_variant_id(RJBUtil::Splitter<std::string> &splitter) {
   std::stringstream ss;
-  ss << splitter[static_cast<int>(Indices::chrom)] << "-"
-     << splitter[static_cast<int>(Indices::start)] << "-"
-     << splitter[static_cast<int>(Indices::end)] << "-"
-     << splitter[static_cast<int>(Indices::type)];
+  ss << splitter[static_cast<int>(Indices::chrom)] << ","
+     << splitter[static_cast<int>(Indices::start)] << ","
+     << splitter[static_cast<int>(Indices::end)] << ","
+     << splitter[static_cast<int>(Indices::ref)] << ","
+     << splitter[static_cast<int>(Indices::alt)] << ","
+     << splitter[static_cast<int>(Indices::type)] << ","
+     << splitter[static_cast<int>(Indices::gene)] << ","
+     << splitter[static_cast<int>(Indices::transcript)];
   return ss.str();
 }
 

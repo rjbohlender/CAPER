@@ -73,14 +73,14 @@ void FileValidator::validate_weight_line(RJBUtil::Splitter<std::string> &line, i
 		lineno);
 	throw(std::runtime_error(msg.c_str()));
   }
-  if(matrix_variant_types.find(line[3]) == matrix_variant_types.end()) {
+  if(matrix_variant_types.find(line[5]) == matrix_variant_types.end()) {
 	std::string msg = build_error_message(
 		"ERROR: Weight Line Validation -- Variant type in location incorrect. Must be one of {SNV, insertion, deletion, SPDA, complex_substitution}.",
 		lineno);
 	throw(std::runtime_error(msg.c_str()));
   }
   try {
-	std::stod(line[4]);
+	std::stod(line.back());
   } catch (std::exception &e) {
 	std::string msg = build_error_message("ERROR: Weight Line Validation -- Non-numeric value provided in weights.",
 										  lineno);
