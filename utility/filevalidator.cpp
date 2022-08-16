@@ -3,7 +3,6 @@
 //
 
 #include "filevalidator.hpp"
-#include "index.hpp"
 #include "../data/matrix_indices.hpp"
 #include <sstream>
 

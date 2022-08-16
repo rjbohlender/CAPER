@@ -12,7 +12,6 @@
 #include "../statistics/bayesianglm.hpp"
 #include "../statistics/glm.hpp"
 #include "../utility/filevalidator.hpp"
-#include "../utility/index.hpp"
 #include "../utility/indexsort.hpp"
 #include "matrix_indices.hpp"
 

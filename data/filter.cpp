@@ -5,7 +5,6 @@
 #include "filter.hpp"
 #include "matrix_indices.hpp"
 #include "../utility/filesystem.hpp"
-#include "../utility/index.hpp"
 #include <boost/algorithm/string/predicate.hpp>
 #include <fstream>
 #include <sstream>

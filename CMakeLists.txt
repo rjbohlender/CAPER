@@ -115,7 +115,7 @@ set(PROJECT_SUPPORT_FILES
     statistics/fishertest.cpp
     statistics/fishertest.hpp
     utility/jointhreads.hpp
-    utility/indexsort.hpp utility/math.hpp utility/filevalidator.cpp utility/filevalidator.hpp utility/index.hpp data/filter.cpp data/filter.hpp data/matrix_indices.hpp)
+    utility/indexsort.hpp utility/math.hpp utility/filevalidator.cpp utility/filevalidator.hpp data/filter.cpp data/filter.hpp data/matrix_indices.hpp)
 
 
 include_directories("${CMAKE_CURRENT_LIST_DIR}/third_party")
@@ -124,7 +124,6 @@ include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${LAPACK_INCLUDE_DIRS})
 include_directories(${BLAS_INCLUDE_DIRS})
 include_directories(${ZLIB_INCLUDE_DIRS})
-include_directories("third_party/zstr/src")
 
 add_executable(carva
                carva/carva.cpp

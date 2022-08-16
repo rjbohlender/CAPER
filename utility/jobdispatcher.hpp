@@ -22,12 +22,10 @@
 #include "../data/filter.hpp"
 #include "filesystem.hpp"
 #include "filevalidator.hpp"
-#include "index.hpp"
 #include "reporter.hpp"
 
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/filtering_streambuf.hpp>
-#include <zstr.hpp>
 
 template <typename Operation_t, typename Task_t, typename Reporter_t>
 class JobDispatcher {
@@ -49,9 +47,6 @@ public:
       weight_ = Weight(*tp_.weight);
     }
     Filter filter(tp_.program_directory + "../filter/filter_whitelist.csv");
-    if (check_file_exists(tp_.genotypes_path + ".idx")) {
-      index_ = Index(tp_.genotypes_path + ".idx");
-    }
 
     // Update case/control count for reporter
     if (!tp_.power) {
@@ -66,9 +61,17 @@ public:
       stage_ = Stage::Stage1;
     }
 
-    // Switch to zstr
-    zstr::ifstream gt_stream(tp_.genotypes_path);
+    // Handle zipped input
+    if (is_gzipped(tp_.genotypes_path)) {
+      gt_ifs_.open(tp_.genotypes_path, std::ios_base::in | std::ios_base::binary);
+      gt_streambuf.push(boost::iostreams::gzip_decompressor());
+      gt_streambuf.push(gt_ifs_);
+    } else {
+      gt_ifs_.open(tp_.genotypes_path, std::ios_base::in);
+      gt_streambuf.push(gt_ifs_);
+    }
 
+    std::istream gt_stream(&gt_streambuf);
     // Retrieve header line
     std::getline(gt_stream, header_);
 
@@ -158,7 +161,7 @@ public:
         gene_list_dispatcher(gt_stream, filter);
       }
 
-      gt_stream.close();
+      gt_ifs_.close();
     } else {
       arma::uword remaining = *tp_.max_perms;
       while (remaining > 0) {
@@ -234,7 +237,7 @@ public:
           }
           pset_ofs.close();
         }
-        if (gt_stream.is_open()) {
+        if (gt_ifs_.is_open()) {
           if (!tp_.gene_list) {
             // Parse if no gene_list
             all_gene_dispatcher(gt_stream, filter);
@@ -242,7 +245,7 @@ public:
             // Parse with gene_list
             gene_list_dispatcher(gt_stream, filter);
           }
-          gt_stream.close();
+          gt_ifs_.close();
           tq_.wait(); // Need to wait here until all jobs are done, otherwise
                       // permutations will update during processing
           if (tq_.continue_.size() == 0) { // Terminate if all jobs are done.
@@ -552,11 +555,12 @@ private:
   // Member variables
   TaskParams tp_;
   TaskQueue<Operation_t, Task_t, Reporter_t> tq_;
+  std::ifstream gt_ifs_;
+  boost::iostreams::filtering_streambuf<boost::iostreams::input> gt_streambuf;
   Bed bed_;
   Weight weight_;
   Permute permute_;
   RJBUtil::Splitter<std::string> gene_list_;
-  Index index_;
 
   // Gene parsing
   std::string header_;
