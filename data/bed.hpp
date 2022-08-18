@@ -5,13 +5,13 @@
 #ifndef PERMUTE_ASSOCIATE_BED_HPP
 #define PERMUTE_ASSOCIATE_BED_HPP
 
-#include <string>
-#include <map>
-#include <utility>
-#include <fstream>
 #include <algorithm>
-#include <sstream>
 #include <exception>
+#include <fstream>
+#include <map>
+#include <sstream>
+#include <string>
+#include <utility>
 
 #include "../utility/split.hpp"
 
@@ -42,8 +42,10 @@ public:
   explicit Bed(const std::string &ifile);
   explicit Bed(std::stringstream &ss);
 
-  bool check_variant(const std::string &chr, std::pair<std::string, std::string> &&pos); // MNP version
-  bool check_variant(const std::string &chr, const std::string &pos); // SNV / single INDEL version
+  bool check_variant(const std::string &chr,
+                     std::pair<std::string, std::string> &&pos); // MNP version
+  bool check_variant(const std::string &chr,
+                     const std::string &pos); // SNV / single INDEL version
   bool check_variant(const std::string &chr, int pos);
 
   bool empty();
@@ -51,8 +53,9 @@ public:
 
   // Number of entries in ranges_ for a given chromosome
   unsigned long chromosome_count(const std::string &k);
+
 private:
   std::map<std::string, std::vector<BedRange>> ranges_;
 };
 
-#endif //PERMUTE_ASSOCIATE_BED_HPP
+#endif // PERMUTE_ASSOCIATE_BED_HPP
