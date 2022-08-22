@@ -587,8 +587,7 @@ void Gene::generate_vaast(Covariates &cov) {
         }
         // Variant
         vaast_ss << boost::format("%1$s:%2$s") % reference_[ts][i] %
-                        alternate_[ts][i]
-                 << std::endl;
+                        alternate_[ts][i] << " ";
       }
       if (hom_carriers.n_elem > 0) {
         vaast_ss << "\t";
@@ -601,9 +600,9 @@ void Gene::generate_vaast(Covariates &cov) {
         }
         // Variant
         vaast_ss << boost::format("%1$s:%2$s") % alternate_[ts][i] %
-                        alternate_[ts][i]
-                 << std::endl;
+                        alternate_[ts][i];
       }
+      vaast_ss << std::endl;
     }
     // Add background variants
     for (int i = 0; i < positions_[ts].size(); i++) {
@@ -643,8 +642,7 @@ void Gene::generate_vaast(Covariates &cov) {
         }
         // Variant
         vaast_ss << boost::format("%1$s:%2$s") % reference_[ts][i] %
-                        alternate_[ts][i]
-                 << std::endl;
+                        alternate_[ts][i] << " ";
       }
       if (hom_carriers.n_elem > 0) {
         vaast_ss << "\t";
@@ -657,9 +655,9 @@ void Gene::generate_vaast(Covariates &cov) {
         }
         // Variant
         vaast_ss << boost::format("%1$s:%2$s") % alternate_[ts][i] %
-                        alternate_[ts][i]
-                 << std::endl;
+                        alternate_[ts][i];
       }
+      vaast_ss << std::endl;
     }
     vaast_[ts] = vaast_ss.str();
   }
