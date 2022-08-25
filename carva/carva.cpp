@@ -51,6 +51,7 @@ int main(int argc, char **argv) {
   bool legacy_grouping = false;
   bool no_weights = false;
   bool impute_to_mean = false;
+  bool aaf_filter = true;
   bool whole_gene = false;
   std::vector<int> gene_range;
   std::vector<std::string> power;
@@ -126,6 +127,9 @@ int main(int argc, char **argv) {
         ("maf,r",
          po::value<double>()->default_value(0.5),
          "Minor allele frequency cutoff. We recommend using an external sample and filtering variants based on the frequency in that sample, rather than filtering within. Can result in a reduction in power for variants near the threshold.")
+        ("aaf",
+         po::bool_switch(&aaf_filter),
+         "Filter variants where the alternate allele is the major allele.")
         ("pthresh,j",
          po::value(&pthresh),
          "The threshold to terminate permutation based on whether it is outside the p-value CI.")
@@ -353,6 +357,7 @@ int main(int argc, char **argv) {
   tp.ped_path = vm["ped"].as<std::string>();
   tp.output_path = vm["output"].as<std::string>();
   tp.maf = vm["maf"].as<double>();
+  tp.aaf_filter = !aaf_filter;
   tp.cmcmaf = vm["cmcmaf"].as<double>();
   tp.group_size = vm["group_size"].as<arma::uword>();
   tp.vaast_site_penalty = vm["site_penalty"].as<double>();

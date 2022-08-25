@@ -53,6 +53,7 @@ struct TaskParams {
   bool nocovadj;
   bool no_weights;
   bool impute_to_mean;
+  bool aaf_filter;
 
   boost::optional<int> range_start;
   boost::optional<int> range_end;

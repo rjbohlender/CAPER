@@ -100,17 +100,19 @@ Weight::Weight(std::stringstream &ifile) {
 
     std::stringstream ss;
 
-    if (splitter[3] == "SNP") {
-      ss << splitter[0] << "-" << splitter[1] << "-" << splitter[2] << "-"
-         << "SNV";
+    if (splitter[5] == "SNP") {
+      ss << splitter[0] << "," << splitter[1] << "," << splitter[2] << ","
+         << splitter[3] << "," << splitter[4] << ",SNV," << splitter[6] << ","
+         << splitter[7];
     } else {
-      ss << splitter[0] << "-" << splitter[1] << "-" << splitter[2] << "-"
-         << splitter[3];
+      ss << splitter[0] << "," << splitter[1] << "," << splitter[2] << ","
+         << splitter[3] << "," << splitter[4] << "," << splitter[5] << ","
+         << splitter[6] << "," << splitter[7];
     }
 
     double score;
     try {
-      score = std::stod(splitter[4]);
+      score = std::stod(splitter.back());
     } catch (std::exception &e) {
       std::cerr << "Failed to convert weight to double. Line was: " << line
                 << std::endl;

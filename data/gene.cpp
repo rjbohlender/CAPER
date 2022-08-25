@@ -226,70 +226,129 @@ void Gene::parse(std::stringstream &ss, const std::shared_ptr<Covariates> &cov,
       v.second = arma::sp_mat(X);
     }
   }
-  // Switch to counting minor allele
-  for (auto &v : genotypes_) {
-    arma::rowvec maf = arma::rowvec(arma::mean(v.second) / 2.);
-    // For each variant
-    for (arma::uword k : arma::find(maf > 0.5).eval()) {
-      // Swap assignment
-      v.second.col(k).replace(0, 3); // Placeholder to unique value
-      v.second.col(k).replace(2, 0);
-      v.second.col(k).replace(3, 2);
-    }
-  }
-  // Mark gene skippable to start
-  skippable_ = true;
-  // Drop variants with minor allele count > tp_.mac.
-  for (const auto &ts : transcripts_) {
-    arma::rowvec sums = arma::rowvec(arma::sum(genotypes_[ts], 0));
+  if (tp_.aaf_filter) {
+    // Mark gene skippable to start
+    skippable_ = true;
+    // Drop variants with minor allele count > tp_.mac.
+    for (const auto &ts : transcripts_) {
+      arma::rowvec sums = arma::rowvec(arma::sum(genotypes_[ts], 0));
 
-    arma::rowvec maf = arma::rowvec(arma::mean(genotypes_[ts]) / 2.);
-    for (arma::sword k = sums.n_elem - 1; k >= 0; --k) {
-      bool bmac = sums[k] > tp_.mac;
-      bool bmaf = maf[k] > tp_.maf;
-      bool bwht = false; // whitelist bool
-      if (!to_remove[ts].empty()) {
-        bwht = k == to_remove[ts].top();
+      arma::rowvec aaf = arma::rowvec(arma::mean(genotypes_[ts]) / 2.);
+      for (arma::sword k = sums.n_elem - 1; k >= 0; --k) {
+        bool bmac = sums[k] > tp_.mac;
+        bool baaf = aaf[k] >= .5;
+        bool bwht = false; // whitelist bool
+        if (!to_remove[ts].empty()) {
+          bwht = k == to_remove[ts].top();
+        }
+        if (bmac || baaf || bwht) {
+          if (tp_.verbose && bmac) {
+            std::cerr << "Removing: " << gene_name << " " << ts << " "
+                      << positions_[ts][k] << " | count: " << sums[k]
+                      << " due to MAC filter." << std::endl;
+          } else if (tp_.verbose && baaf) {
+            std::cerr << "Removing: " << gene_name << " " << ts << " "
+                      << positions_[ts][k] << " | frequency: " << aaf[k]
+                      << " due to MAF filter." << std::endl;
+          } else if (tp_.verbose && bwht) {
+            std::cerr << "Removing: " << gene_name << " " << ts << " "
+                      << positions_[ts][k] << " | type: " << type_[ts][k]
+                      << " | function: " << function_[ts][k]
+                      << " due to variant whitelist." << std::endl;
+          }
+          if (bwht) {
+            to_remove[ts].pop();
+          }
+          sums.shed_col(k);
+          genotypes_[ts].shed_col(k);
+          weights_[ts].shed_row(k);
+          missing_variant_carriers_[ts].shed_col(k);
+          positions_[ts].erase(positions_[ts].begin() + k);
+          function_[ts].erase(function_[ts].begin() + k);
+          reference_[ts].erase(reference_[ts].begin() + k);
+          alternate_[ts].erase(alternate_[ts].begin() + k);
+          annotation_[ts].erase(annotation_[ts].begin() + k);
+          type_[ts].erase(type_[ts].begin() + k);
+          nvariants_[ts]--;
+        }
       }
-      if (bmac || bmaf || bwht) {
-        if (tp_.verbose && bmac) {
-          std::cerr << "Removing: " << gene_name << " " << ts << " "
-                    << positions_[ts][k] << " | count: " << sums[k]
-                    << " due to MAC filter." << std::endl;
-        } else if (tp_.verbose && bmaf) {
-          std::cerr << "Removing: " << gene_name << " " << ts << " "
-                    << positions_[ts][k] << " | frequency: " << maf[k]
-                    << " due to MAF filter." << std::endl;
-        } else if (tp_.verbose && bwht) {
-          std::cerr << "Removing: " << gene_name << " " << ts << " "
-                    << positions_[ts][k] << " | type: " << type_[ts][k]
-                    << " | function: " << function_[ts][k]
-                    << " due to variant whitelist." << std::endl;
-        }
-        if (bwht) {
-          to_remove[ts].pop();
-        }
-        sums.shed_col(k);
-        genotypes_[ts].shed_col(k);
-        weights_[ts].shed_row(k);
-        missing_variant_carriers_[ts].shed_col(k);
-        positions_[ts].erase(positions_[ts].begin() + k);
-        function_[ts].erase(function_[ts].begin() + k);
-        reference_[ts].erase(reference_[ts].begin() + k);
-        alternate_[ts].erase(alternate_[ts].begin() + k);
-        annotation_[ts].erase(annotation_[ts].begin() + k);
-        type_[ts].erase(type_[ts].begin() + k);
-        nvariants_[ts]--;
+      // Check if any polymorphic. Mark transcripts skippable if all fixed.
+      if (arma::accu(sums) < tp_.min_minor_allele_count ||
+          nvariants_[ts] < tp_.min_variant_count) {
+        std::cerr << "gene: " << gene_name << " marked skippable." << std::endl;
+        polymorphic_[ts] = false;
+      } else {
+        polymorphic_[ts] = true;
+        skippable_ = false;
       }
     }
-    // Check if any polymorphic. Mark transcripts skippable if all fixed.
-    if (arma::accu(sums) < tp_.min_minor_allele_count ||
-        nvariants_[ts] < tp_.min_variant_count) {
-      std::cerr << "gene: " << gene_name << " marked skippable." << std::endl;
-      polymorphic_[ts] = false;
-    } else {
-      polymorphic_[ts] = true;
-      skippable_ = false;
+
+  } else {
+    // Switch to counting minor allele
+    for (auto &v : genotypes_) {
+      arma::rowvec maf = arma::rowvec(arma::mean(v.second) / 2.);
+      // For each variant
+      for (arma::uword k : arma::find(maf > 0.5).eval()) {
+        // Swap assignment
+        v.second.col(k).replace(0, 3); // Placeholder to unique value
+        v.second.col(k).replace(2, 0);
+        v.second.col(k).replace(3, 2);
+      }
+    }
+    // Mark gene skippable to start
+    skippable_ = true;
+    // Drop variants with minor allele count > tp_.mac.
+    for (const auto &ts : transcripts_) {
+      arma::rowvec sums = arma::rowvec(arma::sum(genotypes_[ts], 0));
+
+      arma::rowvec maf = arma::rowvec(arma::mean(genotypes_[ts]) / 2.);
+      for (arma::sword k = sums.n_elem - 1; k >= 0; --k) {
+        bool bmac = sums[k] > tp_.mac;
+        bool bmaf = maf[k] > tp_.maf;
+        bool bwht = false; // whitelist bool
+        if (!to_remove[ts].empty()) {
+          bwht = k == to_remove[ts].top();
+        }
+        if (bmac || bmaf || bwht) {
+          if (tp_.verbose && bmac) {
+            std::cerr << "Removing: " << gene_name << " " << ts << " "
+                      << positions_[ts][k] << " | count: " << sums[k]
+                      << " due to MAC filter." << std::endl;
+          } else if (tp_.verbose && bmaf) {
+            std::cerr << "Removing: " << gene_name << " " << ts << " "
+                      << positions_[ts][k] << " | frequency: " << maf[k]
+                      << " due to MAF filter." << std::endl;
+          } else if (tp_.verbose && bwht) {
+            std::cerr << "Removing: " << gene_name << " " << ts << " "
+                      << positions_[ts][k] << " | type: " << type_[ts][k]
+                      << " | function: " << function_[ts][k]
+                      << " due to variant whitelist." << std::endl;
+          }
+          if (bwht) {
+            to_remove[ts].pop();
+          }
+          sums.shed_col(k);
+          genotypes_[ts].shed_col(k);
+          weights_[ts].shed_row(k);
+          missing_variant_carriers_[ts].shed_col(k);
+          positions_[ts].erase(positions_[ts].begin() + k);
+          function_[ts].erase(function_[ts].begin() + k);
+          reference_[ts].erase(reference_[ts].begin() + k);
+          alternate_[ts].erase(alternate_[ts].begin() + k);
+          annotation_[ts].erase(annotation_[ts].begin() + k);
+          type_[ts].erase(type_[ts].begin() + k);
+          nvariants_[ts]--;
+        }
+      }
+      // Check if any polymorphic. Mark transcripts skippable if all fixed.
+      if (arma::accu(sums) < tp_.min_minor_allele_count ||
+          nvariants_[ts] < tp_.min_variant_count) {
+        std::cerr << "gene: " << gene_name << " marked skippable." << std::endl;
+        polymorphic_[ts] = false;
+      } else {
+        polymorphic_[ts] = true;
+        skippable_ = false;
+      }
     }
   }
 }
