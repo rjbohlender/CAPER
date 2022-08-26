@@ -36,29 +36,10 @@ Bed::Bed(const std::string &ifile) {
     RJBUtil::Splitter<std::string> splitter(line, "\t");
     FileValidator::validate_bed_line(splitter, lineno);
 
-    int first = std::stoi(splitter[1]);
-    int second = std::stoi(splitter[2]);
+    std::stringstream ss;
+    ss << splitter[0] << "," << splitter[1] << "," << splitter[2] << "," << splitter[3] << "," << splitter[4];
 
-    // Initialize vector for chromosome
-    if (ranges_.find(splitter[0]) == ranges_.end())
-      ranges_[splitter[0]] = std::vector<BedRange>();
-
-    auto it = std::lower_bound(ranges_[splitter[0]].begin(),
-                               ranges_[splitter[0]].end(), first);
-
-    if (it == ranges_[splitter[0]].end()) {
-      ranges_[splitter[0]].insert(it, {first, second});
-    } else {
-      // Check if this is a duplicate
-      BedRange br{first, second};
-      if ((*it) == first) {
-        if (br.range.second > (*it).range.second) {
-          (*it).range.second = br.range.second;
-        }
-      } else {
-        ranges_[splitter[0]].emplace(it, std::move(br));
-      }
-    }
+    variants_.emplace(ss.str());
   }
 }
 
@@ -98,47 +79,8 @@ Bed::Bed(std::stringstream &ss) {
   }
 }
 
-bool Bed::check_variant(const std::string &chr,
-                        std::pair<std::string, std::string> &&pos) {
-  int start = std::stoi(pos.first);
-  int end = std::stoi(pos.second);
-
-  if (ranges_.find(chr) == ranges_.end()) {
-    return false;
-  }
-
-  auto it = std::lower_bound(ranges_[chr].begin(), ranges_[chr].end(),
-                             start); // First range >= start
-  if (it == ranges_[chr].end()) {
-    return false;
-  }
-  return *it <= end;
-}
-
-bool Bed::check_variant(const std::string &chr, const std::string &pos) {
-  int ipos = std::stoi(pos);
-
-  if (ranges_.find(chr) == ranges_.end()) {
-    return false;
-  }
-
-  auto it = std::lower_bound(ranges_[chr].begin(), ranges_[chr].end(), ipos);
-  if (it == ranges_[chr].end()) {
-    return false;
-  }
-  return *it == ipos;
-}
-
-bool Bed::check_variant(const std::string &chr, int pos) {
-  if (ranges_.find(chr) == ranges_.end()) {
-    throw std::out_of_range("Chromosome not in bed file.");
-  }
-
-  auto it = std::lower_bound(ranges_[chr].begin(), ranges_[chr].end(), pos);
-  if (it == ranges_[chr].end()) {
-    return false;
-  }
-  return *it == pos;
+bool Bed::check_variant(const std::string &variant) {
+  return variants_.count(variant) > 0;
 }
 
 bool Bed::empty() { return ranges_.empty(); }

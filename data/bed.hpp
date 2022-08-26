@@ -11,6 +11,7 @@
 #include <map>
 #include <sstream>
 #include <string>
+#include <unordered_set>
 #include <utility>
 
 #include "../utility/split.hpp"
@@ -42,11 +43,7 @@ public:
   explicit Bed(const std::string &ifile);
   explicit Bed(std::stringstream &ss);
 
-  bool check_variant(const std::string &chr,
-                     std::pair<std::string, std::string> &&pos); // MNP version
-  bool check_variant(const std::string &chr,
-                     const std::string &pos); // SNV / single INDEL version
-  bool check_variant(const std::string &chr, int pos);
+  bool check_variant(const std::string &variant);
 
   bool empty();
   unsigned long size();
@@ -56,6 +53,7 @@ public:
 
 private:
   std::map<std::string, std::vector<BedRange>> ranges_;
+  std::unordered_set<std::string> variants_;
 };
 
 #endif // PERMUTE_ASSOCIATE_BED_HPP

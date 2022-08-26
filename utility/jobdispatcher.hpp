@@ -520,12 +520,11 @@ private:
   void add_line(std::stringstream &ss, std::string &line,
                 RJBUtil::Splitter<std::string> &split) {
     // Is variant masked?
+    std::stringstream varid;
+    varid << split[0] << "," << split[1] << "," << split[2] << "," << split[3] << "," << split[4];
     if (split[static_cast<int>(Indices::end)] !=
         split[static_cast<int>(Indices::start)]) {
-      if (!bed_.check_variant(
-              split[static_cast<int>(Indices::chrom)],
-              std::make_pair(split[static_cast<int>(Indices::start)],
-                             split[static_cast<int>(Indices::end)]))) {
+      if (!bed_.check_variant(varid.str())) {
         // Variant not masked
         ss << line << "\n";
         // Track number of variants in each transcript
@@ -537,8 +536,7 @@ private:
         }
       }
     } else {
-      if (!bed_.check_variant(split[static_cast<int>(Indices::chrom)],
-                              split[static_cast<int>(Indices::start)])) {
+      if (!bed_.check_variant(varid.str())) {
         // Variant not masked
         ss << line << "\n";
         // Track number of variants in each transcript
