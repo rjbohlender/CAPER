@@ -50,7 +50,7 @@ Weight::Weight(const std::string &ifile) {
 
     double score;
     try {
-      score = std::stod(splitter.back());
+      score = std::stod(splitter[8]);
     } catch (std::exception &e) {
       std::cerr << "Failed to convert weight to double. Line was: " << line
                 << std::endl;
@@ -112,7 +112,7 @@ Weight::Weight(std::stringstream &ifile) {
 
     double score;
     try {
-      score = std::stod(splitter.back());
+      score = std::stod(splitter[8]);
     } catch (std::exception &e) {
       std::cerr << "Failed to convert weight to double. Line was: " << line
                 << std::endl;

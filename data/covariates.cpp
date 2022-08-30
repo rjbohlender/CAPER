@@ -142,6 +142,12 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
     if (line[0] == '#') {
       continue;
     }
+    if (lineno == 0 && line[0] != '#') {
+      std::cerr << "Incorrectly formatted .ped file. First line of file should"
+                   "be a header line describing the columns, and should start"
+                   "with a '#'.\n";
+      throw(std::runtime_error("Failed to read .ped file."));
+    }
     RJBUtil::Splitter<std::string> splitter(line, "\t");
 
     fv.validate_ped_line(splitter, lineno);
