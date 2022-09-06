@@ -9,6 +9,12 @@ macro(remove_cxx_flag flag)
     string(REPLACE "${flag}" "" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
 endmacro()
 
+include(CheckCXXCompilerFlag)
+CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
+if(COMPILER_SUPPORTS_MARCH_NATIVE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+endif()
+
 message(${CMAKE_CXX_FLAGS_RELEASE}) # print "-O3 -DNDEBUG"
 # remove_cxx_flag("-O3")
 # message(${CMAKE_CXX_FLAGS_RELEASE}) # print "-DNDEBUG"

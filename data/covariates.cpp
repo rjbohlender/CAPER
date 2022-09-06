@@ -119,8 +119,9 @@ void Covariates::clear() {
 }
 
 /**
- * @brief Parse the PCA_Internal matrix file.
- * @param ifile
+ * @brief Parse the .ped and PCA_Internal matrix file.
+ * @param ifile Covariate file path.
+ * @param pedfile File path containing phenotypes.
  */
 void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
   std::ifstream ifs;
