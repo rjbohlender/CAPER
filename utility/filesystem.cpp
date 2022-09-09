@@ -8,7 +8,7 @@
 #include <sys/stat.h>
 
 #include "filesystem.hpp"
-
+#include "split.hpp"
 
 bool check_file_exists(const std::string &path) {
   std::ifstream ifs(path);
@@ -32,4 +32,27 @@ bool is_gzipped(const std::string &path) {
   } else {
     throw(std::logic_error("File doesn't exist."));
   }
+}
+
+bool make_directory(const std::string &path) {
+  // Split path into parts
+  RJBUtil::Splitter<std::string> parts(path, "/");
+  std::stringstream path_builder;
+  // Absolute path
+  if (path[0] == '/') {
+    path_builder << "/";
+  } else { // Relative path
+    path_builder << "./";
+  }
+  for (const auto &part : parts) {
+    path_builder << part << "/";
+    if (!check_directory_exists(path_builder.str())) {
+      // Read Write Exectute mask S_IRWXU
+      int rc = mkdir(path_builder.str().c_str(), S_IRWXU);
+      if (rc) {
+        return false;
+      }
+    }
+  }
+  return true;
 }

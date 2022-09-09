@@ -440,7 +440,8 @@ int main(int argc, char **argv) {
     std::cerr << "method: " << tp.method << "\n";
     std::cerr << "success threshold: " << tp.success_threshold << "\n";
     std::cerr << "nthreads: " << tp.nthreads << "\n";
-    std::cerr << "permutations: " << tp.nperm << "\n";
+    std::cerr << "permutation block: " << tp.nperm << "\n";
+    std::cerr << "total permutations: " << *tp.max_perms << "\n";
 	if (tp.testable)
 	  std::cerr << "testable filter: " << *tp.testable << "\n";
 	if (tp.maf < 0.5)
@@ -478,9 +479,11 @@ int main(int argc, char **argv) {
     std::exit(1);
   }
   if (!check_directory_exists(tp.output_path)) {
-    std::cerr << "Output path is invalid." << std::endl;
-    std::cerr << visible << "\n";
-    std::exit(1);
+    if (!make_directory(tp.output_path)) {
+      std::cerr << "Output path is invalid. Unable to construct output directory." << std::endl;
+      std::cerr << visible << "\n";
+      std::exit(1);
+    }
   }
   // Initialize randomization
   if(!tp.seed) {
