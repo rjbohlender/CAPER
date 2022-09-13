@@ -607,6 +607,9 @@ void Gene::generate_vaast(Covariates &cov) {
     // R/U: variant_score position@chr nt|AA B/N|id1,id2...|ref:alt|ref:alt
 
     // Skip exon positions for now
+    // /Volumes/huff/yyu4/Analysis_case_control/carva/LUNG/lung.bing_0.0001
+    // lung_cov_sex_age_pc
+    // /rsrch3/home/epi/yyu4/workspace5/Analysis_case_control/carva/LUNG/lung_no_cov/c_18.b_1/VAAST.g2.vaast
 
     // Add target variants
     for (int i = 0; i < positions_[ts].size(); i++) {

@@ -54,7 +54,7 @@ struct GLM {
 	}
 
 	mu_ = link.linkinv(X.cols(indices_), beta_);
-    eta_ = link.link(mu_);
+        eta_ = link.link(mu_);
 
 	success_ = !(mu_.has_nan() || eta_.has_nan());
   }
@@ -91,7 +91,7 @@ struct GLM {
 	}
 
 	mu_ = link.linkinv(X.cols(indices_), beta_);
-    eta_ = link.link(mu_);
+        eta_ = link.link(mu_);
 
 	success_ = !(mu_.has_nan() || eta_.has_nan());
   }
