@@ -18,7 +18,11 @@
 Covariates::Covariates(TaskParams tp)
     : tp_(std::move(tp)), nsamples_(0), ncases_(0), ncontrols_(0),
       crand((int)time(nullptr)), linear_(tp_.linear) {
-  parse(tp_.covariates_path, tp_.ped_path);
+  bool cov_provided = !tp_.covariates_path.empty();
+  parse_ped(tp_.ped_path, cov_provided);
+  if (cov_provided) {
+    parse_cov(tp_.covariates_path);
+  }
   sorted_ = false;
 }
 
@@ -118,23 +122,137 @@ void Covariates::clear() {
   odds_.reset();
 }
 
-/**
- * @brief Parse the .ped and PCA_Internal matrix file.
- * @param ifile Covariate file path.
- * @param pedfile File path containing phenotypes.
- */
-void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
-  std::ifstream ifs;
-  if (!ifile.empty()) {
-    ifs = std::ifstream(ifile);
+void Covariates::parse_cov(const std::string &covfile) {
+  std::ifstream ifs = std::ifstream(covfile);
+  std::string line;
+  unsigned long lineno = 0;
+  unsigned long nfields = 0;
+
+  std::unordered_map<std::string, std::vector<double>> data;
+  std::vector<std::vector<std::string>> unconvertible;
+  std::vector<double> phenotypes;
+
+  while (std::getline(ifs, line)) {
+    RJBUtil::Splitter<std::string> splitter(line, "\t");
+    FileValidator::validate_cov_line(splitter, lineno);
+    if (lineno == 0) { // Parse meta information
+      if (splitter.size() > 0) {
+        // Not counting the sample field, so we don't have to subtract all the time.
+        nfields = splitter.size() - 1;
+        unconvertible.resize(nfields);
+        lineno++;
+      }
+    }
+
+    if (splitter.empty()) {
+      continue;
+    }
+
+    std::string sampleid = splitter[0];
+    if (splitter.size() < nfields + 1) { // Skip samples where we have a missing column or two
+      skip_.emplace(sampleid);
+      continue;
+    }
+    // Skip samples not present in the ped file.
+    if (ped_samples_.find(sampleid) == ped_samples_.end()) {
+      continue;
+    }
+
+    phenotypes.push_back(sample_phen_map_[sampleid]);
+    cov_samples_.push_back(sampleid);
+    data[sampleid] = std::vector<double>(nfields, 0);
+
+    for (int i = 0; i < nfields; i++) {
+      try {
+        data[sampleid][i] = std::stod(splitter[i + 1]);
+      } catch (...) {
+        unconvertible[i].push_back(splitter[i + 1]);
+      }
+    }
+    lineno++;
   }
+
+  // Ensure phenotypes are in cov sample order.
+  phenotypes_ = arma::conv_to<arma::colvec>::from(phenotypes);
+  original_ = arma::conv_to<arma::colvec>::from(phenotypes);
+
+  // Handle unconvertible fields by treating them as factors with levels -- convert to dummy variables
+  int fieldno = 0;
+  int offset = 0;
+  for (const auto &field : unconvertible) {
+    if (!field.empty()) {
+      std::set<std::string> unique(field.begin(), field.end());
+      std::map<std::string, int> levels;
+
+      if (tp_.verbose) {
+        std::cerr << "In reading covariates, could not convert column " << fieldno + 1 << " to double." << std::endl;
+        std::cerr << "Levels: ";
+      }
+
+      for (auto it = unique.begin(); it != unique.end(); it++) {
+        levels.emplace(std::make_pair(*it, std::distance(unique.begin(), it)));
+        if (tp_.verbose) {
+          std::cerr << *it << " : " << std::distance(unique.begin(), it) << " ";
+        }
+      }
+      if (tp_.verbose) {
+        std::cerr << std::endl;
+      }
+
+      int sampleno = 0;
+      int nlevels = levels.size() - 1;
+      for (const auto &v : field) {// Convert to dummy variable
+        for (int j = 0; j < nlevels; j++) {
+          if (j == 0) {
+            if (j == levels[v]) {
+              data[cov_samples_[sampleno]][fieldno + offset] = 1.0;
+            } else {
+              data[cov_samples_[sampleno]][fieldno + offset] = 0.0;
+            }
+          } else {
+            if (j == levels[v]) {
+              data[cov_samples_[sampleno]].insert(data[cov_samples_[sampleno]].begin() + fieldno + offset + j, 1.0);
+            } else {
+              data[cov_samples_[sampleno]].insert(data[cov_samples_[sampleno]].begin() + fieldno + offset + j, 0.0);
+            }
+          }
+        }
+        sampleno++;
+      }
+      offset += nlevels - 1;
+      nfields += nlevels - 1;
+    }
+    fieldno++;
+  }
+
+  design_.resize(cov_samples_.size(), nfields + 1);
+  if (tp_.verbose) {
+    std::cerr << "Design.n_rows: " << design_.n_rows << std::endl;
+    std::cerr << "Design.n_cols: " << design_.n_cols << std::endl;
+  }
+  int i = 0;
+  for (const auto &s : cov_samples_) {
+    design_(i, 0) = 1;
+    int j = 1;
+    for (const auto &v : data[s]) {
+      design_(i, j) = v;
+      j++;
+    }
+    i++;
+  }
+}
+
+/**
+ * @brief Parser for .ped formatted input
+ * @param pedfile Path to the .ped file
+ * @param cov_provided  Whether covariates were provided or not
+ */
+void Covariates::parse_ped(const std::string &pedfile, bool cov_provided) {
   std::ifstream pfs(pedfile);
   std::string line;
 
-  std::map<std::string, double> sample_phen_map;
   std::vector<double> phenotypes;
   std::vector<std::vector<double>> covariates;
-  FileValidator fv;
   int lineno = -1;
 
   // Parse the phenotype from the ped file.
@@ -151,14 +269,14 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
     }
     RJBUtil::Splitter<std::string> splitter(line, "\t");
 
-    fv.validate_ped_line(splitter, lineno);
+    FileValidator::validate_ped_line(splitter, lineno);
 
     std::string sample_id = splitter[1];
     ped_samples_.insert(sample_id);
     nsamples_++;
     if (linear_) {
       try {
-        sample_phen_map[sample_id] = std::stod(splitter[5]);
+        sample_phen_map_[sample_id] = std::stod(splitter[5]);
       } catch (std::exception &e) {
         std::cerr << "Failed to convert quantitative phenotype in .ped file "
                      "column 7.\n";
@@ -167,7 +285,7 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
     } else {
       try {
         double phen = std::stoi(splitter[5]);
-        sample_phen_map[sample_id] = phen - 1;
+        sample_phen_map_[sample_id] = phen - 1;
       } catch (std::exception &e) {
         std::cerr
             << "Failed to convert binary phenotype in .ped file column 6.\n";
@@ -176,9 +294,9 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
     }
   }
   // Ensure phenotypes are in ped_samples_ order when covariates are not provided
-  if (ifile.empty()) {
+  if (!cov_provided) {
     for (const auto &s : ped_samples_) {
-      phenotypes.push_back(sample_phen_map[s]);
+      phenotypes.push_back(sample_phen_map_[s]);
       if (phenotypes.back() == 1) {
         ncases_++;
       } else {
@@ -186,19 +304,37 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
       }
     }
   }
-  lineno = -1;
+  phenotypes_ = arma::conv_to<arma::vec>::from(phenotypes);
+  original_ = arma::conv_to<arma::vec>::from(phenotypes);
+}
+
+/**
+ * @brief Parse the .ped and PCA_Internal matrix file.
+ * @param covfile Covariate file path.
+ * @param pedfile File path containing phenotypes.
+ */
+void Covariates::parse(const std::string &covfile, const std::string &pedfile) {
+  std::ifstream ifs;
+  if (!covfile.empty()) {
+    ifs = std::ifstream(covfile);
+  }
+  std::string line;
+
+  std::vector<double> phenotypes;
+  std::vector<std::vector<double>> covariates;
+  int lineno = -1;
   // Parse the PCA matrix file
   while (ifs.good() && std::getline(ifs, line)) {
     lineno++;
     RJBUtil::Splitter<std::string> splitter(line, " \t");
-    fv.validate_cov_line(splitter, lineno);
+    FileValidator::validate_cov_line(splitter, lineno);
     if(this->contains(splitter[0])) {
       covariates.emplace_back(std::vector<double>());
       unsigned long i = 0;
       for (const auto &v : splitter) {
         if (i == 0) {
           // Get phenotype of current sample
-          auto phen = sample_phen_map[v];
+          auto phen = sample_phen_map_[v];
 
           cov_samples_.push_back(v);
 
@@ -242,15 +378,12 @@ void Covariates::parse(const std::string &ifile, const std::string &pedfile) {
   } else {
     design_ = arma::mat(nsamples_, 1, arma::fill::ones);
   }
-#ifndef NDEBUG
-  std::cerr << "Covariates_ n_rows = " << design_.n_rows
-            << " Covariates_ n_cols = " << design_.n_cols << "\n";
-#endif
 }
 
 /**
  * @brief For debugging
- * @param ss A stringstream to be parsed.
+ * @param ped_ss A stringstream to be parsed.
+ * @param cov_ss A stringstream to be parsed.
  */
 void Covariates::parse(std::stringstream &ped_ss, std::stringstream &cov_ss) {
   std::string line;

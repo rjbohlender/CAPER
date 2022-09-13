@@ -30,7 +30,7 @@ public:
   /** Constructors */
   Splitter() = default;
   Splitter(const string_type &str, const string_type &delim, int_type n = 0)
-      : data_(str), delim_(delim), n_(n) {
+      : n_(n), data_(str), delim_(delim) {
     if (n > 0) {
       split_up_to_n();
     } else {
@@ -39,7 +39,7 @@ public:
   }
 
   Splitter(const string_type &&str, const string_type &&delim, int_type n = 0)
-      : data_(str), delim_(delim), n_(n) {
+      : n_(n), data_(str), delim_(delim) {
     if (n > 0) {
       split_up_to_n();
     } else {
@@ -48,7 +48,7 @@ public:
   }
 
   Splitter(const string_type &str, const string_type &&delim, int_type n = 0)
-      : data_(str), delim_(delim), n_(n) {
+      : n_(n), data_(str), delim_(delim) {
     if (n > 0) {
       split_up_to_n();
     } else {
@@ -57,7 +57,7 @@ public:
   }
 
   Splitter(const string_type &&str, const string_type &delim, int_type n = 0)
-      : data_(str), delim_(delim), n_(n) {
+      : n_(n),  data_(str), delim_(delim) {
     if (n > 0) {
       split_up_to_n();
     } else {

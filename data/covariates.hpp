@@ -7,17 +7,19 @@
 
 #define ARMA_DONT_USE_WRAPPER
 
-#include <set>
-#include <string>
-#include <vector>
+#include <armadillo>
 #include <fstream>
 #include <iostream>
-#include <armadillo>
+#include <set>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
-#include "../utility/split.hpp"
 #include "../statistics/logistic_regression.hpp"
-#include "permutation.hpp"
+#include "../utility/split.hpp"
 #include "../utility/taskparams.hpp"
+#include "permutation.hpp"
 
 class Covariates {
 public:
@@ -67,7 +69,9 @@ private:
 
   CRandomMersenne crand;
   std::vector<std::string> cov_samples_;
-  std::set<std::string> ped_samples_;
+  std::unordered_set<std::string> ped_samples_;
+  std::unordered_set<std::string> skip_;  // Skip samples with missing cov values
+  std::unordered_map<std::string, double> sample_phen_map_;
   arma::vec phenotypes_; // Possibly permuted phenotype vector
   arma::vec original_; // Original phenotype vector
   arma::mat design_; // Design matrix
@@ -86,7 +90,9 @@ private:
   bool sorted_;
   bool linear_;
 
-  void parse(const std::string& ifile, const std::string& pedfile);
+  void parse_ped(const std::string& pedfile, bool cov_provided);
+  void parse_cov(const std::string &covfile);
+  void parse(const std::string& covfile, const std::string& pedfile);
   void parse(std::stringstream &ped_ss, std::stringstream &cov_ss);
 
   void fit_null();

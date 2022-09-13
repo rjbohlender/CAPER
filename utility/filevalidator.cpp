@@ -37,15 +37,6 @@ void FileValidator::validate_cov_line(RJBUtil::Splitter<std::string> &line, int 
 		lineno);
 	throw(std::runtime_error(msg.c_str()));
   }
-  for(auto it = line.begin() + 1; it != line.end(); it++) {
-    try {
-      std::stod(*it);
-    } catch (std::exception &e) {
-	  std::string msg = build_error_message("ERROR: COV Line Validation -- Non-numeric value provided in covariates.",
-											lineno);
-	  throw(std::runtime_error(msg.c_str()));
-    }
-  }
 }
 
 void FileValidator::validate_ped_line(RJBUtil::Splitter<std::string> &line, int lineno) {
