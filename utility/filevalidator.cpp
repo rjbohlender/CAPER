@@ -32,7 +32,8 @@ void FileValidator::validate_matrix_line(RJBUtil::Splitter<std::string> &line, i
 void FileValidator::validate_cov_line(RJBUtil::Splitter<std::string> &line, int lineno) {
   if(line.size() < 2) {
 	std::string msg = build_error_message(
-		"ERROR: COV Line Validation -- Line appears to be truncated. Line not long enough.",
+		"ERROR: COV Line Validation -- Line appears to be truncated. Line not long enough."
+        "\nExpected format: sample_ID\tcovariate1\t...",
 		lineno);
 	throw(std::runtime_error(msg.c_str()));
   }
