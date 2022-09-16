@@ -133,7 +133,7 @@ void Covariates::parse_cov(const std::string &covfile) {
   std::vector<double> phenotypes;
 
   while (std::getline(ifs, line)) {
-    RJBUtil::Splitter<std::string> splitter(line, "\t");
+    RJBUtil::Splitter<std::string> splitter(line, " \t");
     FileValidator::validate_cov_line(splitter, lineno);
     if (lineno == 0) { // Parse meta information
       if (splitter.size() > 0) {
@@ -158,7 +158,14 @@ void Covariates::parse_cov(const std::string &covfile) {
       continue;
     }
 
-    phenotypes.push_back(sample_phen_map_[sampleid]);
+    auto phen = sample_phen_map_[sampleid];
+    if (phen == 1) {
+      ncases_++;
+    } else {
+      ncontrols_++;
+    }
+
+    phenotypes.push_back(phen);
     cov_samples_.push_back(sampleid);
     data[sampleid] = std::vector<double>(nfields, 0);
 
@@ -267,7 +274,7 @@ void Covariates::parse_ped(const std::string &pedfile, bool cov_provided) {
                    "with a '#'.\n";
       throw(std::runtime_error("Failed to read .ped file."));
     }
-    RJBUtil::Splitter<std::string> splitter(line, "\t");
+    RJBUtil::Splitter<std::string> splitter(line, " \t");
 
     FileValidator::validate_ped_line(splitter, lineno);
 

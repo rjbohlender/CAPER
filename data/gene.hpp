@@ -55,7 +55,7 @@ public:
   std::vector<std::string> &get_transcripts();
   arma::uword get_nvariants(const std::string &k);
   std::vector<std::string> &get_positions(const std::string &k);
-  std::vector<std::string> &get_samples();
+  const std::vector<std::string> &get_samples() const;
   arma::vec &get_weights(const std::string &k);
   void set_weights(const std::string &k, arma::vec &weights);
   arma::vec &get_scores(const std::string &k);

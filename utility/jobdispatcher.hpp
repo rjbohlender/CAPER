@@ -279,6 +279,9 @@ public:
       reporter->report(tq_.get_results(), tp_);
     }
 
+    if (tp_.method == "VAAST" && !tp_.gene_list) {
+      reporter->vaast_sample_index_map(tq_.get_results());
+    }
     reporter->cleanup(tp_);
 
     cov_.reset();

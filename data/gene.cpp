@@ -248,8 +248,12 @@ void Gene::parse(std::stringstream &ss, const std::shared_ptr<Covariates> &cov,
                       << " due to MAC filter." << std::endl;
           } else if (tp_.verbose && baaf) {
             std::cerr << "Removing: " << gene_name << " " << ts << " "
-                      << positions_[ts][k] << " | frequency: " << aaf[k]
-                      << " due to MAF filter." << std::endl;
+                      << positions_[ts][k] << " | frequency: " << aaf[k];
+            if (tp_.aaf_filter) {
+              std::cerr << " due to AAF filter." << std::endl;
+            } else {
+              std::cerr << " due to MAF filter." << std::endl;
+            }
           } else if (tp_.verbose && bwht) {
             std::cerr << "Removing: " << gene_name << " " << ts << " "
                       << positions_[ts][k] << " | type: " << type_[ts][k]
@@ -275,7 +279,7 @@ void Gene::parse(std::stringstream &ss, const std::shared_ptr<Covariates> &cov,
       // Check if any polymorphic. Mark transcripts skippable if all fixed.
       if (arma::accu(sums) < tp_.min_minor_allele_count ||
           nvariants_[ts] < tp_.min_variant_count) {
-        std::cerr << "gene: " << gene_name << " marked skippable." << std::endl;
+        std::cerr << "transcript: " << ts << " marked skippable." << std::endl;
         polymorphic_[ts] = false;
       } else {
         polymorphic_[ts] = true;
@@ -530,7 +534,7 @@ std::string Gene::get_detail() const { return detail_; }
 
 std::map<std::string, std::string> Gene::get_vaast() const { return vaast_; }
 
-std::vector<std::string> &Gene::get_samples() { return samples_; }
+const std::vector<std::string> &Gene::get_samples() const { return samples_; }
 
 bool Gene::testable(const std::string &transcript, Covariates &cov,
                     const std::vector<double> &permuted) {

@@ -439,14 +439,16 @@ auto Reporter::report_vaast(std::vector<CARVATask> &res, TaskParams &tp) -> void
 	  vaast_file_ << "total_success: " << result.second.successes << std::endl;
     }
   }
-
+  vaast_sample_index_map(res);
+}
+void Reporter::vaast_sample_index_map(const std::vector<CARVATask> &res) {
   // Print sample / index map at the end
   vaast_file_ << "## Sample Index Map" << std::endl;
   int j = 0;
   if (results_.empty()) {
     return;
   }
-  for (auto &s : res[0].gene.get_samples()) {
+  for (const auto &s : res[0].gene.get_samples()) {
     vaast_file_ << "#\t" << s << "\t" << j << std::endl;
     j++;
   }
