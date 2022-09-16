@@ -192,6 +192,9 @@ double VAASTLogic::Score(const arma::sp_mat &X, const arma::vec &Y,
     double val = arma::accu(vaast_site_scores) + arma::accu(biallelic_term);
     return (val >= 0) ? val : 0; // Mask all negative values
   }
+  if (arma::accu(case_allele1) == 0) { // Don't score variants that are background unique
+    return 0;
+  }
 
   arma::uvec unweighted = arma::find(w == 0);
   arma::vec log_lh = LRT();

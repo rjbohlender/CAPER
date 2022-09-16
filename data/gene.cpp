@@ -100,7 +100,11 @@ void Gene::parse(std::stringstream &ss, const std::shared_ptr<Covariates> &cov,
       i++;
       continue;
     }
-    assert(columns_.size() == cov->get_nsamples() && "Not all samples in ped file are represented in matrix file.\n");
+    if (columns_.size() != cov->get_nsamples()) {
+      std::cerr << "ERROR: Not all samples in .ped file are represented in the "
+                   "matrix file. There may be an ID mismatch or missing samples.";
+      std::exit(-1);
+    }
     RJBUtil::Splitter<std::string> splitter(line, "\t");
 
     if (gene_name.empty()) {
