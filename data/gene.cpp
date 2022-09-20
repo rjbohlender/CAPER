@@ -648,26 +648,14 @@ void Gene::generate_vaast(Covariates &cov) {
       arma::uvec hom_carriers = arma::find(Xcol % Y == 2);
 
       if (het_carriers.n_elem > 0) {
-        for (arma::uword j = 0; j < het_carriers.n_elem; j++) {
-          if (j < het_carriers.n_elem - 1) {
-            vaast_ss << het_carriers(j) << ",";
-          } else {
-            vaast_ss << het_carriers(j) << "|";
-          }
-        }
+        vaast_ss << compress_adjacent(het_carriers);
         // Variant
         vaast_ss << boost::format("%1$s:%2$s") % reference_[ts][i] %
                         alternate_[ts][i] << " ";
       }
       if (hom_carriers.n_elem > 0) {
         vaast_ss << "\t";
-        for (arma::uword j = 0; j < hom_carriers.n_elem; j++) {
-          if (j < hom_carriers.n_elem - 1) {
-            vaast_ss << hom_carriers(j) << ",";
-          } else {
-            vaast_ss << hom_carriers(j) << "|";
-          }
-        }
+        vaast_ss << compress_adjacent(hom_carriers);
         // Variant
         vaast_ss << boost::format("%1$s:%2$s") % alternate_[ts][i] %
                         alternate_[ts][i];
@@ -784,6 +772,35 @@ std::stringstream Gene::transcript_union(std::stringstream &ss,
   }
 
   return res_ss;
+}
+
+std::string Gene::compress_adjacent(arma::uvec &samples) {
+  std::stringstream ss;
+  int i = 0;
+  int j = 1;
+  while(i < samples.n_elem) {
+    int n = 1;
+    j = i + 1;
+    while(j < samples.n_elem && samples(i) + n == samples(j)) {
+      j++;
+      n++;
+    }
+    if (n > 1) {
+      if (j < samples.n_elem - 1) {
+        ss << samples(i) << "-" << samples(j - 1) << ",";
+      } else {
+        ss << samples(i) << "-" << samples(j - 1) << "|";
+      }
+    } else {
+      if (i < samples.n_elem - 1) {
+        ss << samples(i) << ",";
+      } else {
+        ss << samples(i) << "|";
+      }
+    }
+    i = j;
+  }
+  return ss.str();
 }
 
 void print_comma_sep(arma::uvec &x, std::ostream &os) {

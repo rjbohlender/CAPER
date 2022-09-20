@@ -99,6 +99,7 @@ private:
   std::map<std::string, arma::sp_mat> missing_variant_carriers_;
 
   void parse(std::stringstream &ss, const std::shared_ptr<Covariates>& cov, Filter &filter);
+  std::string compress_adjacent(arma::uvec &samples);
 
   bool testable(const std::string &transcript, Covariates &cov, const std::vector<double> &permuted);
 
