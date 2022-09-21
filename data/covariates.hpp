@@ -49,7 +49,8 @@ public:
   arma::vec &get_fitted();
   arma::vec get_residuals() const;
   arma::vec &get_mean();
-  arma::vec & get_coef();
+  arma::vec &get_coef();
+  std::vector<std::string> get_samples();
 
   // Permute
   void refit_permuted();

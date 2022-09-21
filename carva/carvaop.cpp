@@ -52,6 +52,7 @@ auto CARVAOp::op() -> void {
     std::string transcript = v.first;
     Result &res = v.second;
     if (!gene.is_polymorphic(transcript)) {
+      v.second.done = true;
       continue;
     }
     res.case_alt = arma::accu(gene.get_matrix(transcript).t() *
@@ -73,9 +74,6 @@ auto CARVAOp::op() -> void {
       transcript_no++;
       std::string transcript = v.first;
       Result &res = v.second;
-      if (!carvaTask.gene.is_polymorphic(transcript)) {
-        continue;
-      }
 
       // Skip transcripts with no variants
       if (!gene.is_polymorphic(transcript)) {

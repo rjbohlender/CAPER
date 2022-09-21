@@ -139,7 +139,7 @@ public:
     return q_.size();
   }
 
-  auto get_results() -> std::vector<Task_t>& {
+  auto get_results() -> std::vector<Task_t> {
 	return results_;
   }
 

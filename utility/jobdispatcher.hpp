@@ -280,7 +280,7 @@ public:
     }
 
     if (tp_.method == "VAAST" && !tp_.gene_list) {
-      reporter->vaast_sample_index_map(tq_.get_results());
+      reporter->vaast_sample_index_map(cov_->get_samples());
     }
     reporter->cleanup(tp_);
 

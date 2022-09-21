@@ -123,10 +123,10 @@ int main(int argc, char **argv) {
          "The maximum number of permutations to be performed.")
         ("mac",
          po::value<arma::uword>(),
-         "Minor allele count cutoff.")
+         "Alternative or minor allele count cutoff per variant.")
         ("maf,r",
          po::value<double>()->default_value(0.5),
-         "Minor allele frequency cutoff. We recommend using an external sample and filtering variants based on the frequency in that sample, rather than filtering within. Can result in a reduction in power for variants near the threshold.")
+         "Alternative or minor allele frequency cutoff per variant. We recommend using an external sample and filtering variants based on the frequency in that sample, rather than filtering within. Can result in a reduction in power for variants near the threshold.")
         ("aaf",
          po::bool_switch(&aaf_filter),
          "Filter variants where the alternate allele is the major allele.")

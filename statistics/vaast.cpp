@@ -209,6 +209,9 @@ double VAASTLogic::Score(const arma::sp_mat &X, const arma::vec &Y,
   // vaast_site_scores(arma::find(vaast_site_scores <= 2)).zeros();
   double val = arma::accu(vaast_site_scores(included));
   // val += arma::accu(vaast_site_scores(arma::find(vaast_site_scores <= 2)));
+  if (isnan(val)) {
+    return 0;
+  }
   return (val >= 0) ? val : 0; // Mask all negative values
 }
 

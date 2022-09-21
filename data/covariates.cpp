@@ -604,3 +604,15 @@ arma::vec Covariates::get_residuals() const { return phenotypes_ - p_fitted_; }
 bool Covariates::contains(const std::string &sample) {
   return (ped_samples_.count(sample) > 0);
 }
+
+std::vector<std::string> Covariates::get_samples() {
+  if (cov_samples_.empty()) {
+    std::vector<std::string> ret;
+    for (const auto &s : ped_samples_) {
+      ret.push_back(s);
+    }
+    return ret;
+  } else {
+    return cov_samples_;
+  }
+}

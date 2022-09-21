@@ -155,7 +155,7 @@ Reporter::Reporter(std::vector<CARVATask> &res, TaskParams &tp)
   }
 }
 
-auto Reporter::report(std::vector<CARVATask> &res, TaskParams &tp) -> void {
+auto Reporter::report(std::vector<CARVATask> &&res, TaskParams &tp) -> void {
   // Extract results
   extract_results(res, tp);
 
@@ -449,6 +449,16 @@ void Reporter::vaast_sample_index_map(const std::vector<CARVATask> &res) {
     return;
   }
   for (const auto &s : res[0].gene.get_samples()) {
+    vaast_file_ << "#\t" << s << "\t" << j << std::endl;
+    j++;
+  }
+}
+
+void Reporter::vaast_sample_index_map(std::vector<std::string> &&samples) {
+  // Print sample / index map at the end
+  vaast_file_ << "## Sample Index Map" << std::endl;
+  int j = 0;
+  for (const auto &s : samples) {
     vaast_file_ << "#\t" << s << "\t" << j << std::endl;
     j++;
   }

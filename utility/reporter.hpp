@@ -33,11 +33,12 @@ public:
   explicit Reporter(TaskParams &tp);
   Reporter(std::vector<CARVATask> &res, TaskParams &tp);
 
-  auto report(std::vector<CARVATask> &res, TaskParams &tp) -> void;
+  auto report(std::vector<CARVATask> &&res, TaskParams &tp) -> void;
   auto report_detail(std::vector<CARVATask> &res, TaskParams &tp) -> void;
   auto report_simple(TaskParams &tp) -> void;
   auto report_vaast(std::vector<CARVATask> &res, TaskParams &tp) -> void;
   void vaast_sample_index_map(const std::vector<CARVATask> &res);
+  void vaast_sample_index_map(std::vector<std::string> &&samples);
 
   auto cleanup(TaskParams &tp) -> void;
 
