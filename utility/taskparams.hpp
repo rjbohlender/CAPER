@@ -22,6 +22,7 @@ struct TaskParams {
   boost::optional<int> seed;
 
   arma::uword nperm;
+  arma::uword max_levels;
   boost::optional<arma::uword> max_perms;
 
   bool whole_gene;

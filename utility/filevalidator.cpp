@@ -49,7 +49,7 @@ void FileValidator::validate_ped_line(RJBUtil::Splitter<std::string> &line, int 
 }
 
 void FileValidator::validate_bed_line(RJBUtil::Splitter<std::string> &line, int lineno) {
-  if(line.size() < 4) {
+  if(line.size() < 5) {
 	std::string msg = build_error_message(
 		"ERROR: BED Line Validation -- Line appears to be truncated. Line not long enough.",
 		lineno);

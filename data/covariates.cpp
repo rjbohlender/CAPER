@@ -171,6 +171,11 @@ void Covariates::parse_cov(const std::string &covfile) {
 
     for (int i = 0; i < nfields; i++) {
       try {
+        if (splitter[i + 1] == "NA") {
+          std::cerr << "ERROR: NA value in covariates. Please remove all "
+                       "NA values." << std::endl;
+          std::exit(-1);
+        }
         data[sampleid][i] = std::stod(splitter[i + 1]);
       } catch (...) {
         unconvertible[i].push_back(splitter[i + 1]);
@@ -208,6 +213,12 @@ void Covariates::parse_cov(const std::string &covfile) {
 
       int sampleno = 0;
       int nlevels = levels.size() - 1;
+      if (nlevels > tp_.max_levels) {
+        std::cerr << "ERROR: Too many unconvertible fields. Reduce number of"
+                     " levels in variables. Ensure all "
+                     "non-categorical features are numeric." << std::endl;
+        std::exit(-1);
+      }
       for (const auto &v : field) {// Convert to dummy variable
         for (int j = 0; j < nlevels; j++) {
           if (j == 0) {

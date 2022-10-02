@@ -157,6 +157,9 @@ int main(int argc, char **argv) {
         ("min_variant_count",
          po::value<arma::uword>()->default_value(1),
          "Minimum number of variants to test a gene.")
+        ("max_levels",
+         po::value<arma::uword>()->default_value(100),
+         "Maximum number of levels for a single variable. Will be split into n-1 dummy variables.")
         ("bin_epsilon",
          po::value<double>()->default_value(0.0001),
          "Odds closer together than the given value will be collapsed into a single bin for permutation.")
@@ -367,6 +370,7 @@ int main(int argc, char **argv) {
   tp.weight = weights;
   tp.permute_set = permute_set;
   tp.bin_epsilon = vm["bin_epsilon"].as<double>();
+  tp.max_levels = vm["max_levels"].as<arma::uword>();
   // Threading
   tp.nthreads = vm["nthreads"].as<size_t>();
   // Options
