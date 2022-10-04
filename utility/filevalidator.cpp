@@ -32,8 +32,8 @@ void FileValidator::validate_matrix_line(RJBUtil::Splitter<std::string> &line, i
 void FileValidator::validate_cov_line(RJBUtil::Splitter<std::string> &line, int lineno) {
   if(line.size() < 2) {
 	std::string msg = build_error_message(
-		"ERROR: COV Line Validation -- Line appears to be truncated. Line not long enough."
-        "\nExpected format: sample_ID\tcovariate1\t...",
+                "ERROR: COV Line Validation -- Line appears to be truncated. Line not long enough."
+                        "\nExpected format: sample_ID\tcovariate1\t...",
 		lineno);
 	throw(std::runtime_error(msg.c_str()));
   }
@@ -51,7 +51,8 @@ void FileValidator::validate_ped_line(RJBUtil::Splitter<std::string> &line, int 
 void FileValidator::validate_bed_line(RJBUtil::Splitter<std::string> &line, int lineno) {
   if(line.size() < 5) {
 	std::string msg = build_error_message(
-		"ERROR: BED Line Validation -- Line appears to be truncated. Line not long enough.",
+		"ERROR: BED Line Validation -- Line appears to be truncated. Line not long enough."
+                        "\nExpected format: chrom\tstart_pos\tend_pos\tref\talt\t...",
 		lineno);
 	throw(std::runtime_error(msg.c_str()));
   }
@@ -66,7 +67,9 @@ void FileValidator::validate_weight_line(RJBUtil::Splitter<std::string> &line, i
   }
   if(matrix_variant_types.find(line[5]) == matrix_variant_types.end()) {
 	std::string msg = build_error_message(
-		"ERROR: Weight Line Validation -- Variant type in location incorrect. Must be one of {SNV, insertion, deletion, SPDA, complex_substitution}.",
+		"ERROR: Weight Line Validation -- Variant type "
+                        "incorrect. Must be one of {SNV, insertion, deletion, "
+                        "SPDA, complex_substitution}.",
 		lineno);
 	throw(std::runtime_error(msg.c_str()));
   }

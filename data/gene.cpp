@@ -33,6 +33,15 @@ Gene::Gene(std::stringstream &ss, std::shared_ptr<Covariates> cov,
         i++;
       }
     }
+  } else {
+    for (const auto &k : transcripts_) {
+      weights_[k].reshape(nvariants_[k], 1);
+      arma::uword i = 0;
+      for (const auto &v : positions_[k]) {
+        weights_[k](i) = 1;
+        i++;
+      }
+    }
   }
 }
 

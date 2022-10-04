@@ -20,9 +20,7 @@ Covariates::Covariates(TaskParams tp)
       crand((int)time(nullptr)), linear_(tp_.linear) {
   bool cov_provided = !tp_.covariates_path.empty();
   parse_ped(tp_.ped_path, cov_provided);
-  if (cov_provided) {
-    parse_cov(tp_.covariates_path);
-  }
+  parse_cov(tp_.covariates_path);
   sorted_ = false;
 }
 
@@ -123,6 +121,7 @@ void Covariates::clear() {
 }
 
 void Covariates::parse_cov(const std::string &covfile) {
+  bool cov_provided = !tp_.covariates_path.empty();
   std::ifstream ifs = std::ifstream(covfile);
   std::string line;
   unsigned long lineno = 0;
@@ -132,61 +131,62 @@ void Covariates::parse_cov(const std::string &covfile) {
   std::vector<std::vector<std::string>> unconvertible;
   std::vector<double> phenotypes;
 
-  while (std::getline(ifs, line)) {
-    RJBUtil::Splitter<std::string> splitter(line, " \t");
-    FileValidator::validate_cov_line(splitter, lineno);
-    if (lineno == 0) { // Parse meta information
-      if (splitter.size() > 0) {
-        // Not counting the sample field, so we don't have to subtract all the time.
-        nfields = splitter.size() - 1;
-        unconvertible.resize(nfields);
-        lineno++;
-      }
-    }
-
-    if (splitter.empty()) {
-      continue;
-    }
-
-    std::string sampleid = splitter[0];
-    if (splitter.size() < nfields + 1) { // Skip samples where we have a missing column or two
-      skip_.emplace(sampleid);
-      continue;
-    }
-    // Skip samples not present in the ped file.
-    if (ped_samples_.find(sampleid) == ped_samples_.end()) {
-      continue;
-    }
-
-    auto phen = sample_phen_map_[sampleid];
-    if (phen == 1) {
-      ncases_++;
-    } else {
-      ncontrols_++;
-    }
-
-    phenotypes.push_back(phen);
-    cov_samples_.push_back(sampleid);
-    data[sampleid] = std::vector<double>(nfields, 0);
-
-    for (int i = 0; i < nfields; i++) {
-      try {
-        if (splitter[i + 1] == "NA") {
-          std::cerr << "ERROR: NA value in covariates. Please remove all "
-                       "NA values." << std::endl;
-          std::exit(-1);
+  if (cov_provided) {
+    while (std::getline(ifs, line)) {
+      RJBUtil::Splitter<std::string> splitter(line, " \t");
+      FileValidator::validate_cov_line(splitter, lineno);
+      if (lineno == 0) { // Parse meta information
+        if (splitter.size() > 0) {
+          // Not counting the sample field, so we don't have to subtract all the time.
+          nfields = splitter.size() - 1;
+          unconvertible.resize(nfields);
+          lineno++;
         }
-        data[sampleid][i] = std::stod(splitter[i + 1]);
-      } catch (...) {
-        unconvertible[i].push_back(splitter[i + 1]);
       }
-    }
-    lineno++;
-  }
 
-  // Ensure phenotypes are in cov sample order.
-  phenotypes_ = arma::conv_to<arma::colvec>::from(phenotypes);
-  original_ = arma::conv_to<arma::colvec>::from(phenotypes);
+      if (splitter.empty()) {
+        continue;
+      }
+
+      std::string sampleid = splitter[0];
+      if (splitter.size() < nfields + 1) { // Skip samples where we have a missing column or two
+        skip_.emplace(sampleid);
+        continue;
+      }
+      // Skip samples not present in the ped file.
+      if (ped_samples_.find(sampleid) == ped_samples_.end()) {
+        continue;
+      }
+
+      auto phen = sample_phen_map_[sampleid];
+      if (phen == 1) {
+        ncases_++;
+      } else {
+        ncontrols_++;
+      }
+
+      phenotypes.push_back(phen);
+      cov_samples_.push_back(sampleid);
+      data[sampleid] = std::vector<double>(nfields, 0);
+
+      for (int i = 0; i < nfields; i++) {
+        try {
+          if (splitter[i + 1] == "NA") {
+            std::cerr << "ERROR: NA value in covariates. Please remove all "
+                         "NA values." << std::endl;
+            std::exit(-1);
+          }
+          data[sampleid][i] = std::stod(splitter[i + 1]);
+        } catch (...) {
+          unconvertible[i].push_back(splitter[i + 1]);
+        }
+      }
+      lineno++;
+    }
+    // Ensure phenotypes are in cov sample order.
+    phenotypes_ = arma::conv_to<arma::colvec>::from(phenotypes);
+    original_ = arma::conv_to<arma::colvec>::from(phenotypes);
+  }
 
   // Handle unconvertible fields by treating them as factors with levels -- convert to dummy variables
   int fieldno = 0;
@@ -243,7 +243,11 @@ void Covariates::parse_cov(const std::string &covfile) {
     fieldno++;
   }
 
-  design_.resize(cov_samples_.size(), nfields + 1);
+  if (cov_provided) {
+    design_.resize(cov_samples_.size(), nfields + 1);
+  } else {
+    design_.resize(ped_samples_.size(), nfields + 1);
+  }
   if (tp_.verbose) {
     std::cerr << "Design.n_rows: " << design_.n_rows << std::endl;
     std::cerr << "Design.n_cols: " << design_.n_cols << std::endl;
