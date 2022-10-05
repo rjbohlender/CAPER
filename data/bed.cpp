@@ -22,24 +22,27 @@ bool BedRange::operator>=(int rhs) const { return range.second >= rhs; }
 int BedRange::operator-(int rhs) const { return range.second - rhs; }
 
 Bed::Bed(const std::string &ifile) {
-  if (!check_file_exists(ifile)) {
-    std::cerr << "No mask file provided or incorrect path to mask file."
-              << std::endl;
-    return;
-  }
-  std::ifstream ifs(ifile);
-  std::string line;
-  int lineno = -1;
+  RJBUtil::Splitter<std::string> files(ifile, ",");
+  for (const auto &f : files) {
+    if (!check_file_exists(f)) {
+      std::cerr << "No mask file provided or incorrect path to mask file. "
+                << f << std::endl;
+      return;
+    }
+    std::ifstream ifs(f);
+    std::string line;
+    int lineno = -1;
 
-  while (std::getline(ifs, line)) {
-    lineno++;
-    RJBUtil::Splitter<std::string> splitter(line, "\t");
-    FileValidator::validate_bed_line(splitter, lineno);
+    while (std::getline(ifs, line)) {
+      lineno++;
+      RJBUtil::Splitter<std::string> splitter(line, "\t");
+      FileValidator::validate_bed_line(splitter, lineno);
 
-    std::stringstream ss;
-    ss << splitter[0] << "," << splitter[1] << "," << splitter[2] << "," << splitter[3] << "," << splitter[4];
+      std::stringstream ss;
+      ss << splitter[0] << "," << splitter[1] << "," << splitter[2] << "," << splitter[3] << "," << splitter[4];
 
-    variants_.emplace(ss.str());
+      variants_.emplace(ss.str());
+    }
   }
 }
 

@@ -83,7 +83,7 @@ int main(int argc, char **argv) {
          "The covariate matrix file, tab or space separated.\nFormat = sample_id cov1 ...")
         ("bed_filter,b",
          po::value(&bed),
-         "A bed file to be used as a filter. All specified regions will be excluded.")
+         "A bed file, or a comma separated list of bed files, to be used as a filter. All specified variants will be excluded.")
         ("filter,f",
          po::value<std::string>(),
          "A csv whitelist of TYPE and FUNCTION annotations. Default whitelist can be found in the filter directory.")
