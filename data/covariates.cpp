@@ -247,6 +247,9 @@ void Covariates::parse_cov(const std::string &covfile) {
     design_.resize(cov_samples_.size(), nfields + 1);
   } else {
     design_.resize(ped_samples_.size(), nfields + 1);
+    for (const auto &s : ped_samples_) {
+      cov_samples_.push_back(s);
+    }
   }
   design_.col(0).fill(1);
   if (tp_.verbose) {
@@ -255,7 +258,6 @@ void Covariates::parse_cov(const std::string &covfile) {
   }
   int i = 0;
   for (const auto &s : cov_samples_) {
-    design_.at(i, 0) = 1;
     int j = 1;
     for (const auto &v : data[s]) {
       design_.at(i, j) = v;

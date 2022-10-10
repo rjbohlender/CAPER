@@ -473,10 +473,15 @@ int main(int argc, char **argv) {
     std::cerr << visible << "\n";
     std::exit(1);
   }
-  if (tp.bed && !check_file_exists(*tp.bed)) {
-    std::cerr << "Incorrect file path for bed_file." << std::endl;
-    std::cerr << visible << "\n";
-    std::exit(1);
+  if (tp.bed) {
+    RJBUtil::Splitter<std::string> bed_paths(*tp.bed, ",");
+    for (const auto &f : bed_paths) {
+      if (!check_file_exists(f)) {
+        std::cerr << "Incorrect file path for bed_file." << std::endl;
+        std::cerr << visible << "\n";
+        std::exit(1);
+      }
+    }
   }
   if (tp.weight && !check_file_exists(*tp.weight)) {
     std::cerr << "Incorrect file path for weight_file." << std::endl;
