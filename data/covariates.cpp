@@ -248,16 +248,17 @@ void Covariates::parse_cov(const std::string &covfile) {
   } else {
     design_.resize(ped_samples_.size(), nfields + 1);
   }
+  design_.col(0).fill(1);
   if (tp_.verbose) {
     std::cerr << "Design.n_rows: " << design_.n_rows << std::endl;
     std::cerr << "Design.n_cols: " << design_.n_cols << std::endl;
   }
   int i = 0;
   for (const auto &s : cov_samples_) {
-    design_(i, 0) = 1;
+    design_.at(i, 0) = 1;
     int j = 1;
     for (const auto &v : data[s]) {
-      design_(i, j) = v;
+      design_.at(i, j) = v;
       j++;
     }
     i++;
