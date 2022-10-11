@@ -205,8 +205,8 @@ double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &k,
   double ret = arma::as_scalar((Xxmean - Yymean) * INV * (Xxmean - Yymean).t() *
                                nA * nU / N);
   auto p = static_cast<double>(Xxmean.n_elem);
-  double stat = ret * (nA + nU - 1 - p) /
-                (p * (nA + nU - 2)); // F(N, nA + nU - 1 - N) distributed
+  double stat = ret * (nA + nU - 1 - p) / (p * (nA + nU - 2));
+  // stat ~ F(N, nA + nU - 1 - N)
   if (stat < 0)
     stat = 0;
   if (tp_.nperm > 0) {
