@@ -298,6 +298,7 @@ void Covariates::parse_ped(const std::string &pedfile, bool cov_provided) {
 
     std::string sample_id = splitter[1];
     ped_samples_.insert(sample_id);
+    ped_samples_ordered_.push_back(sample_id);
     nsamples_++;
     if (linear_) {
       try {
@@ -320,7 +321,7 @@ void Covariates::parse_ped(const std::string &pedfile, bool cov_provided) {
   }
   // Ensure phenotypes are in ped_samples_ order when covariates are not provided
   if (!cov_provided) {
-    for (const auto &s : ped_samples_) {
+    for (const auto &s : ped_samples_ordered_) {
       phenotypes.push_back(sample_phen_map_[s]);
       if (phenotypes.back() == 1) {
         ncases_++;
@@ -587,16 +588,16 @@ void Covariates::sort_covariates(std::string &header) {
     // Sort the phenotypes and covariates according to the order in the matrix
     // file.
     original_ = phenotypes_(cov_indices); // Phenotypes are parsed in covariate
-                                          // order if covariates are provided.
     phenotypes_ = phenotypes_(cov_indices);
     design_ = design_.rows(cov_indices);
+    sort_by_index(cov_samples_, cov_indices);
   } else {
-    arma::uvec indices = arma::uvec(ped_samples_.size(), arma::fill::zeros);
+    arma::uvec indices = arma::uvec(ped_samples_ordered_.size(), arma::fill::zeros);
     arma::uword j = 0;
     for(auto i = static_cast<arma::uword>(Indices::first); i < splitter.size(); i++) {
       if (this->contains(splitter[i])) {
-        auto it = std::find(ped_samples_.begin(), ped_samples_.end(), splitter[i]);
-        indices(j) = std::distance(ped_samples_.begin(), it);
+        auto it = std::find(ped_samples_ordered_.begin(), ped_samples_ordered_.end(), splitter[i]);
+        indices(j) = std::distance(ped_samples_ordered_.begin(), it);
         j++;
       }
     }
@@ -633,4 +634,13 @@ std::vector<std::string> Covariates::get_samples() {
   } else {
     return cov_samples_;
   }
+}
+
+void Covariates::sort_by_index(std::vector<std::string> &samples, const arma::uvec &indices) {
+  std::vector<std::string> sorted;
+  sorted.reserve(samples.size());
+  for (const auto &i : indices) {
+    sorted.push_back(samples[i]);
+  }
+  samples = sorted;
 }

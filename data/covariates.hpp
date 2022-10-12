@@ -70,6 +70,7 @@ private:
 
   CRandomMersenne crand;
   std::vector<std::string> cov_samples_;
+  std::vector<std::string> ped_samples_ordered_;
   std::unordered_set<std::string> ped_samples_;
   std::unordered_set<std::string> skip_;  // Skip samples with missing cov values
   std::unordered_map<std::string, double> sample_phen_map_;
@@ -97,6 +98,7 @@ private:
   void parse(std::stringstream &ped_ss, std::stringstream &cov_ss);
 
   void fit_null();
+  void sort_by_index(std::vector<std::string> &samples, const arma::uvec &indices);
 };
 
 #endif //PERMUTE_ASSOCIATE_COVARIATES_HPP
