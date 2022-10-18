@@ -38,7 +38,7 @@ public:
   void clear(std::vector<std::string> &v);
 
   // Wu, Guan, and Pankow 2016
-  double BURDEN(Gene &gene, const std::string &k, arma::vec &phenotypes, int a, int b);
+  double BURDEN(Gene &gene, const std::string &k, arma::vec &phenotypes);
   static double CALPHA(Gene &gene, arma::vec &Y, const std::string &k);
   // Li and Leal 2008
   double CMC(Gene &gene, arma::vec &Y, const std::string &k, double maf = 0.005) const;

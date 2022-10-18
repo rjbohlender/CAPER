@@ -405,7 +405,8 @@ int main(int argc, char **argv) {
       tp.method == "RVT1" || tp.method == "RVT2" || tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN"
           || tp.method == "VT";
   tp.analytic = tp.method == "SKATO" || (tp.method == "SKAT" && tp.nperm == 0) || tp.method == "RVT1"
-     || tp.method == "RVT2" || (tp.method == "CMC" && tp.nperm == 0) || (tp.method == "CMC1df" && tp.nperm == 0);
+     || tp.method == "RVT2" || (tp.method == "CMC" && tp.nperm == 0) || (tp.method == "CMC1df" && tp.nperm == 0)
+                || (tp.method == "BURDEN" && tp.nperm == 0);
   if (tp.linear && !tp.quantitative) {
     std::cerr << "Quantitative trait analysis is only supported for the RVT1, RVT2, SKATO, SKAT, and BURDEN methods."
               << std::endl;

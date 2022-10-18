@@ -119,18 +119,62 @@ void Methods::clear(std::vector<std::string> &v) {
   lin_obj_.reset();
 }
 
-double Methods::BURDEN(Gene &gene, const std::string &k, arma::vec &phenotypes,
-                       int a, int b) {
+double Methods::BURDEN(Gene &gene, const std::string &k,
+                       arma::vec &phenotypes) {
   obj_->shuffle(phenotypes);
+  if (tp_.analytic) {
+    arma::sp_mat G(gene.get_matrix(k));
+    arma::uword N = G.n_cols; // Variant count
 
-  arma::sp_mat G(gene.get_matrix(k));
+    check_weights(gene, k, tp_.a, tp_.b, tp_.no_weights);
+    arma::vec weights = gene.get_weights(k);
 
-  check_weights(gene, k, a, b, tp_.no_weights);
+    arma::mat W = arma::diagmat(weights);
 
-  arma::mat W = arma::diagmat(gene.get_weights(k));
+    arma::mat tmp;
+    if (tp_.linear) {
+      tmp = lin_obj_->get_Ux().t() * G;
+    } else {
+      tmp = obj_->get_Ux().t() * G;
+    }
 
-  return std::pow(arma::accu(arma::sum(arma::diagmat(obj_->get_U0()) * G) * W),
-                  2);
+    arma::mat Gs;
+    arma::rowvec Zs;
+    if (tp_.linear) {
+      Gs = G.t() * G - tmp.t() * tmp;
+      Zs = arma::sum(arma::diagmat(lin_obj_->get_U0()) * G) /
+           std::sqrt(lin_obj_->get_s2());
+    } else {
+      Gs = (arma::diagmat(obj_->get_Yv()) * G).t() * G - tmp.t() * tmp;
+      Zs = arma::sum(arma::diagmat(obj_->get_U0()) * G);
+    }
+
+    arma::mat R = (Gs * W).t() * W;
+    arma::mat Z = Zs * W;
+
+    double Qb = std::pow(arma::accu(Z), 2);
+
+    arma::vec Rs = arma::sum(R, 1);
+    double R1 = arma::accu(Rs);
+
+    boost::math::chi_squared chisq(1); // 1-df chisq
+    double stat = Qb / R1;
+    if (!std::isfinite(stat)) {
+      return 1.;
+    } else {
+      return boost::math::cdf(boost::math::complement(chisq, stat));
+    }
+  } else {
+
+    arma::sp_mat G(gene.get_matrix(k));
+
+    check_weights(gene, k, tp_.a, tp_.b, tp_.no_weights);
+
+    arma::mat W = arma::diagmat(gene.get_weights(k));
+
+    return std::pow(arma::accu(arma::sum(arma::diagmat(obj_->get_U0()) * G) * W),
+                    2);
+  }
 }
 
 double Methods::CALPHA(Gene &gene, arma::vec &Y, const std::string &k) {
@@ -660,7 +704,7 @@ void Methods::check_weights(Gene &gene, const std::string &transcript, int a,
 double Methods::call(Gene &gene, Covariates &cov, arma::vec &phenotypes,
                      const std::string &transcript, bool detail) {
   if (method_ == "BURDEN") {
-    return BURDEN(gene, transcript, phenotypes, tp_.a, tp_.b);
+    return BURDEN(gene, transcript, phenotypes);
   } else if (method_ == "CALPHA") {
     return CALPHA(gene, phenotypes, transcript);
   } else if (method_ == "CMC") {
