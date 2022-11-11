@@ -110,8 +110,9 @@ void Gene::parse(std::stringstream &ss, const std::shared_ptr<Covariates> &cov,
       continue;
     }
     if (columns_.size() != cov->get_nsamples()) {
-      std::cerr << "ERROR: Not all samples in .ped file are represented in the "
-                   "matrix file. There may be an ID mismatch or missing samples.";
+      std::cerr
+          << "ERROR: Not all samples in .ped file are represented in the "
+             "matrix file. There may be an ID mismatch or missing samples.";
       std::exit(-1);
     }
     RJBUtil::Splitter<std::string> splitter(line, "\t");
@@ -185,8 +186,9 @@ void Gene::parse(std::stringstream &ss, const std::shared_ptr<Covariates> &cov,
         std::cerr << "j: " << j << std::endl;
         std::exit(-1);
       }
+      val = std::abs(val);
       // Handle missing data
-      if (val > 2 || val < 0) {
+      if (val > 2) {
         if (tp_.impute_to_mean) {
           val = -9;
         } else {
@@ -433,8 +435,8 @@ void Gene::generate_detail(Covariates &cov,
         if (pos_score_map.find(pos) == pos_score_map.end()) {
           if (variant_scores_[ts].empty())
             variant_scores_[ts].zeros(positions_[ts].size());
-            pos_score_map[pos] = variant_scores_[ts](i);
-            pos_weight_map[pos] = weights_[ts](i);
+          pos_score_map[pos] = variant_scores_[ts](i);
+          pos_weight_map[pos] = weights_[ts](i);
         }
         // Get frequency
         if (pos_freq_map.find(pos) == pos_freq_map.end()) {
@@ -660,7 +662,8 @@ void Gene::generate_vaast(Covariates &cov) {
         vaast_ss << compress_adjacent(het_carriers);
         // Variant
         vaast_ss << boost::format("%1$s:%2$s") % reference_[ts][i] %
-                        alternate_[ts][i] << " ";
+                        alternate_[ts][i]
+                 << " ";
       }
       if (hom_carriers.n_elem > 0) {
         vaast_ss << "\t";
@@ -709,7 +712,8 @@ void Gene::generate_vaast(Covariates &cov) {
         }
         // Variant
         vaast_ss << boost::format("%1$s:%2$s") % reference_[ts][i] %
-                        alternate_[ts][i] << " ";
+                        alternate_[ts][i]
+                 << " ";
       }
       if (hom_carriers.n_elem > 0) {
         vaast_ss << "\t";
@@ -787,10 +791,10 @@ std::string Gene::compress_adjacent(arma::uvec &samples) {
   std::stringstream ss;
   int i = 0;
   int j = 1;
-  while(i < samples.n_elem) {
+  while (i < samples.n_elem) {
     int n = 1;
     j = i + 1;
-    while(j < samples.n_elem && samples(i) + n == samples(j)) {
+    while (j < samples.n_elem && samples(i) + n == samples(j)) {
       j++;
       n++;
     }
