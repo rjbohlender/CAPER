@@ -396,6 +396,7 @@ void Gene::set_weights(const std::string &k, arma::vec &new_weights) {
 
 void Gene::set_scores(const std::string &k, arma::vec &scores) {
   variant_scores[k] = scores;
+  std::cerr << variant_scores[k].t();
 }
 
 void Gene::generate_detail(Covariates &cov,

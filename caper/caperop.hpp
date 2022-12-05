@@ -11,8 +11,10 @@
 
 class CAPEROp {
 public:
-  CAPEROp(CAPERTask &ct, std::shared_ptr<Reporter> reporter, double seed, bool verbose);
-  CAPEROp(CAPERTask &&ct, std::shared_ptr<Reporter> reporter, double seed, bool verbose);
+  CAPEROp(CAPERTask &ct, std::shared_ptr<Reporter> reporter, double seed,
+          bool verbose);
+  CAPEROp(CAPERTask &&ct, std::shared_ptr<Reporter> reporter, double seed,
+          bool verbose);
 
   auto run() -> void;
   auto finish() -> void;
@@ -20,14 +22,13 @@ public:
   bool done_;
   bool verbose_;
   CAPERTask carvaTask;
-private:
 
+private:
   auto op() -> void;
 
-  static auto check_perm(const TaskParams &tp,
-						 double perm_val,
-						 long success_threshold,
-						 std::pair<const std::string, Result> &v) -> void;
+  static auto check_perm(const TaskParams &tp, double perm_val,
+                         long success_threshold,
+                         const std::string &ts, Result &res) -> void;
 
   std::shared_ptr<Reporter> reporter_;
 };

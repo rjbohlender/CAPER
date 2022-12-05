@@ -199,6 +199,7 @@ double VAASTLogic::Score(const arma::sp_mat &X, const arma::vec &Y,
   arma::uvec unweighted = arma::find(w == 0);
   arma::vec log_lh = LRT();
   vaast_site_scores = 2.0 * (log_lh + arma::log(w));
+
   vaast_site_scores(arma::find(vaast_site_scores / (-site_penalty) > 0))
       .zeros();
   vaast_site_scores(unweighted).zeros();

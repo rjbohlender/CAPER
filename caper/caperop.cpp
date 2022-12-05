@@ -48,32 +48,30 @@ auto CAPEROp::op() -> void {
   auto &cov = carvaTask.get_cov();
 
   // Set original value
-  for (auto &v : carvaTask.results) {
-    std::string transcript = v.first;
-    Result &res = v.second;
+  for (auto &[transcript, res] : carvaTask.results) {
     if (!gene.is_polymorphic(transcript)) {
-      v.second.done = true;
+      res.done = true;
       continue;
     }
-    res.case_alt = arma::accu(gene.genotypes[transcript].t() *
-                              cov.get_original_phenotypes());
-    res.case_ref = 2 * arma::accu(cov.get_original_phenotypes()) - res.case_alt;
-    res.cont_alt = arma::accu(gene.genotypes[transcript].t() *
-                              (1. - cov.get_original_phenotypes()));
-    res.cont_ref =
-        2 * arma::accu(1. - cov.get_original_phenotypes()) - res.case_alt;
-    res.original = carvaTask.methods.call(
-        gene, cov, cov.get_original_phenotypes(), transcript, true);
+    if (std::isnan(res.original)) {
+      res.case_alt = arma::accu(gene.genotypes[transcript].t() *
+                                cov.get_original_phenotypes());
+      res.case_ref = 2 * arma::accu(cov.get_original_phenotypes()) - res.case_alt;
+      res.cont_alt = arma::accu(gene.genotypes[transcript].t() *
+                                (1. - cov.get_original_phenotypes()));
+      res.cont_ref =
+          2 * arma::accu(1. - cov.get_original_phenotypes()) - res.case_alt;
+      res.original = carvaTask.methods.call(
+          gene, cov, cov.get_original_phenotypes(), transcript, true);
+    }
   }
 
   int iter = 0;
   while (iter < carvaTask.npermutations) {
     int transcript_no = -1;
 
-    for (auto &v : carvaTask.results) {
+    for (auto &[transcript, res] : carvaTask.results) {
       transcript_no++;
-      std::string transcript = v.first;
-      Result &res = v.second;
 
       // Skip transcripts with no variants
       if (!gene.is_polymorphic(transcript)) {
@@ -108,7 +106,7 @@ auto CAPEROp::op() -> void {
       // Update total number of permutations
       res.permutations++;
 
-      check_perm(carvaTask.tp, perm_val, carvaTask.success_threshold, v);
+      check_perm(carvaTask.tp, perm_val, carvaTask.success_threshold, transcript, res);
     }
     // Stop iterating if everything is done
     if (std::all_of(carvaTask.results.cbegin(), carvaTask.results.cend(),
@@ -119,9 +117,7 @@ auto CAPEROp::op() -> void {
   }
 
   int ts_no = 0;
-  for (auto &v : carvaTask.results) {
-    std::string transcript = v.first;
-    Result &res = v.second;
+  for (auto &[transcript, res] : carvaTask.results) {
     double empirical;
     double midp;
     // If we stopped early, use the geometric correction, otherwise calculate
@@ -156,9 +152,9 @@ auto CAPEROp::op() -> void {
     }
 
     if (ts_no == 0) {
-      done_ = v.second.done;
+      done_ = res.done;
     } else {
-      done_ &= v.second.done;
+      done_ &= res.done;
     }
     if (carvaTask.tp.max_perms) {
       if (carvaTask.tp.gene_list) {
@@ -209,9 +205,7 @@ auto CAPEROp::op() -> void {
 
 auto CAPEROp::check_perm(const TaskParams &tp, double perm_val,
                          long success_threshold,
-                         std::pair<const std::string, Result> &v) -> void {
-  std::string ts = v.first;
-  Result &res = v.second;
+                         const std::string &ts, Result &res) -> void {
   // Some methods return a pvalue so we need to reverse the success inequality
   if (tp.analytic) {
     if (perm_val <= res.original) {
