@@ -53,7 +53,7 @@ auto CAPEROp::op() -> void {
       res.done = true;
       continue;
     }
-    if (std::isnan(res.original)) {
+    if (!res.is_set) {
       res.case_alt = arma::accu(gene.genotypes[transcript].t() *
                                 cov.get_original_phenotypes());
       res.case_ref = 2 * arma::accu(cov.get_original_phenotypes()) - res.case_alt;
@@ -63,6 +63,7 @@ auto CAPEROp::op() -> void {
           2 * arma::accu(1. - cov.get_original_phenotypes()) - res.case_alt;
       res.original = carvaTask.methods.call(
           gene, cov, cov.get_original_phenotypes(), transcript, true);
+      res.is_set = true;
     }
   }
 

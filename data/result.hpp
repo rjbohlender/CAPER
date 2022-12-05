@@ -30,6 +30,7 @@ struct Result {
   void calc_exact_p();
   void calc_exact_p(double n1, double n2);
 
+  bool is_set = false;
   std::string gene;
   std::string transcript;
   std::pair<double, double> empirical_ci;

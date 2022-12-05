@@ -65,7 +65,8 @@ Result::Result(std::string gene, std::string transcript, bool skippable)
 }
 
 Result::Result(Result &&res) noexcept
-	: gene(std::move(res.gene)),
+	: is_set(std::move(res.is_set)),
+          gene(std::move(res.gene)),
 	  transcript(std::move(res.transcript)),
 	  successes(res.successes),
 	  mid_successes(res.mid_successes),
@@ -90,6 +91,7 @@ Result::Result(Result &&res) noexcept
 	  output_stats(res.output_stats) {}
 
 Result &Result::operator=(Result &&rhs) noexcept {
+  is_set = std::move(rhs.is_set);
   gene = std::move(rhs.gene);
   transcript = std::move(rhs.transcript);
   successes = rhs.successes;
