@@ -71,7 +71,7 @@ struct VAASTLogic {
   // Constructors
   VAASTLogic(Gene &gene,
 			 arma::vec &Y_,
-			 const std::string &k,
+			 const std::string &ts,
 			 double site_penalty,
 			 arma::uword group_threshold,
 			 bool detail,

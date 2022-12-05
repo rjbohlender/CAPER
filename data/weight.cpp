@@ -5,9 +5,11 @@
 #include "weight.hpp"
 #include "../utility/filesystem.hpp"
 #include "../utility/filevalidator.hpp"
+#include <charconv>
 #include <boost/algorithm/string/predicate.hpp>
 
 Weight::Weight(const std::string &ifile) {
+  using namespace RJBUtil;
   if (!check_file_exists(ifile)) {
     std::cerr << "No weights provided." << std::endl;
     return;
@@ -15,7 +17,6 @@ Weight::Weight(const std::string &ifile) {
   std::ifstream ifs(ifile);
   std::string line;
   int lineno = -1;
-  FileValidator fileValidator;
 
   while (std::getline(ifs, line)) {
     lineno++;
@@ -23,17 +24,8 @@ Weight::Weight(const std::string &ifile) {
       continue;
     }
 
-    RJBUtil::Splitter<std::string> splitter(line, "\t");
-    fileValidator.validate_weight_line(splitter, lineno);
-
-    if (splitter.size() < 8) {
-      std::cerr << "Incorrectly formatted weight line. Line was: " << line
-                << std::endl;
-      std::cerr << "Line should be tab separated and formatted as <chrom> "
-                   "<start_pos> <end_pos> <type> <weight>"
-                << std::endl;
-      throw(std::runtime_error("Incorrect line in weight file."));
-    }
+    Splitter<std::string> splitter(line, "\t");
+    FileValidator::validate_weight_line(splitter, lineno);
 
     std::stringstream ss;
     // chr13   114326148       114326148       G       A       SNV     CHAMP1
@@ -49,9 +41,10 @@ Weight::Weight(const std::string &ifile) {
     }
 
     double score;
+#if defined(__clang__)
     try {
-      score = std::stod(splitter[8]);
-    } catch (std::exception &e) {
+      score = std::stod(splitter[8].data());
+    } catch(std::exception &e) {
       std::cerr << "Failed to convert weight to double. Line was: " << line
                 << std::endl;
       std::cerr << "Line should be tab separated and formatted as <chrom> "
@@ -59,6 +52,17 @@ Weight::Weight(const std::string &ifile) {
                 << std::endl;
       throw(e);
     }
+#else
+    auto [ptr, ec] = std::from_chars(splitter[8].data(), splitter[8].data() + splitter[8].size(), score);
+    if (ec == std::errc::invalid_argument) {
+      std::cerr << "Failed to convert weight to double. Line was: " << line
+                << std::endl;
+      std::cerr << "Line should be tab separated and formatted as <chrom> "
+                   "<start_pos> <end_pos> <type> <weight>"
+                << std::endl;
+      std::exit(1);
+    }
+#endif
 
     // Prevent math errors
     scores_[ss.str()] = score;

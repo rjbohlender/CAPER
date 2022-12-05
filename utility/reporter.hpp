@@ -8,7 +8,7 @@
 #include <set>
 #include <mutex>
 
-#include "../carva/carvatask.hpp"
+#include "../caper/capertask.hpp"
 #include "../power/powertask.hpp"
 #include "../caese/caesetask.hpp"
 
@@ -31,20 +31,20 @@ struct ResultLine {
 class Reporter {
 public:
   explicit Reporter(TaskParams &tp);
-  Reporter(std::vector<CARVATask> &res, TaskParams &tp);
+  Reporter(std::vector<CAPERTask> &res, TaskParams &tp);
 
-  auto report(std::vector<CARVATask> &&res, TaskParams &tp) -> void;
-  auto report_detail(std::vector<CARVATask> &res, TaskParams &tp) -> void;
+  auto report(std::vector<CAPERTask> &&res, TaskParams &tp) -> void;
+  auto report_detail(std::vector<CAPERTask> &res, TaskParams &tp) -> void;
   auto report_simple(TaskParams &tp) -> void;
-  auto report_vaast(std::vector<CARVATask> &res, TaskParams &tp) -> void;
-  void vaast_sample_index_map(const std::vector<CARVATask> &res);
+  auto report_vaast(std::vector<CAPERTask> &res, TaskParams &tp) -> void;
+  void vaast_sample_index_map(const std::vector<CAPERTask> &res);
   void vaast_sample_index_map(std::vector<std::string> &&samples);
 
   auto cleanup(TaskParams &tp) -> void;
 
   auto sync_write_simple(std::unordered_map<std::string, Result> &results, const TaskParams &tp) -> void;
   auto sync_write_detail(const std::string &d, bool gene_testable) -> void;
-  auto sync_write_vaast(CARVATask &ct, const TaskParams &tp) -> void;
+  auto sync_write_vaast(CAPERTask &ct, const TaskParams &tp) -> void;
 
   auto sort_simple(const TaskParams &tp) -> void;
 
@@ -81,7 +81,7 @@ private:
 
   static const std::set<std::string> pvalue_methods_;
 
-  auto extract_results(std::vector<CARVATask> &tq_results, TaskParams &tp) -> void;
+  auto extract_results(std::vector<CAPERTask> &tq_results, TaskParams &tp) -> void;
   auto write_to_stream(std::ostream &os, Result &res) -> void;
   auto recalculate_mgit(std::map<std::string, std::map<std::string, Result>> &results) -> void;
   auto recalculate_mgit(std::unordered_map<std::string, Result> &results) -> void;

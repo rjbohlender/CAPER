@@ -30,7 +30,7 @@ Reporter::Reporter(TaskParams &tp)
 	if(tp.group_size > 0)
 	  vaast_path_ss << boost::format(".g%1$d") % tp.group_size;
 	if(tp.testable)
-	  vaast_path_ss << ".testable";
+	  vaast_path_ss << ".check_testability";
 	if(tp.biallelic)
 	  vaast_path_ss << ".biallelic";
 	if (tp.range_start && tp.range_end) {
@@ -45,7 +45,7 @@ Reporter::Reporter(TaskParams &tp)
   if(tp.group_size > 0 && tp.method == "VAAST")
     simple_path_ss << boost::format(".g%1$d") % tp.group_size;
   if(tp.testable)
-    simple_path_ss << ".testable";
+    simple_path_ss << ".check_testability";
   if(tp.biallelic)
     simple_path_ss << ".biallelic";
   if (tp.range_start && tp.range_end) {
@@ -76,7 +76,7 @@ Reporter::Reporter(TaskParams &tp)
   if(tp.group_size > 0)
     detail_path_ss << boost::format(".g%1$d") % tp.group_size;
   if(tp.testable)
-    detail_path_ss << ".testable";
+    detail_path_ss << ".check_testability";
   if(tp.biallelic)
 	detail_path_ss << ".biallelic";
   if (tp.range_start && tp.range_end) {
@@ -100,7 +100,7 @@ Reporter::Reporter(TaskParams &tp)
   detail_file_ << header << std::endl;
 }
 
-Reporter::Reporter(std::vector<CARVATask> &res, TaskParams &tp)
+Reporter::Reporter(std::vector<CAPERTask> &res, TaskParams &tp)
 : method_(tp.method), pvalues_(tp.analytic), gene_list_(tp.gene_list), print_testable_(tp.testable), ncases_(0), ncontrols_(0) {
   if(!check_directory_exists(tp.output_path)) {
     throw(std::runtime_error("Output path is invalid."));
@@ -111,7 +111,7 @@ Reporter::Reporter(std::vector<CARVATask> &res, TaskParams &tp)
   if (tp.group_size > 0)
 	simple_path_ss << boost::format(".g%1$d") % tp.group_size;
   if (tp.testable)
-	simple_path_ss << ".testable";
+	simple_path_ss << ".check_testability";
   if (tp.biallelic)
 	simple_path_ss << ".biallelic";
   if (tp.range_start && tp.range_end) {
@@ -124,7 +124,7 @@ Reporter::Reporter(std::vector<CARVATask> &res, TaskParams &tp)
   if (tp.group_size > 0)
 	detail_path_ss << boost::format(".g%1$d") % tp.group_size;
   if (tp.testable)
-	detail_path_ss << ".testable";
+	detail_path_ss << ".check_testability";
   if (tp.biallelic)
 	detail_path_ss << ".biallelic";
   if (tp.range_start && tp.range_end) {
@@ -155,7 +155,7 @@ Reporter::Reporter(std::vector<CARVATask> &res, TaskParams &tp)
   }
 }
 
-auto Reporter::report(std::vector<CARVATask> &&res, TaskParams &tp) -> void {
+auto Reporter::report(std::vector<CAPERTask> &&res, TaskParams &tp) -> void {
   // Extract results
   extract_results(res, tp);
 
@@ -175,7 +175,7 @@ auto Reporter::cleanup(TaskParams &tp) -> void {
   sort_simple(tp);
 }
 
-auto Reporter::extract_results(std::vector<CARVATask> &tq_results, TaskParams &tp) -> void {
+auto Reporter::extract_results(std::vector<CAPERTask> &tq_results, TaskParams &tp) -> void {
   if(gene_list_) {
     // Combine results
     for(auto &task : tq_results) {
@@ -406,7 +406,7 @@ auto Reporter::report_simple(TaskParams &tp) -> void {
   std::cerr << "Transcripts submitted: " << results_.size() << std::endl;
 }
 
-auto Reporter::report_detail(std::vector<CARVATask> &res, TaskParams &tp) -> void {
+auto Reporter::report_detail(std::vector<CAPERTask> &res, TaskParams &tp) -> void {
   int i = 0; // For each gene
   for (auto &v : details_) {
 	detail_file_ << v;
@@ -423,7 +423,7 @@ auto Reporter::report_detail(std::vector<CARVATask> &res, TaskParams &tp) -> voi
   }
 }
 
-auto Reporter::report_vaast(std::vector<CARVATask> &res, TaskParams &tp) -> void {
+auto Reporter::report_vaast(std::vector<CAPERTask> &res, TaskParams &tp) -> void {
   // Header information
   vaast_file_ << "## PA_VERSION\t0.0" << std::endl;
   vaast_file_ << "## COMMAND\t" << tp.full_command << std::endl;
@@ -441,7 +441,7 @@ auto Reporter::report_vaast(std::vector<CARVATask> &res, TaskParams &tp) -> void
   }
   vaast_sample_index_map(res);
 }
-void Reporter::vaast_sample_index_map(const std::vector<CARVATask> &res) {
+void Reporter::vaast_sample_index_map(const std::vector<CAPERTask> &res) {
   // Print sample / index map at the end
   vaast_file_ << "## Sample Index Map" << std::endl;
   int j = 0;
@@ -657,7 +657,7 @@ auto Reporter::sort_simple(const TaskParams &tp) -> void {
 	// Print command to run unfinished
 	std::stringstream uf_ss;
 	uf_ss << tp.program_path << " ";
-	uf_ss << "-i " << tp.genotypes_path << " ";
+	uf_ss << "-i " << tp.input_path << " ";
 	uf_ss << "-c " << tp.covariates_path << " ";
 	uf_ss << "-o " << tp.output_path << " ";
 	uf_ss << "-p " << tp.ped_path << " ";
@@ -718,7 +718,7 @@ auto Reporter::set_ncontrols(int ncontrols) -> void {
   ncontrols_ = ncontrols;
 }
 
-auto Reporter::sync_write_vaast(CARVATask &ct, const TaskParams &tp) -> void {
+auto Reporter::sync_write_vaast(CAPERTask &ct, const TaskParams &tp) -> void {
   std::lock_guard<std::mutex> lock(lock_); // Acquire lock
   if (tp.method != "VAAST") {
     return;

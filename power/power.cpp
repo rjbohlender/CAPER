@@ -140,7 +140,7 @@ int main(int argc, char **argv) {
 			 ("score_only_alternative",
 			  po::bool_switch(&score_only_alternative),
 			  "Score only alternative alleles in VAAST.")
-			 ("testable",
+			 ("check_testability",
 			  po::bool_switch(&testable),
 			  "Return scores only for genes with at least scoreable variants in VAAST.")
 			 ("biallelic",
@@ -270,7 +270,7 @@ int main(int argc, char **argv) {
   tp.nperm = vm["nperm"].as<arma::uword>();
   // File paths and option status
   tp.program_path = argv[0];
-  tp.genotypes_path = vm["input"].as<std::string>();
+  tp.input_path = vm["input"].as<std::string>();
   tp.covariates_path = vm["covariates"].as<std::string>();
   tp.ped_path = vm["ped"].as<std::string>();
   tp.output_path = vm["output"].as<std::string>();
@@ -347,7 +347,7 @@ int main(int argc, char **argv) {
   }
 
   if (tp.verbose) {
-	std::cerr << "genotypes: " << tp.genotypes_path << "\n";
+	std::cerr << "genotypes: " << tp.input_path << "\n";
 	std::cerr << "covariates: " << tp.covariates_path << "\n";
 	if(tp.bed)
 	  std::cerr << "bed_file: " << *tp.bed << "\n";
@@ -359,7 +359,7 @@ int main(int argc, char **argv) {
   }
 
   // Check for correct file paths
-  if (!check_file_exists(tp.genotypes_path)) {
+  if (!check_file_exists(tp.input_path)) {
 	std::cerr << "Incorrect file path for genotypes." << std::endl;
 	std::cerr << visible << "\n";
 	std::exit(1);

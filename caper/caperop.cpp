@@ -2,20 +2,20 @@
 // Created by Bohlender,Ryan James on 2019-05-31.
 //
 
-#include "carvaop.hpp"
+#include "caperop.hpp"
 #include "../utility/math.hpp"
 
-CARVAOp::CARVAOp(CARVATask &ct, std::shared_ptr<Reporter> reporter, double seed,
+CAPEROp::CAPEROp(CAPERTask &ct, std::shared_ptr<Reporter> reporter, double seed,
                  bool verbose)
     : done_(false), verbose_(verbose), carvaTask(ct),
       reporter_(std::move(reporter)) {}
 
-CARVAOp::CARVAOp(CARVATask &&ct, std::shared_ptr<Reporter> reporter,
+CAPEROp::CAPEROp(CAPERTask &&ct, std::shared_ptr<Reporter> reporter,
                  double seed, bool verbose)
     : done_(false), verbose_(verbose), carvaTask(std::move(ct)),
       reporter_(std::move(reporter)) {}
 
-auto CARVAOp::run() -> void {
+auto CAPEROp::run() -> void {
   Stage stage = carvaTask.stage;
 
   if (stage == Stage::Stage1) {
@@ -25,11 +25,11 @@ auto CARVAOp::run() -> void {
     this->done_ = true;
     return;
   } else {
-    throw(std::runtime_error("Incorrect stage in CARVAOp::run()"));
+    throw(std::runtime_error("Incorrect stage in CAPEROp::run()"));
   }
 }
 
-auto CARVAOp::finish() -> void {
+auto CAPEROp::finish() -> void {
   carvaTask.calc_multitranscript_pvalues();
   // Finalize result calculations and free memory
   carvaTask.cleanup();
@@ -38,12 +38,12 @@ auto CARVAOp::finish() -> void {
   if (!carvaTask.tp.gene_list) {
     reporter_->sync_write_simple(carvaTask.results, carvaTask.tp);
     reporter_->sync_write_detail(carvaTask.gene.get_detail(),
-                                 carvaTask.gene.is_testable());
+                                 carvaTask.gene.testable);
     reporter_->sync_write_vaast(carvaTask, carvaTask.tp);
   }
 }
 
-auto CARVAOp::op() -> void {
+auto CAPEROp::op() -> void {
   auto &gene = carvaTask.gene;
   auto &cov = carvaTask.get_cov();
 
@@ -55,10 +55,10 @@ auto CARVAOp::op() -> void {
       v.second.done = true;
       continue;
     }
-    res.case_alt = arma::accu(gene.get_matrix(transcript).t() *
+    res.case_alt = arma::accu(gene.genotypes[transcript].t() *
                               cov.get_original_phenotypes());
     res.case_ref = 2 * arma::accu(cov.get_original_phenotypes()) - res.case_alt;
-    res.cont_alt = arma::accu(gene.get_matrix(transcript).t() *
+    res.cont_alt = arma::accu(gene.genotypes[transcript].t() *
                               (1. - cov.get_original_phenotypes()));
     res.cont_ref =
         2 * arma::accu(1. - cov.get_original_phenotypes()) - res.case_alt;
@@ -187,7 +187,7 @@ auto CARVAOp::op() -> void {
 
     double n = 2. * gene.get_samples().size();
     double nmac =
-        arma::accu(arma::sum(arma::mat(gene.get_matrix(transcript)), 1) > 0);
+        arma::accu(arma::sum(arma::mat(gene.genotypes[transcript]), 1) > 0);
     double nmaj = n - nmac;
 
     res.calc_exact_p(nmac, nmaj);
@@ -207,7 +207,7 @@ auto CARVAOp::op() -> void {
   }
 }
 
-auto CARVAOp::check_perm(const TaskParams &tp, double perm_val,
+auto CAPEROp::check_perm(const TaskParams &tp, double perm_val,
                          long success_threshold,
                          std::pair<const std::string, Result> &v) -> void {
   std::string ts = v.first;

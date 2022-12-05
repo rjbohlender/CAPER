@@ -43,7 +43,7 @@ struct TaskParams {
 
   // General options
   std::string program_path;
-  std::string genotypes_path;
+  std::string input_path;
   std::string covariates_path;
   std::string ped_path;
   std::string whitelist_path;

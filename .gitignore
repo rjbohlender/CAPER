@@ -84,3 +84,4 @@ bernoulli.R
 /cmake-build-debug-system/
 /cmake-build-release-system/
 /R_test/
+/cmake-build-relwithdebinfo/

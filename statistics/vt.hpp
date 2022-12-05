@@ -11,16 +11,16 @@
 class VT_Res {
 public:
   explicit VT_Res();
-  auto initialize(Gene &gene, arma::vec &pheno, const std::string &k) -> void;
+  auto initialize(Gene &gene, arma::vec &pheno, const std::string &ts) -> void;
 
-  auto is_initialized(const std::string &k) const -> bool;
-  auto get_subset(const std::string &k) -> arma::uvec&;
-  auto get_geno(const std::string &k) -> arma::vec&;
-  auto sum_groups(arma::vec &X, arma::uvec &range, const std::string &k) -> arma::vec;
-  auto get_mCount(const std::string &k) -> arma::vec&;
-  auto get_oneToLen(const std::string &k) -> arma::uvec&;
-  auto get_csCountMeanpheno(const std::string &k) -> arma::vec&;
-  auto get_sqrtCsCountSquare(const std::string &k) -> arma::vec&;
+  auto is_initialized(const std::string &ts) const -> bool;
+  auto get_subset(const std::string &ts) -> arma::uvec&;
+  auto get_geno(const std::string &ts) -> arma::vec&;
+  auto sum_groups(arma::vec &X, arma::uvec &range, const std::string &ts) -> arma::vec;
+  auto get_mCount(const std::string &ts) -> arma::vec&;
+  auto get_oneToLen(const std::string &ts) -> arma::uvec&;
+  auto get_csCountMeanpheno(const std::string &ts) -> arma::vec&;
+  auto get_sqrtCsCountSquare(const std::string &ts) -> arma::vec&;
 
 private:
   std::map<std::string, bool> initialized_;

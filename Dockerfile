@@ -23,7 +23,7 @@ WORKDIR /src/build
 
 RUN cmake -DCMAKE_BUILD_TYPE=Release ../.
 
-RUN cmake --build . --target carva
+RUN cmake --build . --target caper
 
 FROM debian:bullseye
 
@@ -31,7 +31,7 @@ ENV DEBIAN_FRONTEND noninteractive
 
 WORKDIR /
 
-COPY --from=builder /src/build/carva /bin
+COPY --from=builder /src/build/caper /bin
 RUN mkdir -p /filter
 COPY --from=builder /src/filter/filter_whitelist.csv /filter/filter_whitelist.csv
 

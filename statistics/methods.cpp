@@ -64,11 +64,8 @@ arma::vec rank(arma::vec &v, const char *direction) {
   return ranks;
 }
 
-Methods::Methods(std::string method)
-    : method_(std::move(method)), kernel_(Kernel::Linear) {}
-
-Methods::Methods(TaskParams &tp, const std::shared_ptr<Covariates> &cov)
-    : method_(tp.method), tp_(tp) {
+Methods::Methods(const TaskParams &tp, const std::shared_ptr<Covariates> &cov)
+    : method_(tp.method), tp(tp) {
   if (tp.kernel == "Linear") {
     kernel_ = Kernel::Linear;
   } else if (tp.kernel == "wLinear") {
@@ -89,8 +86,8 @@ Methods::Methods(TaskParams &tp, const std::shared_ptr<Covariates> &cov)
   }
 }
 
-Methods::Methods(TaskParams &tp, const Covariates &cov)
-    : method_(tp.method), tp_(tp) {
+Methods::Methods(const TaskParams &tp, const Covariates &cov)
+    : method_(tp.method), tp(tp) {
   if (tp.kernel == "Linear") {
     kernel_ = Kernel::Linear;
   } else if (tp.kernel == "wLinear") {
@@ -119,20 +116,20 @@ void Methods::clear(std::vector<std::string> &v) {
   lin_obj_.reset();
 }
 
-double Methods::BURDEN(Gene &gene, const std::string &k,
+double Methods::BURDEN(Gene &gene, const std::string &ts,
                        arma::vec &phenotypes) {
   obj_->shuffle(phenotypes);
-  if (tp_.analytic) {
-    arma::sp_mat G(gene.get_matrix(k));
+  if (tp.analytic) {
+    arma::sp_mat G(gene.genotypes[ts]);
     arma::uword N = G.n_cols; // Variant count
 
-    check_weights(gene, k, tp_.a, tp_.b, tp_.no_weights);
-    arma::vec weights = gene.get_weights(k);
+    check_weights(gene, ts, tp.a, tp.b, tp.no_weights);
+    arma::vec weights = gene.get_weights(ts);
 
     arma::mat W = arma::diagmat(weights);
 
     arma::mat tmp;
-    if (tp_.linear) {
+    if (tp.linear) {
       tmp = lin_obj_->get_Ux().t() * G;
     } else {
       tmp = obj_->get_Ux().t() * G;
@@ -140,7 +137,7 @@ double Methods::BURDEN(Gene &gene, const std::string &k,
 
     arma::mat Gs;
     arma::rowvec Zs;
-    if (tp_.linear) {
+    if (tp.linear) {
       Gs = G.t() * G - tmp.t() * tmp;
       Zs = arma::sum(arma::diagmat(lin_obj_->get_U0()) * G) /
            std::sqrt(lin_obj_->get_s2());
@@ -166,19 +163,19 @@ double Methods::BURDEN(Gene &gene, const std::string &k,
     }
   } else {
 
-    arma::sp_mat G(gene.get_matrix(k));
+    arma::sp_mat G(gene.genotypes[ts]);
 
-    check_weights(gene, k, tp_.a, tp_.b, tp_.no_weights);
+    check_weights(gene, ts, tp.a, tp.b, tp.no_weights);
 
-    arma::mat W = arma::diagmat(gene.get_weights(k));
+    arma::mat W = arma::diagmat(gene.weights[ts]);
 
     return std::pow(arma::accu(arma::sum(arma::diagmat(obj_->get_U0()) * G) * W),
                     2);
   }
 }
 
-double Methods::CALPHA(Gene &gene, arma::vec &Y, const std::string &k) {
-  arma::sp_mat X(gene.get_matrix(k));
+double Methods::CALPHA(Gene &gene, arma::vec &Y, const std::string &ts) {
+  arma::sp_mat X(gene.genotypes[ts]);
 
   double nA = arma::sum(Y);  // Case count
   double nU = Y.n_rows - nA; // Control count
@@ -206,9 +203,9 @@ double Methods::CALPHA(Gene &gene, arma::vec &Y, const std::string &k) {
   return arma::sum(arma::pow(g - (n * p0), 2) - (n * p0 * (1 - p0)));
 }
 
-double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &k,
+double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &ts,
                     double maf) const {
-  arma::mat X(gene.get_matrix(k));
+  arma::mat X(gene.genotypes[ts]);
 
   double N = Y.n_rows;
   double nA = arma::sum(Y); // Case count
@@ -253,7 +250,7 @@ double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &k,
   // stat ~ F(N, nA + nU - 1 - N)
   if (stat < 0)
     stat = 0;
-  if (tp_.nperm > 0) {
+  if (tp.nperm > 0) {
     return stat;
   }
   boost::math::fisher_f fisher_f(p, nA + nU - 1 - p);
@@ -275,11 +272,11 @@ double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &k,
   return pval;
 }
 
-double Methods::CMC1df(Gene &gene, arma::vec &Y, const std::string &k) const {
+double Methods::CMC1df(Gene &gene, arma::vec &Y, const std::string &ts) const {
   // Runtime for MDA OV with just fisher test and 10000 perms = 6544.95
   // Runtime for fast path with 10000 perms = 267.874
-  if (tp_.nperm > 0) {
-    arma::vec X(arma::sum(gene.get_matrix(k), 1));
+  if (tp.nperm > 0) {
+    arma::vec X(arma::sum(gene.genotypes[ts], 1));
     X(arma::find(X > 0)).ones();
 
     arma::uword ncase = arma::accu(Y);
@@ -301,13 +298,13 @@ double Methods::CMC1df(Gene &gene, arma::vec &Y, const std::string &k) const {
 
     return OR;
   } else {
-    FisherTest fisherTest(gene, Y, k);
+    FisherTest fisherTest(gene, Y, ts);
     return fisherTest.get_pval();
   }
 }
 
 double Methods::RVT1(Gene &gene, arma::vec &Y, arma::mat design,
-                     arma::vec &initial_beta, const std::string &k,
+                     arma::vec &initial_beta, const std::string &ts,
                      bool linear) {
   // Runtime 100 perms naive initialization on macbook pro, ovarian data --
   // 2421.09 Runtime 100 perms prior initialization on macbook pro, ovarian data
@@ -315,12 +312,12 @@ double Methods::RVT1(Gene &gene, arma::vec &Y, arma::mat design,
   // prior initialization on macbook pro, ovarian data -- 1757.13
   if (linear) {
     // Quantitative trait
-    arma::sp_mat X = arma::ceil(gene.get_matrix(k).t() / 2);
+    arma::sp_mat X = arma::ceil(gene.genotypes[ts].t() / 2);
     Gaussian link("identity");
-    GLM<Gaussian> fit1(design, Y, link, initial_beta, tp_);
+    GLM<Gaussian> fit1(design, Y, link, initial_beta, tp);
     arma::mat d2 =
         arma::join_horiz(design, arma::rowvec(arma::sum(X) / X.n_rows).t());
-    GLM<Gaussian> fit2(d2, Y, link, fit1.beta_, tp_);
+    GLM<Gaussian> fit2(d2, Y, link, fit1.beta_, tp);
 
     double n = Y.n_elem;
 
@@ -334,12 +331,12 @@ double Methods::RVT1(Gene &gene, arma::vec &Y, arma::mat design,
   } else {
     // Binary trait
     // Convert to 0/1 to make summing the number of carriers easier.
-    arma::sp_mat X = arma::ceil(gene.get_matrix(k).t() / 2);
+    arma::sp_mat X = arma::ceil(gene.genotypes[ts].t() / 2);
     Binomial link("logit");
-    GLM<Binomial> fit1(design, Y, link, initial_beta, tp_);
+    GLM<Binomial> fit1(design, Y, link, initial_beta, tp);
     arma::mat d2 =
         arma::join_horiz(design, arma::rowvec(arma::sum(X) / X.n_rows).t());
-    GLM<Binomial> fit2(d2, Y, link, fit1.beta_, tp_);
+    GLM<Binomial> fit2(d2, Y, link, fit1.beta_, tp);
 
     boost::math::chi_squared chisq(1);
     double stat = fit1.dev_ - fit2.dev_;
@@ -351,11 +348,11 @@ double Methods::RVT1(Gene &gene, arma::vec &Y, arma::mat design,
 }
 
 double Methods::RVT2(Gene &gene, arma::vec &Y, arma::mat design,
-                     arma::vec &initial_beta, const std::string &k,
+                     arma::vec &initial_beta, const std::string &ts,
                      bool linear) {
   if (linear) {
     // Quantitative trait
-    arma::sp_mat X = gene.get_matrix(k).t();
+    arma::sp_mat X = gene.genotypes[ts].t();
     Gaussian link("identity");
     GLM<Gaussian> fit1(design, Y, link, initial_beta, TaskParams());
     arma::rowvec r =
@@ -373,7 +370,7 @@ double Methods::RVT2(Gene &gene, arma::vec &Y, arma::mat design,
     return boost::math::cdf(boost::math::complement(chisq, stat));
   } else {
     // Binary trait
-    arma::sp_mat X = gene.get_matrix(k).t();
+    arma::sp_mat X = gene.genotypes[ts].t();
     Binomial link("logit");
     GLM<Binomial> fit1(design, Y, link, initial_beta, TaskParams());
     arma::rowvec r =
@@ -394,29 +391,29 @@ double Methods::VAAST(Gene &gene, arma::vec &Y, const std::string &k,
                       double site_penalty, arma::uword group_threshold,
                       bool detail, bool biallelic, double control_freq_cutoff,
                       bool legacy) {
-  check_weights(gene, k, tp_.a, tp_.b, tp_.no_weights);
+  check_weights(gene, k, tp.a, tp.b, tp.no_weights);
   VAASTLogic vaast_logic(gene, Y, k, site_penalty, group_threshold, detail,
                          biallelic, control_freq_cutoff, legacy);
   return vaast_logic.score;
 }
 
-double Methods::VT(Gene &gene, const std::string &k, arma::vec &phenotypes) {
+double Methods::VT(Gene &gene, const std::string &ts, arma::vec &phenotypes) {
   // Convert data to match their format
-  arma::vec pheno = arma::repmat(phenotypes, gene.get_matrix(k).n_cols, 1);
-  if (!vt_obj_->is_initialized(k)) {
-    vt_obj_->initialize(gene, pheno, k);
+  arma::vec pheno = arma::repmat(phenotypes, gene.genotypes[ts].n_cols, 1);
+  if (!vt_obj_->is_initialized(ts)) {
+    vt_obj_->initialize(gene, pheno, ts);
   }
   arma::vec phenoCount =
-      pheno % vt_obj_->get_mCount(k); // Changes under permutation
+      pheno % vt_obj_->get_mCount(ts); // Changes under permutation
   arma::vec csPhenoCount = arma::cumsum(vt_obj_->sum_groups(
-      phenoCount, vt_obj_->get_oneToLen(k), k)); // Changes under permutation
+      phenoCount, vt_obj_->get_oneToLen(ts), ts)); // Changes under permutation
 
-  return arma::max((csPhenoCount - vt_obj_->get_csCountMeanpheno(k)) /
-                   vt_obj_->get_sqrtCsCountSquare(k));
+  return arma::max((csPhenoCount - vt_obj_->get_csCountMeanpheno(ts)) /
+                   vt_obj_->get_sqrtCsCountSquare(ts));
 }
 
 double Methods::WSS(Gene &gene, arma::vec &Y, const std::string &k) {
-  arma::mat X(gene.get_matrix(k));
+  arma::mat X(gene.genotypes[k]);
 
   double n = Y.n_rows;
 
@@ -446,7 +443,7 @@ std::string Methods::str() { return method_; }
 double Methods::SKAT(Gene &gene, const std::string &transcript,
                      arma::vec &phenotypes, int a, int b, bool detail,
                      bool linear, bool permute) {
-  arma::sp_mat G(gene.get_matrix(transcript));
+  arma::sp_mat G(gene.genotypes[transcript]);
 
   if (linear) {
     lin_obj_->shuffle(phenotypes);
@@ -454,7 +451,7 @@ double Methods::SKAT(Gene &gene, const std::string &transcript,
     obj_->shuffle(phenotypes);
   }
 
-  check_weights(gene, transcript, a, b, tp_.no_weights);
+  check_weights(gene, transcript, a, b, tp.no_weights);
   arma::vec weights = gene.get_weights(transcript);
 
   arma::mat W = arma::diagmat(weights);
@@ -519,10 +516,10 @@ double Methods::SKATO(Gene &gene, const std::string &transcript,
     obj_->shuffle(phenotypes);
   }
 
-  arma::sp_mat G(gene.get_matrix(transcript));
+  arma::sp_mat G(gene.genotypes[transcript]);
   arma::uword N = G.n_cols; // Variant count
 
-  check_weights(gene, transcript, a, b, tp_.no_weights);
+  check_weights(gene, transcript, a, b, tp.no_weights);
   arma::vec weights = gene.get_weights(transcript);
 
   arma::mat W = arma::diagmat(weights);
@@ -680,12 +677,12 @@ double Methods::SKATO(Gene &gene, const std::string &transcript,
 void Methods::check_weights(Gene &gene, const std::string &transcript, int a,
                             int b, bool no_weight) {
   if (no_weight) {
-    arma::vec weights(gene.get_matrix(transcript).n_cols, arma::fill::ones);
+    arma::vec weights(gene.genotypes[transcript].n_cols, arma::fill::ones);
     gene.set_weights(transcript, weights);
     return;
   }
-  arma::sp_mat G(gene.get_matrix(transcript));
-  arma::vec weights = gene.get_weights(transcript);
+  arma::sp_mat G(gene.genotypes[transcript]);
+  arma::vec weights = gene.weights[transcript];
 
   if (kernel_ == Kernel::wLinear) {
     arma::vec maf(arma::mean(G, 0).t() / 2.);
@@ -708,25 +705,24 @@ double Methods::call(Gene &gene, Covariates &cov, arma::vec &phenotypes,
   } else if (method_ == "CALPHA") {
     return CALPHA(gene, phenotypes, transcript);
   } else if (method_ == "CMC") {
-    return CMC(gene, phenotypes, transcript, tp_.cmcmaf);
+    return CMC(gene, phenotypes, transcript, tp.cmcmaf);
   } else if (method_ == "CMC1df") {
     return CMC1df(gene, phenotypes, transcript);
   } else if (method_ == "RVT1") {
     return RVT1(gene, phenotypes, cov.get_covariate_matrix(), cov.get_coef(),
-                transcript, tp_.linear);
+                transcript, tp.linear);
   } else if (method_ == "RVT2") {
     return RVT2(gene, phenotypes, cov.get_covariate_matrix(), cov.get_coef(),
-                transcript, tp_.linear);
+                transcript, tp.linear);
   } else if (method_ == "SKAT") {
-    return SKAT(gene, transcript, phenotypes, tp_.a, tp_.b, detail, tp_.linear,
-                tp_.nperm > 0);
+    return SKAT(gene, transcript, phenotypes, tp.a, tp.b, detail, tp.linear,
+                tp.nperm > 0);
   } else if (method_ == "SKATO") {
-    return SKATO(gene, transcript, phenotypes, tp_.a, tp_.b, detail,
-                 tp_.linear);
+    return SKATO(gene, transcript, phenotypes, tp.a, tp.b, detail, tp.linear);
   } else if (method_ == "VAAST") {
-    return VAAST(gene, phenotypes, transcript, tp_.vaast_site_penalty,
-                 tp_.group_size, detail, tp_.biallelic, tp_.soft_maf_filter,
-                 tp_.legacy_grouping);
+    return VAAST(gene, phenotypes, transcript, tp.vaast_site_penalty,
+                 tp.group_size, detail, tp.biallelic, tp.soft_maf_filter,
+                 tp.legacy_grouping);
   } else if (method_ == "VT") {
     return VT(gene, transcript, phenotypes);
   } else if (method_ == "WSS") {

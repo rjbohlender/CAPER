@@ -95,7 +95,7 @@ template<typename T>
 double percentile_of_score(T score, std::vector<T> dist, bool greater=false) {
   double ret;
   T init = 0.;
-  ret = std::accumulate(dist.begin(), dist.end(), init, [&](T &a, T &b) { if (greater) { return a + (score >= b); } else { return a + (score <= b); } });
+  ret = std::accumulate(dist.begin(), dist.end(), init, [&greater, &score](T a, T b) { if (greater) { return a + (score >= b); } else { return a + (score <= b); } });
   ret = (ret + 1.) / (dist.size() + 1.);
   return ret;
 }

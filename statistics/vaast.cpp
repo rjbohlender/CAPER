@@ -7,49 +7,49 @@
 
 #include <algorithm>
 
-VAASTLogic::VAASTLogic(Gene &gene, arma::vec &Y_, const std::string &k,
+VAASTLogic::VAASTLogic(Gene &gene, arma::vec &Y_, const std::string &ts,
                        double site_penalty, arma::uword group_threshold,
                        bool detail, bool biallelic, double soft_maf_filter,
                        bool legacy_)
-    : detail(detail), biallelic(biallelic), k(k),
+    : detail(detail), biallelic(biallelic), k(ts),
       group_threshold(group_threshold), site_penalty(site_penalty),
-      soft_maf_filter(soft_maf_filter), legacy(legacy_), X(gene.get_matrix(k)),
-      Y(Y_), weights(gene.get_weights(k)) {
+      soft_maf_filter(soft_maf_filter), legacy(legacy_), X(gene.genotypes[ts]),
+      Y(Y_), weights(gene.weights[ts]) {
   n_case = arma::accu(Y);
   n_control = arma::accu(1. - Y);
 
   if (group_threshold == 0 || X.n_cols == 1) {
     score = Score(X, Y, weights);
     if (detail) {
-      gene.set_scores(k, vaast_site_scores);
+      gene.set_scores(ts, vaast_site_scores);
       expanded_scores = vaast_site_scores;
     }
   } else {
     score = Score(X, Y, weights);
     if (legacy) {
-      legacy_grouping(X, Y, weights, gene.get_positions(k));
+      legacy_grouping(X, Y, weights, gene.get_positions(ts));
     } else {
-      variant_grouping(X, Y, weights, gene.get_positions(k));
+      variant_grouping(X, Y, weights, gene.get_positions(ts));
     }
     score = Score();
   }
 
   if (detail) {
     if (group_threshold == 0 || X.n_cols == 1) {
-      gene.set_scores(k, vaast_site_scores);
+      gene.set_scores(ts, vaast_site_scores);
     } else {
       expanded_scores.reshape(X.n_cols, 1);
       if (X.n_cols > 1) {
         arma::sp_mat Xnew(X);
         arma::vec Wnew(weights);
-        std::vector<std::string> positions = gene.get_positions(k);
+        std::vector<std::string> positions = gene.get_positions(ts);
         for (arma::uword i = 0; i < X.n_cols; i++) {
           if (i == 0) {
             positions.erase(positions.begin());
             Xnew.shed_col(i);
             Wnew.shed_row(i);
           } else {
-            positions[i - 1] = gene.get_positions(k)[i - 1];
+            positions[i - 1] = gene.get_positions(ts)[i - 1];
             // TODO Find a way to avoid this copy, the old way gave a
             // spontaneous seg fault
             Xnew = X;
@@ -67,10 +67,10 @@ VAASTLogic::VAASTLogic(Gene &gene, arma::vec &Y_, const std::string &k,
           expanded_scores(i) = (score - new_score >= 0) ? score - new_score
                                                         : 0; // Calculate score
         }
-        gene.set_scores(k, expanded_scores);
+        gene.set_scores(ts, expanded_scores);
       } else {
         expanded_scores(0) = vaast_site_scores(0);
-        gene.set_scores(k, expanded_scores);
+        gene.set_scores(ts, expanded_scores);
       }
     }
   }

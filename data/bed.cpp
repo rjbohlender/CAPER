@@ -22,7 +22,8 @@ bool BedRange::operator>=(int rhs) const { return range.second >= rhs; }
 int BedRange::operator-(int rhs) const { return range.second - rhs; }
 
 Bed::Bed(const std::string &ifile) {
-  RJBUtil::Splitter<std::string> files(ifile, ",");
+  using namespace RJBUtil;
+  Splitter<std::string> files(ifile, ",");
   for (const auto &f : files) {
     if (!check_file_exists(f)) {
       std::cerr << "No mask file provided or incorrect path to mask file. "
@@ -47,12 +48,13 @@ Bed::Bed(const std::string &ifile) {
 }
 
 Bed::Bed(std::stringstream &ss) {
+  using namespace RJBUtil;
   std::string line;
   int lineno = -1;
 
   while (std::getline(ss, line, '\n')) {
     lineno++;
-    RJBUtil::Splitter<std::string> splitter(line, "\t");
+    Splitter<std::string> splitter(line, "\t");
     FileValidator::validate_bed_line(splitter, lineno);
 
     int first = std::stoi(splitter[1]);

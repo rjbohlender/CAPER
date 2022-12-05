@@ -169,7 +169,7 @@ int main(int argc, char **argv) {
         ("seed",
          po::value(&seed),
          "A defined seed passed to the random number generators used for each gene.")
-        ("testable",
+        ("check_testability",
          po::value(&testable),
          "Return results for genes with a minimum achievable p-value less than or equal to what is given.");
 	vaast.add_options()
@@ -351,7 +351,7 @@ int main(int argc, char **argv) {
   }
   std::cerr << "Program directory: " << tp.program_directory << std::endl;
   tp.seed = seed;
-  tp.genotypes_path = vm["input"].as<std::string>();
+  tp.input_path = vm["input"].as<std::string>();
   if (vm.count("covariates") > 0) {
     tp.covariates_path = vm["covariates"].as<std::string>();
   } else {
@@ -434,7 +434,7 @@ int main(int argc, char **argv) {
   }
 
   if (tp.verbose) {
-    std::cerr << "genotypes: " << tp.genotypes_path << "\n";
+    std::cerr << "genotypes: " << tp.input_path << "\n";
     std::cerr << "covariates: " << tp.covariates_path << "\n";
     std::cerr << "ped: " << tp.ped_path << "\n";
     if (tp.bed)
@@ -449,7 +449,7 @@ int main(int argc, char **argv) {
     if (tp.max_perms)
       std::cerr << "total permutations: " << *tp.max_perms << "\n";
     if (tp.testable)
-      std::cerr << "testable filter: " << *tp.testable << "\n";
+      std::cerr << "check_testability filter: " << *tp.testable << "\n";
     if (tp.maf < 0.5)
       std::cerr << "maf filter: " << tp.maf << "\n";
     if (tp.mac < std::numeric_limits<unsigned long long>::max())
@@ -459,7 +459,7 @@ int main(int argc, char **argv) {
   }
 
   // Check for correct file paths
-  if (!check_file_exists(tp.genotypes_path)) {
+  if (!check_file_exists(tp.input_path)) {
     std::cerr << "Incorrect file path for genotypes." << std::endl;
     std::cerr << visible << "\n";
     std::exit(1);
@@ -513,7 +513,7 @@ int main(int argc, char **argv) {
 
   std::shared_ptr<Reporter> reporter = nullptr;
   reporter = std::make_shared<Reporter>(tp);
-  JobDispatcher<CARVAOp, CARVATask, Reporter> jd(tp, reporter);
+  JobDispatcher<CAPEROp, CAPERTask, Reporter> jd(tp, reporter);
 
   double n = timer.toc();
   std::cerr << "Elapsed time: " << n << std::endl;

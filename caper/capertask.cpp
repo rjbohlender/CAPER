@@ -2,11 +2,11 @@
 // Created by Bohlender,Ryan James on 8/22/18.
 //
 
-#include "carvatask.hpp"
-#include "../statistics/bayesianglm.hpp"
+#include "capertask.hpp"
 #include "../link/binomial.hpp"
+#include "../statistics/bayesianglm.hpp"
 
-CARVATask::CARVATask(Stage stage_,
+CAPERTask::CAPERTask(Stage stage_,
 					 Gene gene_,
 					 const std::shared_ptr<Covariates> &cov_,
 					 TaskParams tp_,
@@ -36,7 +36,7 @@ CARVATask::CARVATask(Stage stage_,
   }
 }
 
-CARVATask::CARVATask(Stage stage_,
+CAPERTask::CAPERTask(Stage stage_,
 					 Gene &gene_,
 					 std::shared_ptr<Covariates> cov_,
 					 TaskParams tp_,
@@ -62,11 +62,11 @@ CARVATask::CARVATask(Stage stage_,
   }
 }
 
-Covariates &CARVATask::get_cov() {
+Covariates &CAPERTask::get_cov() {
   return *cov;
 }
 
-int CARVATask::max_permutations() {
+int CAPERTask::max_permutations() {
   auto res = std::max_element(results.cbegin(),
 							  results.cend(),
 							  [](const auto &v1, const auto &v2) {
@@ -75,22 +75,22 @@ int CARVATask::max_permutations() {
   return (*res).second.permutations;
 }
 
-std::vector<std::vector<int8_t>> &CARVATask::get_permutations() {
+std::vector<std::vector<int8_t>> &CAPERTask::get_permutations() {
   return permutations;
 }
 
-void CARVATask::cleanup() {
+void CAPERTask::cleanup() {
   if (!tp.linear) {
 	Binomial link("logit");
 	for (const auto &ts : gene.get_transcripts()) {
-	  arma::mat X = arma::mat(arma::sum(gene.get_matrix(ts).t(), 0).t());
-	  arma::mat D = arma::join_horiz(cov->get_covariate_matrix(), X);
+	  // arma::mat X = arma::mat(arma::sum(gene.genotypes[ts].t(), 0).t());
+	  // arma::mat D = arma::join_horiz(cov->get_covariate_matrix(), X);
 	  // BayesianGLM<Binomial> fit(D, cov->get_original_phenotypes(), link);
 	  // results[ts].odds = std::exp(fit.beta_(fit.beta_.n_elem - 1));
 	}
   } else {
 	for (const auto &ts : gene.get_transcripts()) {
-	  results[ts].odds = 1; // default
+	  // results[ts].odds = 1; // default
 	}
   }
   gene.clear(*cov, results, tp);
@@ -98,7 +98,7 @@ void CARVATask::cleanup() {
   methods.clear(gene.get_transcripts());
 }
 
-void CARVATask::calc_multitranscript_pvalues() {
+void CAPERTask::calc_multitranscript_pvalues() {
   // Skip MGIT if only a single transcript
   if (!has_multiple_transcripts()) {
 	for (auto &v : results) {
@@ -168,7 +168,7 @@ void CARVATask::calc_multitranscript_pvalues() {
   }
 }
 
-bool CARVATask::has_multiple_transcripts() {
+bool CAPERTask::has_multiple_transcripts() {
   return gene.get_transcripts().size() > 1;
 }
 

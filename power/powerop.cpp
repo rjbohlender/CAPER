@@ -50,7 +50,7 @@ auto PowerOp::power() -> void {
 
 		arma::vec odds = carvaTask.cov->get_odds();
 		for (arma::uword i = 0; i < carvaTask.nreps; i++) {
-		  bootstrapped_.set_matrix(ts, sample(carvaTask.gene.get_matrix(ts), ncases, ncontrols));
+		  bootstrapped_.set_matrix(ts, sample(carvaTask.gene.genotypes[ts], ncases, ncontrols));
 		  // Original for this bootstrap replicate
 		  double original = call_method(carvaTask.method, bootstrapped_, *carvaTask.cov, phenotypes_,
                                                 carvaTask.tp, ts);
@@ -115,7 +115,7 @@ auto PowerOp::power() -> void {
 
 		  arma::vec odds = carvaTask.cov->get_odds();
 		  for (arma::uword i = 0; i < carvaTask.nreps; i++) {
-			bootstrapped_.set_matrix(ts, sample(carvaTask.gene.get_matrix(ts), ncases, ncontrols));
+			bootstrapped_.set_matrix(ts, sample(carvaTask.gene.genotypes[ts], ncases, ncontrols));
 			// Original for this bootstrap replicate
 			double original = call_method(
                             carvaTask.method, bootstrapped_, *carvaTask.cov, phenotypes_, carvaTask.tp, ts);

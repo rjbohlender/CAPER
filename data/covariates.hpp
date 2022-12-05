@@ -38,7 +38,8 @@ public:
   arma::colvec &get_phenotype_vector();
   void set_phenotype_vector(const arma::vec &vec);
   void set_phenotype_vector(const std::vector<int32_t> &vec);
-  bool contains(const std::string &sample);
+  bool contains(const std::string &sample) const;
+  bool contains(const std::string_view &sample) const;
 
   arma::uword get_nsamples() const;
   arma::uword get_ncases() const;

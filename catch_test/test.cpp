@@ -96,7 +96,7 @@ TEST_CASE("Data Construction & Methods") {
                                                {"test_transcript2", 4}};
 
   Gene gene(test_data, std::make_shared<Covariates>(test_ped, test_cov),
-            cov.get_nsamples(), nvariants, casm, tp, );
+            cov.get_nsamples(), nvariants, casm, tp, <#initializer #>);
 
   SECTION("Data Construction") {
 
@@ -129,10 +129,10 @@ TEST_CASE("Data Construction & Methods") {
     REQUIRE(gene.get_transcripts().size() == 2);
 
     REQUIRE(arma::all(arma::all(
-        arma::mat(gene.get_matrix("test_transcript1")) == transcript1)));
+        arma::mat(gene.genotypes["test_transcript1"]) == transcript1)));
     REQUIRE(arma::all(arma::all(
-        arma::mat(gene.get_matrix("test_transcript2")) == transcript2)));
-    REQUIRE(arma::all(gene.get_weights("test_transcript1") == weights));
+        arma::mat(gene.genotypes["test_transcript2"]) == transcript2)));
+    REQUIRE(arma::all(gene.weights["test_transcript1"] == weights));
   }
 
   SECTION("BED") {

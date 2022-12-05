@@ -2,8 +2,8 @@
 // Created by Bohlender,Ryan James on 8/1/18.
 //
 
-#ifndef PERMUTE_ASSOCIATE_CARVATASK_HPP
-#define PERMUTE_ASSOCIATE_CARVATASK_HPP
+#ifndef PERMUTE_ASSOCIATE_CAPERTASK_HPP
+#define PERMUTE_ASSOCIATE_CAPERTASK_HPP
 
 #define ARMA_DONT_USE_WRAPPER
 
@@ -24,7 +24,7 @@
 
 enum class Stage { Stage1, Stage2, Done, Power };
 
-class CARVATask {
+class CAPERTask {
 public:
   Stage stage;
   Gene gene;
@@ -40,11 +40,11 @@ public:
   std::unordered_map<std::string, Permute> permute;
 
   // Constructors
-  CARVATask(Stage stage_, Gene gene_, const std::shared_ptr<Covariates> &cov_,
+  CAPERTask(Stage stage_, Gene gene_, const std::shared_ptr<Covariates> &cov_,
             TaskParams tp_, arma::uword succ_thresh_, arma::uword nperm_,
             arma::uword offset_, arma::uword termination_,
             std::vector<std::vector<int8_t>> &perm_);
-  CARVATask(Stage stage_, Gene &gene_, std::shared_ptr<Covariates> cov_,
+  CAPERTask(Stage stage_, Gene &gene_, std::shared_ptr<Covariates> cov_,
             TaskParams tp_, std::vector<std::vector<int8_t>> &perm_);
 
   // Free memory
@@ -58,4 +58,4 @@ public:
   bool has_multiple_transcripts();
 };
 
-#endif // PERMUTE_ASSOCIATE_CARVATASK_HPP
+#endif // PERMUTE_ASSOCIATE_CAPERTASK_HPP

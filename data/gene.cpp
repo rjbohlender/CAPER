@@ -9,36 +9,207 @@
 #include <stack>
 
 #include "../link/binomial.hpp"
-#include "../link/gaussian.hpp"
-#include "../statistics/bayesianglm.hpp"
 #include "../statistics/glm.hpp"
 #include "../statistics/methods.hpp"
 #include "../utility/math.hpp"
 #include "filter.hpp"
 #include "gene.hpp"
 
-Gene::Gene(std::stringstream &ss, std::shared_ptr<Covariates> cov,
+Gene::Gene(std::stringstream &ss, const std::shared_ptr<Covariates> &cov,
            unsigned long nsamples,
-           std::map<std::string, arma::uword> &nvariants, const Weight &weight,
-           TaskParams tp, Filter &filter)
-    : nsamples_(nsamples), nvariants_(nvariants), testable_(false),
-      skippable_(false), tp_(std::move(tp)) {
+           std::unordered_map<std::string, arma::uword> nvariants,
+           const Weight &weight, const TaskParams &tp, Filter &filter)
+    : nsamples(nsamples), nvariants(std::move(nvariants)), testable(false),
+      skippable(false), tp(tp) {
   parse(ss, cov, filter);
+
+  if (tp.impute_to_mean) {
+    impute_to_mean(cov);
+  }
+
+  if (tp.aaf_filter) {
+    aaf_filter();
+  } else {
+    maf_filter();
+  }
+
+  update_weights(weight);
+}
+
+void Gene::aaf_filter() { // Mark gene skippable to start
+  skippable = true;
+  // Drop variants with minor allele count > tp_.mac.
+  for (const auto &ts : transcripts) {
+    arma::rowvec sums = arma::rowvec(arma::sum(genotypes[ts], 0));
+
+    arma::rowvec aaf = arma::rowvec(arma::mean(genotypes[ts]) / 2.);
+    for (arma::sword k = sums.n_elem - 1; k >= 0; --k) {
+      bool bmac = sums[k] > tp.mac;
+      bool baaf = aaf[k] >= .5;
+      bool bwht = false; // whitelist bool
+      if (!to_remove[ts].empty()) {
+        bwht = k == to_remove[ts].top();
+      }
+      if (bmac || baaf || bwht) {
+        if (tp.verbose && bmac) {
+          std::cerr << "Removing: " << gene_name << " " << ts << " "
+                    << positions[ts][k] << " | count: " << sums[k]
+                    << " due to MAC filter." << std::endl;
+        } else if (tp.verbose && baaf) {
+          std::cerr << "Removing: " << gene_name << " " << ts << " "
+                    << positions[ts][k] << " | frequency: " << aaf[k];
+          if (tp.aaf_filter) {
+            std::cerr << " due to AAF filter." << std::endl;
+          } else {
+            std::cerr << " due to MAF filter." << std::endl;
+          }
+        } else if (tp.verbose && bwht) {
+          std::cerr << "Removing: " << gene_name << " " << ts << " "
+                    << positions[ts][k] << " | type: " << type[ts][k]
+                    << " | function: " << function[ts][k]
+                    << " due to variant whitelist." << std::endl;
+        }
+        if (bwht) {
+          to_remove[ts].pop();
+        }
+        sums.shed_col(k);
+        genotypes[ts].shed_col(k);
+        weights[ts].shed_row(k);
+        missing_variant_carriers_[ts].shed_col(k);
+        positions[ts].erase(positions[ts].begin() + k);
+        function[ts].erase(function[ts].begin() + k);
+        reference[ts].erase(reference[ts].begin() + k);
+        alternate[ts].erase(alternate[ts].begin() + k);
+        annotation[ts].erase(annotation[ts].begin() + k);
+        type[ts].erase(type[ts].begin() + k);
+        nvariants[ts]--;
+      }
+    }
+    // Check if any polymorphic. Mark transcripts skippable if all fixed.
+    if (arma::accu(sums) < tp.min_minor_allele_count ||
+        nvariants[ts] < tp.min_variant_count) {
+      std::cerr << "transcript: " << ts << " marked skippable." << std::endl;
+      polymorphic[ts] = false;
+    } else {
+      polymorphic[ts] = true;
+      skippable = false;
+    }
+  }
+}
+
+void Gene::maf_filter() {
+  // Switch to counting minor allele
+  for (auto &v : genotypes) {
+    arma::rowvec maf = arma::rowvec(arma::mean(v.second) / 2.);
+    // For each variant
+    for (arma::uword k : arma::find(maf > 0.5).eval()) {
+      // Swap assignment
+      v.second.col(k).replace(0, 3); // Placeholder to unique value
+      v.second.col(k).replace(2, 0);
+      v.second.col(k).replace(3, 2);
+    }
+  }
+  // Mark gene skippable to start
+  skippable = true;
+  // Drop variants with minor allele count > tp_.mac.
+  for (const auto &ts : transcripts) {
+    arma::rowvec sums = arma::rowvec(arma::sum(genotypes[ts], 0));
+
+    arma::rowvec maf = arma::rowvec(arma::mean(genotypes[ts]) / 2.);
+    for (arma::sword k = sums.n_elem - 1; k >= 0; --k) {
+      bool bmac = sums[k] > tp.mac;
+      bool bmaf = maf[k] > tp.maf;
+      bool bwht = false; // whitelist bool
+      if (!to_remove[ts].empty()) {
+        bwht = k == to_remove[ts].top();
+      }
+      if (bmac || bmaf || bwht) {
+        if (tp.verbose && bmac) {
+          std::cerr << "Removing: " << gene_name << " " << ts << " "
+                    << positions[ts][k] << " | count: " << sums[k]
+                    << " due to MAC filter." << std::endl;
+        } else if (tp.verbose && bmaf) {
+          std::cerr << "Removing: " << gene_name << " " << ts << " "
+                    << positions[ts][k] << " | frequency: " << maf[k]
+                    << " due to MAF filter." << std::endl;
+        } else if (tp.verbose && bwht) {
+          std::cerr << "Removing: " << gene_name << " " << ts << " "
+                    << positions[ts][k] << " | type: " << type[ts][k]
+                    << " | function: " << function[ts][k]
+                    << " due to variant whitelist." << std::endl;
+        }
+        if (bwht) {
+          to_remove[ts].pop();
+        }
+        sums.shed_col(k);
+        genotypes[ts].shed_col(k);
+        weights[ts].shed_row(k);
+        missing_variant_carriers_[ts].shed_col(k);
+        positions[ts].erase(positions[ts].begin() + k);
+        function[ts].erase(function[ts].begin() + k);
+        reference[ts].erase(reference[ts].begin() + k);
+        alternate[ts].erase(alternate[ts].begin() + k);
+        annotation[ts].erase(annotation[ts].begin() + k);
+        type[ts].erase(type[ts].begin() + k);
+        nvariants[ts]--;
+      }
+    }
+    // Check if any polymorphic. Mark transcripts skippable if all fixed.
+    if (arma::accu(sums) < tp.min_minor_allele_count ||
+        nvariants[ts] < tp.min_variant_count) {
+      std::cerr << "gene: " << gene_name << " marked skippable." << std::endl;
+      polymorphic[ts] = false;
+    } else {
+      polymorphic[ts] = true;
+      skippable = false;
+    }
+  }
+}
+
+void Gene::impute_to_mean(const std::shared_ptr<Covariates> &cov) {
+  // Impute missing values to the mean of their category
+  for (auto &[_, g] : genotypes) {
+    arma::mat X(g);
+    arma::vec Y(cov->get_original_phenotypes());
+    arma::uvec cases = arma::find(Y == 1);
+    arma::uvec controls = arma::find(Y == 0);
+    for (arma::uword i = 0; i < X.n_cols; i++) {
+      arma::vec Xc = X.col(i);
+      arma::uvec nonmissing = arma::find(Xc != -9);
+      arma::uvec missing = arma::find(Xc == -9);
+
+      arma::uvec keep = arma::intersect(cases, nonmissing);
+      if (keep.n_elem > 0) {
+        double maf = arma::sum(Xc(keep)) / (2. * keep.n_elem);
+        Xc(arma::intersect(cases, missing)).replace(-9, maf);
+      }
+      keep = arma::intersect(controls, nonmissing);
+      if (keep.n_elem > 0) {
+        double maf = arma::sum(Xc(keep)) / (2. * keep.n_elem);
+        Xc(arma::intersect(controls, missing)).replace(-9, maf);
+      }
+      X.col(i) = Xc;
+    }
+    g = arma::sp_mat(X);
+  }
+}
+
+void Gene::update_weights(const Weight &weight) {
   if (!weight.empty()) {
-    for (const auto &k : transcripts_) {
-      weights_[k].reshape(nvariants_[k], 1);
+    for (const auto &k : transcripts) {
+      weights[k].reshape(nvariants[k], 1);
       arma::uword i = 0;
-      for (const auto &v : positions_[k]) {
-        weights_[k](i) = weight.get(v);
+      for (const auto &v : positions[k]) {
+        weights[k](i) = weight.get(v);
         i++;
       }
     }
   } else {
-    for (const auto &k : transcripts_) {
-      weights_[k].reshape(nvariants_[k], 1);
+    for (const auto &k : transcripts) {
+      weights[k].reshape(nvariants[k], 1);
       arma::uword i = 0;
-      for (const auto &v : positions_[k]) {
-        weights_[k](i) = 1;
+      for (const auto &v : positions[k]) {
+        weights[k](i) = 1;
         i++;
       }
     }
@@ -46,138 +217,135 @@ Gene::Gene(std::stringstream &ss, std::shared_ptr<Covariates> cov,
 }
 
 void Gene::print() {
-  for (const auto &v : genotypes_)
+  for (const auto &v : genotypes)
     std::cout << v.second;
 }
 
-arma::sp_mat &Gene::get_matrix(const std::string &k) { return genotypes_[k]; }
-
 void Gene::set_matrix(const std::string &k, arma::sp_mat &data) {
-  genotypes_[k] = std::move(data);
+  genotypes[k] = std::move(data);
 }
 
 void Gene::set_matrix(const std::string &k, arma::sp_mat &&data) {
-  genotypes_[k] = std::move(data);
+  genotypes[k] = std::move(data);
 }
 
-std::vector<std::string> &Gene::get_transcripts() { return transcripts_; }
+std::vector<std::string> &Gene::get_transcripts() { return transcripts; }
 
-arma::vec &Gene::get_weights(const std::string &k) { return weights_[k]; }
-
-arma::uword Gene::get_nvariants(const std::string &k) { return nvariants_[k]; }
+arma::vec &Gene::get_weights(const std::string &k) { return weights[k]; }
 
 std::vector<std::string> &Gene::get_positions(const std::string &k) {
-  return positions_[k];
+  return positions[k];
 }
 
 void Gene::clear(Covariates &cov,
                  std::unordered_map<std::string, Result> &results,
                  const TaskParams &tp) {
   if (!tp.no_detail)
-    generate_detail(cov, results, tp);
+    generate_detail(cov, results);
   if (tp.method == "VAAST") {
     generate_vaast(cov);
   }
 
   // Set matrix size to 0x0 to free space.
-  for (auto &v : genotypes_) {
+  for (auto &v : genotypes) {
     v.second.reset();
   }
 }
 
 void Gene::parse(std::stringstream &ss, const std::shared_ptr<Covariates> &cov,
                  Filter &filter) {
+  using namespace RJBUtil;
   std::string line;
   arma::uword i = 0;
   std::vector<bool> rarest;
-  std::map<std::string, std::stack<int>> to_remove;
 
-  if (tp_.whole_gene) {
+  if (tp.whole_gene) {
     ss = transcript_union(ss, cov, filter);
   }
 
   while (std::getline(ss, line, '\n')) {
     if (i == 0) {
-      RJBUtil::Splitter<std::string> splitter(line, "\t");
+      Splitter<std::string> splitter(line, "\t");
       for (arma::uword j = static_cast<int>(Indices::first);
            j < splitter.size(); j++) {
         if (cov->contains(splitter[j])) {
-          samples_.push_back(splitter[j]);
-          columns_.push_back(j);
+          samples.emplace_back(splitter[j]);
+          columns.push_back(j);
         }
       }
       i++;
       continue;
     }
-    if (columns_.size() != cov->get_nsamples()) {
+    if (columns.size() != cov->get_nsamples()) {
       std::cerr
           << "ERROR: Not all samples in .ped file are represented in the "
              "matrix file. There may be an ID mismatch or missing samples.";
       std::exit(-1);
     }
-    RJBUtil::Splitter<std::string> splitter(line, "\t");
+    Splitter<std::string> splitter(line, "\t", 11);
 
     if (gene_name.empty()) {
       gene_name = splitter[static_cast<int>(Indices::gene)];
     }
     std::string transcript =
-        tp_.whole_gene ? gene_name
-                       : splitter[static_cast<int>(Indices::transcript)];
+        tp.whole_gene
+            ? gene_name
+            : std::string(splitter[static_cast<int>(Indices::transcript)]);
     auto iter =
-        std::find(std::begin(transcripts_), std::end(transcripts_), transcript);
-    if (iter == std::end(transcripts_)) {
+        std::find(std::begin(transcripts), std::end(transcripts), transcript);
+    if (iter == std::end(transcripts)) {
       // Transcript not found -- add
-      transcripts_.push_back(transcript);
+      transcripts.push_back(transcript);
       // Start with matrix transposed
-      genotypes_.emplace(std::make_pair(
-          transcript, arma::sp_mat(nsamples_, nvariants_[transcript])));
+      genotypes.emplace(std::make_pair(
+          transcript, arma::sp_mat(nsamples, nvariants[transcript])));
       // Separately record the controls
       missing_variant_carriers_.emplace(std::make_pair(
-          transcript, arma::sp_mat(nsamples_, nvariants_[transcript])));
+          transcript, arma::sp_mat(nsamples, nvariants[transcript])));
       // Ensure positions are allocated for current transcript
-      positions_[transcript] = std::vector<std::string>();
+      positions[transcript] = std::vector<std::string>();
       // Ensure weights are the right length
-      weights_[transcript].reshape(nvariants_[transcript], 1);
+      weights[transcript].reshape(nvariants[transcript], 1);
       // Add transcript to the type map
-      type_.emplace(std::make_pair(transcript, std::vector<std::string>()));
+      type.emplace(std::make_pair(transcript, std::vector<std::string>()));
       // Add transcript to the reference allele map
-      reference_.emplace(
-          std::make_pair(transcript, std::vector<std::string>()));
+      reference.emplace(std::make_pair(transcript, std::vector<std::string>()));
       // Add transcript to the alternate allele map
-      alternate_.emplace(
-          std::make_pair(transcript, std::vector<std::string>()));
+      alternate.emplace(std::make_pair(transcript, std::vector<std::string>()));
       // Add transcript to the variant function map
-      function_.emplace(std::make_pair(transcript, std::vector<std::string>()));
+      function.emplace(std::make_pair(transcript, std::vector<std::string>()));
       // Add transcript to the variant annotation map
-      annotation_.emplace(
+      annotation.emplace(
           std::make_pair(transcript, std::vector<std::string>()));
       // Add filtering stack for transcript
       to_remove.emplace(std::make_pair(transcript, std::stack<int>()));
       // Reset counter on new transcript
       i = 1;
     }
-    if (!filter.allow_variant(tp_.method, splitter)) {
+    if (!filter.allow_variant(tp.method, splitter)) {
       to_remove[transcript].push(i - 1);
     }
 
     std::string var_id = form_variant_id(splitter);
-    positions_[transcript].push_back(var_id);
+    positions[transcript].push_back(var_id);
 
     // Record other info in line
-    function_[transcript].push_back(
+    function[transcript].emplace_back(
         splitter[static_cast<int>(Indices::function)]);
-    annotation_[transcript].push_back(
+    annotation[transcript].emplace_back(
         splitter[static_cast<int>(Indices::annotation)]);
-    reference_[transcript].push_back(splitter[static_cast<int>(Indices::ref)]);
-    alternate_[transcript].push_back(splitter[static_cast<int>(Indices::alt)]);
-    type_[transcript].push_back(splitter[static_cast<int>(Indices::type)]);
+    reference[transcript].emplace_back(
+        splitter[static_cast<int>(Indices::ref)]);
+    alternate[transcript].emplace_back(
+        splitter[static_cast<int>(Indices::alt)]);
+    type[transcript].emplace_back(splitter[static_cast<int>(Indices::type)]);
 
     auto first_idx = static_cast<int>(Indices::first);
     arma::uword k = 0;
-    for (const auto &j : columns_) {
+    for (const auto &j : columns) {
       double val;
       try {
-        val = std::stod(splitter[j]);
+        val = splitter.back()[j - static_cast<int>(Indices::first)] - '0';
       } catch (std::exception &e) {
         std::cerr << "Full buffer: " << ss.str() << std::endl;
         std::cerr << "Failed to convert data to double: " << splitter[j]
@@ -186,10 +354,12 @@ void Gene::parse(std::stringstream &ss, const std::shared_ptr<Covariates> &cov,
         std::cerr << "j: " << j << std::endl;
         std::exit(-1);
       }
-      val = std::abs(val);
+      if (val == -48) {
+        std::cerr << splitter.back()[j - static_cast<int>(Indices::first)] << std::endl;
+      }
       // Handle missing data
       if (val > 2) {
-        if (tp_.impute_to_mean) {
+        if (tp.impute_to_mean) {
           val = -9;
         } else {
           val = 0;
@@ -198,7 +368,7 @@ void Gene::parse(std::stringstream &ss, const std::shared_ptr<Covariates> &cov,
       }
       if (val != 0) {
         try {
-          genotypes_[transcript](k, i - 1) = val;
+          genotypes[transcript](k, i - 1) = val;
         } catch (std::exception &e) {
           std::cerr << "Failed to set value for: row = " << j - first_idx
                     << " col = " << i - 1 << std::endl;
@@ -214,181 +384,22 @@ void Gene::parse(std::stringstream &ss, const std::shared_ptr<Covariates> &cov,
     }
     i++;
   }
-  if (tp_.impute_to_mean) {
-    // Impute missing
-    for (auto &v : genotypes_) {
-      arma::mat X(v.second);
-      arma::vec Y(cov->get_original_phenotypes());
-      arma::uvec cases = arma::find(Y == 1);
-      arma::uvec controls = arma::find(Y == 0);
-      for (arma::uword i = 0; i < X.n_cols; i++) {
-        arma::vec Xc = X.col(i);
-        arma::uvec nonmissing = arma::find(Xc != -9);
-        arma::uvec missing = arma::find(Xc == -9);
-
-        arma::uvec keep = arma::intersect(cases, nonmissing);
-        if (keep.n_elem > 0) {
-          double maf = arma::sum(Xc(keep)) / (2. * keep.n_elem);
-          Xc(arma::intersect(cases, missing)).replace(-9, maf);
-        }
-        keep = arma::intersect(controls, nonmissing);
-        if (keep.n_elem > 0) {
-          double maf = arma::sum(Xc(keep)) / (2. * keep.n_elem);
-          Xc(arma::intersect(controls, missing)).replace(-9, maf);
-        }
-        X.col(i) = Xc;
-      }
-      v.second = arma::sp_mat(X);
-    }
-  }
-  if (tp_.aaf_filter) {
-    // Mark gene skippable to start
-    skippable_ = true;
-    // Drop variants with minor allele count > tp_.mac.
-    for (const auto &ts : transcripts_) {
-      arma::rowvec sums = arma::rowvec(arma::sum(genotypes_[ts], 0));
-
-      arma::rowvec aaf = arma::rowvec(arma::mean(genotypes_[ts]) / 2.);
-      for (arma::sword k = sums.n_elem - 1; k >= 0; --k) {
-        bool bmac = sums[k] > tp_.mac;
-        bool baaf = aaf[k] >= .5;
-        bool bwht = false; // whitelist bool
-        if (!to_remove[ts].empty()) {
-          bwht = k == to_remove[ts].top();
-        }
-        if (bmac || baaf || bwht) {
-          if (tp_.verbose && bmac) {
-            std::cerr << "Removing: " << gene_name << " " << ts << " "
-                      << positions_[ts][k] << " | count: " << sums[k]
-                      << " due to MAC filter." << std::endl;
-          } else if (tp_.verbose && baaf) {
-            std::cerr << "Removing: " << gene_name << " " << ts << " "
-                      << positions_[ts][k] << " | frequency: " << aaf[k];
-            if (tp_.aaf_filter) {
-              std::cerr << " due to AAF filter." << std::endl;
-            } else {
-              std::cerr << " due to MAF filter." << std::endl;
-            }
-          } else if (tp_.verbose && bwht) {
-            std::cerr << "Removing: " << gene_name << " " << ts << " "
-                      << positions_[ts][k] << " | type: " << type_[ts][k]
-                      << " | function: " << function_[ts][k]
-                      << " due to variant whitelist." << std::endl;
-          }
-          if (bwht) {
-            to_remove[ts].pop();
-          }
-          sums.shed_col(k);
-          genotypes_[ts].shed_col(k);
-          weights_[ts].shed_row(k);
-          missing_variant_carriers_[ts].shed_col(k);
-          positions_[ts].erase(positions_[ts].begin() + k);
-          function_[ts].erase(function_[ts].begin() + k);
-          reference_[ts].erase(reference_[ts].begin() + k);
-          alternate_[ts].erase(alternate_[ts].begin() + k);
-          annotation_[ts].erase(annotation_[ts].begin() + k);
-          type_[ts].erase(type_[ts].begin() + k);
-          nvariants_[ts]--;
-        }
-      }
-      // Check if any polymorphic. Mark transcripts skippable if all fixed.
-      if (arma::accu(sums) < tp_.min_minor_allele_count ||
-          nvariants_[ts] < tp_.min_variant_count) {
-        std::cerr << "transcript: " << ts << " marked skippable." << std::endl;
-        polymorphic_[ts] = false;
-      } else {
-        polymorphic_[ts] = true;
-        skippable_ = false;
-      }
-    }
-
-  } else {
-    // Switch to counting minor allele
-    for (auto &v : genotypes_) {
-      arma::rowvec maf = arma::rowvec(arma::mean(v.second) / 2.);
-      // For each variant
-      for (arma::uword k : arma::find(maf > 0.5).eval()) {
-        // Swap assignment
-        v.second.col(k).replace(0, 3); // Placeholder to unique value
-        v.second.col(k).replace(2, 0);
-        v.second.col(k).replace(3, 2);
-      }
-    }
-    // Mark gene skippable to start
-    skippable_ = true;
-    // Drop variants with minor allele count > tp_.mac.
-    for (const auto &ts : transcripts_) {
-      arma::rowvec sums = arma::rowvec(arma::sum(genotypes_[ts], 0));
-
-      arma::rowvec maf = arma::rowvec(arma::mean(genotypes_[ts]) / 2.);
-      for (arma::sword k = sums.n_elem - 1; k >= 0; --k) {
-        bool bmac = sums[k] > tp_.mac;
-        bool bmaf = maf[k] > tp_.maf;
-        bool bwht = false; // whitelist bool
-        if (!to_remove[ts].empty()) {
-          bwht = k == to_remove[ts].top();
-        }
-        if (bmac || bmaf || bwht) {
-          if (tp_.verbose && bmac) {
-            std::cerr << "Removing: " << gene_name << " " << ts << " "
-                      << positions_[ts][k] << " | count: " << sums[k]
-                      << " due to MAC filter." << std::endl;
-          } else if (tp_.verbose && bmaf) {
-            std::cerr << "Removing: " << gene_name << " " << ts << " "
-                      << positions_[ts][k] << " | frequency: " << maf[k]
-                      << " due to MAF filter." << std::endl;
-          } else if (tp_.verbose && bwht) {
-            std::cerr << "Removing: " << gene_name << " " << ts << " "
-                      << positions_[ts][k] << " | type: " << type_[ts][k]
-                      << " | function: " << function_[ts][k]
-                      << " due to variant whitelist." << std::endl;
-          }
-          if (bwht) {
-            to_remove[ts].pop();
-          }
-          sums.shed_col(k);
-          genotypes_[ts].shed_col(k);
-          weights_[ts].shed_row(k);
-          missing_variant_carriers_[ts].shed_col(k);
-          positions_[ts].erase(positions_[ts].begin() + k);
-          function_[ts].erase(function_[ts].begin() + k);
-          reference_[ts].erase(reference_[ts].begin() + k);
-          alternate_[ts].erase(alternate_[ts].begin() + k);
-          annotation_[ts].erase(annotation_[ts].begin() + k);
-          type_[ts].erase(type_[ts].begin() + k);
-          nvariants_[ts]--;
-        }
-      }
-      // Check if any polymorphic. Mark transcripts skippable if all fixed.
-      if (arma::accu(sums) < tp_.min_minor_allele_count ||
-          nvariants_[ts] < tp_.min_variant_count) {
-        std::cerr << "gene: " << gene_name << " marked skippable." << std::endl;
-        polymorphic_[ts] = false;
-      } else {
-        polymorphic_[ts] = true;
-        skippable_ = false;
-      }
-    }
-  }
 }
 
-void Gene::set_weights(const std::string &k, arma::vec &weights) {
-  if (weights.n_rows != genotypes_[k].n_cols) {
+void Gene::set_weights(const std::string &k, arma::vec &new_weights) {
+  if (new_weights.n_rows != genotypes[k].n_cols) {
     throw(std::logic_error("Weights do not match number of variants."));
   }
 
-  weights_[k] = weights;
+  weights[k] = new_weights;
 }
 
-arma::vec &Gene::get_scores(const std::string &k) { return variant_scores_[k]; }
-
 void Gene::set_scores(const std::string &k, arma::vec &scores) {
-  variant_scores_[k] = scores;
+  variant_scores[k] = scores;
 }
 
 void Gene::generate_detail(Covariates &cov,
-                           std::unordered_map<std::string, Result> &results,
-                           const TaskParams &tp) {
+                           std::unordered_map<std::string, Result> &results) {
   std::stringstream detail;
 
   arma::vec Y = cov.get_original_phenotypes();
@@ -409,13 +420,13 @@ void Gene::generate_detail(Covariates &cov,
   std::unordered_map<std::string, arma::uvec> pos_contidx_map;
 
   // Collect all positions across transcripts and associated scores
-  for (const auto &ts : transcripts_) {
+  for (const auto &ts : transcripts) {
     arma::uword i = 0;
 
     arma::uvec cases = arma::find(Y == 1);
     arma::uvec controls = arma::find(Y == 0);
 
-    arma::sp_mat X(genotypes_[ts]);
+    arma::sp_mat X(genotypes[ts]);
 
     arma::rowvec maf = arma::rowvec(arma::mean(X) / 2.);
     // Ref/Alt Counts
@@ -424,7 +435,7 @@ void Gene::generate_detail(Covariates &cov,
     arma::vec cont_alt = X.t() * (1. - Y);
     arma::vec cont_ref = 2 * controls.n_elem - cont_alt;
     if (!tp.linear) {
-      for (const auto &pos : positions_[ts]) {
+      for (const auto &pos : positions[ts]) {
         // Get transcripts
         if (pos_ts_map.find(pos) == pos_ts_map.end()) {
           pos_ts_map[pos] = {ts};
@@ -433,10 +444,10 @@ void Gene::generate_detail(Covariates &cov,
         }
         // Get scores
         if (pos_score_map.find(pos) == pos_score_map.end()) {
-          if (variant_scores_[ts].empty())
-            variant_scores_[ts].zeros(positions_[ts].size());
-          pos_score_map[pos] = variant_scores_[ts](i);
-          pos_weight_map[pos] = weights_[ts](i);
+          if (variant_scores[ts].empty())
+            variant_scores[ts].zeros(positions[ts].size());
+          pos_score_map[pos] = variant_scores[ts](i);
+          pos_weight_map[pos] = weights[ts](i);
         }
         // Get frequency
         if (pos_freq_map.find(pos) == pos_freq_map.end()) {
@@ -466,11 +477,11 @@ void Gene::generate_detail(Covariates &cov,
         i++;
       }
       if (tp.testable)
-        results[ts].testable = testable(ts, cov, results[ts].permuted);
-      if (!testable_)
-        testable_ = results[ts].testable;
+        results[ts].testable = check_testability(ts, cov, results[ts].permuted);
+      if (!testable)
+        testable = results[ts].testable;
     } else {
-      for (const auto &pos : positions_[ts]) {
+      for (const auto &pos : positions[ts]) {
         // Get transcripts
         if (pos_ts_map.find(pos) == pos_ts_map.end()) {
           pos_ts_map[pos] = {ts};
@@ -479,9 +490,9 @@ void Gene::generate_detail(Covariates &cov,
         }
         // Get scores
         if (pos_score_map.find(pos) == pos_score_map.end()) {
-          if (variant_scores_[ts].empty())
-            variant_scores_[ts].zeros(positions_[ts].size());
-          pos_score_map[pos] = variant_scores_[ts](i);
+          if (variant_scores[ts].empty())
+            variant_scores[ts].zeros(positions[ts].size());
+          pos_score_map[pos] = variant_scores[ts](i);
         }
         // Get frequency
         if (pos_freq_map.find(pos) == pos_freq_map.end()) {
@@ -547,22 +558,24 @@ void Gene::generate_detail(Covariates &cov,
 
 std::string Gene::get_detail() const { return detail_; }
 
-std::map<std::string, std::string> Gene::get_vaast() const { return vaast_; }
+std::unordered_map<std::string, std::string> Gene::get_vaast() const {
+  return vaast_;
+}
 
-const std::vector<std::string> &Gene::get_samples() const { return samples_; }
+const std::vector<std::string> &Gene::get_samples() const { return samples; }
 
-bool Gene::testable(const std::string &transcript, Covariates &cov,
-                    const std::vector<double> &permuted) {
+bool Gene::check_testability(const std::string &transcript, Covariates &cov,
+                             const std::vector<double> &permuted) {
   if (!is_polymorphic(transcript)) {
     return false;
   }
-  double alpha = *tp_.testable;
+  double alpha = *tp.testable;
   arma::vec Yvec = cov.get_original_phenotypes();
-  arma::sp_mat Xmat(genotypes_[transcript]);
+  arma::sp_mat Xmat(genotypes[transcript]);
 
   auto ncase = static_cast<arma::sword>(arma::accu(Yvec));
 
-  Methods methods(tp_, cov);
+  Methods methods(tp, cov);
 
   // Most Extreme Phenotype Distribution
   arma::uvec mac_carriers = arma::vec(arma::sum(Xmat, 1)) > 0;
@@ -586,17 +599,17 @@ bool Gene::testable(const std::string &transcript, Covariates &cov,
   Gene tmp = *this;
   double score = methods.call(tmp, cov, extreme_phen, transcript, true);
 
-  if (tp_.method == "VAAST" || tp_.method == "SKAT") {
+  if (tp.method == "VAAST" || tp.method == "SKAT") {
     bool testable_variants =
-        arma::accu(tmp.variant_scores_[transcript] > 0) >= 8;
-    if (tp_.analytic) {
+        arma::accu(tmp.variant_scores[transcript] > 0) >= 8;
+    if (tp.analytic) {
       return score < alpha && testable_variants;
     } else {
-      return (percentile_of_score(score, permuted, false) < alpha) &&
+      return (percentile_of_score<double>(score, permuted, false) < alpha) &&
              testable_variants;
     }
   } else {
-    if (tp_.analytic) {
+    if (tp.analytic) {
       return score < alpha;
     } else {
       return percentile_of_score(score, permuted, false) < alpha;
@@ -604,19 +617,17 @@ bool Gene::testable(const std::string &transcript, Covariates &cov,
   }
 }
 
-bool Gene::is_testable() const { return testable_; }
+bool Gene::is_skippable() const { return skippable; }
 
-bool Gene::is_skippable() const { return skippable_; }
-
-bool Gene::is_polymorphic(const std::string &k) { return polymorphic_[k]; }
+bool Gene::is_polymorphic(const std::string &k) { return polymorphic[k]; }
 
 void Gene::generate_vaast(Covariates &cov) {
   // One entry per transcript
-  for (const auto &ts : transcripts_) {
+  for (const auto &ts : transcripts) {
     std::stringstream vaast_ss;
     vaast_ss << ">" << ts << "\t" << gene_name << std::endl;
 
-    arma::sp_mat X(genotypes_[ts]);
+    arma::sp_mat X(genotypes[ts]);
     arma::vec Y(cov.get_original_phenotypes());
 
     arma::uvec cases = arma::find(Y == 1);
@@ -626,12 +637,12 @@ void Gene::generate_vaast(Covariates &cov) {
     // R/U: variant_score position@chr nt|AA B/N|id1,id2...|ref:alt|ref:alt
 
     // Skip exon positions for now
-    // /Volumes/huff/yyu4/Analysis_case_control/carva/LUNG/lung.bing_0.0001
+    // /Volumes/huff/yyu4/Analysis_case_control/caper/LUNG/lung.bing_0.0001
     // lung_cov_sex_age_pc
-    // /rsrch3/home/epi/yyu4/workspace5/Analysis_case_control/carva/LUNG/lung_no_cov/c_18.b_1/VAAST.g2.vaast
+    // /rsrch3/home/epi/yyu4/workspace5/Analysis_case_control/caper/LUNG/lung_no_cov/c_18.b_1/VAAST.g2.vaast
 
     // Add target variants
-    for (int i = 0; i < positions_[ts].size(); i++) {
+    for (int i = 0; i < positions[ts].size(); i++) {
       double case_alt = arma::as_scalar(X.col(i).t() * Y);
       double case_ref = 2 * cases.n_elem - case_alt;
       double cont_alt = arma::as_scalar(X.col(i).t() * (1. - Y));
@@ -644,14 +655,14 @@ void Gene::generate_vaast(Covariates &cov) {
       } else {
         continue;
       }
-      vaast_ss << boost::format("%1$.2f") % variant_scores_[ts][i] << "\t";
+      vaast_ss << boost::format("%1$.2f") % variant_scores[ts][i] << "\t";
 
-      RJBUtil::Splitter<std::string> pos_splitter(positions_[ts][i], ",");
+      RJBUtil::Splitter<std::string> pos_splitter(positions[ts][i], ",");
       vaast_ss << pos_splitter[1] << "@" << pos_splitter[0] << "\t";
 
       // Placeholder for Reference alleles
-      vaast_ss << boost::format("%1$s\t") % reference_[ts][i];
-      vaast_ss << boost::format("%1$s\t") % annotation_[ts][i];
+      vaast_ss << boost::format("%1$s\t") % reference[ts][i];
+      vaast_ss << boost::format("%1$s\t") % annotation[ts][i];
 
       arma::vec Xcol(X.col(i));
 
@@ -661,21 +672,21 @@ void Gene::generate_vaast(Covariates &cov) {
       if (het_carriers.n_elem > 0) {
         vaast_ss << compress_adjacent(het_carriers);
         // Variant
-        vaast_ss << boost::format("%1$s:%2$s") % reference_[ts][i] %
-                        alternate_[ts][i]
+        vaast_ss << boost::format("%1$s:%2$s") % reference[ts][i] %
+                        alternate[ts][i]
                  << " ";
       }
       if (hom_carriers.n_elem > 0) {
         vaast_ss << "\t";
         vaast_ss << compress_adjacent(hom_carriers);
         // Variant
-        vaast_ss << boost::format("%1$s:%2$s") % alternate_[ts][i] %
-                        alternate_[ts][i];
+        vaast_ss << boost::format("%1$s:%2$s") % alternate[ts][i] %
+                        alternate[ts][i];
       }
       vaast_ss << std::endl;
     }
     // Add background variants
-    for (int i = 0; i < positions_[ts].size(); i++) {
+    for (int i = 0; i < positions[ts].size(); i++) {
       double case_alt = arma::as_scalar(X.col(i).t() * Y);
       double case_ref = 2 * cases.n_elem - case_alt;
       double cont_alt = arma::as_scalar(X.col(i).t() * (1. - Y));
@@ -688,14 +699,14 @@ void Gene::generate_vaast(Covariates &cov) {
       } else {
         continue;
       }
-      vaast_ss << boost::format("%1$.2f") % variant_scores_[ts][i] << "\t";
+      vaast_ss << boost::format("%1$.2f") % variant_scores[ts][i] << "\t";
 
-      RJBUtil::Splitter<std::string> pos_splitter(positions_[ts][i], ",");
+      RJBUtil::Splitter<std::string> pos_splitter(positions[ts][i], ",");
       vaast_ss << pos_splitter[1] << "@" << pos_splitter[0] << "\t";
 
       // Placeholder for Reference alleles
-      vaast_ss << boost::format("%1$s\t") % reference_[ts][i];
-      vaast_ss << boost::format("%1$s\t") % annotation_[ts][i];
+      vaast_ss << boost::format("%1$s\t") % reference[ts][i];
+      vaast_ss << boost::format("%1$s\t") % annotation[ts][i];
 
       arma::vec Xcol(X.col(i));
 
@@ -711,8 +722,8 @@ void Gene::generate_vaast(Covariates &cov) {
           }
         }
         // Variant
-        vaast_ss << boost::format("%1$s:%2$s") % reference_[ts][i] %
-                        alternate_[ts][i]
+        vaast_ss << boost::format("%1$s:%2$s") % reference[ts][i] %
+                        alternate[ts][i]
                  << " ";
       }
       if (hom_carriers.n_elem > 0) {
@@ -725,17 +736,13 @@ void Gene::generate_vaast(Covariates &cov) {
           }
         }
         // Variant
-        vaast_ss << boost::format("%1$s:%2$s") % alternate_[ts][i] %
-                        alternate_[ts][i];
+        vaast_ss << boost::format("%1$s:%2$s") % alternate[ts][i] %
+                        alternate[ts][i];
       }
       vaast_ss << std::endl;
     }
     vaast_[ts] = vaast_ss.str();
   }
-}
-
-arma::sp_mat &Gene::get_missing(const std::string &k) {
-  return missing_variant_carriers_[k];
 }
 
 std::string Gene::form_variant_id(RJBUtil::Splitter<std::string> &splitter) {
@@ -778,7 +785,7 @@ std::stringstream Gene::transcript_union(std::stringstream &ss,
     line_no++;
   }
 
-  nvariants_[gene_name] = variants.size();
+  nvariants[gene_name] = variants.size();
 
   for (const auto &s : variants) {
     res_ss << s.second << "\n";
@@ -814,16 +821,6 @@ std::string Gene::compress_adjacent(arma::uvec &samples) {
     i = j;
   }
   return ss.str();
-}
-
-void print_comma_sep(arma::uvec &x, std::ostream &os) {
-  for (arma::uword i = 0; i < x.size(); i++) {
-    if (i == x.size() - 1) {
-      os << x(i);
-    } else {
-      os << x(i) << ",";
-    }
-  }
 }
 
 void print_comma_sep(std::vector<std::string> &x, std::ostream &os) {
@@ -866,17 +863,4 @@ void print_semicolon_sep(arma::uvec &x, std::ostream &os) {
       os << x(i) << ";";
     }
   }
-}
-
-// Adapted from
-// https://stackoverflow.com/questions/29724083/trying-to-write-a-setdiff-function-using-rcpparmadillo-gives-compilation-error
-arma::uvec setdiff(arma::uvec x, arma::uvec y) {
-  for (size_t j = 0; j < y.n_elem; j++) {
-    arma::uvec q1 = arma::find(x == y[j]);
-    if (!q1.empty()) {
-      x.shed_row(q1(0));
-    }
-  }
-
-  return x;
 }

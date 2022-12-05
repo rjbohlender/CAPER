@@ -160,6 +160,7 @@ private:
   }
   void split_up_to_n() {
     int cur = 0;
+    tokens_.reserve(n_ + 1);
     // Faster version described at:
     // https://www.bfilipek.com/2018/07/string-view-perf-followup.html
     for (auto first = data_.data(), second = data_.data(),
@@ -172,6 +173,9 @@ private:
         tokens_.emplace_back(first, second - first);
       cur++;
       if (cur >= n_) {
+        if (second != last) {
+          tokens_.emplace_back(second + 1, last - (second + 1));
+        }
         break;
       }
     }

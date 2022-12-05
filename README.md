@@ -1,6 +1,6 @@
-# Covariate Adjusted Rare Variant Association (CARVA) #
+# Covariate Adjusted PERmutation (CAPER) #
 
-CARVA is a tool for gene-based testing of rare variants in
+CAPER is a tool for gene-based testing of rare variants in
 sequencing studies of any size. We provide methods for the analysis of
 data provided in simple, plain text, array formats. Permutation and
 statistical computation is multithreaded.
@@ -17,14 +17,11 @@ RVT2, SKAT, and SKATO methods currently.
 
 ## Approach ##
 
-We have implemented an alternative to the efficient resampling
-approach presented in Lee, Fuchsberger, Kim, and Scott (2016). In
-short, we use covariate adjusted permutation while binning samples by the
-similarity of their odds of being a case.  We permute the phenotype of all 
-individuals according to their odds estimated from logistic regression. All
-methods can be used with covariate adjusted permutation. If the user doesn't
-supply a covariate file, or disables covariate adjustment, the phenotypes
-are shuffled uniformly.
+We have developed a simple and fast approach to approximate covariate adjusted permutation. In short, we use covariate
+adjusted permutation while binning samples by the similarity of their odds of being a case. We permute the phenotype of
+all individuals according to their odds estimated from logistic regression. All methods can be used with covariate
+adjusted permutation. If the user doesn't supply a covariate file, or disables covariate adjustment, the phenotypes are
+shuffled uniformly.
 
 ## Supported Methods ##
 
@@ -34,6 +31,7 @@ VAAST.
 	- BURDEN (Wu, Guan, Pankow 2016)
 	- CALPHA (Neale et al. 2011)
 	- CMC (Li, Leal 2008)
+	- CMC1df -- OR as test statistic
 	- RVT1 (Morris, Zeggini 2010)
 	- RVT2 (Morris, Zeggini 2010)
 	- SKAT (Wu et al. 2011; Wu, Guan, Pankow 2016)
@@ -41,6 +39,9 @@ VAAST.
 	- VAAST (Yandell et al. 2011) -- Default
 	- VT (Price et al. 2010)
 	- WSS (Madsen, Browning 2009)
+
+A subset of methods can provide analytic p-values if run with --nperm 0. Those include, BURDEN, CMC, RVT1, RVT2, SKAT,
+and SKATO.
 
 ### SKAT / SKAT-O ###
 
@@ -50,7 +51,7 @@ computational speedup over the individual based statistic
 for very large datasets. Additionally, this allows SKAT to be used on very
 large datasets, where otherwise the NxN covariance matrix will exhaust available
  memory. Even with the computation advantage that this
-approach provides, it is still time consuming to permute SKAT-O.
+approach provides, it is still time-consuming to permute SKAT-O.
 
 Note that SKAT can return two different values. When used without permutation,
 SKAT returns an analytic p-value. When used with permutation, the costly 
@@ -129,15 +130,15 @@ cmake -DCMAKE_CXX_COMPILER=<path_to_executable> ..
 
 Testing on a mid-2015 MacBook Pro, 2.2Ghz Core i7, 16GB 1600 Mhz DDR3 ram.
 
-| Test  | Samples | Genes | Permutations |  Time (sec) |
-| -----:|:-------:|:-----:|:------------:|:-----------:|
-| CMC   | 100000  | 1000  | 0            |  341.42     |
-| RVT1  | 100000  | 1000  | 0            |  377.89     |
-| RVT2  | 100000  | 1000  | 0            |  405.56     |
-| VAAST | 100000  | 1000  | 10000        |  2086.53    |
-| SKAT-O| 100000  | 1000  | 0            |  487.79     |
-| WSS   | 100000  | 1000  | 10000        |  3432.29    |
-| SKAT  | 100000  | 1000  | 10000        |  28293.36   |
+|   Test | Samples | Genes | Permutations | Time (sec) |
+|-------:|:-------:|:-----:|:------------:|:----------:|
+|    CMC | 100000  | 1000  |      0       |   341.42   |
+|   RVT1 | 100000  | 1000  |      0       |   377.89   |
+|   RVT2 | 100000  | 1000  |      0       |   405.56   |
+|  VAAST | 100000  | 1000  |    10000     |  2086.53   |
+| SKAT-O | 100000  | 1000  |      0       |   487.79   |
+|    WSS | 100000  | 1000  |    10000     |  3432.29   |
+|   SKAT | 100000  | 1000  |    10000     |  28293.36  |
 
 ### Gzipped Data ###
 
@@ -153,8 +154,8 @@ The file formats used are simple, plain text formats, which may be gzipped.
 ### Matrix ###
 
 Matrix files may be zipped with gzip, or unzipped. They are provided
-to the program with the "-i" flag. The matrix format used for the
-genotype file includes a header and is is as follows:
+to the program with the "-i" option. The matrix format used for the
+genotype file includes a header and is as follows:
 
 	1) Chromosome
 	2) Start position (bp)
@@ -162,24 +163,19 @@ genotype file includes a header and is is as follows:
 	4) Type (SNV) 
 	5) Reference allele
 	6) Alternate allele
-	7) Gene (e.g., BRCA1)
+	7) Gene symbol (e.g., BRCA1)
 	8) Transcript (e.g., NM_700030) 
 	9) Region (e.g., exonic, intronic)
 	10) Function (synonymous, nonsynonymous)
-	11) CASM score (function and conservation based weight)
-	12+) Sample genotype (e.g., 0/1/2 - will be converted to minor allele count)
+	11+) Sample genotype (e.g., 0/1/2 - assumes alternate allele count)
 
-Note that the type field is used for
-grouping in VAAST, and the program will fail if the
-annotation is not present when grouping is used.
+Note that the type field is used for grouping in VAAST, and the program will fail if the annotation is not present when
+grouping is used.
 
-Variants are expected to be repeated for each transcript they appear
-in. This does increase the size of the file, but simplifies
-parsing. Because the format is simple, and QC is expected to be
-finished before this program is run, the file remains reasonably
-lean. E.g., with 20,000 simulated genes, and 100,000 samples, a matrix
-file, uncompressed, is only 56GB. Compressed with gzip defaults, the same
-matrix file is only 841MB. 
+Variants are expected to be repeated for each transcript they appear in. This does increase the size of the file, but
+simplifies parsing. Because the format is simple, and QC is expected to be finished before this program is run, the file
+remains reasonably lean. E.g., with 20,000 simulated genes, and 100,000 samples, a matrix file, uncompressed, is only
+56GB. Compressed with gzip defaults, the same matrix file is only 841MB.
 
 ### Bed Mask File ###
 
@@ -203,23 +199,28 @@ follows:
     3) Second covariate
     4) ...
 
-There is no limit on the number of covariates that can be provided but they are
-assumed to be numeric.
+There is no limit on the number of covariates that can be provided. If a given covariate cannot be converted to a
+floating point representation, then it is assumed to be a discrete category (e.g., male/female), and will be separated
+into n-1 0/1 variables where n is the number of categories.
 
 ### Weights ###
 
-Essentially a bed format file, with the 4th column the variant annotation and 
-5th column the weight, which will be converted to a log scale for VAAST. Weights
-will be used by VAAST, and SKAT / SKAT-O if the linear kernel is used.
+The file format for weights. The columns are required to uniquely identify variants
+in the case of weights for variants with different annotations (e.g., a splice variant in one transcript and missense in
+another). Weights will be used by VAAST, and SKAT / SKAT-O if the linear kernel is used.
 
     1) Chromosome
     2) Start position
     3) End position
-    4) Annotation (e.g. SNV, Deletion, Insertion, etc.)
-    5) Weight
+    4) Reference Allele
+    5) Alternate Allele
+    6) Type (e.g. SNV, Deletion, Insertion, etc.)
+    7) Gene symbol
+    8) Transcript
+    9) Weight
 
-Weights provided via this option overwrite the CASM scores, which are used for
-weighting by default. Passing the --no_weights option will remove all weights.
+Weights provided via this option overwrite the beta distribution values, which are used for
+weighting by default in SKAT / SKAT-O. Passing the --no_weights option will remove all weights.
 Using SKAT or SKAT-O with the weighted Linear kernel option will overwrite the
 weights with those calculated from a beta distribution.
 

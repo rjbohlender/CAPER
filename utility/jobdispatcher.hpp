@@ -9,9 +9,10 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <unordered_map>
 
-#include "../carva/carvaop.hpp"
-#include "../carva/carvatask.hpp"
+#include "../caper/caperop.hpp"
+#include "../caper/capertask.hpp"
 #include "../data/bed.hpp"
 #include "../data/covariates.hpp"
 #include "../data/permutation.hpp"
@@ -62,12 +63,12 @@ public:
     }
 
     // Handle zipped input
-    if (is_gzipped(tp_.genotypes_path)) {
-      gt_ifs_.open(tp_.genotypes_path, std::ios_base::in | std::ios_base::binary);
+    if (is_gzipped(tp_.input_path)) {
+      gt_ifs_.open(tp_.input_path, std::ios_base::in | std::ios_base::binary);
       gt_streambuf.push(boost::iostreams::gzip_decompressor());
       gt_streambuf.push(gt_ifs_);
     } else {
-      gt_ifs_.open(tp_.genotypes_path, std::ios_base::in);
+      gt_ifs_.open(tp_.input_path, std::ios_base::in);
       gt_streambuf.push(gt_ifs_);
     }
 
@@ -568,7 +569,7 @@ private:
   std::string gene_;
   std::string transcript_;
   Stage stage_;
-  std::map<std::string, arma::uword> nvariants_;
+  std::unordered_map<std::string, arma::uword> nvariants_;
 
   // Counters
   arma::uword ntranscripts_ = 0;

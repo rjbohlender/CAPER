@@ -247,7 +247,7 @@ void Covariates::parse_cov(const std::string &covfile) {
     design_.resize(cov_samples_.size(), nfields + 1);
   } else {
     design_.resize(ped_samples_.size(), nfields + 1);
-    for (const auto &s : ped_samples_) {
+    for (const auto &s : ped_samples_ordered_) {
       cov_samples_.push_back(s);
     }
   }
@@ -620,8 +620,12 @@ arma::vec &Covariates::get_coef() { return p_coef_; }
 
 arma::vec Covariates::get_residuals() const { return phenotypes_ - p_fitted_; }
 
-bool Covariates::contains(const std::string &sample) {
-  return (ped_samples_.count(sample) > 0);
+bool Covariates::contains(const std::string &sample) const {
+  return ped_samples_.contains(sample);
+}
+
+bool Covariates::contains(const std::string_view &sample) const {
+  return ped_samples_.contains(std::string(sample));
 }
 
 std::vector<std::string> Covariates::get_samples() {

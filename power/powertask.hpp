@@ -5,7 +5,7 @@
 #ifndef PERMUTE_ASSOCIATE_POWERTASK_HPP
 #define PERMUTE_ASSOCIATE_POWERTASK_HPP
 
-#include "../carva/carvatask.hpp"
+#include "../caper/capertask.hpp"
 #include "../data/covariates.hpp"
 #include "../data/gene.hpp"
 #include "../statistics/methods.hpp"

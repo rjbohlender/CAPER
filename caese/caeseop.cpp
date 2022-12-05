@@ -60,8 +60,8 @@ auto CAESEOp::effectsize() -> void {
 	  v.second.cont_ref = original.cont_ref;
 	}
 	// Minor allele carrier indices
-	mac_indices[k] = arma::find(arma::sum(arma::mat(ta_.gene.get_matrix(k)), 1) > 0);
-	maj_indices[k] = arma::find(arma::sum(arma::mat(ta_.gene.get_matrix(k)), 1) == 0);
+	mac_indices[k] = arma::find(arma::sum(arma::mat(ta_.gene.genotypes[k]), 1) > 0);
+	maj_indices[k] = arma::find(arma::sum(arma::mat(ta_.gene.genotypes[k]), 1) == 0);
 	assert(mac_indices[k].n_rows + maj_indices[k].n_rows == ta_.get_cov().get_nsamples());
 
 	mac_odds[k] = ta_.get_cov().get_odds()(mac_indices[k]);
