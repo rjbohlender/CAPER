@@ -76,7 +76,7 @@ struct VAASTLogic {
 			 arma::uword group_threshold,
 			 bool detail,
 			 bool biallelic,
-			 double soft_maf_filter,
+			 double smf,
 			 bool legacy_);
   VAASTLogic(arma::sp_mat X_,
 			 arma::vec &Y_,
@@ -86,7 +86,7 @@ struct VAASTLogic {
 			 bool biallelic,
 			 arma::uword group_threshold,
 			 double site_penalty,
-			 double soft_maf_filter,
+			 double smf,
 			 bool legacy_);
 
   double Score();

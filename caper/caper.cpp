@@ -65,6 +65,7 @@ int main(int argc, char **argv) {
   boost::optional<int> seed;
   boost::optional<arma::uword> max_perms;
   boost::optional<double> testable;
+  double soft_maf_filter = 1.0;
 
   try {
     required.add_options()
@@ -177,7 +178,7 @@ int main(int argc, char **argv) {
          po::value<arma::uword>()->default_value(0),
          "Group size, minor allele count threshold for grouping a variant. VAAST can collapse variants into groups of variants, dependent upon the collapse having a higher total VAAST score.")
         ("soft_maf_filter",
-         po::value<double>()->default_value(0.5),
+         po::value(&soft_maf_filter),
          "Caps the highest allele frequency for the control set in the likelihood calculation. Penalizes common variants without removing them.")
         ("biallelic",
          po::bool_switch(&biallelic),
@@ -384,7 +385,7 @@ int main(int argc, char **argv) {
   tp.min_minor_allele_count = vm["min_minor_allele_count"].as<arma::uword>();
   tp.min_variant_count = vm["min_variant_count"].as<arma::uword>();
   tp.pthresh = pthresh;
-  tp.soft_maf_filter = vm["soft_maf_filter"].as<double>();
+  tp.soft_maf_filter = soft_maf_filter;
   // SKAT Options
   tp.kernel = vm["kernel"].as<std::string>();
   tp.linear = linear;

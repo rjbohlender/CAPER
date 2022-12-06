@@ -9,11 +9,11 @@
 
 VAASTLogic::VAASTLogic(Gene &gene, arma::vec &Y_, const std::string &ts,
                        double site_penalty, arma::uword group_threshold,
-                       bool detail, bool biallelic, double soft_maf_filter,
+                       bool detail, bool biallelic, double smf,
                        bool legacy_)
     : detail(detail), biallelic(biallelic), k(ts),
       group_threshold(group_threshold), site_penalty(site_penalty),
-      soft_maf_filter(soft_maf_filter), legacy(legacy_), X(gene.genotypes[ts]),
+      soft_maf_filter(smf), legacy(legacy_), X(gene.genotypes[ts]),
       Y(Y_), weights(gene.weights[ts]) {
   n_case = arma::accu(Y);
   n_control = arma::accu(1. - Y);
@@ -79,10 +79,10 @@ VAASTLogic::VAASTLogic(Gene &gene, arma::vec &Y_, const std::string &ts,
 VAASTLogic::VAASTLogic(arma::sp_mat X_, arma::vec &Y_, arma::vec &weights,
                        std::vector<std::string> &positions_, std::string k,
                        bool biallelic, arma::uword group_threshold,
-                       double site_penalty, double soft_maf_filter,
+                       double site_penalty, double smf,
                        bool legacy_)
     : detail(true), biallelic(biallelic), k(std::move(k)),
-      group_threshold(group_threshold), soft_maf_filter(soft_maf_filter),
+      group_threshold(group_threshold), soft_maf_filter(smf),
       site_penalty(site_penalty), legacy(legacy_), X(std::move(X_)), Y(Y_) {
 
   if (group_threshold == 0 || X.n_cols == 1) {

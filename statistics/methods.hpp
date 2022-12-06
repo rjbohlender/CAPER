@@ -82,7 +82,7 @@ private:
   std::shared_ptr<VT_Res> vt_obj_;
 
   // TaskParams
-  const TaskParams &tp;
+  const TaskParams tp;
 };
 
 #endif // PERMUTE_ASSOCIATE_METHODS_HPP
