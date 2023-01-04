@@ -17,7 +17,7 @@
 
 Covariates::Covariates(TaskParams tp)
     : tp_(std::move(tp)), nsamples_(0), ncases_(0), ncontrols_(0),
-      crand((int)time(nullptr)), linear_(tp_.linear) {
+      crand((int)time(nullptr)), linear_(tp_.qtl) {
   bool cov_provided = !tp_.covariates_path.empty();
   parse_ped(tp_.ped_path, cov_provided);
   parse_cov(tp_.covariates_path);
@@ -161,8 +161,10 @@ void Covariates::parse_cov(const std::string &covfile) {
       auto phen = sample_phen_map_[sampleid];
       if (phen == 1) {
         ncases_++;
-      } else {
+      } else if(phen == 0){
         ncontrols_++;
+      } else {
+        std::cerr << "WARNING: Invalid case-control value.\n";
       }
 
       phenotypes.push_back(phen);
@@ -182,6 +184,10 @@ void Covariates::parse_cov(const std::string &covfile) {
         }
       }
       lineno++;
+    }
+    if ((ncases_ == 0 || ncontrols_ == 0) && !tp_.qtl) {
+      std::cerr << "ERROR: Phenotype file provided 0 cases or 0 controls.";
+      std::exit(1);
     }
     // Ensure phenotypes are in cov sample order.
     phenotypes_ = arma::conv_to<arma::colvec>::from(phenotypes);

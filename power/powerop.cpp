@@ -244,13 +244,13 @@ double PowerOp::call_method(Methods &method,
   } else if (tp.method == "CMC") {
 	return method.CMC(gene, phenotypes, k, tp.maf);
   } else if (tp.method == "RVT1") {
-	return method.RVT1(gene, phenotypes, cov.get_covariate_matrix(), cov.get_coef(), k, tp.linear);
+	return method.RVT1(gene, phenotypes, cov.get_covariate_matrix(), cov.get_coef(), k, tp.qtl);
   } else if (tp.method == "RVT2") {
-	return method.RVT2(gene, phenotypes, cov.get_covariate_matrix(), cov.get_coef(), k, tp.linear);
+	return method.RVT2(gene, phenotypes, cov.get_covariate_matrix(), cov.get_coef(), k, tp.qtl);
   } else if (tp.method == "SKAT") {
-	return method.SKAT(gene, k, phenotypes, tp.a, tp.b, detail, tp.linear, false);
+	return method.SKAT(gene, k, phenotypes, tp.a, tp.b, detail, tp.qtl, false);
   } else if (tp.method == "SKATO") {
-	return method.SKATO(gene, k, phenotypes, tp.a, tp.b, detail, tp.linear);
+	return method.SKATO(gene, k, phenotypes, tp.a, tp.b, detail, tp.qtl);
   } else if (tp.method == "VAAST") {
 	return method
 		.VAAST(gene,

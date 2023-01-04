@@ -101,15 +101,15 @@ public:
     tokens_.erase(pos);
   }
 
-  auto front() { return tokens_.front(); }
+  auto &front() { return tokens_.front(); }
 
-  auto back() { return tokens_.back(); }
+  auto &back() { return tokens_.back(); }
 
-  auto operator[](int_type i) {
+  auto &operator[](int_type i) {
     return tokens_[i];
   }
 
-  auto at(int_type i) { return tokens_.at(i); }
+  auto &at(int_type i) { return tokens_.at(i); }
 
 private:
   /**

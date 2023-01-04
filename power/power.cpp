@@ -291,7 +291,7 @@ int main(int argc, char **argv) {
   tp.pthresh = pthresh;
   // SKAT Options
   tp.kernel = vm["kernel"].as<std::string>();
-  tp.linear = linear;
+  tp.qtl = linear;
   // Beta weights
   tp.a = std::stoi(beta_split[0]);
   tp.b = std::stoi(beta_split[1]);
@@ -322,7 +322,7 @@ int main(int argc, char **argv) {
 
   tp.alternate_permutation = tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN" || tp.method == "VT";
   tp.quantitative = tp.method == "RVT1" || tp.method == "RVT2" || tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN" || tp.method == "VT";
-  if(tp.linear && !tp.quantitative) {
+  if(tp.qtl && !tp.quantitative) {
 	std::cerr << "Quantitative trait analysis is only supported for the RVT1, RVT2, SKATO, SKAT, and BURDEN methods." << std::endl;
 	std::exit(1);
   }

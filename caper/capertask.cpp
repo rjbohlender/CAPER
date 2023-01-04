@@ -61,7 +61,7 @@ std::vector<std::vector<int8_t>> &CAPERTask::get_permutations() {
 }
 
 void CAPERTask::cleanup() {
-  if (!tp.linear) {
+  if (!tp.qtl) {
     Binomial link("logit");
     for (const auto &ts : gene.get_transcripts()) {
       // arma::mat X = arma::mat(arma::sum(gene.genotypes[ts].t(), 0).t());

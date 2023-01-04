@@ -388,7 +388,7 @@ int main(int argc, char **argv) {
   tp.soft_maf_filter = soft_maf_filter;
   // SKAT Options
   tp.kernel = vm["kernel"].as<std::string>();
-  tp.linear = linear;
+  tp.qtl = linear;
   // Beta weights
   tp.a = std::stoi(beta_split[0]);
   tp.b = std::stoi(beta_split[1]);
@@ -408,7 +408,7 @@ int main(int argc, char **argv) {
   tp.analytic = tp.method == "SKATO" || (tp.method == "SKAT" && tp.nperm == 0) || tp.method == "RVT1"
      || tp.method == "RVT2" || (tp.method == "CMC" && tp.nperm == 0) || (tp.method == "CMC1df" && tp.nperm == 0)
                 || (tp.method == "BURDEN" && tp.nperm == 0);
-  if (tp.linear && !tp.quantitative) {
+  if (tp.qtl && !tp.quantitative) {
     std::cerr << "Quantitative trait analysis is only supported for the RVT1, RVT2, SKATO, SKAT, and BURDEN methods."
               << std::endl;
     std::exit(1);

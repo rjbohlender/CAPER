@@ -73,12 +73,12 @@ Methods::Methods(const TaskParams &tp, const std::shared_ptr<Covariates> &cov)
   }
 
   if ((tp.method == "SKAT" || tp.method == "SKATO" || tp.method == "BURDEN") &&
-      !tp.linear) {
+      !tp.qtl) {
     obj_ = std::make_shared<SKATR_Null>(*cov);
     lin_obj_ = nullptr;
   } else if ((tp.method == "SKAT" || tp.method == "SKATO" ||
               tp.method == "BURDEN") &&
-             tp.linear) {
+             tp.qtl) {
     obj_ = nullptr;
     lin_obj_ = std::make_shared<SKATR_Linear_Null>(*cov);
   } else if (tp.method == "VT") {
@@ -95,12 +95,12 @@ Methods::Methods(const TaskParams &tp, const Covariates &cov)
   }
 
   if ((tp.method == "SKAT" || tp.method == "SKATO" || tp.method == "BURDEN") &&
-      !tp.linear) {
+      !tp.qtl) {
     obj_ = std::make_shared<SKATR_Null>(cov);
     lin_obj_ = nullptr;
   } else if ((tp.method == "SKAT" || tp.method == "SKATO" ||
               tp.method == "BURDEN") &&
-             tp.linear) {
+             tp.qtl) {
     obj_ = nullptr;
     lin_obj_ = std::make_shared<SKATR_Linear_Null>(cov);
   } else if (tp.method == "VT") {
@@ -129,7 +129,7 @@ double Methods::BURDEN(Gene &gene, const std::string &ts,
     arma::mat W = arma::diagmat(weights);
 
     arma::mat tmp;
-    if (tp.linear) {
+    if (tp.qtl) {
       tmp = lin_obj_->get_Ux().t() * G;
     } else {
       tmp = obj_->get_Ux().t() * G;
@@ -137,7 +137,7 @@ double Methods::BURDEN(Gene &gene, const std::string &ts,
 
     arma::mat Gs;
     arma::rowvec Zs;
-    if (tp.linear) {
+    if (tp.qtl) {
       Gs = G.t() * G - tmp.t() * tmp;
       Zs = arma::sum(arma::diagmat(lin_obj_->get_U0()) * G) /
            std::sqrt(lin_obj_->get_s2());
@@ -710,15 +710,15 @@ double Methods::call(Gene &gene, Covariates &cov, arma::vec &phenotypes,
     return CMC1df(gene, phenotypes, transcript);
   } else if (method_ == "RVT1") {
     return RVT1(gene, phenotypes, cov.get_covariate_matrix(), cov.get_coef(),
-                transcript, tp.linear);
+                transcript, tp.qtl);
   } else if (method_ == "RVT2") {
     return RVT2(gene, phenotypes, cov.get_covariate_matrix(), cov.get_coef(),
-                transcript, tp.linear);
+                transcript, tp.qtl);
   } else if (method_ == "SKAT") {
-    return SKAT(gene, transcript, phenotypes, tp.a, tp.b, detail, tp.linear,
+    return SKAT(gene, transcript, phenotypes, tp.a, tp.b, detail, tp.qtl,
                 tp.nperm > 0);
   } else if (method_ == "SKATO") {
-    return SKATO(gene, transcript, phenotypes, tp.a, tp.b, detail, tp.linear);
+    return SKATO(gene, transcript, phenotypes, tp.a, tp.b, detail, tp.qtl);
   } else if (method_ == "VAAST") {
     return VAAST(gene, phenotypes, transcript, tp.vaast_site_penalty,
                  tp.group_size, detail, tp.biallelic, tp.soft_maf_filter,

@@ -90,7 +90,7 @@ Reporter::Reporter(TaskParams &tp)
     throw(std::runtime_error("Detail file failed to open for writing.\n"));
   }
 
-  if(tp.linear) {
+  if(tp.qtl) {
     header =
         "Gene\tTranscripts\tVariant\tScore\tAF";
   } else {

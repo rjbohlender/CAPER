@@ -434,7 +434,7 @@ void Gene::generate_detail(Covariates &cov,
     arma::vec case_ref = 2 * cases.n_elem - case_alt;
     arma::vec cont_alt = X.t() * (1. - Y);
     arma::vec cont_ref = 2 * controls.n_elem - cont_alt;
-    if (!tp.linear) {
+    if (!tp.qtl) {
       for (const auto &pos : positions[ts]) {
         // Get transcripts
         if (pos_ts_map.find(pos) == pos_ts_map.end()) {
@@ -523,7 +523,7 @@ void Gene::generate_detail(Covariates &cov,
       }
     }
   }
-  if (tp.linear) {
+  if (tp.qtl) {
     // Output for quantitative traits
     for (const auto &v : pos_ts_map) {
       detail << gene_name << "\t";
