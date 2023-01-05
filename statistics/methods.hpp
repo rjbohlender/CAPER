@@ -44,9 +44,9 @@ public:
   // Morris and Zeggini 2010
   double RVT1(Gene &gene, arma::vec &Y, arma::mat design,
               arma::vec &initial_beta, const std::string &ts, bool linear);
-  static double RVT2(Gene &gene, arma::vec &Y, arma::mat design,
-                     arma::vec &initial_beta, const std::string &ts,
-                     bool linear);
+  double RVT2(Gene &gene, arma::vec &Y, arma::mat design,
+              arma::vec &initial_beta, const std::string &ts,
+              bool linear);
   // Wu, Guan, and Pankow 2016
   double SKAT(Gene &gene, const std::string &transcript, arma::vec &phenotypes,
               int a, int b, bool detail, bool linear, bool permute);

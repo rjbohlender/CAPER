@@ -354,11 +354,11 @@ double Methods::RVT2(Gene &gene, arma::vec &Y, arma::mat design,
     // Quantitative trait
     arma::sp_mat X = gene.genotypes[ts].t();
     Gaussian link("identity");
-    GLM<Gaussian> fit1(design, Y, link, initial_beta, TaskParams());
+    GLM<Gaussian> fit1(design, Y, link, initial_beta, tp);
     arma::rowvec r =
         arma::conv_to<arma::rowvec>::from(arma::rowvec(arma::sum(X)) > 0);
     arma::mat d2 = arma::join_horiz(design, r.t());
-    GLM<Gaussian> fit2(d2, Y, link, fit1.beta_, TaskParams());
+    GLM<Gaussian> fit2(d2, Y, link, fit1.beta_, tp);
 
     double n = Y.n_elem;
 
@@ -372,11 +372,11 @@ double Methods::RVT2(Gene &gene, arma::vec &Y, arma::mat design,
     // Binary trait
     arma::sp_mat X = gene.genotypes[ts].t();
     Binomial link("logit");
-    GLM<Binomial> fit1(design, Y, link, initial_beta, TaskParams());
+    GLM<Binomial> fit1(design, Y, link, initial_beta, tp);
     arma::rowvec r =
         arma::conv_to<arma::rowvec>::from(arma::rowvec(arma::sum(X)) > 0);
     arma::mat d2 = arma::join_horiz(design, r.t());
-    GLM<Binomial> fit2(d2, Y, link, fit1.beta_, TaskParams());
+    GLM<Binomial> fit2(d2, Y, link, fit1.beta_, tp);
 
     boost::math::chi_squared chisq(1);
     double stat = fit1.dev_ - fit2.dev_;
