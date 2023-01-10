@@ -173,7 +173,7 @@ int main(int argc, char **argv) {
         ("check_testability",
          po::value(&testable),
          "Return results for genes with a minimum achievable p-value less than or equal to what is given.");
-	vaast.add_options()
+    vaast.add_options()
         ("group_size,g",
          po::value<arma::uword>()->default_value(0),
          "Group size, minor allele count threshold for grouping a variant. VAAST can collapse variants into groups of variants, dependent upon the collapse having a higher total VAAST score.")
