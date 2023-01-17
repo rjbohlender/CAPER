@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
   bool biallelic = false;
   bool nocovadj = false;
   bool stats = false;
-  bool legacy_grouping = false;
+  bool alternate_grouping = false;
   bool no_weights = false;
   bool impute_to_mean = false;
   bool aaf_filter = true;
@@ -175,7 +175,7 @@ int main(int argc, char **argv) {
          "Return results for genes with a minimum achievable p-value less than or equal to what is given.");
     vaast.add_options()
         ("group_size,g",
-         po::value<arma::uword>()->default_value(0),
+         po::value<arma::uword>()->default_value(4),
          "Group size, minor allele count threshold for grouping a variant. VAAST can collapse variants into groups of variants, dependent upon the collapse having a higher total VAAST score.")
         ("soft_maf_filter",
          po::value(&soft_maf_filter),
@@ -186,8 +186,8 @@ int main(int argc, char **argv) {
         ("site_penalty",
          po::value<double>()->default_value(2.0),
          "VAAST site penalty. AIC penalty applied to each site in VAAST.")
-        ("legacy_grouping",
-         po::bool_switch(&legacy_grouping),
+        ("alternate_grouping",
+         po::bool_switch(&alternate_grouping),
          "Match grouping behavior to VAAST 2.0. Off by default. If enabled variants are grouped by type annotation, otherwise grouped all together.");
     skat.add_options()
         ("kernel,k",
@@ -365,7 +365,7 @@ int main(int argc, char **argv) {
   tp.cmcmaf = vm["cmcmaf"].as<double>();
   tp.group_size = vm["group_size"].as<arma::uword>();
   tp.vaast_site_penalty = vm["site_penalty"].as<double>();
-  tp.legacy_grouping = legacy_grouping;
+  tp.alternate_grouping = alternate_grouping;
   tp.whole_gene = whole_gene;
   tp.bed = bed;
   tp.weight = weights;

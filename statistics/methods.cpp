@@ -722,7 +722,7 @@ double Methods::call(Gene &gene, Covariates &cov, arma::vec &phenotypes,
   } else if (method_ == "VAAST") {
     return VAAST(gene, phenotypes, transcript, tp.vaast_site_penalty,
                  tp.group_size, detail, tp.biallelic, tp.soft_maf_filter,
-                 tp.legacy_grouping);
+                 tp.alternate_grouping);
   } else if (method_ == "VT") {
     return VT(gene, transcript, phenotypes);
   } else if (method_ == "WSS") {

@@ -27,9 +27,9 @@ VAASTLogic::VAASTLogic(Gene &gene, arma::vec &Y_, const std::string &ts,
   } else {
     score = Score(X, Y, weights);
     if (legacy) {
-      legacy_grouping(X, Y, weights, gene.get_positions(ts));
+      vaast_grouping(X, Y, weights, gene.get_positions(ts));
     } else {
-      variant_grouping(X, Y, weights, gene.get_positions(ts));
+      alternate_grouping(X, Y, weights, gene.get_positions(ts));
     }
     score = Score();
   }
@@ -59,9 +59,9 @@ VAASTLogic::VAASTLogic(Gene &gene, arma::vec &Y_, const std::string &ts,
 
           Score(Xnew, Y, Wnew); // Do normal individual variant scoring
           if (legacy) {
-            legacy_grouping(Xnew, Y, Wnew, positions);
+            vaast_grouping(Xnew, Y, Wnew, positions);
           } else {
-            variant_grouping(Xnew, Y, Wnew, positions);
+            alternate_grouping(Xnew, Y, Wnew, positions);
           }
           double new_score = Score();
           expanded_scores(i) = (score - new_score >= 0) ? score - new_score
@@ -91,9 +91,9 @@ VAASTLogic::VAASTLogic(arma::sp_mat X_, arma::vec &Y_, arma::vec &weights,
   } else {
     score = Score(X, Y, weights);
     if (legacy) {
-      legacy_grouping(X, Y, weights, positions_);
+      vaast_grouping(X, Y, weights, positions_);
     } else {
-      variant_grouping(X, Y, weights, positions_);
+      alternate_grouping(X, Y, weights, positions_);
     }
     score = Score();
   }
@@ -116,9 +116,9 @@ VAASTLogic::VAASTLogic(arma::sp_mat X_, arma::vec &Y_, arma::vec &weights,
 
       Score(Xnew, Y, Wnew); // Do normal individual variant scoring
       if (legacy) {
-        legacy_grouping(Xnew, Y, Wnew, positions);
+        vaast_grouping(Xnew, Y, Wnew, positions);
       } else {
-        variant_grouping(Xnew, Y, Wnew, positions);
+        alternate_grouping(Xnew, Y, Wnew, positions);
       }
       double new_score = Score();
       expanded_scores(i) =
@@ -207,6 +207,9 @@ double VAASTLogic::Score(const arma::sp_mat &X, const arma::vec &Y,
   arma::uvec included = arma::find(vaast_site_scores > site_penalty);
   vaast_site_scores(included) -= site_penalty;
 
+  arma::uvec bu = arma::find(case_allele1 == 0);
+  vaast_site_scores(bu).fill(0);
+
   // vaast_site_scores(arma::find(vaast_site_scores <= 2)).zeros();
   double val = arma::accu(vaast_site_scores(included));
   // val += arma::accu(vaast_site_scores(arma::find(vaast_site_scores <= 2)));
@@ -256,7 +259,7 @@ arma::vec VAASTLogic::log_likelihood(arma::vec &freq, arma::vec &allele0,
   return allele1 % arma::log(freq) + allele0 % arma::log(1.0 - freq);
 }
 
-void VAASTLogic::variant_grouping(const arma::sp_mat &X, const arma::vec &Y,
+void VAASTLogic::alternate_grouping(const arma::sp_mat &X, const arma::vec &Y,
                                   const arma::vec &w,
                                   std::vector<std::string> &positions) {
   case_allele1 = X.t() * Y;
@@ -374,7 +377,7 @@ void VAASTLogic::variant_grouping(const arma::sp_mat &X, const arma::vec &Y,
   }
 }
 
-void VAASTLogic::legacy_grouping(const arma::sp_mat &X, const arma::vec &Y,
+void VAASTLogic::vaast_grouping(const arma::sp_mat &X, const arma::vec &Y,
                                  const arma::vec &w,
                                  std::vector<std::string> &positions) {
   case_allele1 = X.t() * Y;

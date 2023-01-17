@@ -93,11 +93,11 @@ struct VAASTLogic {
   double Score(const arma::sp_mat &X, const arma::vec &Y, const arma::vec &w);
   arma::vec LRT();
   arma::vec log_likelihood(arma::vec &freq, arma::vec &allele0, arma::vec &allele1);
-  void variant_grouping(const arma::sp_mat &X,
+  void alternate_grouping(const arma::sp_mat &X,
 					   const arma::vec &Y,
 					   const arma::vec &w,
 					   std::vector<std::string> &positions);
-  void legacy_grouping(const arma::sp_mat &X,
+  void vaast_grouping(const arma::sp_mat &X,
 					   const arma::vec &Y,
 					   const arma::vec &w,
 					   std::vector<std::string> &positions);

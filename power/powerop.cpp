@@ -261,7 +261,7 @@ double PowerOp::call_method(Methods &method,
 			   detail,
 			   tp.biallelic,
 			   tp.soft_maf_filter,
-			   tp.legacy_grouping);
+			   tp.alternate_grouping);
   } else if (tp.method == "VT") {
 	return method.VT(gene, k, phenotypes);
   } else if (tp.method == "WSS") {

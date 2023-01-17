@@ -689,8 +689,8 @@ auto Reporter::sort_simple(const TaskParams &tp) -> void {
 	if (tp.no_detail) {
 	  uf_ss << "--nodetail ";
 	}
-	if (tp.legacy_grouping) {
-	  uf_ss << "--legacy_grouping ";
+	if (tp.alternate_grouping) {
+	  uf_ss << "--alternate_grouping ";
 	}
 	if (tp.soft_maf_filter != 0.5) {
 	  uf_ss << "--soft_maf_filter " << tp.soft_maf_filter << " ";
