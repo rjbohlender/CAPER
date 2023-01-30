@@ -13,26 +13,30 @@
 #include <boost/math/tools/roots.hpp>
 #include <utility>
 
-
-double SKAT_pval(double Q, const arma::vec &lambda) {
+double SKAT_pval(double Q, const arma::vec &lambda, bool sadd) {
   if (std::isnan(Q)) {
     return 1;
   }
 
-  std::vector<double> lb1 = arma::conv_to<std::vector<double>>::from(lambda);
-  std::vector<double> nc1(lb1.size(), 0);
-  std::vector<int> df(lb1.size(), 1);
-  double sigma = 0;
-  int lim1 = 1000000;
-  double acc = 1e-9;
+  if (!sadd) {
+    std::vector<double> lb1 = arma::conv_to<std::vector<double>>::from(lambda);
+    std::vector<double> nc1(lb1.size(), 0);
+    std::vector<int> df(lb1.size(), 1);
+    double sigma = 0;
+    int lim1 = 1000000;
+    double acc = 1e-9;
 
-  QFC qfc(lb1, nc1, df, sigma, Q, lim1, acc);
+    QFC qfc(lb1, nc1, df, sigma, Q, lim1, acc);
 
-  double pval = 1. - qfc.get_res();
-  if (pval >= 1 || pval <= 0 || qfc.get_fault() > 0) {
-    pval = Saddlepoint(Q, lambda);
+    double pval = 1. - qfc.get_res();
+    if (pval >= 1 || pval <= 0 || qfc.get_fault() > 0) {
+      pval = Saddlepoint(Q, lambda);
+    }
+    return pval;
+  } else {
+    double pval = Saddlepoint(Q, lambda);
+    return pval;
   }
-  return pval;
 }
 
 double Liu_qval_mod(double pval, const arma::vec &lambda) {

@@ -37,6 +37,7 @@ struct TaskParams {
   bool analytic;
   bool qtl;
   bool quantitative;
+  bool saddlepoint;
 
   // Method
   std::string method;

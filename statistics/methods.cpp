@@ -503,7 +503,7 @@ double Methods::SKAT(Gene &gene, const std::string &transcript,
       gene.set_scores(transcript, variant_scores);
     }
 
-    return SKAT_pval(Q, s);
+    return SKAT_pval(Q, s, tp.saddlepoint);
   }
 }
 
@@ -605,7 +605,7 @@ double Methods::SKATO(Gene &gene, const std::string &transcript,
       lamk[i] = arma::clamp(lamk[i], tol, lamk[i].max());
     }
 
-    pval[i] = SKAT_pval(Qw[i], lamk[i]);
+    pval[i] = SKAT_pval(Qw[i], lamk[i], tp.saddlepoint);
   }
 
   double pmin = pval.min();
@@ -650,7 +650,7 @@ double Methods::SKATO(Gene &gene, const std::string &transcript,
         eta1 = val;
     }
     double x = (eta1 - MuQ) * sd1 + MuQ;
-    return SKAT_pval(x, lam) * boost::math::pdf(chisq, xpar);
+    return SKAT_pval(x, lam, tp.saddlepoint) * boost::math::pdf(chisq, xpar);
   };
 
   double error_estimate;

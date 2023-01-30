@@ -53,6 +53,7 @@ int main(int argc, char **argv) {
   bool impute_to_mean = false;
   bool aaf_filter = true;
   bool whole_gene = false;
+  bool saddlepoint = false;
   std::vector<int> gene_range;
   std::vector<std::string> power;
   boost::optional<std::string> bed;
@@ -198,7 +199,10 @@ int main(int argc, char **argv) {
          "Analyze a quantitative trait. Values are assumed to be finite floating point values.")
         ("beta_weights",
          po::value<std::string>()->default_value("1,25"),
-         "Parameters for the beta distribution. Two values, comma separated corresponding to a,b.");
+         "Parameters for the beta distribution. Two values, comma separated corresponding to a,b.")
+        ("saddlepoint",
+        po::bool_switch(&saddlepoint),
+        "Force the saddlepoint approximation. Useful for highly skewed case/control sample sizes.");
     cmc.add_options()
         ("cmcmaf",
          po::value<double>()->default_value(0.005),
@@ -389,6 +393,7 @@ int main(int argc, char **argv) {
   // SKAT Options
   tp.kernel = vm["kernel"].as<std::string>();
   tp.qtl = linear;
+  tp.saddlepoint = saddlepoint;
   // Beta weights
   tp.a = std::stoi(beta_split[0]);
   tp.b = std::stoi(beta_split[1]);

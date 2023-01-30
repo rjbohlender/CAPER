@@ -258,10 +258,6 @@ void Covariates::parse_cov(const std::string &covfile) {
     }
   }
   design_.col(0).fill(1);
-  if (tp_.verbose) {
-    std::cerr << "Design.n_rows: " << design_.n_rows << std::endl;
-    std::cerr << "Design.n_cols: " << design_.n_cols << std::endl;
-  }
   int i = 0;
   for (const auto &s : cov_samples_) {
     int j = 1;
@@ -270,6 +266,10 @@ void Covariates::parse_cov(const std::string &covfile) {
       j++;
     }
     i++;
+  }
+  if (tp_.verbose) {
+    std::cerr << "Cases: " << ncases_ << std::endl;
+    std::cerr << "Controls: " << ncontrols_ << std::endl;
   }
 }
 

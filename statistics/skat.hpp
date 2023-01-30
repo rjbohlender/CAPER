@@ -8,7 +8,7 @@
 #include "../data/covariates.hpp"
 
 // Davies method
-double SKAT_pval(double Q, const arma::vec& lambda);
+double SKAT_pval(double Q, const arma::vec &lambda, bool sadd);
 
 // Liu Method
 double Liu_qval_mod(double pval, const arma::vec& lambda);
