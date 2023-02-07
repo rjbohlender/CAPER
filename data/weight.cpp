@@ -40,10 +40,9 @@ Weight::Weight(const std::string &ifile) {
          << splitter[6] << "," << splitter[7];
     }
 
-    double score;
-#if defined(__clang__)
+    double score = 1;
     try {
-      score = std::stod(splitter[8].data());
+      score = std::stod(splitter[8]);
     } catch(std::exception &e) {
       std::cerr << "Failed to convert weight to double. Line was: " << line
                 << std::endl;
@@ -52,17 +51,6 @@ Weight::Weight(const std::string &ifile) {
                 << std::endl;
       throw(e);
     }
-#else
-    auto [ptr, ec] = std::from_chars(splitter[8].data(), splitter[8].data() + splitter[8].size(), score);
-    if (ec == std::errc::invalid_argument) {
-      std::cerr << "Failed to convert weight to double. Line was: " << line
-                << std::endl;
-      std::cerr << "Line should be tab separated and formatted as <chrom> "
-                   "<start_pos> <end_pos> <type> <weight>"
-                << std::endl;
-      std::exit(1);
-    }
-#endif
 
     // Prevent math errors
     scores_[ss.str()] = score;
