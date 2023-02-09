@@ -26,6 +26,7 @@
 #include "reporter.hpp"
 
 #include <boost/iostreams/filter/gzip.hpp>
+#include <boost/iostreams/filter/zstd.hpp>
 #include <boost/iostreams/filtering_streambuf.hpp>
 
 template <typename Operation_t, typename Task_t, typename Reporter_t>
@@ -66,6 +67,10 @@ public:
     if (is_gzipped(tp_.input_path)) {
       gt_ifs_.open(tp_.input_path, std::ios_base::in | std::ios_base::binary);
       gt_streambuf.push(boost::iostreams::gzip_decompressor());
+      gt_streambuf.push(gt_ifs_);
+    } else if(is_zstd(tp_.input_path)) {
+      gt_ifs_.open(tp_.input_path, std::ios_base::in | std::ios_base::binary);
+      gt_streambuf.push(boost::iostreams::zstd_decompressor());
       gt_streambuf.push(gt_ifs_);
     } else {
       gt_ifs_.open(tp_.input_path, std::ios_base::in);

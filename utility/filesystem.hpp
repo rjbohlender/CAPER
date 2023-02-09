@@ -11,6 +11,7 @@
 bool check_file_exists(const std::string &path);
 bool check_directory_exists(const std::string &path);
 bool is_gzipped(const std::string &path);
+bool is_zstd(const std::string &path);
 bool make_directory(const std::string &path);
 
 #endif //PERMUTE_ASSOCIATE_FILESYSTEM_HPP

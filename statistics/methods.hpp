@@ -39,7 +39,7 @@ public:
   static double CALPHA(Gene &gene, arma::vec &Y, const std::string &ts);
   // Li and Leal 2008
   double CMC(Gene &gene, arma::vec &Y, const std::string &ts,
-             double maf = 0.005) const;
+             double rare_freq = 0.005) const;
   double CMC1df(Gene &gene, arma::vec &Y, const std::string &ts) const;
   // Morris and Zeggini 2010
   double RVT1(Gene &gene, arma::vec &Y, arma::mat design,

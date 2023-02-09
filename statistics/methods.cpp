@@ -204,7 +204,8 @@ double Methods::CALPHA(Gene &gene, arma::vec &Y, const std::string &ts) {
 }
 
 double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &ts,
-                    double maf) const {
+                    double rare_freq) const {
+#ifdef HOTELLINGS
   arma::mat X(gene.genotypes[ts]);
 
   double N = Y.n_rows;
@@ -214,8 +215,8 @@ double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &ts,
   arma::rowvec MAF = arma::mean(X, 0) / 2;
 
   // Collapse rare variants
-  arma::uvec rare = arma::find(MAF < maf);
-  arma::uvec common = arma::find(MAF >= maf);
+  arma::uvec rare = arma::find(MAF < rare_freq);
+  arma::uvec common = arma::find(MAF >= rare_freq);
 
   arma::mat Xnew;
   if (rare.size() <= 1) {
@@ -270,6 +271,96 @@ double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &ts,
     throw;
   }
   return pval;
+#else
+  arma::mat X(gene.genotypes[ts]);
+
+  const arma::rowvec freq = arma::mean(X, 0) / 2.;
+
+  // Collapse rare variants
+  const arma::uvec rare = arma::find(freq < rare_freq);
+  const arma::uvec common = arma::find(freq >= rare_freq);
+
+  arma::mat Xnew;
+  double ncollapse = rare.n_elem;
+  if (ncollapse > 0) {
+    const double combined_freq = arma::accu(freq(rare));
+    arma::mat Xcollapse = arma::sum(X.cols(rare), 1);
+    Xnew = X.cols(common);
+    Xnew.insert_cols(Xnew.n_cols, Xcollapse);
+  } else {
+    Xnew = X;
+  }
+
+  if (Xnew.n_cols == 1) { // Switch test
+    Xnew(arma::find(Xnew > 0)).ones();
+
+    double freq_mutated = arma::accu(arma::mean(Xnew, 0));
+
+    arma::uword ncase = arma::accu(Y);
+    arma::uword ncont = arma::accu(1 - Y);
+
+    // Observed
+    double case_alt = arma::accu(Xnew % Y);
+    double cont_alt = arma::accu(Xnew % (1 - Y));
+    double case_ref = ncase - case_alt;
+    double cont_ref = ncont - cont_alt;
+
+    // Expected
+    double case_alt_exp = ncase * freq_mutated;
+    double case_ref_exp = ncase * (1. - freq_mutated);
+    double cont_alt_exp = ncont * freq_mutated;
+    double cont_ref_exp = ncont * (1. - freq_mutated);
+
+    double stat = std::pow(case_alt - case_alt_exp, 2) / case_alt_exp +
+                  std::pow(case_ref - case_ref_exp, 2) / case_ref_exp +
+                  std::pow(cont_alt - cont_alt_exp, 2) / cont_alt_exp +
+                  std::pow(cont_ref - cont_ref_exp, 2) / cont_ref_exp;
+    double df = 1;
+
+    if (tp.nperm == 0) {
+      // Formula is df = (r -1)(c - 1) and r == 2 always so it's just c - 1.
+      boost::math::chi_squared chisq(df);
+      if (stat < 0) {
+        stat = std::numeric_limits<double>::epsilon();
+      }
+      return boost::math::cdf(boost::math::complement(chisq, stat));
+    } else {
+      return stat;
+    }
+  } else {
+
+    double n = arma::accu(Xnew); // Total of table observations
+
+    arma::rowvec case_counts = Y.t() * Xnew;
+    arma::rowvec control_counts = (1. - Y).t() * Xnew;
+
+    double case_total = arma::accu(case_counts);
+    double control_total = arma::accu(control_counts);
+
+    arma::rowvec variant_totals = case_counts + control_counts;
+
+    arma::rowvec case_expected = case_total * variant_totals / n;
+    arma::rowvec control_expected = control_total * variant_totals / n;
+
+    arma::rowvec case_chi =
+        arma::pow(case_counts - case_expected, 2) / case_expected;
+    arma::rowvec control_chi =
+        arma::pow(control_counts - control_expected, 2) / control_expected;
+
+    if (tp.nperm == 0) {
+      // Formula is df = (r -1)(c - 1) and r == 2 always so it's just c - 1.
+      const int df = case_counts.n_elem - 1;
+      boost::math::chi_squared chisq(df);
+      double stat = arma::accu(case_chi + control_chi);
+      if (stat < 0) {
+        stat = std::numeric_limits<double>::epsilon();
+      }
+      return boost::math::cdf(boost::math::complement(chisq, stat));
+    } else {
+      return arma::accu(case_chi + control_chi);
+    }
+  }
+#endif
 }
 
 double Methods::CMC1df(Gene &gene, arma::vec &Y, const std::string &ts) const {
