@@ -223,9 +223,9 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-    std::vector<int> range_opt;
-    if (!vm["range"].empty() && ((range_opt = vm["range"].as<std::vector<int>>()).size() != 2
-        || (!vm["range"].empty() && !vm["genes"].empty()))) {
+    std::vector<int> range_opt = vm["range"].as<std::vector<int>>();
+    if (!vm["range"].empty() && range_opt.size() != 2
+        || (!vm["range"].empty() && !vm["genes"].empty())) {
       std::cerr << "--range takes two integer arguments\n";
       std::cerr << "--range cannot be used with the --genes or -l option.\n";
       std::cerr << visible << "\n";
@@ -246,7 +246,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  std::set<std::string> method_choices = {
+  const std::set<std::string> method_choices = {
       "BURDEN",
       "CALPHA",
       "CMC",
@@ -260,12 +260,12 @@ int main(int argc, char **argv) {
       "VAAST"
   };
 
-  std::set<std::string> kernel_choices = {
+  const std::set<std::string> kernel_choices = {
       "Linear",
       "wLinear"
   };
 
-  std::set<std::string> optimizer_choices = {
+  const std::set<std::string> optimizer_choices = {
   	"irls",
   	"irls_svdnewton",
   	"irls_qr",

@@ -26,7 +26,12 @@
 
 constexpr std::array<double, 8> Methods::rho_;
 
-// TODO Check with Chad / Yao re: replacing NAN values for MGIT
+/**
+ * @brief Compute the rank of each element in a vector
+ * @param v The vector to rank
+ * @param direction The direction to rank in. Either "ascend" or "descend"
+ * @return A vector of ranks
+ */
 arma::vec rank(arma::vec &v, const char *direction) {
   if (strcmp(direction, "ascend") != 0 && strcmp(direction, "descend") != 0)
     throw(std::logic_error(
@@ -116,6 +121,13 @@ void Methods::clear(std::vector<std::string> &v) {
   lin_obj_.reset();
 }
 
+/**
+ * @brief Compute the p-value for using the BURDEN test statistic.
+ * @param gene The gene to test.
+ * @param ts Transcript.
+ * @param phenotypes Phenoypes.
+ * @return The p-value or test statistic.
+ */
 double Methods::BURDEN(Gene &gene, const std::string &ts,
                        arma::vec &phenotypes) {
   obj_->shuffle(phenotypes);
@@ -174,6 +186,14 @@ double Methods::BURDEN(Gene &gene, const std::string &ts,
   }
 }
 
+/**
+ * @brief Calculate the p-value for a gene using the SKAT method.
+ *
+ * @param gene Gene object.
+ * @param Y Phenotype vector.
+ * @param ts Transcript.
+ * @return double P-value.
+ */
 double Methods::CALPHA(Gene &gene, arma::vec &Y, const std::string &ts) {
   arma::sp_mat X(gene.genotypes[ts]);
 
@@ -203,6 +223,15 @@ double Methods::CALPHA(Gene &gene, arma::vec &Y, const std::string &ts) {
   return arma::sum(arma::pow(g - (n * p0), 2) - (n * p0 * (1 - p0)));
 }
 
+/**
+ * @brief Compute the CMC test statistic.
+ *
+ * @param gene Gene object.
+ * @param Y Phenotype vector.
+ * @param ts Transcript
+ * @param rare_freq Rare variant frequency threshold.
+ * @return double Test statistic.
+ */
 double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &ts,
                     double rare_freq) const {
 #ifdef HOTELLINGS
@@ -363,6 +392,14 @@ double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &ts,
 #endif
 }
 
+/**
+ * @brief Calculate the CMC1df statistic for a gene.
+ *
+ * @param gene Gene to calculate the statistic for.
+ * @param Y Phenotype vector.
+ * @param ts Transcript to calculate the statistic for.
+ * @return double Statistic.
+ */
 double Methods::CMC1df(Gene &gene, arma::vec &Y, const std::string &ts) const {
   // Runtime for MDA OV with just fisher test and 10000 perms = 6544.95
   // Runtime for fast path with 10000 perms = 267.874
