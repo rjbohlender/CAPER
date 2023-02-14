@@ -223,9 +223,8 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-    std::vector<int> range_opt = vm["range"].as<std::vector<int>>();
-    if (!vm["range"].empty() && range_opt.size() != 2
-        || (!vm["range"].empty() && !vm["genes"].empty())) {
+    std::vector<int> range_opt;
+    if (!vm["range"].empty() && ((range_opt = vm["range"].as<std::vector<int>>()).size() != 2 || (!vm["range"].empty() && !vm["genes"].empty()))) {
       std::cerr << "--range takes two integer arguments\n";
       std::cerr << "--range cannot be used with the --genes or -l option.\n";
       std::cerr << visible << "\n";
