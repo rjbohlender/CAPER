@@ -17,7 +17,7 @@ const std::set<std::string> Reporter::pvalue_methods_ {
 };
 
 Reporter::Reporter(TaskParams &tp)
-: method_(tp.method), pvalues_(tp.analytic), gene_list_(tp.gene_list), print_testable_(tp.testable), ncases_(0), ncontrols_(0) {
+: ncases_(0), ncontrols_(0), method_(tp.method), pvalues_(tp.analytic), gene_list_(tp.gene_list), print_testable_(tp.testable) {
   std::string header;
 
   if(!check_directory_exists(tp.output_path)) {
@@ -46,7 +46,7 @@ Reporter::Reporter(TaskParams &tp)
     simple_path_ss << boost::format(".g%1$d") % tp.group_size;
   if(tp.testable)
     simple_path_ss << ".check_testability";
-  if(tp.biallelic)
+  if(tp.biallelic && tp.method == "VAAST")
     simple_path_ss << ".biallelic";
   if (tp.range_start && tp.range_end) {
 	simple_path_ss << "." << *tp.range_start;
@@ -73,11 +73,11 @@ Reporter::Reporter(TaskParams &tp)
   simple_file_tmp_ << std::setw(20) << "Permutations" << std::endl;
 
   detail_path_ss << tp.output_path << "/" << tp.method;
-  if(tp.group_size > 0)
+  if(tp.group_size > 0 && tp.method == "VAAST")
     detail_path_ss << boost::format(".g%1$d") % tp.group_size;
   if(tp.testable)
     detail_path_ss << ".check_testability";
-  if(tp.biallelic)
+  if(tp.biallelic && tp.method == "VAAST")
 	detail_path_ss << ".biallelic";
   if (tp.range_start && tp.range_end) {
 	detail_path_ss << "." << *tp.range_start;
@@ -101,18 +101,18 @@ Reporter::Reporter(TaskParams &tp)
 }
 
 Reporter::Reporter(std::vector<CAPERTask> &res, TaskParams &tp)
-: method_(tp.method), pvalues_(tp.analytic), gene_list_(tp.gene_list), print_testable_(tp.testable), ncases_(0), ncontrols_(0) {
+: ncases_(0), ncontrols_(0), method_(tp.method), pvalues_(tp.analytic), gene_list_(tp.gene_list), print_testable_(tp.testable) {
   if(!check_directory_exists(tp.output_path)) {
     throw(std::runtime_error("Output path is invalid."));
   }
 
   // Normal execution
   simple_path_ss << tp.output_path << "/" << tp.method;
-  if (tp.group_size > 0)
+  if (tp.group_size > 0 && tp.method == "VAAST")
 	simple_path_ss << boost::format(".g%1$d") % tp.group_size;
   if (tp.testable)
 	simple_path_ss << ".check_testability";
-  if (tp.biallelic)
+  if (tp.biallelic && tp.method == "VAAST")
 	simple_path_ss << ".biallelic";
   if (tp.range_start && tp.range_end) {
 	simple_path_ss << "." << *tp.range_start;
@@ -121,11 +121,11 @@ Reporter::Reporter(std::vector<CAPERTask> &res, TaskParams &tp)
   simple_path_ss << ".simple";
 
   detail_path_ss << tp.output_path << "/" << tp.method;
-  if (tp.group_size > 0)
+  if (tp.group_size > 0 && tp.method == "VAAST")
 	detail_path_ss << boost::format(".g%1$d") % tp.group_size;
   if (tp.testable)
 	detail_path_ss << ".check_testability";
-  if (tp.biallelic)
+  if (tp.biallelic && tp.method == "VAAST")
 	detail_path_ss << ".biallelic";
   if (tp.range_start && tp.range_end) {
 	detail_path_ss << "." << *tp.range_start;
