@@ -107,7 +107,7 @@ int main(int argc, char **argv) {
         ("method,m",
          po::value<std::string>()->default_value("VAAST"),
          "The statistical method to be used.\n"
-         "Options: {BURDEN, CALPHA, CMC, CMC1df, RVT1, RVT2, SKAT, SKATO, VAAST, VT, WSS}.")
+         "Options: {BURDEN, CALPHA, CMC, CMC1df, RVT1, RVT2, SKAT, SKATO, SKATC, VAAST, VT, WSS}.")
         ("optimizer",
          po::value<std::string>()->default_value("irls"),
          "The optimizer used to fit the GLM.\n"
@@ -256,6 +256,7 @@ int main(int argc, char **argv) {
       "RVT2",
       "SKAT",
       "SKATO",
+      "SKATC",
       "VAAST"
   };
 
@@ -275,7 +276,7 @@ int main(int argc, char **argv) {
   if (method_choices.count(vm["method"].as<std::string>()) == 0) {
     // Method not among choices
     std::cerr
-        << "Method must be one of {BURDEN, CALPHA, CMC, CMC1df, RVT1, RVT2, SKAT, SKATO, VAAST, VT, WSS}.\n";
+        << "Method must be one of {BURDEN, CALPHA, CMC, CMC1df, RVT1, RVT2, SKAT, SKATO, SKATC, VAAST, VT, WSS}.\n";
     std::cerr << visible << "\n";
     return 1;
   }
@@ -408,12 +409,12 @@ int main(int argc, char **argv) {
   tp.alternate_permutation = tp.nocovadj || tp.covariates_path.empty();
   tp.quantitative =
       tp.method == "RVT1" || tp.method == "RVT2" || tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN"
-          || tp.method == "VT";
+          || tp.method == "VT" || tp.method == "SKATC";
   tp.analytic = tp.method == "SKATO" || (tp.method == "SKAT" && tp.nperm == 0) || tp.method == "RVT1"
      || tp.method == "RVT2" || (tp.method == "CMC" && tp.nperm == 0) || (tp.method == "CMC1df" && tp.nperm == 0)
-                || (tp.method == "BURDEN" && tp.nperm == 0);
+                || (tp.method == "BURDEN" && tp.nperm == 0) || tp.method == "SKATC";
   if (tp.qtl && !tp.quantitative) {
-    std::cerr << "Quantitative trait analysis is only supported for the RVT1, RVT2, SKATO, SKAT, and BURDEN methods."
+    std::cerr << "Quantitative trait analysis is only supported for the RVT1, RVT2, SKAT, SKATO, SKATC, and BURDEN methods."
               << std::endl;
     std::exit(1);
   }

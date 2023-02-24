@@ -35,12 +35,13 @@ public:
   void clear(std::vector<std::string> &v);
 
   // Wu, Guan, and Pankow 2016
-  double BURDEN(Gene &gene, const std::string &ts, arma::vec &phenotypes);
+  double BURDEN(Gene &gene, arma::vec &phenotypes, const std::string &ts);
   static double CALPHA(Gene &gene, arma::vec &Y, const std::string &ts);
   // Li and Leal 2008
   double CMC(Gene &gene, arma::vec &Y, const std::string &ts,
              double rare_freq = 0.005) const;
-  double CMC1df(Gene &gene, arma::vec &Y, const std::string &ts) const;
+  double CMC1df(Gene &gene, arma::vec &Y, const std::string &ts,
+                bool permute) const;
   // Morris and Zeggini 2010
   double RVT1(Gene &gene, arma::vec &Y, arma::mat design,
               arma::vec &initial_beta, const std::string &ts, bool linear);
@@ -48,15 +49,17 @@ public:
               arma::vec &initial_beta, const std::string &ts,
               bool linear);
   // Wu, Guan, and Pankow 2016
-  double SKAT(Gene &gene, const std::string &transcript, arma::vec &phenotypes,
+  double SKAT(Gene &gene, arma::vec &phenotypes, const std::string &transcript,
               int a, int b, bool detail, bool linear, bool permute);
   // Wu, Guan, and Pankow 2016
-  double SKATO(Gene &gene, const std::string &transcript, arma::vec &phenotypes,
+  double SKATO(Gene &gene, arma::vec &phenotypes, const std::string &transcript,
                int a, int b, bool detail = false, bool linear = false);
-  double VAAST(Gene &gene, arma::vec &Y, const std::string &k,
+  double SKATC(Gene &gene, arma::vec &phenotypes, const std::string &transcript,
+               int a, int b, bool detail = false, bool linear = false);
+  double VAAST(Gene &gene, arma::vec &Y, const std::string &ts,
                double site_penalty, arma::uword group_threshold, bool detail,
                bool biallelic, double control_freq_cutoff, bool legacy);
-  double VT(Gene &gene, const std::string &ts, arma::vec &phenotypes);
+  double VT(Gene &gene, arma::vec &phenotypes, const std::string &ts);
 
   // Madsen, Browning 2009
   static double WSS(Gene &gene, arma::vec &Y, const std::string &k);
