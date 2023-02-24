@@ -127,10 +127,11 @@ void Methods::clear(std::vector<std::string> &v) {
  * @param gene The gene to test.
  * @param ts Transcript.
  * @param phenotypes Phenoypes.
+ * @param permute Whether we are permuting or returning analytic p-value.
  * @return The p-value or test statistic.
  */
-double Methods::BURDEN(Gene &gene, arma::vec &phenotypes,
-                       const std::string &ts) {
+double Methods::BURDEN(Gene &gene, arma::vec &phenotypes, const std::string &ts,
+                       bool permute) {
   obj_->shuffle(phenotypes);
   arma::sp_mat G(gene.genotypes[ts]);
   arma::uword N = G.n_cols; // Variant count
@@ -167,7 +168,7 @@ double Methods::BURDEN(Gene &gene, arma::vec &phenotypes,
   double R1 = arma::accu(Rs);
   double stat = Qb / R1;
 
-  if (tp.analytic) {
+  if (!permute) {
     boost::math::chi_squared chisq(1); // 1-df chisq
     if (!std::isfinite(stat)) {
       return 1.;
@@ -340,7 +341,7 @@ double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &ts,
     double df = 1;
 
     if (tp.nperm == 0) {
-      // Formula is df = (r -1)(c - 1) and r == 2 always so it's just c - 1.
+      // Formula is df = (r -1)(c - 1) and r == 2 always, so it's just c - 1.
       boost::math::chi_squared chisq(df);
       if (stat < 0) {
         stat = std::numeric_limits<double>::epsilon();
@@ -370,7 +371,7 @@ double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &ts,
         arma::pow(control_counts - control_expected, 2) / control_expected;
 
     if (tp.nperm == 0) {
-      // Formula is df = (r -1)(c - 1) and r == 2 always so it's just c - 1.
+      // Formula is df = (r -1)(c - 1) and r == 2 always, so it's just c - 1.
       const int df = case_counts.n_elem - 1;
       boost::math::chi_squared chisq(df);
       double stat = arma::accu(case_chi + control_chi);
@@ -810,6 +811,11 @@ double Methods::SKATO(Gene &gene, arma::vec &phenotypes,
 double Methods::SKATC(Gene &gene, arma::vec &phenotypes,
                       const std::string &transcript, int a, int b, bool detail,
                       bool linear) {
+  if (linear) {
+    lin_obj_->shuffle(phenotypes);
+  } else {
+    obj_->shuffle(phenotypes);
+  }
   // ACAT p-value combination functions
   const double pi = boost::math::constants::pi<double>();
   auto acat = [&pi](arma::vec &p, arma::vec &w) -> double {
@@ -819,11 +825,17 @@ double Methods::SKATC(Gene &gene, arma::vec &phenotypes,
     return 1./2. - atan(t / arma::accu(w)) / pi;
   };
 
+#ifdef SKATCMC
   double skatp =
       SKAT(gene, phenotypes, transcript, a, b, detail, linear, false);
   double cmc1dfp = CMC1df(gene, phenotypes, transcript, false);
+#else
+  double skatp =
+      SKAT(gene, phenotypes, transcript, a, b, detail, linear, false);
+  double burdenp = BURDEN(gene, phenotypes, transcript, false);
+#endif
 
-  arma::vec ps = {skatp, cmc1dfp};
+  arma::vec ps = {skatp, burdenp};
   arma::vec ws = {1, 1};
 
   double stat = acat(ps, ws);
@@ -857,7 +869,7 @@ void Methods::check_weights(Gene &gene, const std::string &transcript, int a,
 double Methods::call(Gene &gene, Covariates &cov, arma::vec &phenotypes,
                      const std::string &transcript, bool detail) {
   if (method_ == "BURDEN") {
-    return BURDEN(gene, phenotypes, transcript);
+    return BURDEN(gene, phenotypes, transcript, tp.nperm > 0);
   } else if (method_ == "CALPHA") {
     return CALPHA(gene, phenotypes, transcript);
   } else if (method_ == "CMC") {

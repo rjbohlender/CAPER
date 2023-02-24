@@ -238,7 +238,7 @@ double PowerOp::call_method(Methods &method,
   bool shuffle = false; // Not needed here
   bool detail = false;
   if (tp.method == "BURDEN") {
-	return method.BURDEN(gene, phenotypes, k);
+	return method.BURDEN(gene, phenotypes, k, false);
   } else if (tp.method == "CALPHA") {
 	return method.CALPHA(gene, phenotypes, k);
   } else if (tp.method == "CMC") {
