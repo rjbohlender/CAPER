@@ -48,7 +48,7 @@ public:
     if (tp_.weight) {
       weight_ = Weight(*tp_.weight);
     }
-    Filter filter(tp_.program_directory + "../filter/filter_whitelist.csv");
+    Filter filter(tp_.whitelist_path);
 
     // Update case/control count for reporter
     if (!tp_.power) {

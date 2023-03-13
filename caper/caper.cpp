@@ -355,6 +355,7 @@ int main(int argc, char **argv) {
     tp.whitelist_path = tp.program_directory + "../filter/filter_whitelist.csv";
   }
   std::cerr << "Program directory: " << tp.program_directory << std::endl;
+  std::cerr << "Whitelist path: " << tp.whitelist_path << std::endl;
   tp.seed = seed;
   tp.input_path = vm["input"].as<std::string>();
   if (vm.count("covariates") > 0) {
