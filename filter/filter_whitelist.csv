@@ -4,8 +4,8 @@ TYPE:insertion,1,1,1,1,1,1,1,1,1,1,1,1
 TYPE:deletion,1,1,1,1,1,1,1,1,1,1,1,1
 TYPE:SPDA,1,1,1,1,1,1,1,1,1,1,1,1
 TYPE:complex_substitution,1,1,1,1,1,1,1,1,1,1,1,1
-FUNCTION:synonymous,1,1,1,1,1,1,1,1,1,1,1,1
-FUNCTION:synonymous SNV,1,1,1,1,1,1,1,1,1,1,1,1
+FUNCTION:synonymous,0,0,0,0,0,0,0,0,0,0,0,0
+FUNCTION:synonymous SNV,0,0,0,0,0,0,0,0,0,0,0,0
 FUNCTION:nonsynonymous,1,1,1,1,1,1,1,1,1,1,1,1
 FUNCTION:nonsynonymous SNV,1,1,1,1,1,1,1,1,1,1,1,1
 FUNCTION:frameshift,1,1,1,1,1,1,1,1,1,1,1,1

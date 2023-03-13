@@ -189,7 +189,7 @@ int main(int argc, char **argv) {
          "VAAST site penalty. AIC penalty applied to each site in VAAST.")
         ("alternate_grouping",
          po::bool_switch(&alternate_grouping),
-         "Match grouping behavior to VAAST 2.0. Off by default. If enabled variants are grouped by type annotation, otherwise grouped all together.");
+         "If enabled variants are grouped all together, otherwise by VAAST 2.0 type annotation.");
     skat.add_options()
         ("kernel,k",
          po::value<std::string>()->default_value("Linear"),
