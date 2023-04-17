@@ -256,6 +256,7 @@ void Gene::parse(std::stringstream &ss, const std::shared_ptr<Covariates> &cov,
                  Filter &filter) {
   using namespace RJBUtil;
   std::string line;
+  std::string prev_transcript;
   arma::uword i = 0;
   std::vector<bool> rarest;
 
@@ -318,9 +319,17 @@ void Gene::parse(std::stringstream &ss, const std::shared_ptr<Covariates> &cov,
       annotation.emplace(
           std::make_pair(transcript, std::vector<std::string>()));
       // Add filtering stack for transcript
-      to_remove.emplace(std::make_pair(transcript, std::stack<int>()));
+      to_remove.emplace(transcript, std::stack<int>());
       // Reset counter on new transcript
+      prev_transcript = transcript;
       i = 1;
+    } else {
+      // Throw error on transcript mismatch
+      if (transcript != prev_transcript) {
+        throw(std::runtime_error("Transcript " + transcript +
+                                 " is out of order in matrix file. "
+                                 "Sort matrix file by gene and transcript."));
+      }
     }
     if (!filter.allow_variant(tp.method, splitter)) {
       to_remove[transcript].push(i - 1);

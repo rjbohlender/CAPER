@@ -299,6 +299,7 @@ private:
   void all_gene_dispatcher(std::istream &gt_stream, Filter &filter) {
     std::string line;
     std::stringstream current;
+    std::unordered_set<std::string> previous_genes;
     int lineno = -1;
     FileValidator fv;
     fv.set_matrix_header(header_);
@@ -314,6 +315,16 @@ private:
       if (split[static_cast<int>(Indices::gene)] == gene_) {
         add_line(current, line, split);
       } else {
+        if (previous_genes.contains(split[static_cast<int>(Indices::gene)])) {
+              throw std::runtime_error(
+              "Gene list must be sorted by gene name. Gene " +
+              split[static_cast<int>(Indices::gene)] +
+              " appears before " + gene_ + " on line " +
+              std::to_string(lineno) + " of the gene stream. " +
+              "Please sort the gene stream by gene name and transcript.");
+        } else {
+              previous_genes.insert(split[static_cast<int>(Indices::gene)]);
+        }
         // Have we read a gene yet?
         if (!gene_.empty()) {
           if (std::any_of(nvariants_.cbegin(), nvariants_.cend(),
