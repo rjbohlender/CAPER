@@ -319,7 +319,7 @@ private:
               throw std::runtime_error(
               "Gene list must be sorted by gene name. Gene " +
               split[static_cast<int>(Indices::gene)] +
-              " appears before " + gene_ + " on line " +
+              " appears again on line " +
               std::to_string(lineno) + " of the gene stream. " +
               "Please sort the gene stream by gene name and transcript.");
         } else {
