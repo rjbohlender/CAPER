@@ -11,10 +11,16 @@
 class FileValidator {
   RJBUtil::Splitter<std::string> matrix_header;
   static const std::set<std::string> matrix_variant_types;
+  static const int cov_line_size = 2;
+  static const int ped_line_size = 6;
+  static const int bed_line_size = 5;
+  static const int weight_line_size = 5;
+  static const int weight_type_index = 5;
+  size_t matrix_sample_count;
 
 public:
 	FileValidator() = default;
-	static void validate_matrix_line(RJBUtil::Splitter<std::string> &line, int lineno) ;
+	void validate_matrix_line(RJBUtil::Splitter<std::string> &line, int lineno) const ;
 	static void validate_cov_line(RJBUtil::Splitter<std::string> &line, int lineno) ;
   	static void validate_ped_line(RJBUtil::Splitter<std::string> &line, int lineno) ;
 	static void validate_bed_line(RJBUtil::Splitter<std::string> &line, int lineno) ;
