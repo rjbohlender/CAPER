@@ -185,6 +185,8 @@ problematic variants. The .bed format for the mask file is as follows:
 	1) Chromosome
 	2) Start position of masked region
 	3) End position of masked region
+    4) Reference allele
+    5) Alternate allele
 	
 XQC (in the Cross Platform Association Toolkit (XPAT)) will provide a mask
 file for those variants that fail QC if it is being used.
@@ -226,29 +228,12 @@ weights with those calculated from a beta distribution.
 
 ## Filter Whitelist ##
 
-This is a list of variant types and functions to include for each method. Any
-types or functions not in the list will be ignored / removed during parsing. The
-whitelist format is simple. It is the method matched with the type / function.
-Example:
+This is a matrix of variant types and functions, to include for each method. Any types or functions not in the list will
+be ignored / removed during parsing. The whitelist format is simple. A default whitelist is provided in the filter
+directory.
 
-Convert to matrix csv format.
-
-- BURDEN:SNV
-- BURDEN:insertion
-- BURDEN:deletion
-- BURDEN:SPDA
-- BURDEN:complex_substitution
-- BURDEN:synonymous
-- BURDEN:nonsynonymous
-- BURDEN:frameshift
-- BURDEN:nonframeshift
-- BURDEN:stopgain
-- BURDEN:stoploss
-- BURDEN:unknown
-
-This is the default allowed set of variant types and functions for the BURDEN
-test. Removing the SPDA line would result in all variants labelled as splicing
-donor / acceptor being removed.
+The default allows all variant types and functions for all methods. Removing the SPDA line would result in all variants
+labelled as splicing donor / acceptor being removed.
 
 ## Testability ##
 
