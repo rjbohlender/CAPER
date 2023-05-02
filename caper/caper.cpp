@@ -54,6 +54,7 @@ int main(int argc, char **argv) {
   bool aaf_filter = true;
   bool whole_gene = false;
   bool saddlepoint = false;
+  bool hotellings = false;
   std::vector<int> gene_range;
   std::vector<std::string> power;
   boost::optional<std::string> bed;
@@ -152,7 +153,7 @@ int main(int argc, char **argv) {
          "Write permuted statistics to .simple file following default output.")
         ("permute_out",
          po::value(&permute_set),
-         "Output permutations to the given file.")
+         "Output permutations to the given file. Exits after generating permutations.")
         ("min_minor_allele_count",
          po::value<arma::uword>()->default_value(1),
          "Minimum number of minor allele copies to test a gene.")
@@ -206,7 +207,10 @@ int main(int argc, char **argv) {
     cmc.add_options()
         ("cmcmaf",
          po::value<double>()->default_value(0.005),
-         "Minor allele frequency cutoff for CMC collapsing.");
+         "Minor allele frequency cutoff for CMC collapsing.")
+        ("hotellings",
+        po::bool_switch(&hotellings),
+        "Use Hotellings T2 instead of a chi-square test.");
     all.add_options()
         ("external", po::value<std::string>(), "Use external permutations.")
         ("help,h", "Print this help message.")

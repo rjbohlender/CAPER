@@ -24,7 +24,8 @@
 class Covariates {
 public:
   explicit Covariates(TaskParams tp);
-  Covariates(std::stringstream &ped_ss, std::stringstream& cov_ss);
+  Covariates(std::stringstream &ped_ss, std::stringstream &cov_ss,
+             TaskParams tp);
 
   Covariates(const Covariates &cov) = default;
 

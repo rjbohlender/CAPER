@@ -24,9 +24,10 @@ Covariates::Covariates(TaskParams tp)
   sorted_ = false;
 }
 
-Covariates::Covariates(std::stringstream &ped_ss, std::stringstream &cov_ss)
+Covariates::Covariates(std::stringstream &ped_ss, std::stringstream &cov_ss,
+                       TaskParams tp)
     : nsamples_(0), ncases_(0), ncontrols_(0), crand((int)time(nullptr)),
-      linear_(false) {
+      linear_(false), tp_(tp) {
   parse(ped_ss, cov_ss);
   sorted_ = false;
 }

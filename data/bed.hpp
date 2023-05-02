@@ -48,9 +48,6 @@ public:
   bool empty();
   unsigned long size();
 
-  // Number of entries in ranges_ for a given chromosome
-  unsigned long chromosome_count(const std::string &k);
-
 private:
   std::map<std::string, std::vector<BedRange>> ranges_;
   std::unordered_set<std::string> variants_;

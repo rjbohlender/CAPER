@@ -25,7 +25,7 @@ struct TaskParams {
   arma::uword max_levels;
   boost::optional<arma::uword> max_perms;
 
-  bool whole_gene;
+  bool whole_gene = false;
 
   // For external permutations
   bool external;
@@ -92,6 +92,7 @@ struct TaskParams {
 
   // CMC
   double cmcmaf;
+  bool hotellings = false;
 
   size_t nthreads;
 

@@ -228,162 +228,162 @@ double Methods::CALPHA(Gene &gene, arma::vec &Y, const std::string &ts) {
  */
 double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &ts,
                     double rare_freq) const {
-#ifdef HOTELLINGS
-  arma::mat X(gene.genotypes[ts]);
+  if (tp.hotellings) {
+    arma::mat X(gene.genotypes[ts]);
 
-  double N = Y.n_rows;
-  double nA = arma::sum(Y); // Case count
-  double nU = N - nA;       // Control count
+    double N = Y.n_rows;
+    double nA = arma::sum(Y); // Case count
+    double nU = N - nA;       // Control count
 
-  arma::rowvec MAF = arma::mean(X, 0) / 2;
+    arma::rowvec MAF = arma::mean(X, 0) / 2;
 
-  // Collapse rare variants
-  arma::uvec rare = arma::find(MAF < rare_freq);
-  arma::uvec common = arma::find(MAF >= rare_freq);
+    // Collapse rare variants
+    arma::uvec rare = arma::find(MAF < rare_freq);
+    arma::uvec common = arma::find(MAF >= rare_freq);
 
-  arma::mat Xnew;
-  if (rare.size() <= 1) {
-    Xnew = X;
-  } else {
-    arma::mat Xcollapse = arma::sum(X.cols(rare), 1);
-    Xcollapse(arma::find(Xcollapse > 1)).ones();
-    Xnew = X.cols(common);
-    Xnew.insert_cols(Xnew.n_cols, Xcollapse);
-  }
-
-  // Rescale to -1, 0, 1
-  Xnew -= 1;
-
-  // Calculate two-sample Hotelling's T2 statistic
-  arma::mat Xx = Xnew.rows(arma::find(Y == 1));
-  arma::mat Yy = Xnew.rows(arma::find(Y == 0));
-
-  arma::rowvec Xxmean = arma::mean(Xx);
-  arma::rowvec Yymean = arma::mean(Yy);
-
-  arma::mat COV =
-      ((nA - 1.) * arma::cov(Xx) + (nU - 1.) * arma::cov(Yy)) / (N - 2.);
-  arma::mat INV;
-  if (!arma::inv_sympd(INV, COV)) {
-    arma::pinv(INV, COV);
-  }
-  double ret = arma::as_scalar((Xxmean - Yymean) * INV * (Xxmean - Yymean).t() *
-                               nA * nU / N);
-  auto p = static_cast<double>(Xxmean.n_elem);
-  double stat = ret * (nA + nU - 1 - p) / (p * (nA + nU - 2));
-  // stat ~ F(N, nA + nU - 1 - N)
-  if (stat < 0)
-    stat = 0;
-  if (tp.nperm > 0) {
-    return stat;
-  }
-  boost::math::fisher_f fisher_f(p, nA + nU - 1 - p);
-  double pval;
-  try {
-    if (isnan(stat)) {
-      return 1.;
-    }
-    pval = boost::math::cdf(boost::math::complement(fisher_f, stat));
-  } catch (boost::exception &e) {
-    std::cerr << "COV: " << COV;
-    std::cerr << "INV: " << INV;
-    std::cerr << "Xxmean: " << Xxmean;
-    std::cerr << "Yymean: " << Yymean;
-    std::cerr << "stat: " << stat << std::endl;
-    std::cerr << "ret: " << arma::as_scalar(ret);
-    throw;
-  }
-  return pval;
-#else
-  arma::mat X(gene.genotypes[ts]);
-
-  const arma::rowvec freq = arma::mean(X, 0) / 2.;
-
-  // Collapse rare variants
-  const arma::uvec rare = arma::find(freq < rare_freq);
-  const arma::uvec common = arma::find(freq >= rare_freq);
-
-  arma::mat Xnew;
-  double ncollapse = rare.n_elem;
-  if (ncollapse > 0) {
-    const double combined_freq = arma::accu(freq(rare));
-    arma::mat Xcollapse = arma::sum(X.cols(rare), 1);
-    Xnew = X.cols(common);
-    Xnew.insert_cols(Xnew.n_cols, Xcollapse);
-  } else {
-    Xnew = X;
-  }
-
-  if (Xnew.n_cols == 1) { // Switch test
-    Xnew(arma::find(Xnew > 0)).ones();
-
-    double freq_mutated = arma::accu(arma::mean(Xnew, 0));
-
-    arma::uword ncase = arma::accu(Y);
-    arma::uword ncont = arma::accu(1 - Y);
-
-    // Observed
-    double case_alt = arma::accu(Xnew % Y);
-    double cont_alt = arma::accu(Xnew % (1 - Y));
-    double case_ref = ncase - case_alt;
-    double cont_ref = ncont - cont_alt;
-
-    // Expected
-    double case_alt_exp = ncase * freq_mutated;
-    double case_ref_exp = ncase * (1. - freq_mutated);
-    double cont_alt_exp = ncont * freq_mutated;
-    double cont_ref_exp = ncont * (1. - freq_mutated);
-
-    double stat = std::pow(case_alt - case_alt_exp, 2) / case_alt_exp +
-                  std::pow(case_ref - case_ref_exp, 2) / case_ref_exp +
-                  std::pow(cont_alt - cont_alt_exp, 2) / cont_alt_exp +
-                  std::pow(cont_ref - cont_ref_exp, 2) / cont_ref_exp;
-    double df = 1;
-
-    if (tp.nperm == 0) {
-      // Formula is df = (r -1)(c - 1) and r == 2 always, so it's just c - 1.
-      boost::math::chi_squared chisq(df);
-      if (stat < 0) {
-        stat = std::numeric_limits<double>::epsilon();
-      }
-      return boost::math::cdf(boost::math::complement(chisq, stat));
+    arma::mat Xnew;
+    if (rare.size() <= 1) {
+      Xnew = X;
     } else {
+      arma::mat Xcollapse = arma::sum(X.cols(rare), 1);
+      Xcollapse(arma::find(Xcollapse > 1)).ones();
+      Xnew = X.cols(common);
+      Xnew.insert_cols(Xnew.n_cols, Xcollapse);
+    }
+
+    // Rescale to -1, 0, 1
+    Xnew -= 1;
+
+    // Calculate two-sample Hotelling's T2 statistic
+    arma::mat Xx = Xnew.rows(arma::find(Y == 1));
+    arma::mat Yy = Xnew.rows(arma::find(Y == 0));
+
+    arma::rowvec Xxmean = arma::mean(Xx);
+    arma::rowvec Yymean = arma::mean(Yy);
+
+    arma::mat COV =
+        ((nA - 1.) * arma::cov(Xx) + (nU - 1.) * arma::cov(Yy)) / (N - 2.);
+    arma::mat INV;
+    if (!arma::inv_sympd(INV, COV)) {
+      arma::pinv(INV, COV);
+    }
+    double ret = arma::as_scalar((Xxmean - Yymean) * INV *
+                                 (Xxmean - Yymean).t() * nA * nU / N);
+    auto p = static_cast<double>(Xxmean.n_elem);
+    double stat = ret * (nA + nU - 1 - p) / (p * (nA + nU - 2));
+    // stat ~ F(N, nA + nU - 1 - N)
+    if (stat < 0)
+      stat = 0;
+    if (tp.nperm > 0) {
       return stat;
     }
-  } else {
-
-    double n = arma::accu(Xnew); // Total of table observations
-
-    arma::rowvec case_counts = Y.t() * Xnew;
-    arma::rowvec control_counts = (1. - Y).t() * Xnew;
-
-    double case_total = arma::accu(case_counts);
-    double control_total = arma::accu(control_counts);
-
-    arma::rowvec variant_totals = case_counts + control_counts;
-
-    arma::rowvec case_expected = case_total * variant_totals / n;
-    arma::rowvec control_expected = control_total * variant_totals / n;
-
-    arma::rowvec case_chi =
-        arma::pow(case_counts - case_expected, 2) / case_expected;
-    arma::rowvec control_chi =
-        arma::pow(control_counts - control_expected, 2) / control_expected;
-
-    if (tp.nperm == 0) {
-      // Formula is df = (r -1)(c - 1) and r == 2 always, so it's just c - 1.
-      const int df = case_counts.n_elem - 1;
-      boost::math::chi_squared chisq(df);
-      double stat = arma::accu(case_chi + control_chi);
-      if (stat < 0) {
-        stat = std::numeric_limits<double>::epsilon();
+    boost::math::fisher_f fisher_f(p, nA + nU - 1 - p);
+    double pval;
+    try {
+      if (isnan(stat)) {
+        return 1.;
       }
-      return boost::math::cdf(boost::math::complement(chisq, stat));
+      pval = boost::math::cdf(boost::math::complement(fisher_f, stat));
+    } catch (boost::exception &e) {
+      std::cerr << "COV: " << COV;
+      std::cerr << "INV: " << INV;
+      std::cerr << "Xxmean: " << Xxmean;
+      std::cerr << "Yymean: " << Yymean;
+      std::cerr << "stat: " << stat << std::endl;
+      std::cerr << "ret: " << arma::as_scalar(ret);
+      throw;
+    }
+    return pval;
+  } else {
+    arma::mat X(gene.genotypes[ts]);
+
+    const arma::rowvec freq = arma::mean(X, 0) / 2.;
+
+    // Collapse rare variants
+    const arma::uvec rare = arma::find(freq < rare_freq);
+    const arma::uvec common = arma::find(freq >= rare_freq);
+
+    arma::mat Xnew;
+    double ncollapse = rare.n_elem;
+    if (ncollapse > 0) {
+      const double combined_freq = arma::accu(freq(rare));
+      arma::mat Xcollapse = arma::sum(X.cols(rare), 1);
+      Xnew = X.cols(common);
+      Xnew.insert_cols(Xnew.n_cols, Xcollapse);
     } else {
-      return arma::accu(case_chi + control_chi);
+      Xnew = X;
+    }
+
+    if (Xnew.n_cols == 1) { // Switch test
+      Xnew(arma::find(Xnew > 0)).ones();
+
+      double freq_mutated = arma::accu(arma::mean(Xnew, 0));
+
+      arma::uword ncase = arma::accu(Y);
+      arma::uword ncont = arma::accu(1 - Y);
+
+      // Observed
+      double case_alt = arma::accu(Xnew % Y);
+      double cont_alt = arma::accu(Xnew % (1 - Y));
+      double case_ref = ncase - case_alt;
+      double cont_ref = ncont - cont_alt;
+
+      // Expected
+      double case_alt_exp = ncase * freq_mutated;
+      double case_ref_exp = ncase * (1. - freq_mutated);
+      double cont_alt_exp = ncont * freq_mutated;
+      double cont_ref_exp = ncont * (1. - freq_mutated);
+
+      double stat = std::pow(case_alt - case_alt_exp, 2) / case_alt_exp +
+                    std::pow(case_ref - case_ref_exp, 2) / case_ref_exp +
+                    std::pow(cont_alt - cont_alt_exp, 2) / cont_alt_exp +
+                    std::pow(cont_ref - cont_ref_exp, 2) / cont_ref_exp;
+      double df = 1;
+
+      if (tp.nperm == 0) {
+        // Formula is df = (r -1)(c - 1) and r == 2 always, so it's just c - 1.
+        boost::math::chi_squared chisq(df);
+        if (stat < 0) {
+          stat = std::numeric_limits<double>::epsilon();
+        }
+        return boost::math::cdf(boost::math::complement(chisq, stat));
+      } else {
+        return stat;
+      }
+    } else {
+
+      double n = arma::accu(Xnew); // Total of table observations
+
+      arma::rowvec case_counts = Y.t() * Xnew;
+      arma::rowvec control_counts = (1. - Y).t() * Xnew;
+
+      double case_total = arma::accu(case_counts);
+      double control_total = arma::accu(control_counts);
+
+      arma::rowvec variant_totals = case_counts + control_counts;
+
+      arma::rowvec case_expected = case_total * variant_totals / n;
+      arma::rowvec control_expected = control_total * variant_totals / n;
+
+      arma::rowvec case_chi =
+          arma::pow(case_counts - case_expected, 2) / case_expected;
+      arma::rowvec control_chi =
+          arma::pow(control_counts - control_expected, 2) / control_expected;
+
+      if (tp.nperm == 0) {
+        // Formula is df = (r -1)(c - 1) and r == 2 always, so it's just c - 1.
+        const int df = case_counts.n_elem - 1;
+        boost::math::chi_squared chisq(df);
+        double stat = arma::accu(case_chi + control_chi);
+        if (stat < 0) {
+          stat = std::numeric_limits<double>::epsilon();
+        }
+        return boost::math::cdf(boost::math::complement(chisq, stat));
+      } else {
+        return arma::accu(case_chi + control_chi);
+      }
     }
   }
-#endif
 }
 
 /**

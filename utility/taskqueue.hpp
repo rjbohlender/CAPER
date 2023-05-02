@@ -59,7 +59,7 @@ public:
 	}
 
 	quit_ = true;
-	cv_.notify_all();
+	cv_.notify_one();
 
 	for (size_t i = 0; i < threads_.size(); i++) {
 	  if (threads_[i].joinable()) {
@@ -84,7 +84,7 @@ public:
 	ntasks_++;
 
 	lock.unlock();
-	cv_.notify_all();
+	cv_.notify_one();
   }
 
   void dispatch(Task_t &&args) {
@@ -95,7 +95,7 @@ public:
 	ntasks_++;
 
 	lock.unlock();
-	cv_.notify_all();
+	cv_.notify_one();
   }
 
   void dispatch(Operation_t &op) {
@@ -105,7 +105,7 @@ public:
 	ntasks_++;
 
 	lock.unlock();
-	cv_.notify_all();
+	cv_.notify_one();
   }
 
   void dispatch(Operation_t &&op) {
@@ -115,7 +115,7 @@ public:
 	ntasks_++;
 
 	lock.unlock();
-	cv_.notify_all();
+	cv_.notify_one();
   }
 
   void unfinished(Operation_t &op) {
@@ -189,14 +189,12 @@ private:
   std::vector<Task_t> results_;
 
   auto thread_handler() -> void {
-	std::unique_lock<std::mutex> lock(lock_);
+	std::unique_lock lock(lock_);
 	do {
 	  // Wait for data
-	  while(!(q_.size() || quit_)) {
-		cv_.wait(lock, [this] {
-		  return q_.size() || quit_;
-		});
-	  }
+          cv_.wait(lock, [this] {
+            return q_.size() || quit_;
+          });
 
 	  // After waiting, we have the lock
 	  if (q_.size() && !quit_) {

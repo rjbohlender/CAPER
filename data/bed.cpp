@@ -52,46 +52,22 @@ Bed::Bed(std::stringstream &ss) {
   std::string line;
   int lineno = -1;
 
-  while (std::getline(ss, line, '\n')) {
+  while (std::getline(ss, line)) {
     lineno++;
-    Splitter<std::string> splitter(line, "\t");
+    RJBUtil::Splitter<std::string> splitter(line, "\t");
     FileValidator::validate_bed_line(splitter, lineno);
 
-    int first = std::stoi(splitter[1]);
-    int second = std::stoi(splitter[2]);
+    std::stringstream ss;
+    ss << splitter[0] << "," << splitter[1] << "," << splitter[2] << "," << splitter[3] << "," << splitter[4];
 
-    // Initialize vector for chromosome
-    if (ranges_.find(splitter[0]) == ranges_.end()) {
-      ranges_[splitter[0]] = std::vector<BedRange>();
-    }
-
-    auto it = std::lower_bound(ranges_[splitter[0]].begin(),
-                               ranges_[splitter[0]].end(), first);
-
-    if (it == ranges_[splitter[0]].end()) {
-      ranges_[splitter[0]].insert(it, {first, second});
-    } else {
-      // Check if this is a duplicate
-      BedRange br{first, second};
-      if ((*it) == first) {
-        if (br.range.second > (*it).range.second) {
-          (*it).range.second = br.range.second;
-        }
-      } else {
-        ranges_[splitter[0]].emplace(it, std::move(br));
-      }
-    }
+    variants_.emplace(ss.str());
   }
 }
 
 bool Bed::check_variant(const std::string &variant) {
-  return variants_.count(variant) > 0;
+  return variants_.contains(variant);
 }
 
-bool Bed::empty() { return ranges_.empty(); }
+bool Bed::empty() { return variants_.empty(); }
 
-unsigned long Bed::size() { return ranges_.size(); }
-
-unsigned long Bed::chromosome_count(const std::string &k) {
-  return ranges_[k].size();
-}
+unsigned long Bed::size() { return variants_.size(); }
