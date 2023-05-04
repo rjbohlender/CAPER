@@ -25,8 +25,10 @@
 #include "filevalidator.hpp"
 #include "reporter.hpp"
 
+#include <boost/iostreams/device/file.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/filter/zstd.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filtering_streambuf.hpp>
 
 template <typename Operation_t, typename Task_t, typename Reporter_t>
@@ -62,24 +64,20 @@ public:
     } else {
       stage_ = Stage::Stage1;
     }
-
     // Handle zipped input
+    boost::iostreams::file_source gt_file_{tp_.input_path};
     if (is_gzipped(tp_.input_path)) {
-      gt_ifs_.open(tp_.input_path, std::ios_base::in | std::ios_base::binary);
-      gt_streambuf.push(boost::iostreams::gzip_decompressor());
-      gt_streambuf.push(gt_ifs_);
+      gt_ifs_.push(boost::iostreams::gzip_decompressor());
+      gt_ifs_.push(gt_file_);
     } else if(is_zstd(tp_.input_path)) {
-      gt_ifs_.open(tp_.input_path, std::ios_base::in | std::ios_base::binary);
-      gt_streambuf.push(boost::iostreams::zstd_decompressor());
-      gt_streambuf.push(gt_ifs_);
+      gt_ifs_.push(boost::iostreams::zstd_decompressor());
+      gt_ifs_.push(gt_file_);
     } else {
-      gt_ifs_.open(tp_.input_path, std::ios_base::in);
-      gt_streambuf.push(gt_ifs_);
+      gt_ifs_.push(gt_file_);
     }
 
-    std::istream gt_stream(&gt_streambuf);
     // Retrieve header line
-    std::getline(gt_stream, header_);
+    std::getline(gt_ifs_, header_);
 
     // Cleanup previous permutations if looping because we append to the file
     if (tp_.permute_set) {
@@ -161,13 +159,12 @@ public:
 
       if (!tp_.gene_list) {
         // Parse if no gene_list
-        all_gene_dispatcher(gt_stream, filter);
+        all_gene_dispatcher(gt_ifs_, filter);
       } else {
         // Parse with gene_list
-        gene_list_dispatcher(gt_stream, filter);
+        gene_list_dispatcher(gt_ifs_, filter);
       }
 
-      gt_ifs_.close();
     } else {
       arma::uword remaining = *tp_.max_perms;
       while (remaining > 0) {
@@ -243,15 +240,14 @@ public:
           }
           pset_ofs.close();
         }
-        if (gt_ifs_.is_open()) {
+        if (gt_ifs_.good()) {
           if (!tp_.gene_list) {
             // Parse if no gene_list
-            all_gene_dispatcher(gt_stream, filter);
+            all_gene_dispatcher(gt_ifs_, filter);
           } else {
             // Parse with gene_list
-            gene_list_dispatcher(gt_stream, filter);
+            gene_list_dispatcher(gt_ifs_, filter);
           }
-          gt_ifs_.close();
           tq_.wait(); // Need to wait here until all jobs are done, otherwise
                       // permutations will update during processing
           if (tq_.continue_.size() == 0) { // Terminate if all jobs are done.
@@ -573,8 +569,7 @@ private:
   // Member variables
   TaskParams tp_;
   TaskQueue<Operation_t, Task_t, Reporter_t> tq_;
-  std::ifstream gt_ifs_;
-  boost::iostreams::filtering_streambuf<boost::iostreams::input> gt_streambuf;
+  boost::iostreams::filtering_istream gt_ifs_;
   Bed bed_;
   Weight weight_;
   Permute permute_;
