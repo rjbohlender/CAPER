@@ -59,7 +59,7 @@ public:
 	}
 
 	quit_ = true;
-	cv_.notify_one();
+	cv_.notify_all();
 
 	for (size_t i = 0; i < threads_.size(); i++) {
 	  if (threads_[i].joinable()) {
