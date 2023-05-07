@@ -59,9 +59,9 @@ public:
 	}
 
 	quit_ = true;
-	cv_.notify_all();
 
 	for (size_t i = 0; i < threads_.size(); i++) {
+          cv_.notify_all();
 	  if (threads_[i].joinable()) {
 		threads_[i].join();
 	  }
