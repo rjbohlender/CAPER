@@ -186,7 +186,7 @@ private:
       cv_.wait(lock, [this] { return !q_.empty() || quit_; });
 
       // After waiting, we have the lock
-      if (q_.size()) {
+      if (!q_.empty()) {
         auto op = q_.front();
         q_.pop();
 
