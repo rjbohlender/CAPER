@@ -180,7 +180,7 @@ private:
   auto thread_handler() -> void {
     std::unique_lock lock(lock_);
     lock.unlock();
-    while (!quit_ || ntasks_ > 0) {
+    do {
       // Wait for data
       lock.lock();
       cv_.wait(lock, [this] { return !q_.empty() || quit_; });
@@ -210,9 +210,11 @@ private:
             lock.unlock();
           }
         }
+        lock.lock();
         ntasks_--;
+        lock.unlock();
       }
-    }
+    } while (!quit_ || ntasks_ > 0);
   }
 };
 
