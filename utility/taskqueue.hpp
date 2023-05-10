@@ -53,6 +53,7 @@ public:
     // Complete jobs
     while (!q_.empty() || ntasks_ > 0) {
       std::this_thread::sleep_for(0.1s);
+      cv_.notify_one();
     }
 
     quit_ = true;
@@ -181,7 +182,7 @@ private:
     std::unique_lock lock(lock_);
     do {
       // Wait for data
-      cv_.wait(lock, [this] { return !q_.empty() || quit_; });
+      cv_.wait_for(lock, std::chrono::seconds(1), [this] { return !q_.empty() || quit_; });
 
       // After waiting, we have the lock
       if (!q_.empty()) {
