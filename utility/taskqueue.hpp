@@ -179,10 +179,8 @@ private:
 
   auto thread_handler() -> void {
     std::unique_lock lock(lock_);
-    lock.unlock();
     do {
       // Wait for data
-      lock.lock();
       cv_.wait(lock, [this] { return !q_.empty() || quit_; });
 
       // After waiting, we have the lock
@@ -212,7 +210,7 @@ private:
         }
         lock.lock();
         ntasks_--;
-        lock.unlock();
+        std::cerr << "Jobs remaining: " << ntasks_ << std::endl;
       }
     } while (!quit_ || ntasks_ > 0);
   }
