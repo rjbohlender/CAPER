@@ -184,7 +184,12 @@ double Saddlepoint(double Q, const arma::vec &lambda) {
   int tol = static_cast<int>(digits * 0.6);
   boost::uintmax_t max_iter = 1000;
   double guess = (lmax - lmin) / 2.;
+#ifdef __clang__
   double hatzeta = boost::math::tools::halley_iterate(hatzetafn, guess, lmin, lmax, tol, max_iter);
+#else
+  double hatzeta = boost::math::tools::schroder_iterate(hatzetafn, guess, lmin, lmax, tol, max_iter);
+#endif
+
 
 #endif
 
