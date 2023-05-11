@@ -587,7 +587,7 @@ auto Reporter::sort_simple(const TaskParams &tp) -> void {
   simple_file_ << std::setw(20) << std::left << "Rank";
   simple_file_ << std::setw(25) << "Gene"
                << " ";
-  simple_file_ << std::setw(20) << "Transcript";
+  simple_file_ << std::setw(20) << "Transcript" << " ";
   simple_file_ << std::setw(30) << "Test_Statistic";
   // simple_file_ << std::setw(20) << "Exact_P";
   simple_file_ << std::setw(20) << "Empirical_P";
@@ -657,9 +657,9 @@ auto Reporter::sort_simple(const TaskParams &tp) -> void {
     ci << rs.empirical_p_ci.first << "," << rs.empirical_p_ci.second;
     midci << rs.empirical_midp_ci.first << "," << rs.empirical_midp_ci.second;
 
-    simple_file_ << std::setw(20) << std::left << rank;
+    simple_file_ << std::setw(20) << std::left << rank << " ";
     simple_file_ << std::setw(25) << rs.gene << " ";
-    simple_file_ << std::setw(20) << rs.transcript;
+    simple_file_ << std::setw(20) << rs.transcript << " ";
     simple_file_ << std::setw(30) << std::setprecision(15) << rs.original;
     // simple_file_ << std::setw(20) << rs.exact_p;
     simple_file_ << std::setw(20) << std::setprecision(8) << rs.empirical_p;
