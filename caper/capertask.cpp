@@ -96,6 +96,7 @@ void CAPERTask::calc_multitranscript_pvalues() {
 
   int i, j, k;
   double successes;
+  double midp_successes;
 
   arma::mat mgit_pval_mat = arma::mat(max_permutations() + 1, n);
 
@@ -145,10 +146,16 @@ void CAPERTask::calc_multitranscript_pvalues() {
 
     successes =
         arma::find(mgit_pval_dist_ <= results[ts].empirical_p).eval().n_rows;
+    midp_successes =
+        arma::find(mgit_pval_dist_ < results[ts].empirical_p).eval().n_rows;
+    midp_successes +=
+        arma::find(mgit_pval_dist_ == results[ts].empirical_p).eval().n_rows / 2.;
 
     // Store multi-transcript p-value
     results[ts].mgit_p = (1.0 + successes) / (1.0 + m);
     results[ts].mgit_successes = static_cast<int>(successes);
+    results[ts].mgit_midp = (1.0 + midp_successes) / (1.0 + m);
+    results[ts].mgit_midp_successes = static_cast<int>(midp_successes);
   }
 }
 

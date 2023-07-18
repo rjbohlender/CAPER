@@ -18,12 +18,14 @@ Result::Result()
 	  successes(0),
 	  mid_successes(0),
 	  mgit_successes(0),
+          mgit_midp_successes(0),
 	  permutations(0),
 	  min_success_at(0),
 	  original(std::numeric_limits<double>::quiet_NaN()),
 	  empirical_p(std::numeric_limits<double>::quiet_NaN()),
 	  empirical_midp(std::numeric_limits<double>::quiet_NaN()),
 	  mgit_p(std::numeric_limits<double>::quiet_NaN()),
+          mgit_midp(std::numeric_limits<double>::quiet_NaN()),
 	  done(false),
 	  skippable(false),
 	  permuted(),
@@ -49,10 +51,12 @@ Result::Result(std::string gene, std::string transcript, bool skippable)
 	  empirical_p(std::numeric_limits<double>::quiet_NaN()),
 	  empirical_midp(std::numeric_limits<double>::quiet_NaN()),
 	  mgit_p(std::numeric_limits<double>::quiet_NaN()),
+          mgit_midp(std::numeric_limits<double>::quiet_NaN()),
 	  done(false),
 	  skippable(skippable),
 	  permuted(),
 	  mgit_successes(0),
+          mgit_midp_successes(0),
 	  testable(true),
 	  odds(std::numeric_limits<double>::quiet_NaN()),
 	  exact_p(std::numeric_limits<double>::quiet_NaN()),
@@ -76,10 +80,12 @@ Result::Result(Result &&res) noexcept
 	  empirical_p(res.empirical_p),
 	  empirical_midp(res.empirical_midp),
 	  mgit_p(res.mgit_p),
+          mgit_midp(res.mgit_midp),
 	  done(res.done),
 	  skippable(res.skippable),
 	  permuted(std::move(res.permuted)),
 	  mgit_successes(res.mgit_successes),
+          mgit_midp_successes(res.mgit_midp_successes),
 	  testable(res.testable),
 	  odds(res.odds),
 	  exact_p(res.exact_p),
@@ -102,10 +108,12 @@ Result &Result::operator=(Result &&rhs) noexcept {
   empirical_p = rhs.empirical_p;
   empirical_midp = rhs.empirical_midp;
   mgit_p = rhs.mgit_p;
+  mgit_midp = rhs.mgit_midp;
   done = rhs.done;
   skippable = rhs.skippable;
   permuted = std::move(rhs.permuted);
   mgit_successes = rhs.mgit_successes;
+  mgit_midp_successes = rhs.mgit_midp_successes;
   testable = rhs.testable;
   odds = rhs.odds;
   exact_p = rhs.exact_p;
@@ -135,8 +143,10 @@ std::ostream &operator<<(std::ostream &stream, Result &rhs) {
   stream << std::setw(20) << std::setprecision(8) << rhs.empirical_midp;
   stream << std::setw(20) << midci.str();
   stream << std::setw(20) << rhs.mgit_p;
+  stream << std::setw(20) << rhs.mgit_midp;
   stream << std::setw(20) << rhs.successes;
   stream << std::setw(20) << rhs.mgit_successes;
+  stream << std::setw(20) << rhs.mgit_midp_successes;
   stream << std::setw(20) << rhs.permutations;
   if (rhs.output_stats) {
 	for (const auto &v : rhs.permuted) {

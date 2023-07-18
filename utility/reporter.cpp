@@ -65,8 +65,10 @@ Reporter::Reporter(TaskParams &tp)
   simple_file_tmp_ << std::setw(20) << "Empirical_MidP";
   simple_file_tmp_ << std::setw(20) << "Empirical_MidP_CI";
   simple_file_tmp_ << std::setw(20) << "MGIT_P";
+  simple_file_tmp_ << std::setw(20) << "MGIT_MIDP";
   simple_file_tmp_ << std::setw(20) << "Successes";
   simple_file_tmp_ << std::setw(20) << "MGIT_Successes";
+  simple_file_tmp_ << std::setw(20) << "MGIT_MIDP_Successes";
   simple_file_tmp_ << std::setw(20) << "Permutations" << std::endl;
 
   detail_path_ss << tp.output_path << "/" << tp.method;
@@ -239,7 +241,9 @@ auto Reporter::recalculate_mgit(
     if (g.second.size() == 1) {
       for (auto &v : g.second) {
         v.second.mgit_p = v.second.empirical_p;
+        v.second.mgit_midp = v.second.empirical_midp;
         v.second.mgit_successes = v.second.successes;
+        v.second.mgit_midp_successes = v.second.mid_successes;
       }
       continue;
     }
@@ -248,7 +252,8 @@ auto Reporter::recalculate_mgit(
     unsigned long n = g.second.size();
     arma::uword max_perm = 0;
     arma::uword i;
-    double successes;
+    double successes = 0;
+    double midp_successes = 0;
 
     // Get max_perm
     for (const auto &tr : g.second) {
@@ -294,10 +299,14 @@ auto Reporter::recalculate_mgit(
     unsigned long m = mgit_pval_dist_.n_rows; // Total permutations
     for (auto &tr : g.second) {
       successes = arma::find(mgit_pval_dist_ <= min_p).eval().n_rows;
+      midp_successes += arma::find(mgit_pval_dist_ < min_p).eval().n_rows;
+      midp_successes += arma::find(mgit_pval_dist_ == min_p).eval().n_rows / 2.;
 
       // Store multi-transcript p-value
       tr.second.mgit_p = (1.0 + successes) / (1.0 + m);
       tr.second.mgit_successes = static_cast<int>(successes);
+      tr.second.mgit_midp = (1.0 + midp_successes) / (1.0 + m);
+      tr.second.mgit_midp_successes = static_cast<int>(midp_successes);
     }
   }
 }
@@ -308,7 +317,9 @@ auto Reporter::recalculate_mgit(
   if (results.size() == 1) {
     for (auto &v : results) {
       v.second.mgit_p = v.second.empirical_p;
+      v.second.mgit_midp = v.second.empirical_midp;
       v.second.mgit_successes = v.second.successes;
+      v.second.mgit_midp_successes = v.second.mid_successes;
     }
     return;
   }
@@ -318,6 +329,7 @@ auto Reporter::recalculate_mgit(
   arma::uword max_perm = 0;
   arma::uword i, j, k;
   double successes;
+  double midp_successes;
 
   // Get max_perm
   for (const auto &tr : results) {
@@ -368,10 +380,14 @@ auto Reporter::recalculate_mgit(
     unsigned long m = mgit_pval_dist_.n_rows; // Total permutations
 
     successes = arma::find(mgit_pval_dist_ <= min_p).eval().n_rows;
+    midp_successes += arma::find(mgit_pval_dist_ < min_p).eval().n_rows;
+    midp_successes += arma::find(mgit_pval_dist_ == min_p).eval().n_rows / 2.;
 
     // Store multi-transcript p-value
     tr.second.mgit_p = (1.0 + successes) / (1.0 + m);
     tr.second.mgit_successes = static_cast<int>(successes);
+    tr.second.mgit_midp = (1.0 + midp_successes) / (1.0 + m);
+    tr.second.mgit_midp_successes = static_cast<int>(midp_successes);
   }
 }
 
@@ -595,8 +611,10 @@ auto Reporter::sort_simple(const TaskParams &tp) -> void {
   simple_file_ << std::setw(20) << "Empirical_MidP";
   simple_file_ << std::setw(20) << "Empirical_MidP_CI";
   simple_file_ << std::setw(20) << "MGIT_P";
+  simple_file_ << std::setw(20) << "MGIT_MIDP";
   simple_file_ << std::setw(20) << "Successes";
   simple_file_ << std::setw(20) << "MGIT_Successes";
+  simple_file_ << std::setw(20) << "MGIT_MIDP_Successes";
   simple_file_ << std::setw(20) << "Permutations" << std::endl;
 
   std::vector<ResultLine> results;
@@ -621,8 +639,9 @@ auto Reporter::sort_simple(const TaskParams &tp) -> void {
                      std::stod(splitter[5]),
                      std::make_pair(std::stod(emp_midci_splitter[0]),
                                     std::stod(emp_midci_splitter[1])),
-                     std::stod(splitter[7]), std::stoul(splitter[8]),
-                     std::stoul(splitter[9]), std::stoul(splitter[10])};
+                     std::stod(splitter[7]), std::stod(splitter[8]),
+                     std::stoul(splitter[9]), std::stoul(splitter[10]),
+                     std::stoul(splitter[11]), std::stoul(splitter[12])};
 
       for (int i = 12; i < splitter.size(); i++) {
         rs.stats.push_back(splitter[i]);
@@ -667,8 +686,10 @@ auto Reporter::sort_simple(const TaskParams &tp) -> void {
     simple_file_ << std::setw(20) << rs.empirical_midp;
     simple_file_ << std::setw(20) << midci.str();
     simple_file_ << std::setw(20) << rs.mgit;
+    simple_file_ << std::setw(20) << rs.mgit_midp;
     simple_file_ << std::setw(20) << rs.successes;
     simple_file_ << std::setw(20) << rs.mgit_successes;
+    simple_file_ << std::setw(20) << rs.mgit_midp_successes;
     simple_file_ << std::setw(20) << rs.permutations;
     for (const auto &v : rs.stats) {
       simple_file_ << std::setw(30) << v;

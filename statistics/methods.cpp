@@ -799,14 +799,14 @@ double Methods::SKATO(Gene &gene, arma::vec &phenotypes,
 
 /**
  * @brief SKATC being SKATO but combining p-values with ACAT
- * @param gene
- * @param transcript
- * @param phenotypes
- * @param a
- * @param b
- * @param detail
- * @param linear
- * @return
+ * @param gene A gene object representing the gene to be tested
+ * @param transcript The transcript id to be tested
+ * @param phenotypes The sample phenotypes to be tested
+ * @param a The beta parameter for the beta distribution
+ * @param b The beta parameter for the beta distribution
+ * @param detail Whether to generate detailed output
+ * @param linear Whether to fit a linear model
+ * @return The p-value for the gene
  */
 double Methods::SKATC(Gene &gene, arma::vec &phenotypes,
                       const std::string &transcript, int a, int b, bool detail,
@@ -821,25 +821,31 @@ double Methods::SKATC(Gene &gene, arma::vec &phenotypes,
   auto acat = [&pi](arma::vec &p, arma::vec &w) -> double {
     return arma::accu(w % arma::tan((0.5 - p) * pi));
   };
-  auto acat_p = [&pi](double t, arma::vec &w) -> double {
+  auto acat_p = [&pi](const double t, arma::vec &w) -> double {
     return 1./2. - atan(t / arma::accu(w)) / pi;
   };
 
 #ifdef SKATCMC
-  double skatp =
+  const double skatp =
       SKAT(gene, phenotypes, transcript, a, b, detail, linear, false);
-  double cmc1dfp = CMC1df(gene, phenotypes, transcript, false);
+  const double cmc1dfp = CMC1df(gene, phenotypes, transcript, false);
+
+  arma::vec ps = {skatp, cmc1df};
+  arma::vec ws = {1, 1};
+
+  const double stat = acat(ps, ws);
+  return acat_p(stat, ws);
 #else
-  double skatp =
+  const double skatp =
       SKAT(gene, phenotypes, transcript, a, b, detail, linear, false);
-  double burdenp = BURDEN(gene, phenotypes, transcript, false);
-#endif
+  const double burdenp = BURDEN(gene, phenotypes, transcript, false);
 
   arma::vec ps = {skatp, burdenp};
   arma::vec ws = {1, 1};
 
-  double stat = acat(ps, ws);
+  const double stat = acat(ps, ws);
   return acat_p(stat, ws);
+#endif
 }
 
 void Methods::check_weights(Gene &gene, const std::string &transcript, int a,

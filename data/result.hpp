@@ -45,7 +45,9 @@ struct Result {
   double empirical_midp;
   double exact_p;
   double mgit_p;
+  double mgit_midp;
   size_t mgit_successes;
+  size_t mgit_midp_successes;
   bool done;
   bool skippable;
   std::vector<double> permuted;
