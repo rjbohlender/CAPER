@@ -299,7 +299,7 @@ auto Reporter::recalculate_mgit(
     unsigned long m = mgit_pval_dist_.n_rows; // Total permutations
     for (auto &tr : g.second) {
       successes = arma::find(mgit_pval_dist_ <= min_p).eval().n_rows;
-      midp_successes += arma::find(mgit_pval_dist_ < min_p).eval().n_rows;
+      midp_successes = arma::find(mgit_pval_dist_ < min_p).eval().n_rows;
       midp_successes += arma::find(mgit_pval_dist_ == min_p).eval().n_rows / 2.;
 
       // Store multi-transcript p-value
@@ -380,7 +380,7 @@ auto Reporter::recalculate_mgit(
     unsigned long m = mgit_pval_dist_.n_rows; // Total permutations
 
     successes = arma::find(mgit_pval_dist_ <= min_p).eval().n_rows;
-    midp_successes += arma::find(mgit_pval_dist_ < min_p).eval().n_rows;
+    midp_successes = arma::find(mgit_pval_dist_ < min_p).eval().n_rows;
     midp_successes += arma::find(mgit_pval_dist_ == min_p).eval().n_rows / 2.;
 
     // Store multi-transcript p-value

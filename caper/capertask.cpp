@@ -95,8 +95,8 @@ void CAPERTask::calc_multitranscript_pvalues() {
   unsigned long n = transcripts.size();
 
   int i, j, k;
-  double successes;
-  double midp_successes;
+  double successes = 0;
+  double midp_successes = 0;
 
   arma::mat mgit_pval_mat = arma::mat(max_permutations() + 1, n);
 
