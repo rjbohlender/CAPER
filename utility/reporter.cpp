@@ -328,8 +328,8 @@ auto Reporter::recalculate_mgit(
   unsigned long n = results.size(); // Number of transcripts
   arma::uword max_perm = 0;
   arma::uword i, j, k;
-  double successes;
-  double midp_successes;
+  double successes = 0;
+  double midp_successes = 0;
 
   // Get max_perm
   for (const auto &tr : results) {
