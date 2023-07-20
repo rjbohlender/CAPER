@@ -154,7 +154,7 @@ void CAPERTask::calc_multitranscript_pvalues() {
     // Store multi-transcript p-value
     results[ts].mgit_p = (1.0 + successes) / (1.0 + m);
     results[ts].mgit_successes = static_cast<int>(successes);
-    results[ts].mgit_midp = (1.0 + midp_successes) / (1.0 + m);
+    results[ts].mgit_midp = (0.5 + midp_successes) / (1.0 + m);
     results[ts].mgit_midp_successes = static_cast<int>(midp_successes);
   }
 }

@@ -305,7 +305,7 @@ auto Reporter::recalculate_mgit(
       // Store multi-transcript p-value
       tr.second.mgit_p = (1.0 + successes) / (1.0 + m);
       tr.second.mgit_successes = static_cast<int>(successes);
-      tr.second.mgit_midp = (1.0 + midp_successes) / (1.0 + m);
+      tr.second.mgit_midp = (0.5 + midp_successes) / (1.0 + m);
       tr.second.mgit_midp_successes = static_cast<int>(midp_successes);
     }
   }
@@ -386,7 +386,7 @@ auto Reporter::recalculate_mgit(
     // Store multi-transcript p-value
     tr.second.mgit_p = (1.0 + successes) / (1.0 + m);
     tr.second.mgit_successes = static_cast<int>(successes);
-    tr.second.mgit_midp = (1.0 + midp_successes) / (1.0 + m);
+    tr.second.mgit_midp = (0.5 + midp_successes) / (1.0 + m);
     tr.second.mgit_midp_successes = static_cast<int>(midp_successes);
   }
 }

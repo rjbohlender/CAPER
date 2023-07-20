@@ -177,7 +177,7 @@ Result &Result::combine(const Result &res, const TaskParams &tp) {
 	  empirical_midp = geometric_p(mid_successes, static_cast<double>(permutations));
 	} else {
 	  empirical_p = (1. + successes) / (1. + permutations);
-	  empirical_midp = (1. + mid_successes) / (1. + permutations);
+	  empirical_midp = (0.5 + mid_successes) / (1. + permutations);
 	}
   } else {
 	if (permutations < tp.nperm) {
@@ -185,7 +185,7 @@ Result &Result::combine(const Result &res, const TaskParams &tp) {
 	  empirical_midp = geometric_p(mid_successes, static_cast<double>(permutations));
 	} else {
 	  empirical_p = (1. + successes) / (1. + permutations);
-	  empirical_midp = (1. + mid_successes) / (1. + permutations);
+	  empirical_midp = (0.5 + mid_successes) / (1. + permutations);
 	}
   }
 
