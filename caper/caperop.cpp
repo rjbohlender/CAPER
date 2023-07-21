@@ -126,7 +126,6 @@ auto CAPEROp::op() -> void {
     if (carvaTask.tp.max_perms) { // We're looping multiple times
       if (res.permutations < *carvaTask.tp.max_perms) {
         empirical = geometric_p(res.successes, res.permutations);
-                           static_cast<double>(res.permutations));
       } else {
         empirical = (1. + res.successes) / (1. + res.permutations);
       }
