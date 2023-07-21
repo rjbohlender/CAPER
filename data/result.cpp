@@ -172,21 +172,19 @@ Result &Result::combine(const Result &res, const TaskParams &tp) {
 
   // Update empirical p and empirical midp
   if (tp.max_perms) {
-	if (permutations < *tp.max_perms) {
-	  empirical_p = geometric_p(successes, permutations);
-	  empirical_midp = geometric_p(mid_successes, static_cast<double>(permutations));
-	} else {
-	  empirical_p = (1. + successes) / (1. + permutations);
-	  empirical_midp = (0.5 + mid_successes) / (1. + permutations);
-	}
+    if (permutations < *tp.max_perms) {
+      empirical_p = geometric_p(successes, permutations);
+    } else {
+      empirical_p = (1. + successes) / (1. + permutations);
+    }
+    empirical_midp = (0.5 + mid_successes) / (1. + permutations);
   } else {
-	if (permutations < tp.nperm) {
-	  empirical_p = geometric_p(successes, permutations);
-	  empirical_midp = geometric_p(mid_successes, static_cast<double>(permutations));
-	} else {
-	  empirical_p = (1. + successes) / (1. + permutations);
-	  empirical_midp = (0.5 + mid_successes) / (1. + permutations);
-	}
+    if (permutations < tp.nperm) {
+      empirical_p = geometric_p(successes, permutations);
+    } else {
+      empirical_p = (1. + successes) / (1. + permutations);
+    }
+    empirical_midp = (0.5 + mid_successes) / (1. + permutations);
   }
 
   update_ci();
