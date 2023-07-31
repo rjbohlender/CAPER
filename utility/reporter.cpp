@@ -248,8 +248,15 @@ auto Reporter::recalculate_mgit(
       continue;
     }
 
+    unsigned long skipped = 0;
+    for (auto &v : g.second) {
+      if (!v.second.is_set) {
+        skipped++;
+      }
+    }
+
     // Shorthand
-    unsigned long n = g.second.size();
+    unsigned long n = g.second.size() - skipped;
     arma::uword max_perm = 0;
     arma::uword i;
     double successes = 0;
@@ -265,6 +272,10 @@ auto Reporter::recalculate_mgit(
     arma::mat mgit_pval_mat = arma::mat(max_perm, n);
     i = 0;
     for (auto &tr : g.second) {
+      if (!tr.second.is_set) {
+        // Skipped transcript
+        continue;
+      }
       int m = tr.second.permuted.size();
 
       arma::vec permuted = arma::conv_to<arma::vec>::from(tr.second.permuted);
@@ -324,8 +335,15 @@ auto Reporter::recalculate_mgit(
     return;
   }
 
+  unsigned long skipped = 0;
+  for (auto &v : results) {
+    if (!v.second.is_set) {
+      skipped++;
+    }
+  }
+
   // Shorthand
-  unsigned long n = results.size(); // Number of transcripts
+  unsigned long n = results.size() - skipped; // Number of transcripts
   arma::uword max_perm = 0;
   arma::uword i, j, k;
   double successes = 0;
@@ -341,6 +359,10 @@ auto Reporter::recalculate_mgit(
   arma::mat mgit_pval_mat = arma::mat(max_perm, n);
   i = 0;
   for (auto &tr : results) {
+    if (!tr.second.is_set) {
+      // Skipped transcript
+      continue;
+    }
     int m = tr.second.permuted.size();
     if (m == 0) {
       continue;

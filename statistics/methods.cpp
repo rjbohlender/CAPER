@@ -553,15 +553,15 @@ std::string Methods::str() { return method_; }
 
 /**
  * @brief Calculate SKAT with p-value following Wu, Guan, Pankow (2017)
- * @param gene
- * @param transcript
- * @param phenotypes
- * @param a
- * @param b
- * @param detail
- * @param linear
- * @param permute
- * @return
+ * @param gene Gene object to calculate SKAT on
+ * @param transcript Transcript to calculate SKAT on
+ * @param phenotypes Phenotypes to calculate SKAT on
+ * @param a Parameter for Beta distribution
+ * @param b Parameter for Beta distribution
+ * @param detail Whether to generate the full output
+ * @param linear Whether to use linear regression
+ * @param permute Whether to permute the phenotypes
+ * @return p-value or test statistic
  */
 double Methods::SKAT(Gene &gene, arma::vec &phenotypes,
                      const std::string &transcript, int a, int b, bool detail,
