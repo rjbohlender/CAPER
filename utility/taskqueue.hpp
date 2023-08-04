@@ -194,10 +194,7 @@ private:
 
         // Logic for running with OPs
         if (!op.done_) {
-          arma::wall_clock timer;
-          timer.tic();
           op.run();
-          std::cerr << "Time for task: " << timer.toc() << std::endl;
           if (op.done_) {
             dispatch(op);
           } else {
@@ -214,7 +211,6 @@ private:
         }
         lock.lock();
         ntasks_--;
-        std::cerr << "Jobs remaining: " << ntasks_ << std::endl;
       }
     } while (!quit_ || ntasks_ > 0);
   }

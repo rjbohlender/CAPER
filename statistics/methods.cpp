@@ -443,14 +443,28 @@ double Methods::RVT1(Gene &gene, arma::vec &Y, arma::mat design,
     GLM<Gaussian> fit2(d2, Y, link, fit1.beta_, tp);
 
     double n = Y.n_elem;
+    if (tp.wald) {
+      // Calculate the MSE of the fit
+      double mse = arma::accu(arma::pow(Y - fit2.mu_, 2)) / (n - d2.n_rows);
+      arma::mat var_beta_ = mse * arma::inv(d2.t() * d2);
+      double var_beta = var_beta_(var_beta_.n_rows - 1, var_beta_.n_cols - 1);
 
-    boost::math::chi_squared chisq(1);
-    // TODO: Should be rank not n_rows
-    double stat = (fit1.dev_ - fit2.dev_) / (fit2.dev_ / (n - d2.n_rows));
-    if (stat < 0) {
-      stat = std::numeric_limits<double>::epsilon();
+      double stat = fit2.beta_(fit2.beta_.n_elem - 1) / std::sqrt(var_beta);
+
+      boost::math::chi_squared chisq(1);
+      if (stat < 0) {
+        stat = std::numeric_limits<double>::epsilon();
+      }
+      return boost::math::cdf(boost::math::complement(chisq, stat));
+    } else {
+      boost::math::chi_squared chisq(1);
+      // TODO: Should be rank not n_rows
+      double stat = (fit1.dev_ - fit2.dev_) / (fit2.dev_ / (n - d2.n_rows));
+      if (stat < 0) {
+        stat = std::numeric_limits<double>::epsilon();
+      }
+      return boost::math::cdf(boost::math::complement(chisq, stat));
     }
-    return boost::math::cdf(boost::math::complement(chisq, stat));
   } else {
     // Binary trait
     // Convert to 0/1 to make summing the number of carriers easier.
@@ -461,12 +475,27 @@ double Methods::RVT1(Gene &gene, arma::vec &Y, arma::mat design,
         arma::join_horiz(design, arma::rowvec(arma::sum(X) / X.n_rows).t());
     GLM<Binomial> fit2(d2, Y, link, fit1.beta_, tp);
 
-    boost::math::chi_squared chisq(1);
-    double stat = fit1.dev_ - fit2.dev_;
-    if (stat < 0) {
-      stat = std::numeric_limits<double>::epsilon();
+    if (tp.wald) {
+      // Calculate the MSE of the fit
+      arma::mat var_beta_ = arma::inv(d2.t() * arma::diagmat(fit2.mu_ % (1. - fit2.mu_)) * d2);
+      double var_beta = var_beta_(var_beta_.n_rows - 1, var_beta_.n_cols - 1);
+
+      double stat = std::pow(fit2.beta_(fit2.beta_.n_elem - 1), 2) / var_beta;
+
+      boost::math::chi_squared chisq(1);
+      if (stat < 0) {
+        stat = std::numeric_limits<double>::epsilon();
+      }
+      return boost::math::cdf(boost::math::complement(chisq, stat));
+
+    } else {
+      boost::math::chi_squared chisq(1);
+      double stat = fit1.dev_ - fit2.dev_;
+      if (stat < 0) {
+        stat = std::numeric_limits<double>::epsilon();
+      }
+      return boost::math::cdf(boost::math::complement(chisq, stat));
     }
-    return boost::math::cdf(boost::math::complement(chisq, stat));
   }
 }
 
@@ -485,12 +514,28 @@ double Methods::RVT2(Gene &gene, arma::vec &Y, arma::mat design,
 
     double n = Y.n_elem;
 
-    boost::math::chi_squared chisq(1);
-    double stat = (fit1.dev_ - fit2.dev_) / (fit2.dev_ / (n - d2.n_rows));
-    if (stat < 0) {
-      stat = std::numeric_limits<double>::epsilon();
+    if (tp.wald) {
+      // Calculate the MSE of the fit
+      double mse = arma::accu(arma::pow(Y - fit2.mu_, 2)) / (n - d2.n_rows);
+      arma::mat var_beta_ = mse * arma::inv(d2.t() * d2);
+      double var_beta = var_beta_(var_beta_.n_rows - 1, var_beta_.n_cols - 1);
+
+      double stat = fit2.beta_(fit2.beta_.n_elem - 1) / std::sqrt(var_beta);
+
+      boost::math::chi_squared chisq(1);
+      if (stat < 0) {
+        stat = std::numeric_limits<double>::epsilon();
+      }
+      return boost::math::cdf(boost::math::complement(chisq, stat));
+    } else {
+      boost::math::chi_squared chisq(1);
+      // TODO: Should be rank not n_rows
+      double stat = (fit1.dev_ - fit2.dev_) / (fit2.dev_ / (n - d2.n_rows));
+      if (stat < 0) {
+        stat = std::numeric_limits<double>::epsilon();
+      }
+      return boost::math::cdf(boost::math::complement(chisq, stat));
     }
-    return boost::math::cdf(boost::math::complement(chisq, stat));
   } else {
     // Binary trait
     arma::sp_mat X = gene.genotypes[ts].t();
@@ -501,12 +546,27 @@ double Methods::RVT2(Gene &gene, arma::vec &Y, arma::mat design,
     arma::mat d2 = arma::join_horiz(design, r.t());
     GLM<Binomial> fit2(d2, Y, link, fit1.beta_, tp);
 
-    boost::math::chi_squared chisq(1);
-    double stat = fit1.dev_ - fit2.dev_;
-    if (stat < 0) {
-      stat = std::numeric_limits<double>::epsilon();
+    if (tp.wald) {
+      // Calculate the variance of the betas
+      arma::mat var_beta_ = arma::inv(d2.t() * arma::diagmat(fit2.mu_ % (1. - fit2.mu_)) * d2);
+      double var_beta = var_beta_(var_beta_.n_rows - 1, var_beta_.n_cols - 1);
+
+      double stat = std::pow(fit2.beta_(fit2.beta_.n_elem - 1), 2) / var_beta;
+
+      boost::math::chi_squared chisq(1);
+      if (stat < 0) {
+        stat = std::numeric_limits<double>::epsilon();
+      }
+      return boost::math::cdf(boost::math::complement(chisq, stat));
+
+    } else {
+      boost::math::chi_squared chisq(1);
+      double stat = fit1.dev_ - fit2.dev_;
+      if (stat < 0) {
+        stat = std::numeric_limits<double>::epsilon();
+      }
+      return boost::math::cdf(boost::math::complement(chisq, stat));
     }
-    return boost::math::cdf(boost::math::complement(chisq, stat));
   }
 }
 

@@ -136,7 +136,7 @@ std::ostream &operator<<(std::ostream &stream, Result &rhs) {
 		<< rhs.empirical_midci.second;
   stream << std::setw(25) << std::defaultfloat << std::left << rhs.gene << " ";
   stream << std::setw(20) << rhs.transcript << " ";
-  stream << std::setw(30) << std::setprecision(15) << rhs.original;
+  stream << std::setw(30) << std::setprecision(15) << rhs.original << " ";
   // stream << std::setw(20) << std::setprecision(8) << rhs.exact_p;
   stream << std::setw(20) << std::setprecision(8) << rhs.empirical_p;
   stream << std::setw(20) << ci.str();

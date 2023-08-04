@@ -682,8 +682,7 @@ void Gene::generate_vaast(Covariates &cov) {
         vaast_ss << compress_adjacent(het_carriers);
         // Variant
         vaast_ss << boost::format("%1$s:%2$s") % reference[ts][i] %
-                        alternate[ts][i]
-                 << " ";
+                        alternate[ts][i];
       }
       if (hom_carriers.n_elem > 0) {
         vaast_ss << "\t";

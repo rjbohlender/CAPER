@@ -55,6 +55,7 @@ int main(int argc, char **argv) {
   bool whole_gene = false;
   bool saddlepoint = false;
   bool hotellings = false;
+  bool wald = false;
   std::vector<int> gene_range;
   std::vector<std::string> power;
   boost::optional<std::string> bed;
@@ -212,6 +213,9 @@ int main(int argc, char **argv) {
         po::bool_switch(&hotellings),
         "Use Hotellings T2 instead of a chi-square test.");
     all.add_options()
+        ("wald",
+         po::bool_switch(&wald),
+         "Use a Wald test instead of the deviance for RVT2.")
         ("external", po::value<std::string>(), "Use external permutations.")
         ("help,h", "Print this help message.")
         ("quiet,q", "Don't print status messages.");
@@ -405,6 +409,7 @@ int main(int argc, char **argv) {
   // Testability
   tp.testable = testable;
   tp.biallelic = biallelic;
+  tp.wald = wald;
 
   tp.nocovadj = nocovadj || tp.covariates_path.empty();
 

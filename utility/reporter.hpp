@@ -15,11 +15,11 @@
 struct ResultLine {
   std::string gene;
   std::string transcript;
-  double original;
+  long double original;
   // double exact_p;
-  double empirical_p;
+  long double empirical_p;
   std::pair<double, double> empirical_p_ci;
-  double empirical_midp;
+  long double empirical_midp;
   std::pair<double, double> empirical_midp_ci;
   double mgit;
   double mgit_midp;

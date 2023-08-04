@@ -626,7 +626,7 @@ auto Reporter::sort_simple(const TaskParams &tp) -> void {
   simple_file_ << std::setw(25) << "Gene"
                << " ";
   simple_file_ << std::setw(20) << "Transcript" << " ";
-  simple_file_ << std::setw(30) << "Test_Statistic";
+  simple_file_ << std::setw(30) << "Test_Statistic" << " ";
   // simple_file_ << std::setw(20) << "Exact_P";
   simple_file_ << std::setw(20) << "Empirical_P";
   simple_file_ << std::setw(20) << "Empirical_P_CI";
@@ -651,9 +651,8 @@ auto Reporter::sort_simple(const TaskParams &tp) -> void {
     RJBUtil::Splitter<std::string> emp_ci_splitter(splitter[4], ",");
     RJBUtil::Splitter<std::string> emp_midci_splitter(splitter[6], ",");
 
-    try {
       ResultLine rs =
-          ResultLine{splitter[0], splitter[1], std::stod(splitter[2]),
+          ResultLine{splitter[0], splitter[1], std::stold(splitter[2]),
                      // std::stod(splitter[3]),
                      std::stod(splitter[3]),
                      std::make_pair(std::stod(emp_ci_splitter[0]),
@@ -665,15 +664,15 @@ auto Reporter::sort_simple(const TaskParams &tp) -> void {
                      std::stoul(splitter[9]), std::stoul(splitter[10]),
                      std::stoul(splitter[11]), std::stoul(splitter[12])};
 
-      for (int i = 12; i < splitter.size(); i++) {
+      for (int i = 13; i < splitter.size(); i++) {
         rs.stats.push_back(splitter[i]);
       }
       results.push_back(rs);
-    } catch (std::exception &e) {
-      std::cerr << "Error parsing line: " << line << std::endl
-                << "On line number: " << lineno << std::endl;
-      throw(e);
-    }
+    // catch (std::exception &e) {
+    //   std::cerr << "Error parsing line: " << line << std::endl
+    //             << "On line number: " << lineno << std::endl;
+    //   throw(e);
+    // }
 
     lineno++;
   }
@@ -701,7 +700,7 @@ auto Reporter::sort_simple(const TaskParams &tp) -> void {
     simple_file_ << std::setw(20) << std::left << rank << " ";
     simple_file_ << std::setw(25) << rs.gene << " ";
     simple_file_ << std::setw(20) << rs.transcript << " ";
-    simple_file_ << std::setw(30) << std::setprecision(15) << rs.original;
+    simple_file_ << std::setw(30) << std::setprecision(15) << rs.original << " ";
     // simple_file_ << std::setw(20) << rs.exact_p;
     simple_file_ << std::setw(20) << std::setprecision(8) << rs.empirical_p;
     simple_file_ << std::setw(20) << ci.str();

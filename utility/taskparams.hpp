@@ -71,6 +71,9 @@ struct TaskParams {
 
   bool verbose;
 
+  // RVT test options
+  bool wald;
+
   // Output permutations
   boost::optional<std::string> permute_set;
 
