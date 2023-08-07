@@ -45,7 +45,7 @@ void Gene::aaf_filter() { // Mark gene skippable to start
     arma::rowvec aaf = arma::rowvec(arma::mean(genotypes[ts]) / 2.);
     for (arma::sword k = sums.n_elem - 1; k >= 0; --k) {
       bool bmac = sums[k] > tp.mac;
-      bool baaf = aaf[k] >= .5;
+      bool baaf = aaf[k] >= tp.maf;
       bool bwht = false; // whitelist bool
       if (!to_remove[ts].empty()) {
         bwht = k == to_remove[ts].top();
