@@ -176,26 +176,24 @@ auto Reporter::extract_results(std::vector<CAPERTask> &tq_results,
   if (gene_list_) {
     // Combine results
     for (auto &task : tq_results) {
-      for (auto &result : task.results) {
-        if (results_.find(result.second.gene) != results_.end()) {
-          if (results_[result.second.gene].find(result.second.transcript) !=
-              results_[result.second.gene].end()) {
-            results_[result.second.gene][result.second.transcript].combine(
-                result.second, tp);
+      for (auto &[ts, result] : task.results) {
+        const std::string gene = result.gene;
+        // If we've seen this gene before
+        if (results_.find(gene) != results_.end()) {
+          if (results_[gene].find(ts) != results_[gene].end()) {
+            results_[gene][ts].combine(result, tp);
           } else {
-            results_[result.second.gene][result.second.transcript] =
-                result.second;
-            vaast_.emplace(std::make_pair(
-                result.second.transcript,
-                task.gene.get_vaast()[result.second.transcript]));
+            results_[gene][ts] = result;
+            vaast_.emplace(
+                ts,
+                task.gene.get_vaast()[ts]);
           }
         } else {
-          results_[result.second.gene][result.second.transcript] =
-              result.second;
+          results_[gene][ts] =
+              result;
           details_.push_back(task.gene.get_detail());
           vaast_.emplace(
-              std::make_pair(result.second.transcript,
-                             task.gene.get_vaast()[result.second.transcript]));
+              ts, task.gene.get_vaast()[ts]);
         }
       }
     }
@@ -203,8 +201,8 @@ auto Reporter::extract_results(std::vector<CAPERTask> &tq_results,
     recalculate_mgit(results_);
   } else {
     for (auto &task : tq_results) {
-      for (auto &result : task.results) {
-        results_[result.second.gene][result.second.transcript] = result.second;
+      for (auto &[ts, result ]: task.results) {
+        results_[result.gene][result.transcript] = result;
         details_.push_back(task.gene.get_detail());
       }
     }

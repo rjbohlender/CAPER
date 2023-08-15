@@ -155,23 +155,17 @@ auto CAPEROp::op() -> void {
     }
     if (carvaTask.tp.max_perms) {
       if (carvaTask.tp.gene_list) {
-        if (res.permutations >= carvaTask.termination) {
-          done_ = true;
-        }
+        done_ = res.permutations >= carvaTask.termination;
+        done_ |= res.permutations >= *carvaTask.tp.max_perms / (carvaTask.tp.nthreads - 1);
       } else {
-        if (res.permutations >= *carvaTask.tp.max_perms) {
-          done_ = true;
-        }
+        done_ = res.permutations >= *carvaTask.tp.max_perms;
       }
     } else {
       if (carvaTask.tp.gene_list) {
-        if (res.permutations >= carvaTask.termination) {
-          done_ = true;
-        }
+        done_ = res.permutations >= carvaTask.termination;
+        done_ |= res.permutations >= carvaTask.tp.nperm / (carvaTask.tp.nthreads - 1);
       } else {
-        if (res.permutations >= carvaTask.tp.nperm) {
-          done_ = true;
-        }
+        done_ = res.permutations >= carvaTask.tp.nperm;
       }
     }
     res.empirical_p = empirical;
@@ -186,12 +180,13 @@ auto CAPEROp::op() -> void {
     res.calc_exact_p(nmac, nmaj);
     ts_no++;
   }
-  if (done_) { // True only when all are finished.
+  // True only when all are finished, or we've exhausted permutations
+  if (done_) {
     if (verbose_) {
-      for (const auto &v : carvaTask.results) {
-        std::cerr << gene.gene_name << "\t" << v.second.transcript << "\t";
+      for (const auto &[ts, result] : carvaTask.results) {
+        std::cerr << gene.gene_name << "\t" << ts << "\t";
         std::cerr << std::defaultfloat << std::setprecision(6)
-                  << v.second.original << std::endl;
+                  << result.original << std::endl;
       }
     }
     carvaTask.stage = Stage::Done;

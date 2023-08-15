@@ -14,14 +14,14 @@ CAPERTask::CAPERTask(Stage stage_, Gene gene_,
     : stage(stage_), gene(std::move(gene_)), cov(cov_), methods(tp_, cov_),
       success_threshold(succ_thresh_), npermutations(nperm_), offset(offset_),
       termination(termination_), permutations(perm_), tp(tp_) {
-  for (const auto &transcript : gene.get_transcripts()) {
-    results[transcript] =
-        Result(gene.gene_name, transcript, !gene.is_polymorphic(transcript));
-    results[transcript].output_stats = tp.output_stats;
+  for (const auto &ts : gene.get_transcripts()) {
+    results[ts] =
+        Result(gene.gene_name, ts, !gene.is_polymorphic(ts));
+    results[ts].output_stats = tp.output_stats;
     if (tp.seed) {
-      permute[transcript] = Permute(*tp.seed);
+      permute[ts] = Permute(*tp.seed);
     } else {
-      permute[transcript] = Permute();
+      permute[ts] = Permute();
     }
   }
 }
