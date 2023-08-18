@@ -123,7 +123,7 @@ void Methods::clear(std::vector<std::string> &v) {
 }
 
 /**
- * @brief Compute the p-value for using the BURDEN test statistic.
+ * @brief Compute the p-value using the BURDEN test statistic.
  * @param gene The gene to test.
  * @param ts Transcript.
  * @param phenotypes Phenoypes.

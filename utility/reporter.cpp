@@ -555,8 +555,14 @@ auto Reporter::sync_write_simple(
       if (topres == nullptr) {
         topres = std::make_unique<Result>(r.second);
       } else {
-        if (topres->empirical_p > r.second.empirical_p) {
-          topres = std::make_unique<Result>(r.second);
+        if (tp.analytic) {
+          if (topres->original > r.second.original) {
+            topres = std::make_unique<Result>(r.second);
+          }
+        } else {
+          if (topres->empirical_p > r.second.empirical_p) {
+            topres = std::make_unique<Result>(r.second);
+          }
         }
       }
     }
