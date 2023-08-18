@@ -58,7 +58,11 @@ Reporter::Reporter(TaskParams &tp)
   simple_file_tmp_ << std::setw(25) << std::left << "Gene"
                    << " ";
   simple_file_tmp_ << std::setw(20) << "Transcript";
-  simple_file_tmp_ << std::setw(20) << "Test_Statistic";
+  if (tp.analytic) {
+    simple_file_tmp_ << std::setw(20) << "Analytic_P";
+  } else {
+    simple_file_tmp_ << std::setw(20) << "Test_Statistic";
+  }
   simple_file_tmp_ << std::setw(20) << "Exact_P";
   simple_file_tmp_ << std::setw(20) << "Empirical_P";
   simple_file_tmp_ << std::setw(20) << "Empirical_P_CI";
@@ -630,7 +634,11 @@ auto Reporter::sort_simple(const TaskParams &tp) -> void {
   simple_file_ << std::setw(25) << "Gene"
                << " ";
   simple_file_ << std::setw(20) << "Transcript" << " ";
-  simple_file_ << std::setw(30) << "Test_Statistic" << " ";
+  if (tp.analytic) {
+    simple_file_ << std::setw(30) << "Analytic_P" << " ";
+  } else {
+    simple_file_ << std::setw(30) << "Test_Statistic" << " ";
+  }
   // simple_file_ << std::setw(20) << "Exact_P";
   simple_file_ << std::setw(20) << "Empirical_P";
   simple_file_ << std::setw(20) << "Empirical_P_CI";
