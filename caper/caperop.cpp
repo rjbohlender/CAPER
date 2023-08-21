@@ -156,14 +156,14 @@ auto CAPEROp::op() -> void {
     if (carvaTask.tp.max_perms) {
       if (carvaTask.tp.gene_list) {
         done_ = res.permutations >= carvaTask.termination;
-        done_ |= res.permutations >= *carvaTask.tp.max_perms / (carvaTask.tp.nthreads - 1);
+        done_ |= (res.permutations >= (*carvaTask.tp.max_perms / (carvaTask.tp.nthreads - 1)));
       } else {
         done_ = res.permutations >= *carvaTask.tp.max_perms;
       }
     } else {
       if (carvaTask.tp.gene_list) {
         done_ = res.permutations >= carvaTask.termination;
-        done_ |= res.permutations >= carvaTask.tp.nperm / (carvaTask.tp.nthreads - 1);
+        done_ |= (res.permutations >= (carvaTask.tp.nperm / (carvaTask.tp.nthreads - 1)));
       } else {
         done_ = res.permutations >= carvaTask.tp.nperm;
       }

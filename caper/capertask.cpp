@@ -35,8 +35,8 @@ CAPERTask::CAPERTask(Stage stage_, Gene &gene_,
       termination(tp_.nperm), tp(tp_) {
   for (const auto &transcript : gene.get_transcripts()) {
     results.emplace(
-        std::make_pair(transcript, Result(gene.gene_name, transcript,
-                                          !gene.is_polymorphic(transcript))));
+        transcript, Result(gene.gene_name, transcript,
+                                          !gene.is_polymorphic(transcript)));
     results[transcript].output_stats = tp.output_stats;
     if (tp.seed) {
       permute[transcript] = Permute(*tp.seed);

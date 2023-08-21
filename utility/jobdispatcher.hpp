@@ -240,6 +240,36 @@ public:
           }
           pset_ofs.close();
         }
+#if 1
+        // First loop
+        if (remaining >= *tp_.max_perms - tp_.nperm) {
+	        if (!tp_.gene_list) {
+		        // Parse if no gene_list
+		        all_gene_dispatcher(gt_ifs_, filter);
+	        } else {
+		        // Parse with gene_list
+		        gene_list_dispatcher(gt_ifs_, filter);
+	        }
+	        tq_.wait(); // Need to wait here until all jobs are done, otherwise
+	        // permutations will update during processing
+	        if (tq_.continue_.size() == 0) { // Terminate if all jobs are done.
+		        remaining = 0;
+	        }
+        } else {
+          // Subsequent loops
+	        tq_.redispatch(); // Re-dispatch each job. No need to update anything
+	        // because the permutations are kept in a pointer.
+	        auto cur = std::chrono::system_clock::now();
+	        std::time_t cur_time = std::chrono::system_clock::to_time_t(cur);
+	        std::cerr << "Remaining permutations: " << remaining << " at "
+	                  << std::ctime(&cur_time);
+	        tq_.wait(); // Need to wait here until all jobs are done, otherwise
+	        // permutations will update during processing
+	        if (tq_.continue_.size() == 0) { // Terminate if all jobs are done.
+		        remaining = 0;
+	        }
+        }
+#else
         if (gt_ifs_.good()) {
           if (!tp_.gene_list) {
             // Parse if no gene_list
@@ -266,6 +296,7 @@ public:
             remaining = 0;
           }
         }
+#endif
       }
     }
 
@@ -451,21 +482,24 @@ private:
     // Ensure we have at least one variant for a submitted gene
     if (std::any_of(nvariants_.cbegin(), nvariants_.cend(),
                     [&](const auto &v) { return v.second > 0; })) {
+      const auto delay = 0.001s;
+
       long total_perm = 0;
       long total_success = 0;
       long perm_step = tp_.nperm / (tp_.nthreads - 1);
       long succ_step = tp_.success_threshold / (tp_.nthreads - 1);
       long max_loops = 1;
       if (tp_.max_perms) {
-        max_loops = *tp_.max_perms / tp_.nperm;
+        max_loops = std::ceil(*tp_.max_perms / (double)tp_.nperm);
       }
+
 
       // Single dispatch of gene list items for power analysis
       if (tp_.power) {
         Task_t ta(stage_, gene, cov_, tp_, tp_.success_threshold, tp_.nperm, 0,
                   tp_.nperm, *permutation_ptr_);
         while (tq_.size() > tp_.nthreads - 1) {
-          std::this_thread::sleep_for(0.001s);
+          std::this_thread::sleep_for(delay);
         }
         tq_.dispatch(ta);
         ngenes_++;
@@ -477,11 +511,11 @@ private:
           Task_t ta(stage_, gene, cov_, tp_,
                     tp_.success_threshold - total_success,
                     tp_.nperm - total_perm, i * perm_step,
-                    max_loops * (tp_.nperm - total_perm), *permutation_ptr_);
+                    max_loops * perm_step, *permutation_ptr_);
 
           // Limit adding jobs to prevent excessive memory usage
           while (tq_.size() > tp_.nthreads - 1) {
-            std::this_thread::sleep_for(0.001s);
+            std::this_thread::sleep_for(delay);
           }
           tq_.dispatch(ta);
         } else {
@@ -493,7 +527,7 @@ private:
 
           // Limit adding jobs to prevent excessive memory usage
           while (tq_.size() > tp_.nthreads - 1) {
-            std::this_thread::sleep_for(0.001s);
+            std::this_thread::sleep_for(delay);
           }
           tq_.dispatch(ta);
         }

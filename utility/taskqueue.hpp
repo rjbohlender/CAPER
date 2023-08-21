@@ -195,10 +195,10 @@ private:
         // Logic for running with OPs
         if (!op.done_) {
           op.run();
-          if (op.done_) {
-            dispatch(op);
+          if (!op.done_) {
+	       unfinished(op);
           } else {
-            unfinished(op);
+           dispatch(op);
           }
         } else {
           op.finish();
