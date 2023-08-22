@@ -27,8 +27,8 @@ private:
   auto op() -> void;
 
   static auto check_perm(const TaskParams &tp, double perm_val,
-                         long success_threshold,
-                         const std::string &ts, Result &res) -> void;
+                         long success_threshold, const std::string &ts,
+                         Result &res, unsigned long termination) -> void;
 
   std::shared_ptr<Reporter> reporter_;
 };

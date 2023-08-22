@@ -107,7 +107,8 @@ auto CAPEROp::op() -> void {
       // Update total number of permutations
       res.permutations++;
 
-      check_perm(carvaTask.tp, perm_val, carvaTask.success_threshold, transcript, res);
+      check_perm(carvaTask.tp, perm_val, carvaTask.success_threshold,
+                 transcript, res, carvaTask.termination);
     }
     // Stop iterating if everything is done
     if (std::all_of(carvaTask.results.cbegin(), carvaTask.results.cend(),
@@ -153,21 +154,6 @@ auto CAPEROp::op() -> void {
     } else {
       done_ &= res.done;
     }
-    if (carvaTask.tp.max_perms) {
-      if (carvaTask.tp.gene_list) {
-        done_ = res.permutations >= carvaTask.termination;
-        done_ |= (res.permutations >= (*carvaTask.tp.max_perms / (carvaTask.tp.nthreads - 1)));
-      } else {
-        done_ = res.permutations >= *carvaTask.tp.max_perms;
-      }
-    } else {
-      if (carvaTask.tp.gene_list) {
-        done_ = res.permutations >= carvaTask.termination;
-        done_ |= (res.permutations >= (carvaTask.tp.nperm / (carvaTask.tp.nthreads - 1)));
-      } else {
-        done_ = res.permutations >= carvaTask.tp.nperm;
-      }
-    }
     res.empirical_p = empirical;
     res.empirical_midp = midp;
     res.update_ci();
@@ -196,9 +182,9 @@ auto CAPEROp::op() -> void {
 }
 
 auto CAPEROp::check_perm(const TaskParams &tp, double perm_val,
-                         long success_threshold,
-                         const std::string &ts, Result &res) -> void {
-  // Some methods return a pvalue so we need to reverse the success inequality
+                         long success_threshold, const std::string &ts,
+                         Result &res, unsigned long termination) -> void {
+  // Some methods return a pvalue, so we need to reverse the success inequality
   if (tp.analytic) {
     if (perm_val <= res.original) {
       res.successes++;
@@ -266,6 +252,20 @@ auto CAPEROp::check_perm(const TaskParams &tp, double perm_val,
         }
         res.done = true;
       }
+    }
+  }
+  if (tp.max_perms) {
+    if (tp.gene_list) {
+      res.done |= res.permutations >= termination;
+      res.done |= (res.permutations >= (*tp.max_perms / (tp.nthreads - 1)));
+    } else {
+      res.done |= res.permutations >= *tp.max_perms;
+    }
+  } else {
+    if (tp.gene_list) {
+      res.done |= (res.permutations >= (tp.nperm / (tp.nthreads - 1)));
+    } else {
+      res.done |= res.permutations >= tp.nperm;
     }
   }
 }
