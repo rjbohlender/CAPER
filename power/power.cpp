@@ -4,27 +4,31 @@
 
 #include "../utility/split.hpp"
 
-#include <string>
-#include <vector>
-#include <iostream>
-#include <thread>
+#include <cassert>
 #include <ctime>
 #include <iomanip>
+#include <iostream>
 #include <set>
-#include <cassert>
+#include <string>
+#include <thread>
+#include <vector>
 
-#include <boost/program_options.hpp>
 #include <boost/optional.hpp>
+#include <boost/program_options.hpp>
 
-#include "stocc/stocc.h"
-#include "stocc/randomc.h"
-#include "../statistics/methods.hpp"
 #include "../data/permutation.hpp"
+#include "../statistics/methods.hpp"
 #include "../utility/filesystem.hpp"
 #include "../utility/jobdispatcher.hpp"
-#include "../utility/taskparams.hpp"
 #include "../utility/reporter.hpp"
+#include "../utility/taskparams.hpp"
 #include "powerop.hpp"
+#include "stocc/randomc.h"
+#include "stocc/stocc.h"
+
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
 
 namespace po = boost::program_options;
 
@@ -38,7 +42,8 @@ int main(int argc, char **argv) {
 
   // BOOST Program Options Implementation
   po::options_description all("");
-  po::options_description visible("Permutation tool for gene-based rare-variant analysis.\nAllowed options");
+  po::options_description visible("Permutation tool for gene-based "
+                                  "rare-variant analysis.\nAllowed options");
   po::options_description required("Required");
   po::options_description optional("Optional");
   po::options_description vaast("VAAST Options");
@@ -66,182 +71,202 @@ int main(int argc, char **argv) {
   boost::optional<arma::uword> approximate;
 
   try {
-	required.add_options()
-				("power",
-				 po::value(&power)->multitoken(),
-				 "Run a bootstrap power analysis for the data provided. Takes four values, the number of bootstrap replicates, the alpha level as a comma-separated list, the number of cases as a comma-separated list, and the number of controls as a comma-separated list.")
-				("input,i",
-				 po::value<std::string>()->required(),
-				 "Genotype matrix file path.")
-				("covariates,c",
-				 po::value<std::string>()->required(),
-				 "The covariate matrix file, tab separated.\nFormat = sample_id cov1 ...")
-				("ped,p",
-				 po::value<std::string>()->required(),
-				 "Path to the .ped file containing the sample phenotypes.")
-				("output,o",
-				 po::value<std::string>()->required(),
-				 "Path to output directory. Two files will be output: a simple transcript level results file, and a detailed variant level result file.")
-		;
-	optional.add_options()
-				("bed-file,b",
-				 po::value(&bed),
-				 "A bed file to be used as a filter. All specified regions will be excluded.")
-				("weight-file,w",
-				 po::value(&weight),
-				 "A file providing weights.")
-				("nthreads,t",
-				 po::value<size_t>()->default_value(std::thread::hardware_concurrency() / 2 + 1),
-				 "The number of threads. Minimum number of threads = 2. n + 1 threads, with one parent thread and n worker threads.")
-				("method,m",
-				 po::value<std::string>()->default_value("VAAST"),
-				 "The statistical method to be used.\nOptions: {BURDEN, CALPHA, CMC, SKAT, WSS, VAAST, VT}.")
-				("range",
-				 po::value(&gene_range)->multitoken(),
-				 "A range of genes to analyze from the matrix file. Takes two values, a start gene number, and end gene number.\nThe program will only provide results for the values in that range. Gene count starts at 1.\nUseful for starting multiple jobs on a cluster each processing part of a file.")
-				("stage_1_max_perm,1",
-				 po::value<arma::uword>()->default_value(0),
-				 "The maximum number of permutations to be performed in the first stage permutation. A small number is recommended if your sample is large.")
-				("stage_2_max_perm,2",
-				 po::value<arma::uword>()->default_value(1000000),
-				 "The maximum number of permutations to be performed in the second stage, the collapsing step.")
-				("mac",
-				 po::value<arma::uword>()->default_value(250),
-				 "Minor allele count cutoff.")
-				("maf,r",
-				 po::value<double>()->default_value(0.05),
-				 "Minor allele frequency cutoff. Default equivalent to XQC.")
-				("pthresh,j",
-				 po::value(&pthresh),
-				 "The threshold to terminate permutation based on whether it is outside the p-value CI.")
-				("top_only",
-				 po::bool_switch(&top_only),
-				 "Output only the top transcript in the simple file.")
-				("successes,s",
-				 po::value<arma::uword>()->default_value(200),
-				 "Number of successes for early termination.")
-				("genes,l",
-				 po::value(&gene_list),
-				 "A comma-separated list of genes to analyze.")
-				("nodetail",
-				 po::bool_switch(&nodetail),
-				 "Don't produce detailed, variant level output.")
-				("approx,a",
-				 po::value(&approximate),
-				 "Group minor allele carriers into n bins with shared average odds. This option is useful for very large data sets where the total number of minor allele carriers to be permuted can be very large, and result in extreme run times.")
-		;
-	vaast.add_options()
-			 ("group_size,g",
-			  po::value<arma::uword>()->default_value(0),
-			  "Group size. VAAST can collapse variants into groups of variants with adjacent weights.")
-			 ("score_only_minor",
-			  po::bool_switch(&score_only_minor),
-			  "Score only minor alleles in VAAST.")
-			 ("score_only_alternative",
-			  po::bool_switch(&score_only_alternative),
-			  "Score only alternative alleles in VAAST.")
-			 ("check_testability",
-			  po::bool_switch(&testable),
-			  "Return scores only for genes with at least scoreable variants in VAAST.")
-			 ("biallelic",
-			  po::bool_switch(&biallelic),
-			  "Additional term for biallelic variants. For detecting potentially recessive variants.")
-		;
-	skat.add_options()
-			("kernel,k",
-			 po::value<std::string>()->default_value("wLinear"),
-			 "Kernel for use with SKAT.\nOne of: {Linear, wLinear}.")
-			("qtl",
-			 po::bool_switch(&linear),
-			 "Analyze a quantitative trait. Values are assumed to be finite floating point values.")
-			("beta_weights",
-			 po::value<std::string>()->default_value("1,25"),
-			 "Parameters for the beta distribution. Two values, comma separated corresponding to a,b.")
-		;
-	cmc.add_options()
-		   ("cmcmaf",
-			po::value<double>()->default_value(0.005),
-			"Minor allele frequency cutoff for CMC collapsing.")
-		;
-	all.add_options()
-		   ("help,h", "Print this help message.")
-		   ("quiet,q", "Don't print status messages.")
-		;
-	hidden.add_options()
-		;
-	all.add(required).add(optional).add(vaast).add(skat).add(cmc).add(hidden);
-	visible.add(required).add(optional).add(vaast).add(skat).add(cmc);
-	po::store(po::parse_command_line(argc, argv, all), vm);
-	if (vm.count("help")) {
-	  std::cerr << visible << "\n";
-	  return 1;
-	}
+    required.add_options()
+        ("power",
+         po::value(&power)->multitoken(),
+         "Run a bootstrap power analysis for the data provided. Takes four "
+         "values, the number of bootstrap replicates, the alpha level as a "
+         "comma-separated list, the number of cases as a comma-separated list, "
+         "and the number of controls as a comma-separated list.")
+        ("input,i",
+         po::value<std::string>()->required(),
+         "Genotype matrix file path.")
+        ("covariates,c",
+         po::value<std::string>()->required(),
+         "The covariate matrix file, tab separated.\nFormat = sample_id cov1 "
+         "...")
+        ("ped,p",
+         po::value<std::string>()->required(),
+         "Path to the .ped file containing the sample phenotypes.")
+        ("output,o",
+         po::value<std::string>()->required(),
+         "Path to output directory. Two files will be output: a simple "
+         "transcript level results file, and a detailed variant level result "
+         "file.");
+    optional.add_options()
+        ("bed-file,b",
+         po::value(&bed),
+         "A bed file to be used as a filter. All specified "
+         "regions will be excluded.")
+        ("weight-file,w",
+         po::value(&weight),
+         "A file providing weights.")
+        ("nthreads,t",
+         po::value<size_t>()->default_value(
+         std::thread::hardware_concurrency() / 2 + 1),
+         "The number of threads. Minimum number of threads = 2. n + 1 threads, "
+         "with one parent thread and n worker threads.")
+        ("method,m",
+         po::value<std::string>()->default_value("VAAST"),
+         "The statistical method to be used.\nOptions: {BURDEN, CALPHA, CMC, "
+         "SKAT, WSS, VAAST, VT}.")
+        ("range",
+         po::value(&gene_range)->multitoken(),
+         "A range of genes to analyze from the matrix file. Takes two values, a "
+         "start gene number, and end gene number.\nThe program will only "
+         "provide results for the values in that range. Gene count starts at "
+         "1.\nUseful for starting multiple jobs on a cluster each processing "
+         "part of a file.")
+        ("stage_1_max_perm,1",
+         po::value<arma::uword>()->default_value(0),
+         "The maximum number of permutations to be performed in the first stage "
+         "permutation. A small number is recommended if your sample is large.")
+        ("stage_2_max_perm,2",
+         po::value<arma::uword>()->default_value(1000000),
+         "The maximum number of permutations to be performed in the second "
+         "stage, the collapsing step.")
+        ("mac",
+         po::value<arma::uword>()->default_value(250),
+         "Minor allele count cutoff.")
+        ("maf,r",
+         po::value<double>()->default_value(0.05),
+         "Minor allele frequency cutoff. Default equivalent to XQC.")
+        ("pthresh,j",
+         po::value(&pthresh),
+         "The threshold to terminate permutation based on whether it is outside "
+         "the p-value CI.")
+        ("top_only",
+         po::bool_switch(&top_only),
+         "Output only the top transcript in the simple file.")
+        ("successes,s",
+         po::value<arma::uword>()->default_value(200),
+         "Number of successes for early termination.")
+        ("genes,l",
+         po::value(&gene_list),
+         "A comma-separated list of genes to analyze.")
+        ("nodetail",
+         po::bool_switch(&nodetail),
+         "Don't produce detailed, variant level output.")
+        ("approx,a",
+         po::value(&approximate),
+         "Group minor allele carriers into n bins with shared average odds. "
+         "This option is useful for very large data sets where the total number "
+         "of minor allele carriers to be permuted can be very large, and result "
+         "in extreme run times.");
+    vaast.add_options()
+        ("group_size,g",
+         po::value<arma::uword>()->default_value(0),
+         "Group size. VAAST can collapse variants into groups "
+         "of variants with adjacent weights.")
+        ("score_only_minor",
+         po::bool_switch(&score_only_minor),
+         "Score only minor alleles in VAAST.")
+        ("score_only_alternative",
+         po::bool_switch(&score_only_alternative),
+         "Score only alternative alleles in VAAST.")
+        ("check_testability",
+         po::bool_switch(&testable),
+         "Return scores only for genes with at least scoreable variants in "
+         "VAAST.")
+        ("biallelic",
+         po::bool_switch(&biallelic),
+         "Additional term for biallelic variants. For detecting "
+         "potentially recessive variants.");
+    skat.add_options()
+        ("kernel,k",
+         po::value<std::string>()->default_value("wLinear"),
+         "Kernel for use with SKAT.\nOne of: {Linear, wLinear}.")
+        ("qtl",
+         po::bool_switch(&linear),
+         "Analyze a quantitative trait. Values are assumed to be finite "
+         "floating point values.")
+        ("beta_weights",
+         po::value<std::string>()->default_value("1,25"),
+         "Parameters for the beta distribution. Two values, comma separated "
+         "corresponding to a,b.");
+    cmc.add_options()
+        ("cmcmaf",
+         po::value<double>()->default_value(0.005),
+         "Minor allele frequency cutoff for CMC collapsing.");
+    all.add_options()
+        ("help,h",
+         "Print this help message.")
+        ("quiet,q",
+         "Don't print status messages.");
+    hidden.add_options();
+    all.add(required).add(optional).add(vaast).add(skat).add(cmc).add(hidden);
+    visible.add(required).add(optional).add(vaast).add(skat).add(cmc);
+    po::store(po::parse_command_line(argc, argv, all), vm);
+    if (vm.count("help")) {
+      std::cerr << visible << "\n";
+      return 1;
+    }
 
-	std::vector<int> range_opt;
-	if (!vm["range"].empty() && ((range_opt = vm["range"].as<std::vector<int>>()).size() != 2 || (!vm["range"].empty() && !vm["genes"].empty()))) {
-	  std::cerr << "--range takes two integer arguments\n";
-	  std::cerr << "--range cannot be used with the --genes or -l option.\n";
-	  std::cerr << visible << "\n";
-	  return 1;
-	}
+    std::vector<int> range_opt;
+    if (!vm["range"].empty() &&
+        ((range_opt = vm["range"].as<std::vector<int>>()).size() != 2 ||
+         (!vm["range"].empty() && !vm["genes"].empty()))) {
+      std::cerr << "--range takes two integer arguments\n";
+      std::cerr << "--range cannot be used with the --genes or -l option.\n";
+      std::cerr << visible << "\n";
+      return 1;
+    }
 
-	std::vector<std::string> power_opt;
-	if (!vm["power"].empty() && ((power_opt = vm["power"].as<std::vector<std::string>>()).size() != 4)) {
-	  std::cerr << "--power takes four arguments, the first an integer argument for bootstrap replicates, the second a floating point value for alpha, the third and fourth are comma-separated lists of cases and control count pairs. The case-control count pairs are expected to be the same length.\n";
-	  std::cerr << all << "\n";
-	  return 1;
-	}
-	po::notify(vm);
+    std::vector<std::string> power_opt;
+    if (!vm["power"].empty() &&
+        ((power_opt = vm["power"].as<std::vector<std::string>>()).size() !=
+         4)) {
+      std::cerr
+          << "--power takes four arguments, the first an integer argument for "
+             "bootstrap replicates, the second a floating point value for "
+             "alpha, the third and fourth are comma-separated lists of cases "
+             "and control count pairs. The case-control count pairs are "
+             "expected to be the same length.\n";
+      std::cerr << all << "\n";
+      return 1;
+    }
+    po::notify(vm);
 
-	if (vm.count("quiet")) {
-	  verbose = false;
-	}
-	if (vm.count("no_adjust")) {
-	  adjust = false;
-	}
+    if (vm.count("quiet")) {
+      verbose = false;
+    }
+    if (vm.count("no_adjust")) {
+      adjust = false;
+    }
   } catch (po::required_option &e) {
-	std::cerr << "Missing required option:\n" << e.what() << "\n";
-	std::cerr << visible << "\n";
-	return 1;
+    std::cerr << "Missing required option:\n" << e.what() << "\n";
+    std::cerr << visible << "\n";
+    return 1;
   } catch (std::exception &e) {
-	std::cerr << "Error: " << e.what() << "\n";
-	return 1;
+    std::cerr << "Error: " << e.what() << "\n";
+    return 1;
   }
 
-  std::set<std::string> method_choices = {
-	  "BURDEN",
-	  "CALPHA",
-	  "CMC",
-	  "VT",
-	  "WSS",
-	  "RVT1",
-	  "RVT2",
-	  "SKAT",
-	  "SKATO",
-	  "VAAST"
-  };
+  std::set<std::string> method_choices = {"BURDEN", "CALPHA", "CMC",  "VT",
+                                          "WSS",    "RVT1",   "RVT2", "SKAT",
+                                          "SKATO",  "VAAST"};
 
   std::set<std::string> kernel_choices = {
-	  "Linear",
-	  "wLinear"
-	  //"IBS",
-	  //"wIBS",
-	  //"Quadratic",
-	  //"twoWayX"
+      "Linear", "wLinear"
+      //"IBS",
+      //"wIBS",
+      //"Quadratic",
+      //"twoWayX"
   };
 
   if (method_choices.count(vm["method"].as<std::string>()) == 0) {
-	// Method not among choices
-	std::cerr << "Method must be one of {BURDEN, CALPHA, CMC, RVT1, RVT2, SKAT, SKATO, VAAST, VT, WSS}.\n";
-	std::cerr << visible << "\n";
-	return 1;
+    // Method not among choices
+    std::cerr << "Method must be one of {BURDEN, CALPHA, CMC, RVT1, RVT2, "
+                 "SKAT, SKATO, VAAST, VT, WSS}.\n";
+    std::cerr << visible << "\n";
+    return 1;
   }
 
   if (kernel_choices.count(vm["kernel"].as<std::string>()) == 0) {
-	// Method not among choices
-	std::cerr << "Kernel must be one of {Linear, wLinear}.\n";
-	std::cerr << visible << "\n";
-	return 1;
+    // Method not among choices
+    std::cerr << "Kernel must be one of {Linear, wLinear}.\n";
+    std::cerr << visible << "\n";
+    return 1;
   }
 
   /**********************
@@ -249,16 +274,17 @@ int main(int argc, char **argv) {
    **********************/
   TaskParams tp;
 
-  RJBUtil::Splitter<std::string> beta_split(vm["beta_weights"].as<std::string>(), ",");
+  RJBUtil::Splitter<std::string> beta_split(
+      vm["beta_weights"].as<std::string>(), ",");
 
   // Store full command
   std::stringstream cmd_ss;
   for (int i = 0; i < argc; i++) {
-	if (i == argc - 1) {
-	  cmd_ss << argv[i];
-	} else {
-	  cmd_ss << argv[i] << " ";
-	}
+    if (i == argc - 1) {
+      cmd_ss << argv[i];
+    } else {
+      cmd_ss << argv[i] << " ";
+    }
   }
 
   tp.base = argv[0];
@@ -269,7 +295,25 @@ int main(int argc, char **argv) {
   tp.method = vm["method"].as<std::string>();
   tp.nperm = vm["nperm"].as<arma::uword>();
   // File paths and option status
-  tp.program_path = argv[0];
+  // File paths and option status
+  uint32_t pathbufsize = 1000;
+  char pathbuf[pathbufsize];
+  for(int i = 0; i < pathbufsize; i++) {
+    pathbuf[i] = '\0';
+  }
+#ifdef __APPLE__
+  int ret = _NSGetExecutablePath(pathbuf, &pathbufsize);
+#else
+  ssize_t len = readlink("/proc/self/exe", pathbuf, 1000);
+#endif
+  tp.program_path = pathbuf;
+  ssize_t i = strlen(pathbuf);
+  for (; i >= 0; i--) {
+    if (pathbuf[i] == '/') {
+      break;
+    }
+  }
+  tp.program_directory = std::string(pathbuf).substr(0, i + 1);
   tp.input_path = vm["input"].as<std::string>();
   tp.covariates_path = vm["covariates"].as<std::string>();
   tp.ped_path = vm["ped"].as<std::string>();
@@ -300,99 +344,117 @@ int main(int argc, char **argv) {
   tp.biallelic = biallelic;
   // Power
   tp.power = !vm["power"].empty();
-  if(tp.power) {
-	std::vector<std::string> power_ops = vm["power"].as<std::vector<std::string>>();
-	tp.bootstrap_reps = std::stoul(power_ops[0]);
-	RJBUtil::Splitter<std::string> alpha_splitter(power_ops[1], ",");
-	RJBUtil::Splitter<std::string> ncase_splitter(power_ops[2], ",");
-	RJBUtil::Splitter<std::string> ncontrol_splitter(power_ops[3], ",");
+  if (tp.power) {
+    std::vector<std::string> power_ops =
+        vm["power"].as<std::vector<std::string>>();
+    tp.bootstrap_reps = std::stoul(power_ops[0]);
+    RJBUtil::Splitter<std::string> alpha_splitter(power_ops[1], ",");
+    RJBUtil::Splitter<std::string> ncase_splitter(power_ops[2], ",");
+    RJBUtil::Splitter<std::string> ncontrol_splitter(power_ops[3], ",");
 
-	std::vector<double> alpha_tmp;
+    std::vector<double> alpha_tmp;
 
-	std::transform(alpha_splitter.begin(), alpha_splitter.end(), std::back_inserter(alpha_tmp), [](std::string &v) { return std::stod(v); });
-	std::transform(ncase_splitter.begin(), ncase_splitter.end(), std::back_inserter(tp.ncases), [](std::string &v) { return std::stoul(v); });
-	std::transform(ncontrol_splitter.begin(), ncontrol_splitter.end(), std::back_inserter(tp.ncontrols), [](std::string &v) { return std::stoul(v); });
+    std::transform(alpha_splitter.begin(), alpha_splitter.end(),
+                   std::back_inserter(alpha_tmp),
+                   [](std::string &v) { return std::stod(v); });
+    std::transform(ncase_splitter.begin(), ncase_splitter.end(),
+                   std::back_inserter(tp.ncases),
+                   [](std::string &v) { return std::stoul(v); });
+    std::transform(ncontrol_splitter.begin(), ncontrol_splitter.end(),
+                   std::back_inserter(tp.ncontrols),
+                   [](std::string &v) { return std::stoul(v); });
 
-	tp.alpha = arma::conv_to<arma::vec>::from(alpha_tmp);
+    tp.alpha = arma::conv_to<arma::vec>::from(alpha_tmp);
 
-	if (tp.ncases.size() != tp.ncontrols.size()) {
-	  throw std::runtime_error("ncases and ncontrols must have the same number of entries.");
-	}
+    if (tp.ncases.size() != tp.ncontrols.size()) {
+      throw std::runtime_error(
+          "ncases and ncontrols must have the same number of entries.");
+    }
   }
 
-  tp.alternate_permutation = tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN" || tp.method == "VT";
-  tp.quantitative = tp.method == "RVT1" || tp.method == "RVT2" || tp.method == "SKATO" || tp.method == "SKAT" || tp.method == "BURDEN" || tp.method == "VT";
-  if(tp.qtl && !tp.quantitative) {
-	std::cerr << "Quantitative trait analysis is only supported for the RVT1, RVT2, SKATO, SKAT, and BURDEN methods." << std::endl;
-	std::exit(1);
+  tp.alternate_permutation = tp.method == "SKATO" || tp.method == "SKAT" ||
+                             tp.method == "BURDEN" || tp.method == "VT";
+  tp.quantitative = tp.method == "RVT1" || tp.method == "RVT2" ||
+                    tp.method == "SKATO" || tp.method == "SKAT" ||
+                    tp.method == "BURDEN" || tp.method == "VT";
+  if (tp.qtl && !tp.quantitative) {
+    std::cerr << "Quantitative trait analysis is only supported for the RVT1, "
+                 "RVT2, SKATO, SKAT, and BURDEN methods."
+              << std::endl;
+    std::exit(1);
   }
 
   std::vector<int> range_opt;
-  if(!vm["range"].empty() && (range_opt = vm["range"].as<std::vector<int>>()).size() == 2) {
-	tp.range_start = range_opt[0];
-	tp.range_end = range_opt[1];
+  if (!vm["range"].empty() &&
+      (range_opt = vm["range"].as<std::vector<int>>()).size() == 2) {
+    tp.range_start = range_opt[0];
+    tp.range_end = range_opt[1];
   }
 
-  if(tp.mac <= 0) {
-	std::cerr << "Minor allele count cutoff must be greater than zero." << std::endl;
-	std::exit(1);
-  } else if(tp.mac > 500) {
-	std::cerr << "WARNING: This software is concerned with evaluating rare events. With a minor allele cutoff > 500, you should consider analyzing those variants using single marker tests." << std::endl;
+  if (tp.mac <= 0) {
+    std::cerr << "Minor allele count cutoff must be greater than zero."
+              << std::endl;
+    std::exit(1);
+  } else if (tp.mac > 500) {
+    std::cerr << "WARNING: This software is concerned with evaluating rare "
+                 "events. With a minor allele cutoff > 500, you should "
+                 "consider analyzing those variants using single marker tests."
+              << std::endl;
   }
 
   assert(tp.nthreads > 1);
-  if(tp.permute_set && tp.nthreads) {
-	std::cerr << "Restricting to a single worker thread. Permute set output is not threadsafe." << std::endl;
-	tp.nthreads = 2;
+  if (tp.permute_set && tp.nthreads) {
+    std::cerr << "Restricting to a single worker thread. Permute set output is "
+                 "not threadsafe."
+              << std::endl;
+    tp.nthreads = 2;
   }
 
   if (tp.verbose) {
-	std::cerr << "genotypes: " << tp.input_path << "\n";
-	std::cerr << "covariates: " << tp.covariates_path << "\n";
-	if(tp.bed)
-	  std::cerr << "bed_file: " << *tp.bed << "\n";
-	if(tp.weight)
-	  std::cerr << "weight_file: " << *tp.weight << "\n";
-	std::cerr << "method: " << tp.method << "\n";
-	std::cerr << "success threshold: " << tp.success_threshold << "\n";
-	std::cerr << "nthreads: " << tp.nthreads << "\n";
+    std::cerr << "genotypes: " << tp.input_path << "\n";
+    std::cerr << "covariates: " << tp.covariates_path << "\n";
+    if (tp.bed)
+      std::cerr << "bed_file: " << *tp.bed << "\n";
+    if (tp.weight)
+      std::cerr << "weight_file: " << *tp.weight << "\n";
+    std::cerr << "method: " << tp.method << "\n";
+    std::cerr << "success threshold: " << tp.success_threshold << "\n";
+    std::cerr << "nthreads: " << tp.nthreads << "\n";
   }
 
   // Check for correct file paths
   if (!check_file_exists(tp.input_path)) {
-	std::cerr << "Incorrect file path for genotypes." << std::endl;
-	std::cerr << visible << "\n";
-	std::exit(1);
+    std::cerr << "Incorrect file path for genotypes." << std::endl;
+    std::cerr << visible << "\n";
+    std::exit(1);
   }
   if (!check_file_exists(tp.covariates_path)) {
-	std::cerr << "Incorrect file path for covariates." << std::endl;
-	std::cerr << visible << "\n";
-	std::exit(1);
+    std::cerr << "Incorrect file path for covariates." << std::endl;
+    std::cerr << visible << "\n";
+    std::exit(1);
   }
   if (tp.bed && !check_file_exists(*tp.bed)) {
-	std::cerr << "Incorrect file path for bed_file." << std::endl;
-	std::cerr << visible << "\n";
-	std::exit(1);
+    std::cerr << "Incorrect file path for bed_file." << std::endl;
+    std::cerr << visible << "\n";
+    std::exit(1);
   }
   if (tp.weight && !check_file_exists(*tp.weight)) {
-	std::cerr << "Incorrect file path for weight_file." << std::endl;
-	std::cerr << visible << "\n";
-	std::exit(1);
+    std::cerr << "Incorrect file path for weight_file." << std::endl;
+    std::cerr << visible << "\n";
+    std::exit(1);
   }
   if (!check_directory_exists(tp.output_path)) {
-	std::cerr << "Output path is invalid." << std::endl;
-	std::cerr << visible << "\n";
-	std::exit(1);
+    std::cerr << "Output path is invalid." << std::endl;
+    std::cerr << visible << "\n";
+    std::exit(1);
   }
   // Initialize randomization
   arma::arma_rng::set_seed_random();
-
 
   std::shared_ptr<PowerReporter> reporter = nullptr;
   reporter = std::make_shared<PowerReporter>(tp);
   JobDispatcher<PowerOp, PowerTask, PowerReporter> jd(tp, reporter);
 
-  double n = timer.toc();
-  std::cerr << "Elapsed time: " << n << std::endl;
+  std::cerr << "Elapsed time: " << timer.toc() << std::endl;
   return 0;
 }

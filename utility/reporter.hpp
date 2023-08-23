@@ -94,12 +94,15 @@ public:
   explicit PowerReporter(TaskParams &tp);
   PowerReporter(std::vector<PowerTask> &res, TaskParams &tp);
 
-  auto report(std::vector<PowerTask> &resv, TaskParams &tp) -> void;
+  auto report(std::vector<PowerTask> &&resv, TaskParams &tp) -> void;
   auto report_power(std::vector<PowerTask> &resv, TaskParams &tp) -> void;
 
   auto cleanup(TaskParams &tp) -> void;
 
   auto sync_write_power(std::vector<PowerRes> &prv) -> void;
+
+  void vaast_sample_index_map(const std::vector<PowerTask> &res);
+  void vaast_sample_index_map(std::vector<std::string> &&samples);
 
   auto set_ncases(int ncases) -> void;
   auto set_ncontrols(int ncontrols) -> void;

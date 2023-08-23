@@ -887,7 +887,7 @@ PowerReporter::PowerReporter(std::vector<PowerTask> &res, TaskParams &tp) {
   }
 }
 
-auto PowerReporter::report(std::vector<PowerTask> &resv, TaskParams &tp)
+auto PowerReporter::report(std::vector<PowerTask> &&resv, TaskParams &tp)
     -> void {
   report_power(resv, tp);
 }
@@ -932,6 +932,10 @@ auto PowerReporter::set_ncontrols(int ncontrols) -> void {
 }
 
 auto PowerReporter::cleanup(TaskParams &tp) -> void { return; }
+void PowerReporter::vaast_sample_index_map(const std::vector<PowerTask> &res) {}
+void PowerReporter::vaast_sample_index_map(std::vector<std::string> &&samples) {
+
+}
 
 CAESEReporter::CAESEReporter(TaskParams &tp) {
   std::stringstream caese_path_ss;

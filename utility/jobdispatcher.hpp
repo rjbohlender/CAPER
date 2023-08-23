@@ -312,7 +312,7 @@ public:
       reporter->report(tq_.get_results(), tp_);
     }
 
-    if (tp_.method == "VAAST" && !tp_.gene_list) {
+    if (tp_.method == "VAAST" && !tp_.gene_list && !tp_.power) {
       reporter->vaast_sample_index_map(cov_->get_samples());
     }
     reporter->cleanup(tp_);
