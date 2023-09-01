@@ -16,6 +16,10 @@ Reporter::Reporter(TaskParams &tp)
       gene_list_(tp.gene_list), print_testable_(tp.testable) {
   std::string header;
 
+  if (!tp.power)
+    initialize(tp, header);
+}
+void Reporter::initialize(TaskParams &tp, std::string &header) {
   if (!check_directory_exists(tp.output_path)) {
     throw(std::runtime_error("Output path is invalid."));
   }
@@ -100,61 +104,6 @@ Reporter::Reporter(TaskParams &tp)
              "alt\tcontrol_ref\tcontrol_alt\tcase_list\tcontrol_list";
   }
   detail_file_ << header << std::endl;
-}
-
-Reporter::Reporter(std::vector<CAPERTask> &res, TaskParams &tp)
-    : ncases_(0), ncontrols_(0), method_(tp.method), pvalues_(tp.analytic),
-      gene_list_(tp.gene_list), print_testable_(tp.testable) {
-  if (!check_directory_exists(tp.output_path)) {
-    throw(std::runtime_error("Output path is invalid."));
-  }
-
-  // Normal execution
-  simple_path_ss << tp.output_path << "/" << tp.method;
-  if (tp.group_size > 0 && tp.method == "VAAST")
-    simple_path_ss << boost::format(".g%1$d") % tp.group_size;
-  if (tp.testable)
-    simple_path_ss << ".check_testability";
-  if (tp.biallelic && tp.method == "VAAST")
-    simple_path_ss << ".biallelic";
-  if (tp.range_start && tp.range_end) {
-    simple_path_ss << "." << *tp.range_start;
-    simple_path_ss << "." << *tp.range_end;
-  }
-  simple_path_ss << ".simple";
-
-  detail_path_ss << tp.output_path << "/" << tp.method;
-  if (tp.group_size > 0 && tp.method == "VAAST")
-    detail_path_ss << boost::format(".g%1$d") % tp.group_size;
-  if (tp.testable)
-    detail_path_ss << ".check_testability";
-  if (tp.biallelic && tp.method == "VAAST")
-    detail_path_ss << ".biallelic";
-  if (tp.range_start && tp.range_end) {
-    detail_path_ss << "." << *tp.range_start;
-    detail_path_ss << "." << *tp.range_end;
-  }
-  detail_path_ss << ".detail";
-
-  simple_file_tmp_ = std::ofstream(simple_path_ss.str());
-  detail_file_ = std::ofstream(detail_path_ss.str());
-
-  if (!simple_file_tmp_.good()) {
-    throw(std::runtime_error("Simple file failed to open for writing.\n"));
-  }
-  if (!detail_file_.good()) {
-    throw(std::runtime_error("Detail file failed to open for writing.\n"));
-  }
-  // Extract results
-  extract_results(res, tp);
-
-  // Write output
-  if (tp.gene_list) {
-    report_simple(tp);
-    if (!tp.no_detail) {
-      report_detail(res, tp);
-    }
-  }
 }
 
 auto Reporter::report(std::vector<CAPERTask> &&res, TaskParams &tp) -> void {
@@ -833,7 +782,7 @@ auto Reporter::sync_write_vaast(CAPERTask &ct, const TaskParams &tp) -> void {
   vaast_file_.flush();
 }
 
-PowerReporter::PowerReporter(TaskParams &tp) {
+PowerReporter::PowerReporter(TaskParams &tp) : Reporter(tp) {
   std::stringstream power_path_ss;
 
   if (tp.method == "VAAST" && tp.group_size > 0) {
@@ -856,35 +805,6 @@ PowerReporter::PowerReporter(TaskParams &tp) {
   power_file_ << std::setw(15) << "Ratio";
   power_file_ << std::setw(15) << "Alpha";
   power_file_ << std::endl;
-}
-
-PowerReporter::PowerReporter(std::vector<PowerTask> &res, TaskParams &tp) {
-  std::stringstream power_path_ss;
-
-  if (tp.method == "VAAST" && tp.group_size > 0) {
-    power_path_ss << tp.output_path << "/" << tp.method << ".g" << tp.group_size
-                  << ".power";
-  } else {
-    power_path_ss << tp.output_path << "/" << tp.method << ".power";
-  }
-  power_file_ = std::ofstream(power_path_ss.str());
-
-  // Initial header write
-  power_file_ << std::setw(15) << "Gene"
-              << " ";
-  power_file_ << std::setw(15) << "Transcript";
-  power_file_ << std::setw(15) << "Method";
-  power_file_ << std::setw(15) << "Ncases";
-  power_file_ << std::setw(15) << "Ncontrols";
-  power_file_ << std::setw(15) << "Successes";
-  power_file_ << std::setw(15) << "Bootstraps";
-  power_file_ << std::setw(15) << "Ratio";
-  power_file_ << std::setw(15) << "Alpha";
-  power_file_ << std::endl;
-
-  if (tp.gene_list) {
-    report_power(res, tp);
-  }
 }
 
 auto PowerReporter::report(std::vector<PowerTask> &&resv, TaskParams &tp)
@@ -923,18 +843,6 @@ auto PowerReporter::sync_write_power(std::vector<PowerRes> &prv) -> void {
   }
 
   lock.unlock();
-}
-
-auto PowerReporter::set_ncases(int ncases) -> void { ncases_ = ncases; }
-
-auto PowerReporter::set_ncontrols(int ncontrols) -> void {
-  ncontrols_ = ncontrols;
-}
-
-auto PowerReporter::cleanup(TaskParams &tp) -> void { return; }
-void PowerReporter::vaast_sample_index_map(const std::vector<PowerTask> &res) {}
-void PowerReporter::vaast_sample_index_map(std::vector<std::string> &&samples) {
-
 }
 
 CAESEReporter::CAESEReporter(TaskParams &tp) {

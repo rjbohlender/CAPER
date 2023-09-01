@@ -69,6 +69,7 @@ int main(int argc, char **argv) {
   boost::optional<std::string> permute_set;
   boost::optional<double> pthresh;
   boost::optional<arma::uword> approximate;
+  double soft_maf_filter = 1.0;
 
   try {
     required.add_options()
@@ -117,14 +118,9 @@ int main(int argc, char **argv) {
          "provide results for the values in that range. Gene count starts at "
          "1.\nUseful for starting multiple jobs on a cluster each processing "
          "part of a file.")
-        ("stage_1_max_perm,1",
-         po::value<arma::uword>()->default_value(0),
-         "The maximum number of permutations to be performed in the first stage "
-         "permutation. A small number is recommended if your sample is large.")
-        ("stage_2_max_perm,2",
-         po::value<arma::uword>()->default_value(1000000),
-         "The maximum number of permutations to be performed in the second "
-         "stage, the collapsing step.")
+        ("nperm",
+         po::value<arma::uword>()->default_value(10000),
+         "The maximum number of permutations to be performed.")
         ("mac",
          po::value<arma::uword>()->default_value(250),
          "Minor allele count cutoff.")
@@ -147,6 +143,9 @@ int main(int argc, char **argv) {
         ("nodetail",
          po::bool_switch(&nodetail),
          "Don't produce detailed, variant level output.")
+        ("min_variant_count",
+         po::value<arma::uword>()->default_value(1),
+         "Minimum number of variants to test a gene.")
         ("approx,a",
          po::value(&approximate),
          "Group minor allele carriers into n bins with shared average odds. "
@@ -158,6 +157,9 @@ int main(int argc, char **argv) {
          po::value<arma::uword>()->default_value(0),
          "Group size. VAAST can collapse variants into groups "
          "of variants with adjacent weights.")
+        ("soft_maf_filter",
+         po::value(&soft_maf_filter),
+         "Caps the highest allele frequency for the control set in the likelihood calculation. Penalizes common variants without removing them.")
         ("score_only_minor",
          po::bool_switch(&score_only_minor),
          "Score only minor alleles in VAAST.")
@@ -242,16 +244,12 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  std::set<std::string> method_choices = {"BURDEN", "CALPHA", "CMC",  "VT",
-                                          "WSS",    "RVT1",   "RVT2", "SKAT",
-                                          "SKATO",  "VAAST"};
+  const std::set<std::string> method_choices = {"BURDEN", "CALPHA", "CMC",  "VT",
+                                                "WSS",    "RVT1",   "RVT2", "SKAT",
+                                                "SKATO",  "VAAST"};
 
-  std::set<std::string> kernel_choices = {
+  const std::set<std::string> kernel_choices = {
       "Linear", "wLinear"
-      //"IBS",
-      //"wIBS",
-      //"Quadratic",
-      //"twoWayX"
   };
 
   if (method_choices.count(vm["method"].as<std::string>()) == 0) {
@@ -295,7 +293,6 @@ int main(int argc, char **argv) {
   tp.method = vm["method"].as<std::string>();
   tp.nperm = vm["nperm"].as<arma::uword>();
   // File paths and option status
-  // File paths and option status
   uint32_t pathbufsize = 1000;
   char pathbuf[pathbufsize];
   for(int i = 0; i < pathbufsize; i++) {
@@ -324,6 +321,8 @@ int main(int argc, char **argv) {
   tp.bed = bed;
   tp.weight = weight;
   tp.permute_set = permute_set;
+  tp.soft_maf_filter = soft_maf_filter;
+  tp.min_variant_count = vm["min_variant_count"].as<arma::uword>();
   // Threading
   tp.nthreads = vm["nthreads"].as<size_t>();
   // Options

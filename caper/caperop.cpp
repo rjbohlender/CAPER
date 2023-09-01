@@ -107,8 +107,8 @@ auto CAPEROp::op() -> void {
       // Update total number of permutations
       res.permutations++;
 
-      check_perm(carvaTask.tp, perm_val, carvaTask.success_threshold,
-                 transcript, res, carvaTask.termination);
+      check_perm(carvaTask.tp, perm_val, carvaTask.success_threshold, res,
+                 carvaTask.termination);
     }
     // Stop iterating if everything is done
     if (std::all_of(carvaTask.results.cbegin(), carvaTask.results.cend(),
@@ -120,6 +120,8 @@ auto CAPEROp::op() -> void {
 
   int ts_no = 0;
   for (auto &[transcript, res] : carvaTask.results) {
+    // For runs with 0 nperm
+    check_done(carvaTask.tp, carvaTask.success_threshold, res, carvaTask.termination);
     double empirical;
     double midp;
     // If we stopped early, use the geometric correction, otherwise calculate
@@ -182,7 +184,7 @@ auto CAPEROp::op() -> void {
 }
 
 auto CAPEROp::check_perm(const TaskParams &tp, double perm_val,
-                         long success_threshold, const std::string &ts,
+                         long success_threshold,
                          Result &res, unsigned long termination) -> void {
   // Some methods return a pvalue, so we need to reverse the success inequality
   if (tp.analytic) {
@@ -252,6 +254,54 @@ auto CAPEROp::check_perm(const TaskParams &tp, double perm_val,
         }
         res.done = true;
       }
+    }
+  }
+  if (tp.max_perms) {
+    if (tp.gene_list) {
+      res.done |= res.permutations >= termination;
+      res.done |= (res.permutations >= (*tp.max_perms / (tp.nthreads - 1)));
+    } else {
+      res.done |= res.permutations >= *tp.max_perms;
+    }
+  } else {
+    if (tp.gene_list) {
+      res.done |= (res.permutations >= (tp.nperm / (tp.nthreads - 1)));
+    } else {
+      res.done |= res.permutations >= tp.nperm;
+    }
+  }
+}
+
+auto CAPEROp::check_done(const TaskParams &tp, long success_threshold,
+                         Result &res, unsigned long termination) -> void {
+  // Some methods return a pvalue, so we need to reverse the success inequality
+  if (tp.analytic) {
+    if (tp.pthresh) {
+      double lower, upper;
+      std::tie(lower, upper) = poisson_ci(res.successes, res.permutations);
+
+      // Ensure a minimum number of permutations
+      if (res.permutations > 10) {
+        // Stop when the lower bound on the 95% confidence interval is greater
+        // than the threshold given
+        res.done = lower > *tp.pthresh;
+      }
+    } else if (res.successes >= success_threshold) {
+      res.done = true;
+    }
+  } else {
+    if (tp.pthresh) {
+      double lower, upper;
+      std::tie(lower, upper) = poisson_ci(res.successes, res.permutations);
+
+      // Ensure a minimum number of permutations
+      if (res.permutations > 10) {
+        // Stop when the lower bound on the 95% confidence interval is greater
+        // than the threshold given
+        res.done = lower > *tp.pthresh;
+      }
+    } else if (res.successes >= success_threshold) {
+      res.done = true;
     }
   }
   if (tp.max_perms) {

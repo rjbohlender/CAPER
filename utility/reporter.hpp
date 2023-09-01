@@ -33,7 +33,6 @@ struct ResultLine {
 class Reporter {
 public:
   explicit Reporter(TaskParams &tp);
-  Reporter(std::vector<CAPERTask> &res, TaskParams &tp);
 
   auto report(std::vector<CAPERTask> &&res, TaskParams &tp) -> void;
   auto report_detail(std::vector<CAPERTask> &res, TaskParams &tp) -> void;
@@ -52,10 +51,16 @@ public:
 
   auto set_ncases(int ncases) -> void;
   auto set_ncontrols(int ncontrols) -> void;
-
-private:
+protected:
   // For thread-safe concurrent writing
   std::mutex lock_;
+
+  std::ofstream power_file_;
+
+  std::vector<std::string> details_;
+  // Holds unfinished genes
+  std::vector<std::string> unfinished_;
+private:
   // For final simple output
   int ncases_;
   int ncontrols_;
@@ -68,18 +73,14 @@ private:
   std::ofstream simple_file_tmp_;
   std::ofstream simple_file_;
   std::ofstream detail_file_;
-  std::ofstream power_file_;
   std::ofstream vaast_file_;
 
   const std::string method_;
   const bool pvalues_;
   const bool gene_list_;
   const bool print_testable_;
-  std::vector<std::string> details_;
   std::map<std::string, std::string> vaast_;
   std::map<std::string, std::map<std::string, Result>> results_;
-  // Holds unfinished genes
-  std::vector<std::string> unfinished_;
 
   static const std::set<std::string> pvalue_methods_;
 
@@ -87,41 +88,20 @@ private:
   auto write_to_stream(std::ostream &os, Result &res) -> void;
   auto recalculate_mgit(std::map<std::string, std::map<std::string, Result>> &results) -> void;
   auto recalculate_mgit(std::unordered_map<std::string, Result> &results) -> void;
+  void initialize(TaskParams &tp, std::string &header);
 };
 
-class PowerReporter {
+class PowerReporter : public Reporter {
 public:
   explicit PowerReporter(TaskParams &tp);
-  PowerReporter(std::vector<PowerTask> &res, TaskParams &tp);
 
   auto report(std::vector<PowerTask> &&resv, TaskParams &tp) -> void;
   auto report_power(std::vector<PowerTask> &resv, TaskParams &tp) -> void;
 
-  auto cleanup(TaskParams &tp) -> void;
-
   auto sync_write_power(std::vector<PowerRes> &prv) -> void;
 
-  void vaast_sample_index_map(const std::vector<PowerTask> &res);
-  void vaast_sample_index_map(std::vector<std::string> &&samples);
-
-  auto set_ncases(int ncases) -> void;
-  auto set_ncontrols(int ncontrols) -> void;
-
 private:
-  // For thread-safe concurrent writing
-  std::mutex lock_;
-
-  int ncases_;
-  int ncontrols_;
-
-  std::ofstream power_file_;
-
-  const std::string method_;
-
   std::vector<PowerRes> results_;
-  std::vector<std::string> details_;
-  // Holds unfinished genes
-  std::vector<std::string> unfinished_;
 };
 
 class CAESEReporter {

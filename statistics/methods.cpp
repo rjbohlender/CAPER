@@ -433,37 +433,26 @@ double Methods::RVT1(Gene &gene, arma::vec &Y, arma::mat design,
   // 2421.09 Runtime 100 perms prior initialization on macbook pro, ovarian data
   // -- 1863.08 -- Poor initialization in permutation Runtime 100 perms single
   // prior initialization on macbook pro, ovarian data -- 1757.13
+  double stat;
   if (linear) {
     // Quantitative trait
-    arma::sp_mat X = arma::ceil(gene.genotypes[ts].t() / 2);
+    const arma::sp_mat X = arma::ceil(gene.genotypes[ts].t() / 2);
     Gaussian link("identity");
     GLM<Gaussian> fit1(design, Y, link, initial_beta, tp);
     arma::mat d2 =
         arma::join_horiz(design, arma::rowvec(arma::sum(X) / X.n_rows).t());
     GLM<Gaussian> fit2(d2, Y, link, fit1.beta_, tp);
 
-    double n = Y.n_elem;
+    const double n = Y.n_elem;
     if (tp.wald) {
       // Calculate the MSE of the fit
-      double mse = arma::accu(arma::pow(Y - fit2.mu_, 2)) / (n - d2.n_rows);
+      const double mse = arma::accu(arma::pow(Y - fit2.mu_, 2)) / (n - d2.n_rows);
       arma::mat var_beta_ = mse * arma::inv(d2.t() * d2);
-      double var_beta = var_beta_(var_beta_.n_rows - 1, var_beta_.n_cols - 1);
+      const double var_beta = var_beta_(var_beta_.n_rows - 1, var_beta_.n_cols - 1);
 
-      double stat = fit2.beta_(fit2.beta_.n_elem - 1) / std::sqrt(var_beta);
-
-      boost::math::chi_squared chisq(1);
-      if (stat < 0) {
-        stat = std::numeric_limits<double>::epsilon();
-      }
-      return boost::math::cdf(boost::math::complement(chisq, stat));
+      stat = fit2.beta_(fit2.beta_.n_elem - 1) / std::sqrt(var_beta);
     } else {
-      boost::math::chi_squared chisq(1);
-      // TODO: Should be rank not n_rows
-      double stat = (fit1.dev_ - fit2.dev_) / (fit2.dev_ / (n - d2.n_rows));
-      if (stat < 0) {
-        stat = std::numeric_limits<double>::epsilon();
-      }
-      return boost::math::cdf(boost::math::complement(chisq, stat));
+      stat = (fit1.dev_ - fit2.dev_) / (fit2.dev_ / (n - arma::rank(d2)));
     }
   } else {
     // Binary trait
@@ -478,33 +467,27 @@ double Methods::RVT1(Gene &gene, arma::vec &Y, arma::mat design,
     if (tp.wald) {
       // Calculate the MSE of the fit
       arma::mat var_beta_ = arma::inv(d2.t() * arma::diagmat(fit2.mu_ % (1. - fit2.mu_)) * d2);
-      double var_beta = var_beta_(var_beta_.n_rows - 1, var_beta_.n_cols - 1);
+      const double var_beta = var_beta_(var_beta_.n_rows - 1, var_beta_.n_cols - 1);
 
-      double stat = std::pow(fit2.beta_(fit2.beta_.n_elem - 1), 2) / var_beta;
-
-      boost::math::chi_squared chisq(1);
-      if (stat < 0) {
-        stat = std::numeric_limits<double>::epsilon();
-      }
-      return boost::math::cdf(boost::math::complement(chisq, stat));
-
+      stat = std::pow(fit2.beta_(fit2.beta_.n_elem - 1), 2) / var_beta;
     } else {
-      boost::math::chi_squared chisq(1);
-      double stat = fit1.dev_ - fit2.dev_;
-      if (stat < 0) {
-        stat = std::numeric_limits<double>::epsilon();
-      }
-      return boost::math::cdf(boost::math::complement(chisq, stat));
+      stat = fit1.dev_ - fit2.dev_;
     }
   }
+  boost::math::chi_squared chisq(1);
+  if (stat < 0) {
+    stat = std::numeric_limits<double>::epsilon();
+  }
+  return boost::math::cdf(boost::math::complement(chisq, stat));
 }
 
 double Methods::RVT2(Gene &gene, arma::vec &Y, arma::mat design,
                      arma::vec &initial_beta, const std::string &ts,
                      bool linear) {
+  double stat;
   if (linear) {
     // Quantitative trait
-    arma::sp_mat X = gene.genotypes[ts].t();
+    const arma::sp_mat X = gene.genotypes[ts].t();
     Gaussian link("identity");
     GLM<Gaussian> fit1(design, Y, link, initial_beta, tp);
     arma::rowvec r =
@@ -516,25 +499,13 @@ double Methods::RVT2(Gene &gene, arma::vec &Y, arma::mat design,
 
     if (tp.wald) {
       // Calculate the MSE of the fit
-      double mse = arma::accu(arma::pow(Y - fit2.mu_, 2)) / (n - d2.n_rows);
+      const double mse = arma::accu(arma::pow(Y - fit2.mu_, 2)) / (n - d2.n_rows);
       arma::mat var_beta_ = mse * arma::inv(d2.t() * d2);
-      double var_beta = var_beta_(var_beta_.n_rows - 1, var_beta_.n_cols - 1);
+      const double var_beta = var_beta_(var_beta_.n_rows - 1, var_beta_.n_cols - 1);
 
-      double stat = fit2.beta_(fit2.beta_.n_elem - 1) / std::sqrt(var_beta);
-
-      boost::math::chi_squared chisq(1);
-      if (stat < 0) {
-        stat = std::numeric_limits<double>::epsilon();
-      }
-      return boost::math::cdf(boost::math::complement(chisq, stat));
+      stat = fit2.beta_(fit2.beta_.n_elem - 1) / std::sqrt(var_beta);
     } else {
-      boost::math::chi_squared chisq(1);
-      // TODO: Should be rank not n_rows
-      double stat = (fit1.dev_ - fit2.dev_) / (fit2.dev_ / (n - d2.n_rows));
-      if (stat < 0) {
-        stat = std::numeric_limits<double>::epsilon();
-      }
-      return boost::math::cdf(boost::math::complement(chisq, stat));
+      stat = (fit1.dev_ - fit2.dev_) / (fit2.dev_ / (n - arma::rank(d2)));
     }
   } else {
     // Binary trait
@@ -549,25 +520,18 @@ double Methods::RVT2(Gene &gene, arma::vec &Y, arma::mat design,
     if (tp.wald) {
       // Calculate the variance of the betas
       arma::mat var_beta_ = arma::inv(d2.t() * arma::diagmat(fit2.mu_ % (1. - fit2.mu_)) * d2);
-      double var_beta = var_beta_(var_beta_.n_rows - 1, var_beta_.n_cols - 1);
+      const double var_beta = var_beta_(var_beta_.n_rows - 1, var_beta_.n_cols - 1);
 
-      double stat = std::pow(fit2.beta_(fit2.beta_.n_elem - 1), 2) / var_beta;
-
-      boost::math::chi_squared chisq(1);
-      if (stat < 0) {
-        stat = std::numeric_limits<double>::epsilon();
-      }
-      return boost::math::cdf(boost::math::complement(chisq, stat));
-
+      stat = std::pow(fit2.beta_(fit2.beta_.n_elem - 1), 2) / var_beta;
     } else {
-      boost::math::chi_squared chisq(1);
-      double stat = fit1.dev_ - fit2.dev_;
-      if (stat < 0) {
-        stat = std::numeric_limits<double>::epsilon();
-      }
-      return boost::math::cdf(boost::math::complement(chisq, stat));
+      stat = fit1.dev_ - fit2.dev_;
     }
   }
+  boost::math::chi_squared chisq(1);
+  if (stat < 0) {
+    stat = std::numeric_limits<double>::epsilon();
+  }
+  return boost::math::cdf(boost::math::complement(chisq, stat));
 }
 
 double Methods::VAAST(Gene &gene, arma::vec &Y, const std::string &ts,
@@ -652,9 +616,8 @@ double Methods::SKAT(Gene &gene, arma::vec &phenotypes,
     double Q = arma::accu(arma::pow(Z, 2));
 
     return Q;
-    // We're not permuting, return asymptotic p-values
   } else {
-
+    // We're not permuting, return asymptotic p-values
     arma::mat tmp;
     if (linear) {
       tmp = lin_obj_->get_Ux().t() * G;
@@ -882,7 +845,7 @@ double Methods::SKATC(Gene &gene, arma::vec &phenotypes,
     return arma::accu(w % arma::tan((0.5 - p) * pi));
   };
   auto acat_p = [&pi](const double t, arma::vec &w) -> double {
-    return 1./2. - atan(t / arma::accu(w)) / pi;
+    return 0.5 - atan(t / arma::accu(w)) / pi;
   };
 
 #ifdef SKATCMC
@@ -915,7 +878,7 @@ void Methods::check_weights(Gene &gene, const std::string &transcript, int a,
     gene.set_weights(transcript, weights);
     return;
   }
-  arma::sp_mat G(gene.genotypes[transcript]);
+  const arma::sp_mat G(gene.genotypes[transcript]);
   arma::vec weights = gene.weights[transcript];
 
   if (kernel_ == Kernel::wLinear) {
