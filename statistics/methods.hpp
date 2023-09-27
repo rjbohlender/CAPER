@@ -18,7 +18,7 @@
 #include "skat.hpp"
 #include "vt.hpp"
 
-arma::vec rank(arma::vec &v, const char *direction);
+arma::vec rank(arma::vec &v, const char *direction, int method = 0);
 
 enum class Kernel { Linear, wLinear };
 

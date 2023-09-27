@@ -184,17 +184,17 @@ TEST_CASE("Data Construction & Methods") {
     arma::vec test_vec{3, 5, 5, 5, 5, 8};
     arma::vec correct{1, 3.5, 3.5, 3.5, 3.5, 6};
 
-    std::cerr << rank(test_vec, "descend");
-    REQUIRE(arma::all(rank(test_vec, "ascend") == correct));
-    INFO(rank(test_vec, "descend").t());
-    REQUIRE(arma::all(rank(test_vec, "descend") == arma::reverse(correct)));
+    std::cerr << rank(test_vec, "descend", 0);
+    REQUIRE(arma::all(rank(test_vec, "ascend", 0) == correct));
+    INFO(rank(test_vec, "descend", 0).t());
+    REQUIRE(arma::all(rank(test_vec, "descend", 0) == arma::reverse(correct)));
 
     test_vec = {3, 5, 5, 5, 7, 8};
     correct = {1, 3, 3, 3, 5, 6};
     arma::vec desc_correct = {6, 4, 4, 4, 2, 1};
 
-    REQUIRE(arma::all(rank(test_vec, "ascend") == correct));
-    REQUIRE(arma::all(rank(test_vec, "descend") == desc_correct));
+    REQUIRE(arma::all(rank(test_vec, "ascend", 0) == correct));
+    REQUIRE(arma::all(rank(test_vec, "descend", 0) == desc_correct));
   }
 
   SECTION("CALPHA") {

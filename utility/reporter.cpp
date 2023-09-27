@@ -233,12 +233,12 @@ auto Reporter::recalculate_mgit(
       arma::vec pvals;
 
       if (pvalues_) {
-        pvals = rank(permuted, "ascend");
+        pvals = rank(permuted, "ascend", 1);
       } else {
-        pvals = rank(permuted, "descend");
+        pvals = rank(permuted, "descend", 1);
       }
 
-      pvals /= permuted.n_rows;
+      pvals /= permuted.n_rows + 1;
 
       try {
         mgit_pval_mat.col(i) = pvals;
@@ -324,12 +324,12 @@ auto Reporter::recalculate_mgit(
 
     // SKATO and SKAT return pvalues so reverse success criteria
     if (pvalues_) {
-      pvals = rank(permuted, "ascend");
+      pvals = rank(permuted, "ascend", 1);
     } else {
-      pvals = rank(permuted, "descend");
+      pvals = rank(permuted, "descend", 1);
     }
 
-    pvals /= permuted.n_rows;
+    pvals /= permuted.n_rows + 1;
 
     try {
       mgit_pval_mat.col(i) = pvals;

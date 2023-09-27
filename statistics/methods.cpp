@@ -31,9 +31,10 @@ constexpr std::array<double, 8> Methods::rho_;
  * @brief Compute the rank of each element in a vector
  * @param v The vector to rank
  * @param direction The direction to rank in. Either "ascend" or "descend"
+ * @param method Tie breaking method, 0 = average, 1 = min, 2 = max
  * @return A vector of ranks
  */
-arma::vec rank(arma::vec &v, const char *direction) {
+arma::vec rank(arma::vec &v, const char *direction, int method) {
   if (strcmp(direction, "ascend") != 0 && strcmp(direction, "descend") != 0)
     throw(std::logic_error(
         "Order argument for rank() must be either 'ascend' or 'descend'"));
@@ -60,8 +61,19 @@ arma::vec rank(arma::vec &v, const char *direction) {
       j++;
     }
     // Adjusted rank
-    for (arma::uword k = i; k < j; k++) {
-      ranks(sort_indices(k)) = 1. + (i + j - 1.) / 2.0f;
+    if (method == 0) { // average
+      for (arma::uword k = i; k < j; k++) {
+        ranks(sort_indices(k)) = 1. + (i + j - 1.) / 2.0f;
+      }
+    } else if(method == 1) { // min
+      for (arma::uword k = i; k < j; k++) {
+        ranks(sort_indices(k)) = i;
+      }
+
+    } else if(method == 2) { // max
+      for (arma::uword k = i; k < j; k++) {
+        ranks(sort_indices(k)) = j - 1;
+      }
     }
     // Update i
     i = j;

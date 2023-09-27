@@ -121,9 +121,9 @@ void CAPERTask::calc_multitranscript_pvalues() {
     arma::vec pvals;
     if (tp.analytic) { // Analytic methods return p-values, so ordering needs to
                        // be reversed
-      pvals = rank(permuted, "ascend");
+      pvals = rank(permuted, "ascend", 0);
     } else {
-      pvals = rank(permuted, "descend");
+      pvals = rank(permuted, "descend", 0);
     }
 
     pvals /= permuted.n_rows;
