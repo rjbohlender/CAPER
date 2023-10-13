@@ -184,26 +184,28 @@ double Saddlepoint(double Q, const arma::vec &lambda) {
   int tol = static_cast<int>(digits * 0.6);
   boost::uintmax_t max_iter = 1000;
   double guess = (lmax - lmin) / 2.;
+  try {
 #ifdef __clang__
-  double hatzeta = boost::math::tools::halley_iterate(hatzetafn, guess, lmin, lmax, tol, max_iter);
+    double hatzeta = boost::math::tools::halley_iterate(hatzetafn, guess, lmin, lmax, tol, max_iter);
 #else
-  double hatzeta = boost::math::tools::schroder_iterate(hatzetafn, guess, lmin, lmax, tol, max_iter);
+    double hatzeta = boost::math::tools::schroder_iterate(hatzetafn, guess, lmin, lmax, tol, max_iter);
 #endif
+    // double hatzeta = tmp.first + (tmp.second - tmp.first) / 2.;
 
+    double w = sgn(hatzeta) * std::sqrt(2 * (hatzeta * Q - k0(hatzeta)));
+    double v = hatzeta * std::sqrt(kpprime0(hatzeta));
 
-#endif
-
-  // double hatzeta = tmp.first + (tmp.second - tmp.first) / 2.;
-
-  double w = sgn(hatzeta) * std::sqrt(2 * (hatzeta * Q - k0(hatzeta)));
-  double v = hatzeta * std::sqrt(kpprime0(hatzeta));
-
-  if (std::abs(hatzeta) < 1e-4 || std::isnan(w) || std::isnan(v)) {
+    if (std::abs(hatzeta) < 1e-4 || std::isnan(w) || std::isnan(v)) {
+      return Liu_pval(Q * d, lambda);
+    } else {
+      boost::math::normal norm(0, 1);
+      return boost::math::cdf(boost::math::complement(norm, w + std::log(v / w) / w));
+    }
+  } catch (boost::math::evaluation_error &e) {
     return Liu_pval(Q * d, lambda);
-  } else {
-    boost::math::normal norm(0, 1);
-    return boost::math::cdf(boost::math::complement(norm, w + std::log(v / w) / w));
   }
+#endif
+
 }
 
 
