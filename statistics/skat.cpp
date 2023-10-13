@@ -202,7 +202,7 @@ double Saddlepoint(double Q, const arma::vec &lambda) {
       return boost::math::cdf(boost::math::complement(norm, w + std::log(v / w) / w));
     }
   } catch (boost::math::evaluation_error &e) {
-    return Liu_pval(Q * d, lambda);
+    return SKAT_pval(Q, lambda, false);
   }
 #endif
 
