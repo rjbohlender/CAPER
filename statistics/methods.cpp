@@ -72,7 +72,7 @@ arma::vec rank(arma::vec &v, const char *direction, int method) {
 
     } else if(method == 2) { // max
       for (arma::uword k = i; k < j; k++) {
-        ranks(sort_indices(k)) = j - 1;
+        ranks(sort_indices(k)) = j;
       }
     }
     // Update i

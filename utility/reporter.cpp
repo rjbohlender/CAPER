@@ -190,18 +190,18 @@ auto Reporter::recalculate_mgit(
   for (auto &g : results) {
     // Skip MGIT if only a single transcript
     if (g.second.size() == 1) {
-      for (auto &v : g.second) {
-        v.second.mgit_p = v.second.empirical_p;
-        v.second.mgit_midp = v.second.empirical_midp;
-        v.second.mgit_successes = v.second.successes;
-        v.second.mgit_midp_successes = v.second.mid_successes;
+      for (auto &[tr, res] : g.second) {
+        res.mgit_p = res.empirical_p;
+        res.mgit_midp = res.empirical_midp;
+        res.mgit_successes = res.successes;
+        res.mgit_midp_successes = res.mid_successes;
       }
       continue;
     }
 
     unsigned long skipped = 0;
-    for (auto &v : g.second) {
-      if (!v.second.is_set) {
+    for (auto &[tr, res] : g.second) {
+      if (!res.is_set) {
         skipped++;
       }
     }
@@ -210,35 +210,33 @@ auto Reporter::recalculate_mgit(
     unsigned long n = g.second.size() - skipped;
     arma::uword max_perm = 0;
     arma::uword i;
-    double successes = 0;
-    double midp_successes = 0;
 
     // Get max_perm
-    for (const auto &tr : g.second) {
-      if (tr.second.permutations > max_perm) {
-        max_perm = tr.second.permutations;
+    for (const auto &[tr, res] : g.second) {
+      if (res.permutations > max_perm) {
+        max_perm = res.permutations;
       }
     }
 
     arma::mat mgit_pval_mat = arma::mat(max_perm, n);
     i = 0;
-    for (auto &tr : g.second) {
-      if (!tr.second.is_set) {
+    for (auto &[tr, res] : g.second) {
+      if (!res.is_set) {
         // Skipped transcript
         continue;
       }
-      int m = tr.second.permuted.size();
+      int m = res.permuted.size();
 
-      arma::vec permuted = arma::conv_to<arma::vec>::from(tr.second.permuted);
+      arma::vec permuted = arma::conv_to<arma::vec>::from(res.permuted);
       arma::vec pvals;
 
       if (pvalues_) {
-        pvals = rank(permuted, "ascend", 1);
+        pvals = rank(permuted, "ascend", 2);
       } else {
-        pvals = rank(permuted, "descend", 1);
+        pvals = rank(permuted, "descend", 2);
       }
 
-      pvals /= permuted.n_rows + 1;
+      pvals = (pvals + 1.) / (permuted.n_rows + 1);
 
       try {
         mgit_pval_mat.col(i) = pvals;
@@ -252,23 +250,27 @@ auto Reporter::recalculate_mgit(
     arma::vec mgit_pval_dist_ = arma::min(mgit_pval_mat, 1);
 
     double min_p = std::numeric_limits<double>::max();
-    for (auto &tr : g.second) {
-      if (tr.second.empirical_p < min_p) {
-        min_p = tr.second.empirical_p;
+    for (auto &[tr, res] : g.second) {
+      if (res.empirical_p < min_p) {
+        min_p = res.empirical_p;
       }
     }
 
-    unsigned long m = mgit_pval_dist_.n_rows; // Total permutations
-    for (auto &tr : g.second) {
-      successes = arma::find(mgit_pval_dist_ <= min_p).eval().n_rows;
-      midp_successes = arma::find(mgit_pval_dist_ < min_p).eval().n_rows;
-      midp_successes += arma::find(mgit_pval_dist_ == min_p).eval().n_rows / 2.;
+    double successes = 0;
+    double midp_successes = 0;
+    const unsigned long m = mgit_pval_dist_.n_elem; // Total permutations
+    for (const auto &v : mgit_pval_dist_) {
+      successes += (v <= min_p);
+      midp_successes += (v < min_p);
+      midp_successes += 0.5 * (v == min_p);
+    }
 
+    for (auto &[tr, res] : g.second) {
       // Store multi-transcript p-value
-      tr.second.mgit_p = (1.0 + successes) / (1.0 + m);
-      tr.second.mgit_successes = static_cast<int>(successes);
-      tr.second.mgit_midp = (0.5 + midp_successes) / (1.0 + m);
-      tr.second.mgit_midp_successes = static_cast<int>(midp_successes);
+      res.mgit_p = (1.0 + successes) / (1.0 + m);
+      res.mgit_successes = static_cast<int>(successes);
+      res.mgit_midp = (0.5 + midp_successes) / (1.0 + m);
+      res.mgit_midp_successes = static_cast<int>(midp_successes);
     }
   }
 }
@@ -277,11 +279,11 @@ auto Reporter::recalculate_mgit(
     std::unordered_map<std::string, Result> &results) -> void {
   // Skip MGIT if only a single transcript
   if (results.size() == 1) {
-    for (auto &v : results) {
-      v.second.mgit_p = v.second.empirical_p;
-      v.second.mgit_midp = v.second.empirical_midp;
-      v.second.mgit_successes = v.second.successes;
-      v.second.mgit_midp_successes = v.second.mid_successes;
+    for (auto &[tr, res] : results) {
+      res.mgit_p = res.empirical_p;
+      res.mgit_midp = res.empirical_midp;
+      res.mgit_successes = res.successes;
+      res.mgit_midp_successes = res.mid_successes;
     }
     return;
   }
@@ -297,39 +299,37 @@ auto Reporter::recalculate_mgit(
   unsigned long n = results.size() - skipped; // Number of transcripts
   arma::uword max_perm = 0;
   arma::uword i, j, k;
-  double successes = 0;
-  double midp_successes = 0;
 
   // Get max_perm
-  for (const auto &tr : results) {
-    if (tr.second.permutations > max_perm) {
-      max_perm = tr.second.permutations;
+  for (const auto &[tr, res] : results) {
+    if (res.permutations > max_perm) {
+      max_perm = res.permutations;
     }
   }
 
   arma::mat mgit_pval_mat = arma::mat(max_perm, n);
   i = 0;
-  for (auto &tr : results) {
-    if (!tr.second.is_set) {
+  for (const auto &[tr, res] : results) {
+    if (!res.is_set) {
       // Skipped transcript
       continue;
     }
-    int m = tr.second.permuted.size();
+    int m = res.permuted.size();
     if (m == 0) {
       continue;
     }
 
-    arma::vec permuted = arma::conv_to<arma::vec>::from(tr.second.permuted);
+    arma::vec permuted = arma::conv_to<arma::vec>::from(res.permuted);
     arma::vec pvals;
 
     // SKATO and SKAT return pvalues so reverse success criteria
     if (pvalues_) {
-      pvals = rank(permuted, "ascend", 1);
+      pvals = rank(permuted, "ascend", 2);
     } else {
-      pvals = rank(permuted, "descend", 1);
+      pvals = rank(permuted, "descend", 2);
     }
 
-    pvals /= permuted.n_rows + 1;
+    pvals = (pvals + 1.) / (permuted.n_rows + 1);
 
     try {
       mgit_pval_mat.col(i) = pvals;
@@ -343,24 +343,27 @@ auto Reporter::recalculate_mgit(
   arma::vec mgit_pval_dist_ = arma::min(mgit_pval_mat, 1);
 
   double min_p = std::numeric_limits<double>::max();
-  for (auto &tr : results) {
-    if (tr.second.empirical_p < min_p) {
-      min_p = tr.second.empirical_p;
+  for (const auto &[tr, res] : results) {
+    if (res.empirical_p < min_p) {
+      min_p = res.empirical_p;
     }
   }
 
-  for (auto &tr : results) {
-    unsigned long m = mgit_pval_dist_.n_rows; // Total permutations
+  unsigned long m = mgit_pval_dist_.n_rows; // Total permutations
+  double successes = 0;
+  double midp_successes = 0;
+  for (const auto &v : mgit_pval_dist_) {
+    successes += (v <= min_p);
+    midp_successes += (v < min_p);
+    midp_successes += 0.5 * (v == min_p);
+  }
 
-    successes = arma::find(mgit_pval_dist_ <= min_p).eval().n_rows;
-    midp_successes = arma::find(mgit_pval_dist_ < min_p).eval().n_rows;
-    midp_successes += arma::find(mgit_pval_dist_ == min_p).eval().n_rows / 2.;
-
+  for (auto &[tr, res] : results) {
     // Store multi-transcript p-value
-    tr.second.mgit_p = (1.0 + successes) / (1.0 + m);
-    tr.second.mgit_successes = static_cast<int>(successes);
-    tr.second.mgit_midp = (0.5 + midp_successes) / (1.0 + m);
-    tr.second.mgit_midp_successes = static_cast<int>(midp_successes);
+    res.mgit_p = (1.0 + successes) / (1.0 + m);
+    res.mgit_successes = static_cast<int>(successes);
+    res.mgit_midp = (0.5 + midp_successes) / (1.0 + m);
+    res.mgit_midp_successes = static_cast<int>(midp_successes);
   }
 }
 
