@@ -228,15 +228,16 @@ auto Reporter::recalculate_mgit(
       int m = res.permuted.size();
 
       arma::vec permuted = arma::conv_to<arma::vec>::from(res.permuted);
+      permuted.insert_rows(0, res.original);
       arma::vec pvals;
 
       if (pvalues_) {
-        pvals = rank(permuted, "ascend", 2);
+        pvals = rank(permuted, "ascend", 0);
       } else {
-        pvals = rank(permuted, "descend", 2);
+        pvals = rank(permuted, "descend", 0);
       }
 
-      pvals = (pvals + 1.) / (permuted.n_rows + 1);
+      pvals = pvals / permuted.n_rows;
 
       try {
         mgit_pval_mat.col(i) = pvals;
@@ -249,12 +250,8 @@ auto Reporter::recalculate_mgit(
     }
     arma::vec mgit_pval_dist_ = arma::min(mgit_pval_mat, 1);
 
-    double min_p = std::numeric_limits<double>::max();
-    for (auto &[tr, res] : g.second) {
-      if (res.empirical_p < min_p) {
-        min_p = res.empirical_p;
-      }
-    }
+    double min_p = mgit_pval_dist_(0);
+    mgit_pval_dist_.shed_row(0);
 
     double successes = 0;
     double midp_successes = 0;
@@ -320,16 +317,17 @@ auto Reporter::recalculate_mgit(
     }
 
     arma::vec permuted = arma::conv_to<arma::vec>::from(res.permuted);
+    permuted.insert_rows(0, res.original);
     arma::vec pvals;
 
     // SKATO and SKAT return pvalues so reverse success criteria
     if (pvalues_) {
-      pvals = rank(permuted, "ascend", 2);
+      pvals = rank(permuted, "ascend", 0);
     } else {
-      pvals = rank(permuted, "descend", 2);
+      pvals = rank(permuted, "descend", 0);
     }
 
-    pvals = (pvals + 1.) / (permuted.n_rows + 1);
+    pvals = pvals / permuted.n_rows;
 
     try {
       mgit_pval_mat.col(i) = pvals;
@@ -342,12 +340,8 @@ auto Reporter::recalculate_mgit(
   }
   arma::vec mgit_pval_dist_ = arma::min(mgit_pval_mat, 1);
 
-  double min_p = std::numeric_limits<double>::max();
-  for (const auto &[tr, res] : results) {
-    if (res.empirical_p < min_p) {
-      min_p = res.empirical_p;
-    }
-  }
+  double min_p = mgit_pval_dist_(0);
+  mgit_pval_dist_.shed_row(0);
 
   unsigned long m = mgit_pval_dist_.n_rows; // Total permutations
   double successes = 0;
