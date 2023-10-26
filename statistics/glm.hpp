@@ -26,6 +26,9 @@ template <typename LinkT> struct GLM {
   bool success_;
 
   GLM(arma::mat &X, arma::vec &Y, LinkT &link, TaskParams tp) {
+    arma::wall_clock timer;
+    timer.tic();
+    std::cerr << "Starting fit." << std::endl;
     indices_ = arma::regspace<arma::uvec>(0, X.n_cols - 1);
     weights_ = arma::vec(X.n_rows, arma::fill::ones);
 
@@ -58,6 +61,7 @@ template <typename LinkT> struct GLM {
     eta_ = link.link(mu_);
 
     success_ = !(mu_.has_nan() || eta_.has_nan());
+    std::cerr << "Fit time: " << timer.toc() << std::endl;
   }
 
   GLM(arma::mat &X, arma::vec &Y, LinkT &link, arma::vec initial_beta,

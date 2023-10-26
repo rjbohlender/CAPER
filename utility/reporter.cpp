@@ -218,7 +218,7 @@ auto Reporter::recalculate_mgit(
       }
     }
 
-    arma::mat mgit_pval_mat = arma::mat(max_perm, n);
+    arma::mat mgit_pval_mat = arma::mat(max_perm + 1, n);
     i = 0;
     for (auto &[tr, res] : g.second) {
       if (!res.is_set) {
@@ -228,7 +228,8 @@ auto Reporter::recalculate_mgit(
       int m = res.permuted.size();
 
       arma::vec permuted = arma::conv_to<arma::vec>::from(res.permuted);
-      permuted.insert_rows(0, res.original);
+      permuted.insert_rows(0, 1);
+      permuted(0) = res.original;
       arma::vec pvals;
 
       if (pvalues_) {
@@ -304,7 +305,7 @@ auto Reporter::recalculate_mgit(
     }
   }
 
-  arma::mat mgit_pval_mat = arma::mat(max_perm, n);
+  arma::mat mgit_pval_mat = arma::mat(max_perm + 1, n);
   i = 0;
   for (const auto &[tr, res] : results) {
     if (!res.is_set) {
@@ -317,7 +318,8 @@ auto Reporter::recalculate_mgit(
     }
 
     arma::vec permuted = arma::conv_to<arma::vec>::from(res.permuted);
-    permuted.insert_rows(0, res.original);
+    permuted.insert_rows(0, 1);
+    permuted(0) = res.original;
     arma::vec pvals;
 
     // SKATO and SKAT return pvalues so reverse success criteria
