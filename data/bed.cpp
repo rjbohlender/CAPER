@@ -47,12 +47,12 @@ Bed::Bed(const std::string &ifile) {
   }
 }
 
-Bed::Bed(std::stringstream &ss) {
+Bed::Bed(std::stringstream &iss) {
   using namespace RJBUtil;
   std::string line;
   int lineno = -1;
 
-  while (std::getline(ss, line)) {
+  while (std::getline(iss, line)) {
     lineno++;
     RJBUtil::Splitter<std::string> splitter(line, "\t");
     FileValidator::validate_bed_line(splitter, lineno);

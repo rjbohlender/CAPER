@@ -40,7 +40,7 @@ Weight::Weight(const std::string &ifile) {
          << splitter[6] << "," << splitter[7];
     }
 
-    double score = 1;
+    double score;
     try {
       score = std::stod(splitter[8]);
     } catch(std::exception &e) {

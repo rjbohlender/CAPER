@@ -41,7 +41,7 @@ public:
   // Constructors
   Bed() = default;
   explicit Bed(const std::string &ifile);
-  explicit Bed(std::stringstream &ss);
+  explicit Bed(std::stringstream &iss);
 
   bool check_variant(const std::string &variant);
 
