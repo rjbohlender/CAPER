@@ -82,9 +82,11 @@ void CAPERTask::cleanup() {
 void CAPERTask::calc_multitranscript_pvalues() {
   // Skip MGIT if only a single transcript
   if (!has_multiple_transcripts()) {
-    for (auto &v : results) {
-      v.second.mgit_p = v.second.empirical_p;
-      v.second.mgit_successes = v.second.successes;
+    for (auto &[tr, res] : results) {
+      res.mgit_p = res.empirical_p;
+      res.mgit_successes = res.successes;
+      res.mgit_midp = res.empirical_midp;
+      res.mgit_midp_successes = res.mid_successes;
     }
     return;
   }
@@ -98,36 +100,27 @@ void CAPERTask::calc_multitranscript_pvalues() {
   double successes = 0;
   double midp_successes = 0;
 
+  int m = max_permutations(); // Total permutations
   arma::mat mgit_pval_mat = arma::mat(max_permutations() + 1, n);
 
   // For each transcript
-  for (i = 0; i < n; i++) {
-    // For each statistic
-    const std::string &ts = transcripts[i];
-    if (!gene.is_polymorphic(ts)) {
+  for (auto &[tr, res] : results) {
+    if (!gene.is_polymorphic(tr)) {
       continue;
     }
-    int m = static_cast<int>(results[ts].permuted.size()); // Total permutations
-
-    assert(m == max_permutations()); // Sanity check - All equal
 
     // Append original
-    results[ts].permuted.push_back(results[ts].original);
-    arma::vec permuted = arma::conv_to<arma::vec>::from(results[ts].permuted);
-
-    // Remove original
-    results[ts].permuted.pop_back();
-
+    arma::vec permuted = arma::conv_to<arma::vec>::from(res.permuted);
+    permuted.insert_rows(0, 1);
+    permuted(0) = res.original;
     arma::vec pvals;
     if (tp.analytic) { // Analytic methods return p-values, so ordering needs to
-                       // be reversed
+      // be reversed
       pvals = rank(permuted, "ascend", 0);
     } else {
       pvals = rank(permuted, "descend", 0);
     }
-
     pvals /= permuted.n_rows;
-
     try {
       mgit_pval_mat.col(i) = pvals;
     } catch (const std::logic_error &e) {
@@ -139,23 +132,19 @@ void CAPERTask::calc_multitranscript_pvalues() {
 
   // Min value of each row
   arma::vec mgit_pval_dist_ = arma::min(mgit_pval_mat, 1);
+  double min_p = mgit_pval_dist_(0);
+  for (const auto &v : mgit_pval_dist_) {
+    successes += (v <= min_p);
+    midp_successes += (v < min_p);
+    midp_successes += 0.5 * (v == min_p);
+  }
 
-  for (i = 0; i < n; i++) {
-    const std::string &ts = transcripts[i];
-    unsigned long m = mgit_pval_dist_.n_rows; // Total permutations
-
-    successes =
-        arma::find(mgit_pval_dist_ <= results[ts].empirical_p).eval().n_rows;
-    midp_successes =
-        arma::find(mgit_pval_dist_ < results[ts].empirical_p).eval().n_rows;
-    midp_successes +=
-        arma::find(mgit_pval_dist_ == results[ts].empirical_p).eval().n_rows / 2.;
-
+  for (auto &[tr, res] : results) {
     // Store multi-transcript p-value
-    results[ts].mgit_p = (1.0 + successes) / (1.0 + m);
-    results[ts].mgit_successes = static_cast<int>(successes);
-    results[ts].mgit_midp = (0.5 + midp_successes) / (1.0 + m);
-    results[ts].mgit_midp_successes = static_cast<int>(midp_successes);
+    res.mgit_p = (1.0 + successes) / (1.0 + m);
+    res.mgit_successes = static_cast<int>(successes);
+    res.mgit_midp = (0.5 + midp_successes) / (1.0 + m);
+    res.mgit_midp_successes = midp_successes;
   }
 }
 

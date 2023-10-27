@@ -268,7 +268,7 @@ auto Reporter::recalculate_mgit(
       res.mgit_p = (1.0 + successes) / (1.0 + m);
       res.mgit_successes = static_cast<int>(successes);
       res.mgit_midp = (0.5 + midp_successes) / (1.0 + m);
-      res.mgit_midp_successes = static_cast<int>(midp_successes);
+      res.mgit_midp_successes = midp_successes;
     }
   }
 }
@@ -359,7 +359,7 @@ auto Reporter::recalculate_mgit(
     res.mgit_p = (1.0 + successes) / (1.0 + m);
     res.mgit_successes = static_cast<int>(successes);
     res.mgit_midp = (0.5 + midp_successes) / (1.0 + m);
-    res.mgit_midp_successes = static_cast<int>(midp_successes);
+    res.mgit_midp_successes = midp_successes;
   }
 }
 
@@ -622,7 +622,7 @@ auto Reporter::sort_simple(const TaskParams &tp) -> void {
                                     std::stod(emp_midci_splitter[1])),
                      std::stod(splitter[7]), std::stod(splitter[8]),
                      std::stoul(splitter[9]), std::stoul(splitter[10]),
-                     std::stoul(splitter[11]), std::stoul(splitter[12])};
+                     std::stod(splitter[11]), std::stoul(splitter[12])};
 
       for (int i = 13; i < splitter.size(); i++) {
         rs.stats.push_back(splitter[i]);

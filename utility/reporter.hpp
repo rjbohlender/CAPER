@@ -25,7 +25,7 @@ struct ResultLine {
   double mgit_midp;
   unsigned long successes;
   unsigned long mgit_successes;
-  unsigned long mgit_midp_successes;
+  double mgit_midp_successes;
   unsigned long permutations;
   std::vector<std::string> stats;
 };
