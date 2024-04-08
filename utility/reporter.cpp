@@ -10,6 +10,10 @@
 
 const std::set<std::string> Reporter::pvalue_methods_{"SKAT", "SKATO", "CMC",
                                                       "RVT1", "RVT2"};
+struct SortableResult {
+  std::string transcript;
+  double emp_p;
+};
 
 Reporter::Reporter(TaskParams &tp)
     : ncases_(0), ncontrols_(0), method_(tp.method), pvalues_(tp.analytic),
@@ -755,26 +759,39 @@ auto Reporter::sync_write_vaast(CAPERTask &ct, const TaskParams &tp) -> void {
     return;
   }
 
-  for (auto &ts : ct.gene.get_vaast()) {
+  std::vector<SortableResult> ordered_transcripts;
+  for (const auto &ts : ct.gene.transcripts) {
+    // insert the transcript and the empirical p value into the vector
+        ordered_transcripts.push_back(
+                SortableResult{ts, ct.results[ts].empirical_p});
+  }
+  // Sort the transcripts by empirical p value
+  std::sort(ordered_transcripts.begin(), ordered_transcripts.end(),
+          [](const SortableResult &a, const SortableResult &b) {
+          return a.emp_p < b.emp_p;
+          });
+
+  for (const auto &sorted : ordered_transcripts) {
+    auto ts = sorted.transcript;
     double z2 = std::pow(1.96, 2);
-    double n = ct.results[ts.first].permutations;
-    double ns = ct.results[ts.first].successes;
+    double n = ct.results[ts].permutations;
+    double ns = ct.results[ts].successes;
     double nf =
-        ct.results[ts.first].permutations - ct.results[ts.first].successes;
+        ct.results[sorted.transcript].permutations - ct.results[sorted.transcript].successes;
     double p = (ns + 1.) / (n + 1.);
     double sp = (p + z2 / (2 * (n + 1.))) / (1. + z2 / (n + 1.));
     double ci = 1.96 / (1. + z2 / n) *
                 std::sqrt((p * (1 - p) / (n + 1.) + z2 / (4 * n * n)));
-    vaast_file_ << ts.second;
+    vaast_file_ << ct.gene.get_vaast()[ts];
     vaast_file_ << "SCORE: "
-                << boost::format("%1$.2f") % ct.results[ts.first].original
+                << boost::format("%1$.2f") % ct.results[ts].original
                 << std::endl;
     vaast_file_ << "genome_permutation_p: " << p << std::endl;
     vaast_file_ << "genome_permutation_p_ci: " << ((sp - ci > 0) ? sp - ci : 0)
                 << "," << ((sp + ci > 1) ? 1 : sp + ci) << std::endl;
-    vaast_file_ << "num_permutations: " << ct.results[ts.first].permutations
+    vaast_file_ << "num_permutations: " << ct.results[ts].permutations
                 << std::endl;
-    vaast_file_ << "total_success: " << ct.results[ts.first].successes
+    vaast_file_ << "total_success: " << ct.results[ts].successes
                 << std::endl;
   }
 
