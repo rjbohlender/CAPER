@@ -117,22 +117,29 @@ template <typename LinkT> struct GLM {
 
 template <typename LinkT>
 auto GLM<LinkT>::gradient_descent(arma::mat &X, arma::colvec &Y) -> arma::vec {
-  // std::cerr << "Running gradient descent.\n";
+  std::cerr << "Running adaptive gradient descent.\n";
   auto iterations = 0ull;
-  const auto max_iter = 1000000ull;
-  auto alpha = 0.0005; // Learning rate
+  const auto max_iter = 25000ull;
+  auto alpha = 0.9; // Learning rate
   auto tol = 1e-8;
   auto m = static_cast<double>(X.n_rows);
+  arma::vec gti = arma::vec(X.n_cols, arma::fill::zeros);
   arma::mat &A = X;
   auto b = arma::vec(A.n_cols, arma::fill::randn);
   auto grad = b;
   do {
     // Vectorized update
-    grad = alpha * (A.t() * (link.linkinv(A, b) - Y)) / m;
-    b -= grad;
+    grad = (A.t() * (link.linkinv(A, b) - Y)) / m;
+    gti += arma::pow(grad, 2);
+    arma::vec adjusted_grad = grad / (arma::sqrt(gti) + 1e-6);
+    b -= adjusted_grad * alpha;
 
     iterations++;
   } while (iterations < max_iter && arma::norm(grad) > tol);
+
+  if (arma::norm(grad) > tol) {
+    std::cerr << "Adaptive gradient descent failed to converge." << std::endl;
+  }
 
   dev_ = arma::sum(link.dev_resids(Y, link.linkinv(A, b),
                                    arma::vec(A.n_rows, arma::fill::ones)));

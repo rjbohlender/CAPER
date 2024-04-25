@@ -513,6 +513,8 @@ private:
                     tp_.nperm - total_perm, i * perm_step,
                     max_loops * perm_step, *permutation_ptr_);
 
+          std::cerr << "Permutations: " << tp_.nperm - total_perm << std::endl;
+
           // Limit adding jobs to prevent excessive memory usage
           while (tq_.size() > tp_.nthreads - 1) {
             std::this_thread::sleep_for(delay);
@@ -521,6 +523,7 @@ private:
         } else {
           Task_t ta(stage_, gene, cov_, tp_, succ_step, perm_step,
                     i * perm_step, max_loops * perm_step, *permutation_ptr_);
+          std::cerr << "Permutations: " << perm_step << std::endl;
           // Add current permutations
           total_perm += perm_step;
           total_success += succ_step;
