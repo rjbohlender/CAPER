@@ -2,7 +2,7 @@ Bootstrap: docker
 From: debian:bullseye-slim
 Stage: build
 
-%copy
+%files
     . /src/
 
 %post
