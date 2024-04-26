@@ -1,0 +1,30 @@
+Bootstrap: docker
+From: debian:bullseye-slim
+Stage: build
+
+%copy
+    . /src/
+
+%post
+    apt-get -y update && apt-get install -y --no-install-recommends apt-utils
+    apt-get install -y --no-install-recommends \
+         ca-certificates \
+         file \
+         sudo \
+         unzip \
+         wget
+    apt-get install -y --no-install-recommends build-essential cmake libboost-all-dev libarmadillo-dev
+    cd /src && mkdir build && cd build
+    cmake -DCMAKE_BUILD_TYPE=Release ../.
+    cmake --build . --target caper
+
+Bootstrap: docker
+From: debian:bullseye-slim
+Stage: final
+
+%files from build
+    /src/build/caper /usr/local/bin/
+    /src/filter /filter
+
+%runscript
+    /usr/local/bin/caper
