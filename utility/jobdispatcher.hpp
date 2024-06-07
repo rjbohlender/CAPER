@@ -486,8 +486,8 @@ private:
 
       long total_perm = 0;
       long total_success = 0;
-      long perm_step = tp_.nperm / (tp_.nthreads - 1);
-      long succ_step = tp_.success_threshold / (tp_.nthreads - 1);
+      long perm_step = tp_.nperm / tq_.get_nthreads();
+      long succ_step = tp_.success_threshold / tq_.get_nthreads();
       long max_loops = 1;
       if (tp_.max_perms) {
         max_loops = std::ceil(*tp_.max_perms / (double)tp_.nperm);
@@ -508,28 +508,42 @@ private:
 
       for (int i = 0; i < tq_.get_nthreads(); i++) {
         if (i == tq_.get_nthreads() - 1) {
-          Task_t ta(stage_, gene, cov_, tp_,
+          Task_t ta(stage_,
+                    gene,
+                    cov_,
+                    tp_,
                     tp_.success_threshold - total_success,
-                    tp_.nperm - total_perm, i * perm_step,
-                    max_loops * perm_step, *permutation_ptr_);
+                    tp_.nperm - total_perm,
+                    i * perm_step,
+                    max_loops * (tp_.nperm - total_perm),
+                    *permutation_ptr_);
 
-          std::cerr << "Permutations: " << tp_.nperm - total_perm << std::endl;
+          std::cerr << "Final Permutations: " << tp_.nperm - total_perm << std::endl;
 
           // Limit adding jobs to prevent excessive memory usage
-          while (tq_.size() > tp_.nthreads - 1) {
+          while (tq_.size() > tq_.get_nthreads()) {
             std::this_thread::sleep_for(delay);
           }
           tq_.dispatch(ta);
         } else {
-          Task_t ta(stage_, gene, cov_, tp_, succ_step, perm_step,
-                    i * perm_step, max_loops * perm_step, *permutation_ptr_);
+          Task_t ta(stage_,
+                    gene,
+                    cov_,
+                    tp_,
+                    succ_step,
+                    perm_step,
+                    i * perm_step,
+                    max_loops * perm_step,
+                    *permutation_ptr_);
+
           std::cerr << "Permutations: " << perm_step << std::endl;
+
           // Add current permutations
           total_perm += perm_step;
           total_success += succ_step;
 
           // Limit adding jobs to prevent excessive memory usage
-          while (tq_.size() > tp_.nthreads - 1) {
+          while (tq_.size() > tq_.get_nthreads()) {
             std::this_thread::sleep_for(delay);
           }
           tq_.dispatch(ta);

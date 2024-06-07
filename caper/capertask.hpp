@@ -40,12 +40,20 @@ public:
   std::unordered_map<std::string, Permute> permute;
 
   // Constructors
-  CAPERTask(Stage stage_, Gene gene_, const std::shared_ptr<Covariates> &cov_,
-            TaskParams tp_, arma::uword succ_thresh_, arma::uword nperm_,
-            arma::uword offset_, arma::uword termination_,
+  CAPERTask(Stage stage_,
+            Gene gene_,
+            const std::shared_ptr<Covariates> &cov_,
+            TaskParams tp_,
+            arma::uword succ_thresh_,
+            arma::uword nperm_,
+            arma::uword offset_,
+            arma::uword termination_,
             std::vector<std::vector<int8_t>> &perm_);
-  CAPERTask(Stage stage_, Gene &gene_, std::shared_ptr<Covariates> cov_,
-            TaskParams tp_, std::vector<std::vector<int8_t>> &perm_);
+  CAPERTask(Stage stage_,
+            Gene &gene_,
+            std::shared_ptr<Covariates> cov_,
+            TaskParams tp_,
+            std::vector<std::vector<int8_t>> &perm_);
 
   // Free memory
   void cleanup();

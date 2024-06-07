@@ -259,7 +259,7 @@ auto CAPEROp::check_perm(const TaskParams &tp, double perm_val,
   if (tp.max_perms) {
     if (tp.gene_list) {
       res.done |= res.permutations >= termination;
-      res.done |= (res.permutations >= (*tp.max_perms / (tp.nthreads - 1)));
+      // res.done |= (res.permutations >= (*tp.max_perms / (tp.nthreads - 1)));
     } else {
       res.done |= res.permutations >= *tp.max_perms;
     }
