@@ -518,8 +518,6 @@ private:
                     max_loops * (tp_.nperm - total_perm),
                     *permutation_ptr_);
 
-          std::cerr << "Final Permutations: " << tp_.nperm - total_perm << std::endl;
-
           // Limit adding jobs to prevent excessive memory usage
           while (tq_.size() > tq_.get_nthreads()) {
             std::this_thread::sleep_for(delay);
@@ -535,8 +533,6 @@ private:
                     i * perm_step,
                     max_loops * perm_step,
                     *permutation_ptr_);
-
-          std::cerr << "Permutations: " << perm_step << std::endl;
 
           // Add current permutations
           total_perm += perm_step;
