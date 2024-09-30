@@ -570,6 +570,10 @@ void Covariates::sort_covariates(std::string &header) {
     for(auto i = static_cast<arma::uword>(Indices::first); i < splitter.size(); i++) {
       if (this->contains(splitter[i])) {
         auto it = std::find(cov_samples_.begin(), cov_samples_.end(), splitter[i]);
+        if (it == cov_samples_.end()) {
+          std::cerr << "cov not found: " << splitter[i] << std::endl;
+          throw std::runtime_error("Sample present in ped file not present in covariate file. Exiting.");
+        }
         cov_indices(j) = std::distance(cov_samples_.begin(), it);
         j++;
       }

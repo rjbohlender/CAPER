@@ -96,7 +96,7 @@ void CAPERTask::calc_multitranscript_pvalues() {
 
   unsigned long n = transcripts.size();
 
-  int i, j, k;
+  int i = 0;
   double successes = 0;
   double midp_successes = 0;
 
@@ -123,6 +123,7 @@ void CAPERTask::calc_multitranscript_pvalues() {
     pvals /= permuted.n_rows;
     try {
       mgit_pval_mat.col(i) = pvals;
+      i++;
     } catch (const std::logic_error &e) {
       std::cerr << "n_row: " << mgit_pval_mat.n_rows
                 << " n_col: " << mgit_pval_mat.n_cols << "\n";

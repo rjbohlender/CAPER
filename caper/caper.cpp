@@ -1,5 +1,6 @@
 #include "../utility/split.hpp"
 
+#include <stdexcept>
 #include <string>
 #include <vector>
 #include <iostream>
