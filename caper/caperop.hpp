@@ -26,7 +26,7 @@ public:
 private:
   auto op() -> void;
 
-  static auto check_perm(const TaskParams &tp, double perm_val,
+  static auto check_perm(const CAPERTask &ct, const TaskParams &tp, double perm_val,
                          long success_threshold, Result &res,
                          unsigned long termination) -> void;
   static auto check_done(const TaskParams &tp, long success_threshold,

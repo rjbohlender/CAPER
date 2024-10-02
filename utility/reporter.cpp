@@ -132,7 +132,9 @@ auto Reporter::extract_results(std::vector<CAPERTask> &tq_results,
                                TaskParams &tp) -> void {
   if (gene_list_) {
     // Combine results
+    int task_count = 0;
     for (auto &task : tq_results) {
+      task_count++;
       for (auto &[ts, result] : task.results) {
         const std::string gene = result.gene;
         // If we've seen this gene before

@@ -107,7 +107,7 @@ auto CAPEROp::op() -> void {
       // Update total number of permutations
       res.permutations++;
 
-      check_perm(carvaTask.tp, perm_val, carvaTask.success_threshold, res,
+      check_perm(carvaTask, carvaTask.tp, perm_val, carvaTask.success_threshold, res,
                  carvaTask.termination);
     }
     // Stop iterating if everything is done
@@ -183,7 +183,7 @@ auto CAPEROp::op() -> void {
   }
 }
 
-auto CAPEROp::check_perm(const TaskParams &tp, double perm_val,
+auto CAPEROp::check_perm(const CAPERTask &ct, const TaskParams &tp, double perm_val,
                          long success_threshold,
                          Result &res, unsigned long termination) -> void {
   // Some methods return a pvalue, so we need to reverse the success inequality
@@ -265,7 +265,7 @@ auto CAPEROp::check_perm(const TaskParams &tp, double perm_val,
     }
   } else {
     if (tp.gene_list) {
-      res.done |= (res.permutations >= (tp.nperm / (tp.nthreads - 1)));
+      res.done |= (res.permutations >= ct.npermutations);
     } else {
       res.done |= res.permutations >= tp.nperm;
     }
