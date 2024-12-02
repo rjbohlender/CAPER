@@ -142,7 +142,7 @@ double Saddlepoint(double Q, const arma::vec &lambda) {
   auto kppprime0 = [&](double &zeta) -> double {
     return 8 * arma::accu(arma::pow(ulambda, 3) / arma::pow(1 - 2 * (zeta * ulambda), 3));
   };
-#if 0
+#if 1
   auto hatzetafn = [&](double zeta) -> double {
     return kprime0(zeta) - Q;
   };
@@ -165,7 +165,7 @@ double Saddlepoint(double Q, const arma::vec &lambda) {
   lmax = arma::min(1 / (2 * ulambda(arma::find(ulambda > 0)))) * 0.99999;
 
   // Root finding
-#if 0
+#if 1
   int digits = std::numeric_limits<double>::digits - 3;
   boost::math::tools::eps_tolerance<double> tol(digits);
   boost::uintmax_t max_iter = 1000;
@@ -184,27 +184,41 @@ double Saddlepoint(double Q, const arma::vec &lambda) {
   int tol = static_cast<int>(digits * 0.6);
   boost::uintmax_t max_iter = 1000;
   double guess = (lmax - lmin) / 2.;
+#endif
   try {
 #ifdef __clang__
-    double hatzeta = boost::math::tools::halley_iterate(hatzetafn, guess, lmin, lmax, tol, max_iter);
+    // double hatzeta = boost::math::tools::halley_iterate(hatzetafn, guess, lmin, lmax, tol, max_iter);
+    // double hatzeta = boost::math::tools::schroder_iterate(hatzetafn, guess, lmin, lmax, tol, max_iter);
 #else
     double hatzeta = boost::math::tools::schroder_iterate(hatzetafn, guess, lmin, lmax, tol, max_iter);
 #endif
-    // double hatzeta = tmp.first + (tmp.second - tmp.first) / 2.;
+    // double hatzeta = boost::math::tools::newton_raphson_iterate(hatzetafn, guess, lmin, lmax, tol, max_iter);
+    double hatzeta = tmp.first + (tmp.second - tmp.first) / 2.;
 
     double w = sgn(hatzeta) * std::sqrt(2 * (hatzeta * Q - k0(hatzeta)));
     double v = hatzeta * std::sqrt(kpprime0(hatzeta));
 
     if (std::abs(hatzeta) < 1e-4 || std::isnan(w) || std::isnan(v)) {
+      std::cerr << "Saddlepoint not applied." << std::endl;
+      if(std::isnan(w)) {
+        std::cerr << "w is nan." << std::endl;
+        std::cerr << "hatzeta: " << hatzeta << std::endl;
+        std::cerr << "Q: " << Q << std::endl;
+        std::cerr << "k0: " << k0(hatzeta) << std::endl;
+      }
+      if(std::isnan(v)) {
+        std::cerr << "v is nan." << std::endl;
+      }
       return Liu_pval(Q * d, lambda);
     } else {
+      std::cerr << "Saddlepoint applied." << std::endl;
       boost::math::normal norm(0, 1);
       return boost::math::cdf(boost::math::complement(norm, w + std::log(v / w) / w));
     }
   } catch (boost::math::evaluation_error &e) {
+    std::cerr << "Saddlepoint error." << std::endl;
     return SKAT_pval(Q, lambda, false);
   }
-#endif
 
 }
 
