@@ -190,7 +190,7 @@ double Saddlepoint(double Q, const arma::vec &lambda) {
     // double hatzeta = boost::math::tools::halley_iterate(hatzetafn, guess, lmin, lmax, tol, max_iter);
     // double hatzeta = boost::math::tools::schroder_iterate(hatzetafn, guess, lmin, lmax, tol, max_iter);
 #else
-    double hatzeta = boost::math::tools::schroder_iterate(hatzetafn, guess, lmin, lmax, tol, max_iter);
+    // double hatzeta = boost::math::tools::schroder_iterate(hatzetafn, guess, lmin, lmax, tol, max_iter);
 #endif
     // double hatzeta = boost::math::tools::newton_raphson_iterate(hatzetafn, guess, lmin, lmax, tol, max_iter);
     double hatzeta = tmp.first + (tmp.second - tmp.first) / 2.;
