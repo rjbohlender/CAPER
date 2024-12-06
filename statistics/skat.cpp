@@ -169,9 +169,9 @@ double Saddlepoint(double Q, const arma::vec &lambda) {
   int digits = std::numeric_limits<double>::digits - 3;
   boost::math::tools::eps_tolerance<double> tol(digits);
   boost::uintmax_t max_iter = 1000;
+  std::pair<double, double> tmp;
   try {
-    std::pair<double, double>
-        tmp = boost::math::tools::bisect(hatzetafn, lmin, lmax, tol, max_iter);
+    tmp = boost::math::tools::bisect(hatzetafn, lmin, lmax, tol, max_iter);
   } catch(boost::math::evaluation_error &e) {
     return Liu_pval(Q * d, lambda);
   }
