@@ -199,7 +199,6 @@ double Saddlepoint(double Q, const arma::vec &lambda) {
     double v = hatzeta * std::sqrt(kpprime0(hatzeta));
 
     if (std::abs(hatzeta) < 1e-4 || std::isnan(w) || std::isnan(v)) {
-      std::cerr << "Saddlepoint not applied." << std::endl;
       if(std::isnan(w)) {
         std::cerr << "w is nan." << std::endl;
         std::cerr << "hatzeta: " << hatzeta << std::endl;
@@ -208,15 +207,16 @@ double Saddlepoint(double Q, const arma::vec &lambda) {
       }
       if(std::isnan(v)) {
         std::cerr << "v is nan." << std::endl;
+        std::cerr << "hatzeta: " << hatzeta << std::endl;
+        std::cerr << "Q: " << Q << std::endl;
+        std::cerr << "k0: " << k0(hatzeta) << std::endl;
       }
       return Liu_pval(Q * d, lambda);
     } else {
-      std::cerr << "Saddlepoint applied." << std::endl;
       boost::math::normal norm(0, 1);
       return boost::math::cdf(boost::math::complement(norm, w + std::log(v / w) / w));
     }
   } catch (boost::math::evaluation_error &e) {
-    std::cerr << "Saddlepoint error." << std::endl;
     return SKAT_pval(Q, lambda, false);
   }
 
