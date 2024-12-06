@@ -692,6 +692,8 @@ double Methods::SKATO(Gene &gene, arma::vec &phenotypes,
 
   check_weights(gene, transcript, a, b, tp.no_weights);
   arma::vec weights = gene.get_weights(transcript);
+  weights.insert_rows(weights.n_elem, arma::sum(weights.rows(Gidx)));
+  weights.shed_rows(Gidx);
 
   arma::mat W = arma::diagmat(weights);
 
