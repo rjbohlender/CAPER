@@ -678,7 +678,7 @@ double Methods::SKATO(Gene &gene, arma::vec &phenotypes,
   arma::uvec Gidx = arma::find(arma::sum(Gtmp, 0) < 10);
   // Collapse rare variants into a single variant
   arma::sp_mat G;
-#if 0
+#if 1
   if (Gidx.n_elem > 0) {
     // Insert column containing the collapsed variant
     Gtmp.insert_cols(Gtmp.n_cols, arma::sum(Gtmp.cols(Gidx), 1));
@@ -696,7 +696,7 @@ double Methods::SKATO(Gene &gene, arma::vec &phenotypes,
 
   check_weights(gene, transcript, a, b, tp.no_weights);
   arma::vec weights = gene.get_weights(transcript);
-#if 0
+#if 1
   weights.insert_rows(weights.n_elem, arma::sum(weights.rows(Gidx)));
   weights.shed_rows(Gidx);
 #endif
