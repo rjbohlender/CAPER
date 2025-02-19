@@ -675,32 +675,11 @@ double Methods::SKATO(Gene &gene, arma::vec &phenotypes,
     obj_->shuffle(phenotypes);
   }
 
-  arma::mat Gtmp(gene.genotypes[transcript]);
-  arma::uvec Gidx = arma::find(arma::sum(Gtmp, 0) < 10);
-  // Collapse rare variants into a single variant
-  arma::sp_mat G;
-#if 1
-  if (Gidx.n_elem > 0) {
-    // Insert column containing the collapsed variant
-    Gtmp.insert_cols(Gtmp.n_cols, arma::sum(Gtmp.cols(Gidx), 1));
-    // Remove the rare variants
-    Gtmp.shed_cols(Gidx);
-    // Update the genotype matrix
-    G = Gtmp;
-  } else {
-    G = Gtmp;
-  }
-#else
-  G = Gtmp;
-#endif
+  arma::sp_mat G = gene.genotypes[transcript];
   arma::uword N = G.n_cols; // Variant count
 
   check_weights(gene, transcript, a, b, tp.no_weights);
   arma::vec weights = gene.get_weights(transcript);
-#if 1
-  weights.insert_rows(weights.n_elem, arma::max(weights.rows(Gidx)));
-  weights.shed_rows(Gidx);
-#endif
 
   arma::mat W = arma::diagmat(weights);
 
