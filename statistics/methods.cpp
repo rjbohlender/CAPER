@@ -6,6 +6,7 @@
 
 #include <cmath>
 #include <iomanip>
+#include <armadillo>
 
 // Boost Math
 #include <boost/math/distributions/chi_squared.hpp>
@@ -697,7 +698,7 @@ double Methods::SKATO(Gene &gene, arma::vec &phenotypes,
   check_weights(gene, transcript, a, b, tp.no_weights);
   arma::vec weights = gene.get_weights(transcript);
 #if 1
-  weights.insert_rows(weights.n_elem, arma::sum(weights.rows(Gidx)));
+  weights.insert_rows(weights.n_elem, arma::max(weights.rows(Gidx)));
   weights.shed_rows(Gidx);
 #endif
 
@@ -914,7 +915,7 @@ void Methods::check_weights(Gene &gene, const std::string &transcript, int a,
   const arma::sp_mat G(gene.genotypes[transcript]);
   arma::vec weights = gene.weights[transcript];
 
-  if (kernel_ == Kernel::wLinear) {
+  if (!tp.weight && kernel_ == Kernel::wLinear) {
     arma::vec maf(arma::mean(G, 0).t() / 2.);
 
     for (arma::uword i = 0; i < G.n_cols; i++) {

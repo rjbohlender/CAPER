@@ -114,6 +114,7 @@ struct TaskParams {
   std::string kernel; // Kernel selection
   int a; // Beta weight parameters
   int b; // Beta weight parameters
+  bool var_collapsing;
 };
 
 #endif //PERMUTE_ASSOCIATE_TASKPARAMS_HPP

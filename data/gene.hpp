@@ -107,6 +107,7 @@ private:
 
   void aaf_filter();
   void maf_filter();
+  void collapse_variants();
   void impute_to_mean(const std::shared_ptr<Covariates> &cov);
   void update_weights(const Weight &weight);
 };

@@ -22,6 +22,7 @@ Gene::Gene(std::stringstream &ss, const std::shared_ptr<Covariates> &cov,
     : nsamples(nsamples), nvariants(std::move(nvariants)), testable(false),
       skippable(false), tp(tp) {
   parse(ss, cov, filter);
+  update_weights(weight);
 
   if (tp.impute_to_mean) {
     impute_to_mean(cov);
@@ -33,7 +34,9 @@ Gene::Gene(std::stringstream &ss, const std::shared_ptr<Covariates> &cov,
     maf_filter();
   }
 
-  update_weights(weight);
+  if (tp.var_collapsing) {
+    collapse_variants();
+  }
 }
 
 void Gene::aaf_filter() { // Mark gene skippable to start
@@ -162,6 +165,79 @@ void Gene::maf_filter() {
     } else {
       polymorphic[ts] = true;
       skippable = false;
+    }
+  }
+}
+
+void Gene::collapse_variants() {
+  // Switch to counting minor allele
+  if (tp.aaf_filter) {
+    for (auto &[ts, gt] : genotypes) {
+      arma::rowvec maf = arma::rowvec(arma::mean(gt) / 2.);
+      // For each variant
+      for (arma::uword k : arma::find(maf > 0.5).eval()) {
+        // Swap assignment
+        gt.col(k).replace(0, 3); // Placeholder to unique value
+        gt.col(k).replace(2, 0);
+        gt.col(k).replace(3, 2);
+      }
+    }
+  }
+  for (const auto &ts : transcripts) {
+    arma::rowvec sums = arma::rowvec(arma::sum(genotypes[ts], 0));
+    // Variants with minor allele count < 10
+    arma::uvec rare = arma::find(sums < 10);
+    // Collapse rare variants into a single pseudo_variant with a 1 in each carrier
+    arma::vec pseudo_variant = arma::sum(arma::mat(genotypes[ts].cols(rare)), 1);
+    arma::uvec nonzero = arma::find(pseudo_variant > 0);
+    pseudo_variant(nonzero).fill(1);
+
+    std::vector<double> weight_vec{};
+
+    arma::rowvec maf = arma::rowvec(arma::mean(genotypes[ts]) / 2.);
+    for (arma::sword k = rare.n_elem - 1; k >= 0; --k) {
+        arma::sword idx = rare(k);
+        sums.shed_col(idx);
+        genotypes[ts].shed_col(idx);
+        weight_vec.push_back(weights[ts](idx));
+        weights[ts].shed_row(idx);
+        missing_variant_carriers_[ts].shed_col(idx);
+        positions[ts].erase(positions[ts].begin() + idx);
+        function[ts].erase(function[ts].begin() + idx);
+        reference[ts].erase(reference[ts].begin() + idx);
+        alternate[ts].erase(alternate[ts].begin() + idx);
+        annotation[ts].erase(annotation[ts].begin() + idx);
+        type[ts].erase(type[ts].begin() + idx);
+        nvariants[ts]--;
+    }
+
+    // Add the pseudo variant to the end of the sparse matrix and update the number of variants
+    genotypes[ts].resize(genotypes[ts].n_rows, genotypes[ts].n_cols + 1);
+    genotypes[ts].col(genotypes[ts].n_cols - 1) = pseudo_variant;
+    nvariants[ts]++;
+
+    // Average the weights of the collapsed variants and add the new weight to the end of the vector
+    double weight_sum = std::accumulate(weight_vec.begin(), weight_vec.end(), 0.0);
+    weights[ts].insert_rows(weights[ts].n_elem, arma::vec{weight_sum / weight_vec.size()});
+    // Position is set to "Collapsed" formatted as other positions
+    positions[ts].push_back("Collapsed,Collapsed,Collapsed,Collapsed,Collapsed,Collapsed,Collapsed,Collapsed");
+    function[ts].push_back("Collapsed");
+    reference[ts].push_back("Collapsed");
+    alternate[ts].push_back("Collapsed");
+    annotation[ts].push_back("Collapsed");
+    type[ts].push_back("Collapsed");
+  }
+  // Switch back to alternate allele
+  if (tp.aaf_filter) {
+    for (auto &[ts, gt] : genotypes) {
+      arma::rowvec maf = arma::rowvec(arma::mean(gt) / 2.);
+      // For each variant
+      for (arma::uword k : arma::find(maf > 0.5).eval()) {
+        // Swap assignment
+        gt.col(k).replace(0, 3); // Placeholder to unique value
+        gt.col(k).replace(2, 0);
+        gt.col(k).replace(3, 2);
+      }
     }
   }
 }

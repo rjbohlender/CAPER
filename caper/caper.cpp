@@ -57,6 +57,7 @@ int main(int argc, char **argv) {
   bool saddlepoint = false;
   bool hotellings = false;
   bool wald = false;
+  bool var_collapsing = false;
   std::vector<int> gene_range;
   std::vector<std::string> power;
   boost::optional<std::string> bed;
@@ -97,7 +98,7 @@ int main(int argc, char **argv) {
          "A file providing weights. Replaces the CASM scores provided in the matrix file.")
         ("no_weights",
          po::bool_switch(&no_weights),
-         "Disable weights. Disables default CASM weights.")
+         "Disable weights.")
         ("impute_to_mean",
          po::bool_switch(&impute_to_mean),
          "Impute the to mean AF of cases for case samples, and the mean AF of controls for control samples.")
@@ -195,8 +196,8 @@ int main(int argc, char **argv) {
          "If enabled variants are grouped all together, otherwise by VAAST 2.0 type annotation.");
     skat.add_options()
         ("kernel,k",
-         po::value<std::string>()->default_value("Linear"),
-         "Kernel for use with SKAT.\nOne of: {Linear, wLinear}.")
+         po::value<std::string>()->default_value("wLinear"),
+         "Kernel for use with SKAT / SKATO.\nOne of: {Linear, wLinear}.")
         ("qtl",
          po::bool_switch(&linear),
          "Analyze a quantitative trait. Values are assumed to be finite floating point values.")
@@ -217,6 +218,9 @@ int main(int argc, char **argv) {
         ("wald",
          po::bool_switch(&wald),
          "Use a Wald test instead of the deviance for RVT2.")
+        ("var_collapsing",
+         po::bool_switch(&var_collapsing),
+         "Collapse variants with <10 minor allele count into a single pseudo variant. Will convert to minor allele counting instead of alternate allele counting.")
         ("external", po::value<std::string>(), "Use external permutations.")
         ("help,h", "Print this help message.")
         ("quiet,q", "Don't print status messages.");
@@ -404,6 +408,7 @@ int main(int argc, char **argv) {
   tp.kernel = vm["kernel"].as<std::string>();
   tp.qtl = linear;
   tp.saddlepoint = saddlepoint;
+  tp.var_collapsing = var_collapsing;
   // Beta weights
   tp.a = std::stoi(beta_split[0]);
   tp.b = std::stoi(beta_split[1]);
