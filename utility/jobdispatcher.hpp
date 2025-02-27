@@ -335,7 +335,7 @@ private:
 
     while (std::getline(gt_stream, line)) {
       lineno++;
-      RJBUtil::Splitter<std::string> split(line, "\t");
+      RJBUtil::Splitter<std::string> split(line, "\t", 11, true);
       fv.validate_matrix_line(split, lineno);
 
       // If this line is part of the same gene
