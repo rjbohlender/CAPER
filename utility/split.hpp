@@ -29,8 +29,8 @@ public:
 
   /** Constructors */
   Splitter() = default;
-  Splitter(const string_type &str, const string_type &delim, int_type n = 0)
-      : n_(n), data_(str), delim_(delim) {
+  Splitter(const string_type &str, const string_type &delim, int_type n = 0, bool split_adjacent = false)
+      : n_(n), data_(str), delim_(delim), split_adjacent_(split_adjacent) {
     if (n > 0) {
       split_up_to_n();
     } else {
@@ -38,8 +38,8 @@ public:
     }
   }
 
-  Splitter(const string_type &&str, const string_type &&delim, int_type n = 0)
-      : n_(n), data_(str), delim_(delim) {
+  Splitter(const string_type &&str, const string_type &&delim, int_type n = 0, bool split_adjacent = false)
+      : n_(n), data_(str), delim_(delim), split_adjacent_(split_adjacent) {
     if (n > 0) {
       split_up_to_n();
     } else {
@@ -47,8 +47,8 @@ public:
     }
   }
 
-  Splitter(const string_type &str, const string_type &&delim, int_type n = 0)
-      : n_(n), data_(str), delim_(delim) {
+  Splitter(const string_type &str, const string_type &&delim, int_type n = 0, bool split_adjacent = false)
+      : n_(n), data_(str), delim_(delim), split_adjacent_(split_adjacent) {
     if (n > 0) {
       split_up_to_n();
     } else {
@@ -56,8 +56,8 @@ public:
     }
   }
 
-  Splitter(const string_type &&str, const string_type &delim, int_type n = 0)
-      : n_(n),  data_(str), delim_(delim) {
+  Splitter(const string_type &&str, const string_type &delim, int_type n = 0, bool split_adjacent = false)
+      : n_(n),  data_(str), delim_(delim), split_adjacent_(split_adjacent) {
     if (n > 0) {
       split_up_to_n();
     } else {
@@ -69,7 +69,8 @@ public:
     data_ = rhs.data_;
     delim_ = rhs.delim_;
     tokens_ = rhs.tokens_;
-    n_ = rhs.n;
+    n_ = rhs.n_;
+    split_adjacent_ = rhs.split_adjacent_;
 
     return *this;
   }
@@ -79,6 +80,7 @@ public:
     delim_ = std::move(rhs.delim_);
     tokens_ = std::move(rhs.tokens_);
     n_ = rhs.n_;
+    split_adjacent_ = std::move(rhs.split_adjacent_);
 
     return *this;
   }
@@ -153,7 +155,10 @@ private:
       second = std::find_first_of(first, last, std::cbegin(delim_),
                                   std::cend(delim_));
 
-      if (first != second)
+      if (split_adjacent_) {
+        tokens_.emplace_back(first, second - first);
+      }
+      else if(first != second)
         tokens_.emplace_back(first, second - first);
     }
 #endif
@@ -169,7 +174,10 @@ private:
       second = std::find_first_of(first, last, std::cbegin(delim_),
                                   std::cend(delim_));
 
-      if (first != second)
+      if (split_adjacent_) {
+        tokens_.emplace_back(first, second - first);
+      }
+      else if (first != second)
         tokens_.emplace_back(first, second - first);
       cur++;
       if (cur >= n_) {
@@ -186,6 +194,7 @@ private:
   string_type data_;
   string_type delim_;
   std::vector<std::string> tokens_;
+  bool split_adjacent_;
 };
 } // namespace RJBUtil
 #endif // PGEN_SPLIT_HPP

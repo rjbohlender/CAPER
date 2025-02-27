@@ -359,7 +359,8 @@ void Gene::parse(std::stringstream &ss, const std::shared_ptr<Covariates> &cov,
              "matrix file. There may be an ID mismatch or missing samples.";
       std::exit(-1);
     }
-    Splitter<std::string> splitter(line, "\t", 11);
+    // We now split adjacent tabs into separate fields
+    Splitter<std::string> splitter(line, "\t", 11, true);
 
     if (gene_name.empty()) {
       gene_name = splitter[static_cast<int>(Indices::gene)];
