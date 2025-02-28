@@ -186,7 +186,7 @@ void Gene::collapse_variants() {
   for (const auto &ts : transcripts) {
     arma::rowvec sums = arma::rowvec(arma::sum(genotypes[ts], 0));
     // Variants with minor allele count < 10
-    arma::uvec rare = arma::find(sums < 10);
+    arma::uvec rare = arma::find(sums <= 10);
     // Collapse rare variants into a single pseudo_variant with a 1 in each carrier
     arma::vec pseudo_variant = arma::sum(arma::mat(genotypes[ts]).cols(rare), 1);
     arma::uvec nonzero = arma::find(pseudo_variant > 0);
