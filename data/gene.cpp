@@ -28,14 +28,14 @@ Gene::Gene(std::stringstream &ss, const std::shared_ptr<Covariates> &cov,
     impute_to_mean(cov);
   }
 
+  if (tp.var_collapsing) {
+    collapse_variants();
+  }
+
   if (tp.aaf_filter) {
     aaf_filter();
   } else {
     maf_filter();
-  }
-
-  if (tp.var_collapsing) {
-    collapse_variants();
   }
 }
 
@@ -170,9 +170,10 @@ void Gene::maf_filter() {
 }
 
 void Gene::collapse_variants() {
+  auto gts = genotypes;
   // Switch to counting minor allele
   if (tp.aaf_filter) {
-    for (auto &[ts, gt] : genotypes) {
+    for (auto &[ts, gt] : gts) {
       arma::rowvec maf = arma::rowvec(arma::mean(gt) / 2.);
       // For each variant
       for (arma::uword k : arma::find(maf > 0.5).eval()) {
@@ -184,17 +185,17 @@ void Gene::collapse_variants() {
     }
   }
   for (const auto &ts : transcripts) {
-    arma::rowvec sums = arma::rowvec(arma::sum(genotypes[ts], 0));
+    arma::rowvec sums = arma::rowvec(arma::sum(gts[ts], 0));
     // Variants with minor allele count < 10
     arma::uvec rare = arma::find(sums <= 10);
     // Collapse rare variants into a single pseudo_variant with a 1 in each carrier
-    arma::vec pseudo_variant = arma::sum(arma::mat(genotypes[ts]).cols(rare), 1);
+    arma::vec pseudo_variant = arma::sum(arma::mat(gts[ts]).cols(rare), 1);
     arma::uvec nonzero = arma::find(pseudo_variant > 0);
     pseudo_variant(nonzero).fill(1);
 
     std::vector<double> weight_vec{};
 
-    arma::rowvec maf = arma::rowvec(arma::mean(genotypes[ts]) / 2.);
+    arma::rowvec maf = arma::rowvec(arma::mean(gts[ts]) / 2.);
     for (arma::sword k = rare.n_elem - 1; k >= 0; --k) {
         arma::sword idx = rare(k);
         sums.shed_col(idx);
@@ -226,19 +227,6 @@ void Gene::collapse_variants() {
     alternate[ts].push_back("Collapsed");
     annotation[ts].push_back("Collapsed");
     type[ts].push_back("Collapsed");
-  }
-  // Switch back to alternate allele
-  if (tp.aaf_filter) {
-    for (auto &[ts, gt] : genotypes) {
-      arma::rowvec maf = arma::rowvec(arma::mean(gt) / 2.);
-      // For each variant
-      for (arma::uword k : arma::find(maf > 0.5).eval()) {
-        // Swap assignment
-        gt.col(k).replace(0, 3); // Placeholder to unique value
-        gt.col(k).replace(2, 0);
-        gt.col(k).replace(3, 2);
-      }
-    }
   }
 }
 
