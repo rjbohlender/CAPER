@@ -898,10 +898,11 @@ void Methods::check_weights(Gene &gene, const std::string &transcript, int a,
     arma::vec maf(arma::mean(G, 0).t() / 2.);
 
     for (arma::uword i = 0; i < G.n_cols; i++) {
-      weights(i) = std::pow(maf(i), a - 1) * std::pow(1 - maf(i), b - 1) /
-                   boost::math::beta(a, b);
-      // weights(i) = std::pow(maf(i), a - 1) * std::pow(1 - maf(i), b - 1);
+      // weights(i) = std::pow(maf(i), a - 1) * std::pow(1 - maf(i), b - 1) /
+                   // boost::math::beta(a, b);
+      weights(i) = std::pow(maf(i), a - 1) * std::pow(1 - maf(i), b - 1);
     }
+    weights /= arma::accu(weights) * G.n_cols;
     gene.set_weights(transcript, weights);
   } else {
     gene.set_weights(transcript, weights);
