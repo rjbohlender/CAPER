@@ -72,11 +72,13 @@ double Liu_qval_mod(double pval, const arma::vec &lambda) {
   double q = boost::math::quantile(boost::math::complement(chisq,
                                                            pval > 0 ? pval
                                                                     : std::sqrt(std::numeric_limits<double>::min())));
-  return (q - muX) / sigmaX * sigmaQ + muQ; // Does match the Liu (2009) paper.
+  // return (q - muX) / sigmaX * sigmaQ + muQ; // Does match the Liu (2009) paper.
+  return (q - df) / (arma::datum::sqrt2 * df) * sigmaQ + muQ; // Matches SKATR package.
 }
 
 
 double Liu_pval(double Q, const arma::vec &lambda) {
+  std::cerr << "Called Liu_pval." << std::endl;
   arma::vec c1{
       arma::accu(lambda),
       arma::accu(arma::pow(lambda, 2)),
@@ -115,6 +117,7 @@ double Liu_pval(double Q, const arma::vec &lambda) {
 
 double Saddlepoint(double Q, const arma::vec &lambda) {
   // Check for valid input
+  std::cerr << "Called saddlepoint." << std::endl;
   if (Q <= 0) {
     return 1;
   }
