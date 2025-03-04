@@ -78,7 +78,6 @@ double Liu_qval_mod(double pval, const arma::vec &lambda) {
 
 
 double Liu_pval(double Q, const arma::vec &lambda) {
-  std::cerr << "Called Liu_pval." << std::endl;
   arma::vec c1{
       arma::accu(lambda),
       arma::accu(arma::pow(lambda, 2)),
@@ -117,7 +116,6 @@ double Liu_pval(double Q, const arma::vec &lambda) {
 
 double Saddlepoint(double Q, const arma::vec &lambda) {
   // Check for valid input
-  std::cerr << "Called saddlepoint." << std::endl;
   if (Q <= 0) {
     return 1;
   }
