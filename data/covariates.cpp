@@ -4,6 +4,8 @@
 
 #include <algorithm>
 #include <set>
+#include <stdexcept>
+#include <unordered_map>
 
 #include "covariates.hpp"
 
@@ -12,22 +14,20 @@
 #include "../statistics/bayesianglm.hpp"
 #include "../statistics/glm.hpp"
 #include "../utility/filevalidator.hpp"
-#include "../utility/indexsort.hpp"
 #include "matrix_indices.hpp"
 
 Covariates::Covariates(TaskParams tp)
     : tp_(std::move(tp)), nsamples_(0), ncases_(0), ncontrols_(0),
-      crand((int)time(nullptr)), linear_(tp_.qtl) {
+      crand(static_cast<int>(time(nullptr))), linear_(tp_.qtl) {
   bool cov_provided = !tp_.covariates_path.empty();
   parse_ped(tp_.ped_path, cov_provided);
   parse_cov(tp_.covariates_path);
   sorted_ = false;
 }
 
-Covariates::Covariates(std::stringstream &ped_ss, std::stringstream &cov_ss,
-                       TaskParams tp)
-    : nsamples_(0), ncases_(0), ncontrols_(0), crand((int)time(nullptr)),
-      linear_(false), tp_(tp) {
+Covariates::Covariates(std::stringstream &ped_ss, std::stringstream &cov_ss, TaskParams tp)
+    : tp_(std::move(tp)), nsamples_(0), ncases_(0), ncontrols_(0),
+      crand(static_cast<int>(time(nullptr))), linear_(false) {
   parse(ped_ss, cov_ss);
   sorted_ = false;
 }
@@ -114,6 +114,12 @@ void Covariates::refit_permuted() {
   }
 }
 
+/**
+ * @brief Resets the covariates data.
+ *
+ * This method clears the internal structures for phenotypes, original phenotypes,
+ * design matrix, and odds vector.
+ */
 void Covariates::clear() {
   phenotypes_.reset();
   original_.reset();
@@ -121,44 +127,61 @@ void Covariates::clear() {
   odds_.reset();
 }
 
+/**
+ * @brief Parses the covariates file and populates the design matrix.
+ *
+ * This function reads the provided covariate file, validates and processes each line,
+ * converts numerical fields, and handles unconvertible (categorical) fields by converting
+ * them into dummy variables. It updates the internal phenotype vector, case/control counts,
+ * and the covariate design matrix for further analysis.
+ *
+ * @param covfile Path to the covariates file.
+ */
 void Covariates::parse_cov(const std::string &covfile) {
+  // Determine if covariates are provided using the file path.
   bool cov_provided = !tp_.covariates_path.empty();
-  std::ifstream ifs = std::ifstream(covfile);
-  std::string line;
-  unsigned long lineno = 0;
+  auto ifs = std::ifstream(covfile);
   unsigned long nfields = 0;
 
+  // Map to hold numeric covariate data, indexed by sample id.
   std::unordered_map<std::string, std::vector<double>> data;
+  // Container for fields that fail numeric conversion (categorical values).
   std::vector<std::vector<std::string>> unconvertible;
-  std::vector<double> phenotypes;
 
   if (cov_provided) {
+    std::vector<double> phenotypes;
+    unsigned long lineno = 0;
+    std::string line;
     while (std::getline(ifs, line)) {
       RJBUtil::Splitter<std::string> splitter(line, " \t");
       FileValidator::validate_cov_line(splitter, lineno);
-      if (lineno == 0) { // Parse meta information
+      if (lineno == 0) { // Parse meta information from header line
         if (splitter.size() > 0) {
-          // Not counting the sample field, so we don't have to subtract all the time.
+          // The first column is the sample field; the rest are covariate fields.
           nfields = splitter.size() - 1;
           unconvertible.resize(nfields);
           lineno++;
         }
       }
 
+      // Skip empty lines
       if (splitter.empty()) {
         continue;
       }
 
+      // Retrieve sample identifier from the first field.
       std::string sampleid = splitter[0];
-      if (splitter.size() < nfields + 1) { // Skip samples where we have a missing column or two
+      // Ensure that the sample has enough columns; otherwise, mark sample as skipped.
+      if (splitter.size() < nfields + 1) {
         skip_.emplace(sampleid);
         continue;
       }
-      // Skip samples not present in the ped file.
-      if (ped_samples_.find(sampleid) == ped_samples_.end()) {
+      // Skip samples not present in the pedigree file.
+      if (!ped_samples_.contains(sampleid)) {
         continue;
       }
 
+      // Retrieve phenotype and update case/control counts.
       auto phen = sample_phen_map_[sampleid];
       if (phen == 1) {
         ncases_++;
@@ -172,34 +195,39 @@ void Covariates::parse_cov(const std::string &covfile) {
       cov_samples_.push_back(sampleid);
       data[sampleid] = std::vector<double>(nfields, 0);
 
+      // Process each covariate field.
       for (int i = 0; i < nfields; i++) {
         try {
+          // Check for missing values.
           if (splitter[i + 1] == "NA") {
-            std::cerr << "ERROR: NA value in covariates. Please remove all "
-                         "NA values." << std::endl;
+            std::cerr << "ERROR: NA value in covariates. Please remove all NA values." << std::endl;
             std::exit(-1);
           }
+          // Convert field to double.
           data[sampleid][i] = std::stod(splitter[i + 1]);
         } catch (...) {
+          // Conversion failed; store the value for categorical processing.
           unconvertible[i].push_back(splitter[i + 1]);
         }
       }
       lineno++;
     }
+    // Ensure there are cases and controls unless performing QTL analysis.
     if ((ncases_ == 0 || ncontrols_ == 0) && !tp_.qtl) {
       std::cerr << "ERROR: Phenotype file provided 0 cases or 0 controls.";
       std::exit(1);
     }
-    // Ensure phenotypes are in cov sample order.
+    // Update phenotype vectors in covariate sample order.
     phenotypes_ = arma::conv_to<arma::colvec>::from(phenotypes);
     original_ = arma::conv_to<arma::colvec>::from(phenotypes);
   }
 
-  // Handle unconvertible fields by treating them as factors with levels -- convert to dummy variables
+  // Handle unconvertible fields by treating them as categorical variables; convert to dummy variables.
   int fieldno = 0;
   int offset = 0;
   for (const auto &field : unconvertible) {
     if (!field.empty()) {
+      // Determine unique categorical levels for the field.
       std::set<std::string> unique(field.begin(), field.end());
       std::map<std::string, int> levels;
 
@@ -208,7 +236,8 @@ void Covariates::parse_cov(const std::string &covfile) {
         std::cerr << "Levels: ";
       }
 
-      for (auto it = unique.begin(); it != unique.end(); it++) {
+      // Map each unique level to its index.
+      for (auto it = unique.begin(); it != unique.end(); ++it) {
         levels.emplace(std::make_pair(*it, std::distance(unique.begin(), it)));
         if (tp_.verbose) {
           std::cerr << *it << " : " << std::distance(unique.begin(), it) << " ";
@@ -220,13 +249,13 @@ void Covariates::parse_cov(const std::string &covfile) {
 
       int sampleno = 0;
       int nlevels = levels.size() - 1;
+      // Check if the number of levels exceeds the maximum allowed.
       if (nlevels > tp_.max_levels) {
-        std::cerr << "ERROR: Too many unconvertible fields. Reduce number of"
-                     " levels in variables. Ensure all "
-                     "non-categorical features are numeric." << std::endl;
+        std::cerr << "ERROR: Too many unconvertible fields. Reduce number of levels in variables. Ensure all non-categorical features are numeric." << std::endl;
         std::exit(-1);
       }
-      for (const auto &v : field) {// Convert to dummy variable
+      // Convert categorical values to dummy variables.
+      for (const auto &v : field) {
         for (int j = 0; j < nlevels; j++) {
           if (j == 0) {
             if (j == levels[v]) {
@@ -250,6 +279,7 @@ void Covariates::parse_cov(const std::string &covfile) {
     fieldno++;
   }
 
+  // Resize and populate the design matrix.
   if (cov_provided) {
     design_.resize(cov_samples_.size(), nfields + 1);
   } else {
@@ -258,8 +288,10 @@ void Covariates::parse_cov(const std::string &covfile) {
       cov_samples_.push_back(s);
     }
   }
+  // Fill the first column with ones for the intercept.
   design_.col(0).fill(1);
   int i = 0;
+  // Populate the design matrix with covariate values.
   for (const auto &s : cov_samples_) {
     int j = 1;
     for (const auto &v : data[s]) {
@@ -558,7 +590,7 @@ void Covariates::fit_null() {
  * If cov_samples_ is empty, covariates weren't provided, phenotypes are in ped
  * file order. Otherwise, phenotypes are in covariate file order.
  */
-void Covariates::sort_covariates(std::string &header) {
+void Covariates::sort_covariates(const std::string &header) {
   RJBUtil::Splitter<std::string> splitter(header, "\t");
 
   std::map<std::string, arma::uword> header_map;
@@ -580,7 +612,7 @@ void Covariates::sort_covariates(std::string &header) {
     }
     std::set<std::string> seen;
     for (const auto &v : cov_samples_) {
-      if (seen.find(v) == seen.end()) {
+      if (!seen.contains(v)) {
         seen.insert(v);
       } else {
         std::cerr << "cov duplicate: " << v << std::endl;
@@ -589,7 +621,7 @@ void Covariates::sort_covariates(std::string &header) {
 
     seen.clear();
     for (const auto &v : splitter) {
-      if (seen.find(v) == seen.end()) {
+      if (!seen.contains(v)) {
         seen.insert(v);
       } else {
         std::cerr << "header duplicate: " << v << std::endl;

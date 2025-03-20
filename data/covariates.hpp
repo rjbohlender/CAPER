@@ -9,15 +9,11 @@
 
 #include <armadillo>
 #include <fstream>
-#include <iostream>
-#include <set>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
-#include "../statistics/logistic_regression.hpp"
-#include "../utility/split.hpp"
 #include "../utility/taskparams.hpp"
 #include "permutation.hpp"
 
@@ -61,7 +57,7 @@ public:
   void clear();
 
   // Sort covariates
-  void sort_covariates(std::string &header);
+  void sort_covariates(const std::string &header);
   bool is_sorted() const;
 
 private:
@@ -100,7 +96,8 @@ private:
   void parse(std::stringstream &ped_ss, std::stringstream &cov_ss);
 
   void fit_null();
-  void sort_by_index(std::vector<std::string> &samples, const arma::uvec &indices);
+
+  static void sort_by_index(std::vector<std::string> &samples, const arma::uvec &indices);
 };
 
 #endif //PERMUTE_ASSOCIATE_COVARIATES_HPP
