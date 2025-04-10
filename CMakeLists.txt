@@ -129,6 +129,7 @@ set(PROJECT_SUPPORT_FILES
 
 
 include_directories("${CMAKE_CURRENT_LIST_DIR}/third_party")
+include_directories("${CMAKE_CURRENT_LIST_DIR}/third_party/sse2neon/")
 include_directories(${ARMADILLO_INCLUDE_DIRS})
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${LAPACK_INCLUDE_DIRS})

@@ -38,14 +38,14 @@ public:
   bool contains(const std::string &sample) const;
   bool contains(const std::string_view &sample) const;
 
-  arma::uword get_nsamples() const;
-  arma::uword get_ncases() const;
+  [[nodiscard]] arma::uword get_nsamples() const;
+  [[nodiscard]] arma::uword get_ncases() const;
 
   arma::mat &get_covariate_matrix();
   arma::vec &get_odds();
   arma::vec &get_original_phenotypes();
   arma::vec &get_fitted();
-  arma::vec get_residuals() const;
+  [[nodiscard]] arma::vec get_residuals() const;
   arma::vec &get_mean();
   arma::vec &get_coef();
   std::vector<std::string> get_samples();

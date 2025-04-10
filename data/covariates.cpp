@@ -14,12 +14,13 @@
 #include "../statistics/bayesianglm.hpp"
 #include "../statistics/glm.hpp"
 #include "../utility/filevalidator.hpp"
+#include "../utility/taskparams.hpp"
 #include "matrix_indices.hpp"
 
 Covariates::Covariates(TaskParams tp)
     : tp_(std::move(tp)), nsamples_(0), ncases_(0), ncontrols_(0),
       crand(static_cast<int>(time(nullptr))), linear_(tp_.qtl) {
-  bool cov_provided = !tp_.covariates_path.empty();
+  const bool cov_provided = !tp_.covariates_path.empty();
   parse_ped(tp_.ped_path, cov_provided);
   parse_cov(tp_.covariates_path);
   sorted_ = false;
@@ -67,6 +68,17 @@ arma::vec &Covariates::get_fitted() { return p_fitted_; }
 
 arma::vec &Covariates::get_mean() { return mean_; }
 
+/**
+ * @brief Refit the model using permuted data.
+ *
+ * This method attempts to re-estimate the model parameters after data permutation.
+ * It first fits a Generalized Linear Model (GLM) based on the specified link function,
+ * either using a linear (Gaussian) or logistic (Binomial) approach. If the initial fit
+ * fails (e.g., due to perfect separation), it falls back to using a Bayesian GLM.
+ *
+ * In the linear case, the method also computes logistic regression parameters without
+ * dichotomizing the phenotype by using a transformation inspired by Moser and Coombs (2004).
+ */
 void Covariates::refit_permuted() {
   bool success;
   if (linear_) {
@@ -95,7 +107,7 @@ void Covariates::refit_permuted() {
     p_coef_ = fit.beta_;
   }
 
-  // Use BayesianGLM to overcome perfect separation
+  // Use BayesianGLM to overcome perfect separation if the initial fit was unsuccessful
   if (!success) {
     if (linear_) {
       Gaussian link("identity");
@@ -374,7 +386,7 @@ void Covariates::parse_ped(const std::string &pedfile, bool cov_provided) {
 }
 
 /**
- * @brief Parse the .ped and PCA_Internal matrix file.
+ * @brief Parse the .ped and covariate matrix file.
  * @param covfile Covariate file path.
  * @param pedfile File path containing phenotypes.
  */
@@ -546,6 +558,15 @@ void Covariates::parse(std::stringstream &ped_ss, std::stringstream &cov_ss) {
 #endif
 }
 
+/**
+ * @brief Fits the null model for the covariates.
+ *
+ * This method fits a Generalized Linear Model (GLM) based on the specified phenotype type.
+ * For linear models, it computes logistic regression parameters via a transformation inspired
+ * by Moser and Coombs (2004) without dichotomizing the phenotype. For non-linear models,
+ * it fits a standard logistic regression model. In both cases, the initial fit parameters are
+ * used to initialize the permuted model parameters.
+ */
 void Covariates::fit_null() {
   if (linear_) {
     Gaussian link("identity");
@@ -553,8 +574,7 @@ void Covariates::fit_null() {
     fitted_ = fit.mu_;
     eta_ = fit.eta_;
     coef_ = fit.beta_;
-    // From Moser and Coombs (2004) -- Get Logistic Regression params without
-    // dichotomizing
+    // From Moser and Coombs (2004) -- Get Logistic Regression params without dichotomizing
     double lambda = arma::datum::pi / std::sqrt(3);
     Binomial alt_link("logit");
     arma::vec temp_mu = alt_link.linkinv(
@@ -671,18 +691,30 @@ bool Covariates::contains(const std::string_view &sample) const {
   return ped_samples_.contains(std::string(sample));
 }
 
+/**
+ * @brief Retrieves the sample names for the analysis.
+ *
+ * If covariate samples are provided, this function returns those.
+ * Otherwise, it constructs a vector of sample names from the pedigree samples.
+ *
+ * @return std::vector<std::string> containing the sample names.
+ */
 std::vector<std::string> Covariates::get_samples() {
-  if (cov_samples_.empty()) {
-    std::vector<std::string> ret;
-    for (const auto &s : ped_samples_) {
-      ret.push_back(s);
-    }
-    return ret;
-  } else {
-    return cov_samples_;
-  }
+  return cov_samples_.empty()
+           ? std::vector<std::string>(ped_samples_.begin(), ped_samples_.end())
+           : cov_samples_;
 }
 
+/**
+ * @brief Sorts the sample names based on the provided indices.
+ *
+ * Rearranges the order of elements in the given sample vector according
+ * to the ordering specified by the indices vector. The original sample
+ * vector is replaced with its sorted version.
+ *
+ * @param samples A vector of sample names to be sorted.
+ * @param indices A vector of indices specifying the new order.
+ */
 void Covariates::sort_by_index(std::vector<std::string> &samples, const arma::uvec &indices) {
   std::vector<std::string> sorted;
   sorted.reserve(samples.size());
