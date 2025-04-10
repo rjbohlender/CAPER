@@ -4,7 +4,14 @@
 
 #include "filevalidator.hpp"
 #include "../data/matrix_indices.hpp"
+#include "split.hpp"
+#include <cstddef>
+#include <exception>
 #include <sstream>
+#include <string>
+#include <stdexcept>
+#include <iostream>
+#include <set>
 
 const std::set<std::string> FileValidator::matrix_variant_types{
     "SNV", "insertion", "deletion", "SPDA", "complex_substitution"};
@@ -18,8 +25,8 @@ void FileValidator::validate_matrix_line(RJBUtil::Splitter<std::string> &line,
                             lineno);
     throw(std::runtime_error(msg.c_str()));
   }
-  if (matrix_variant_types.find(line[static_cast<int>(Indices::type)]) ==
-      matrix_variant_types.end()) {
+  if (!matrix_variant_types.contains(line[static_cast<int>(Indices::type)])
+  ) {
     const std::string msg = build_error_message(
         "ERROR: Matrix Line Validation -- Variant type incorrect. Must be one "
         "of {SNV, insertion, deletion, SPDA, complex_substitution}.",
@@ -72,15 +79,16 @@ void FileValidator::validate_bed_line(RJBUtil::Splitter<std::string> &line,
 
 void FileValidator::validate_weight_line(RJBUtil::Splitter<std::string> &line,
                                          int lineno) {
-  if (line.size() < weight_line_size) {
+  if (line.size() != weight_line_size) {
     const std::string msg =
         build_error_message("ERROR: Weight Line Validation -- Line appears to "
-                            "be truncated. Line not long enough.",
+                            "be truncated. Line not long enough."
+                            "Line should be tab separated and formatted as <chrom> "
+                            "<start_pos> <end_pos> <ref> <alt> <type> <gene> <transcript> <weight>",
                             lineno);
     throw(std::runtime_error(msg.c_str()));
   }
-  if (matrix_variant_types.find(line[weight_type_index]) ==
-      matrix_variant_types.end()) {
+  if (!matrix_variant_types.contains(line[weight_type_index])) {
     const std::string msg = build_error_message(
         "ERROR: Weight Line Validation -- Variant type "
         "incorrect. Must be one of {SNV, insertion, deletion, "

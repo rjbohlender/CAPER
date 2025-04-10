@@ -7,12 +7,8 @@
 
 #include <string>
 #include <unordered_map>
-#include <fstream>
 #include <sstream>
-#include <cmath>
-#include <iostream>
 
-#include "../utility/split.hpp"
 
 class Weight {
 public:
@@ -20,14 +16,25 @@ public:
   explicit Weight(const std::string &ifile);
   explicit Weight(std::stringstream &ifile);
 
-  double get(const std::string &k) const;
+  [[nodiscard]] double get(const std::string &k) const;
   double get(const std::string &k);
 
-  bool empty() const;
+  [[nodiscard]] bool empty() const;
   bool empty();
 
 private:
-  std::unordered_map<std::string, double> scores_;
+    static constexpr int field_count = 9;
+    static constexpr int chrom_index = 0;
+    static constexpr int start_index = 1;
+    static constexpr int end_index = 2;
+    static constexpr int ref_index = 3;
+    static constexpr int alt_index = 4;
+    static constexpr int type_index = 5;
+    static constexpr int gene_index = 6;
+    static constexpr int transcript_index = 7;
+    static constexpr int weight_index = 8;
+
+  std::unordered_map<std::string, double> weights_;
 
 };
 

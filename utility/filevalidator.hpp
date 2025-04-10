@@ -14,7 +14,7 @@ class FileValidator {
   static const int cov_line_size = 2;
   static const int ped_line_size = 6;
   static const int bed_line_size = 5;
-  static const int weight_line_size = 5;
+  static const int weight_line_size = 9;
   static const int weight_type_index = 5;
   size_t matrix_sample_count;
 
