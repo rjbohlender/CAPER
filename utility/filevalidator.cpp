@@ -108,7 +108,12 @@ void FileValidator::validate_weight_line(RJBUtil::Splitter<std::string> &line,
 }
 
 void FileValidator::set_matrix_header(const std::string &header) {
-  matrix_header = RJBUtil::Splitter<std::string>(header, "\t");
+  // Pass an owning string to Splitter so that the header fields referenced by
+  // matrix_header remain valid even after the original `header` argument goes
+  // out of scope. Using `std::string(header)` creates an rvalue that invokes
+  // the owning constructor of Splitter.
+  matrix_header =
+      RJBUtil::Splitter<std::string>(std::string(header), "\t");
   matrix_sample_count =
       matrix_header.size() - static_cast<size_t>(Indices::first);
 }
