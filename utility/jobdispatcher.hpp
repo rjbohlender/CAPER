@@ -392,12 +392,8 @@ private:
   }
 
   void single_dispatch(Gene &gene) {
-    using namespace std::literals::chrono_literals;
     Task_t ta(stage_, gene, cov_, tp_, *permutation_ptr_);
-    // Limit adding jobs to prevent excessive memory usage
-    while (tq_.size() > tp_.nthreads - 1) {
-      std::this_thread::sleep_for(0.001s);
-    }
+    tq_.wait_for_space(tp_.nthreads - 1);
     tq_.dispatch(std::move(ta));
     ngenes_++;
   }
@@ -480,11 +476,9 @@ private:
   }
 
   void multiple_dispatch(Gene &gene) {
-    using namespace std::literals::chrono_literals;
     // Ensure we have at least one variant for a submitted gene
     if (std::any_of(nvariants_.cbegin(), nvariants_.cend(),
                     [&](const auto &v) { return v.second > 0; })) {
-      const auto delay = 0.001s;
 
       long total_perm = 0;
       long total_success = 0;
@@ -500,9 +494,7 @@ private:
       if (tp_.power) {
         Task_t ta(stage_, gene, cov_, tp_, tp_.success_threshold, tp_.nperm, 0,
                   tp_.nperm, *permutation_ptr_);
-        while (tq_.size() > tp_.nthreads - 1) {
-          std::this_thread::sleep_for(delay);
-        }
+        tq_.wait_for_space(tp_.nthreads - 1);
         tq_.dispatch(ta);
         ngenes_++;
         return;
@@ -520,10 +512,7 @@ private:
                     max_loops * (tp_.nperm - total_perm),
                     *permutation_ptr_);
 
-          // Limit adding jobs to prevent excessive memory usage
-          while (tq_.size() > tq_.get_nthreads()) {
-            std::this_thread::sleep_for(delay);
-          }
+          tq_.wait_for_space(tq_.get_nthreads());
           tq_.dispatch(ta);
         } else {
           Task_t ta(stage_,
@@ -540,10 +529,7 @@ private:
           total_perm += perm_step;
           total_success += succ_step;
 
-          // Limit adding jobs to prevent excessive memory usage
-          while (tq_.size() > tq_.get_nthreads()) {
-            std::this_thread::sleep_for(delay);
-          }
+          tq_.wait_for_space(tq_.get_nthreads());
           tq_.dispatch(ta);
         }
       }
