@@ -70,7 +70,7 @@ Weight::Weight(const std::string &ifile) {
 
     double weight = 1;
     try {
-      weight = std::stod(splitter.at(weight_index));
+      weight = std::stod(splitter.at_str(weight_index));
     } catch (std::exception &e) {
       std::cerr << "Failed to convert weight to double. Line was: " << line
                 << std::endl;
@@ -159,7 +159,7 @@ Weight::Weight(std::stringstream &ifile) {
     // Parse and store the weight value
     double weight = 1;
     try {
-      weight = std::stod(splitter.at(weight_index));
+      weight = std::stod(splitter.at_str(weight_index));
     } catch (std::exception &e) {
       std::cerr << "Failed to convert weight to double. Line was: " << line
                 << std::endl;

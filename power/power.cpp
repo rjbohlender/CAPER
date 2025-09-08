@@ -336,8 +336,8 @@ int main(int argc, char **argv) {
   tp.kernel = vm["kernel"].as<std::string>();
   tp.qtl = linear;
   // Beta weights
-  tp.a = std::stoi(beta_split[0]);
-  tp.b = std::stoi(beta_split[1]);
+  tp.a = std::stoi(beta_split.str(0));
+  tp.b = std::stoi(beta_split.str(1));
   // Testability
   tp.testable = testable;
   tp.biallelic = biallelic;
@@ -355,13 +355,19 @@ int main(int argc, char **argv) {
 
     std::transform(alpha_splitter.begin(), alpha_splitter.end(),
                    std::back_inserter(alpha_tmp),
-                   [](std::string &v) { return std::stod(v); });
+                   [](auto v) {
+                     return std::stod(RJBUtil::Splitter<std::string>::str(v));
+                   });
     std::transform(ncase_splitter.begin(), ncase_splitter.end(),
                    std::back_inserter(tp.ncases),
-                   [](std::string &v) { return std::stoul(v); });
+                   [](auto v) {
+                     return std::stoul(RJBUtil::Splitter<std::string>::str(v));
+                   });
     std::transform(ncontrol_splitter.begin(), ncontrol_splitter.end(),
                    std::back_inserter(tp.ncontrols),
-                   [](std::string &v) { return std::stoul(v); });
+                   [](auto v) {
+                     return std::stoul(RJBUtil::Splitter<std::string>::str(v));
+                   });
 
     tp.alpha = arma::conv_to<arma::vec>::from(alpha_tmp);
 

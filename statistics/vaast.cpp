@@ -274,8 +274,8 @@ void VAASTLogic::alternate_grouping(const arma::sp_mat &X, const arma::vec &Y,
     std::stringstream loc;
     loc << splitter[0] << "-" << splitter[1] << "-" << splitter[2];
     variants.emplace_back(case_allele1(i), case_allele0(i), control_allele1(i),
-                          control_allele0(i), w(i), splitter[5], loc.str(), i,
-                          soft_maf_filter);
+                          control_allele0(i), w(i), splitter.str(5), loc.str(),
+                          i, soft_maf_filter);
   }
 
   std::vector<std::vector<Variant>> sub_groups;
@@ -396,7 +396,7 @@ void VAASTLogic::vaast_grouping(const arma::sp_mat &X, const arma::vec &Y,
     RJBUtil::Splitter<std::string> splitter(positions[i], ",");
     std::stringstream loc;
     loc << splitter[0] << "-" << splitter[1] << "-" << splitter[2];
-    std::string type = splitter[5];
+    std::string type = splitter.str(5);
     if (type == "SNV") {
       SNVs.emplace_back(Variant(case_allele1(i), case_allele0(i),
                                 control_allele1(i), control_allele0(i), w(i),

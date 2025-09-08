@@ -27,12 +27,13 @@ Bed::Bed(const std::string &ifile) {
   size_t reserve = 1000000;
   variants_.reserve(reserve);
   for (const auto &f : files) {
-    if (!check_file_exists(f)) {
+    auto path = std::string(f);
+    if (!check_file_exists(path)) {
       std::cerr << "No mask file provided or incorrect path to mask file. "
                 << f << std::endl;
       return;
     }
-    std::ifstream ifs(f);
+    std::ifstream ifs(path);
     std::string line;
     int lineno = -1;
 

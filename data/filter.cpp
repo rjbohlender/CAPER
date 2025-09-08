@@ -24,8 +24,9 @@ Filter::Filter(const std::string &file_path) {
     lineno++;
     RJBUtil::Splitter<std::string> splitter(line, ",");
     if (lineno == 0) {
-      std::copy(splitter.begin() + 1, splitter.end(),
-                std::back_inserter(methods));
+      for (auto it = splitter.begin() + 1; it != splitter.end(); ++it) {
+        methods.emplace_back(std::string(*it));
+      }
       continue;
     }
     if (boost::starts_with(line, "#")) { // Skip commented lines
@@ -34,7 +35,7 @@ Filter::Filter(const std::string &file_path) {
     RJBUtil::Splitter<std::string> variant(splitter[0], ":");
     for (int i = 1; i < splitter.size(); i++) {
       if (splitter[i] == "1") {
-        method_type_map[methods[i - 1]].insert(variant[1]);
+        method_type_map[methods[i - 1]].insert(std::string(variant[1]));
       }
     }
   }
@@ -42,10 +43,8 @@ Filter::Filter(const std::string &file_path) {
 
 bool Filter::allow_variant(const std::string &method,
                            RJBUtil::Splitter<std::string> &variant) {
-  return method_type_map[method].find(
-             variant[static_cast<int>(Indices::type)]) !=
-             method_type_map[method].end() &&
-         method_type_map[method].find(
-             variant[static_cast<int>(Indices::function)]) !=
-             method_type_map[method].end();
+  auto type = variant.str(static_cast<int>(Indices::type));
+  auto func = variant.str(static_cast<int>(Indices::function));
+  return method_type_map[method].find(type) != method_type_map[method].end() &&
+         method_type_map[method].find(func) != method_type_map[method].end();
 }

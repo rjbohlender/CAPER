@@ -64,9 +64,9 @@ void Parser::parse(std::istream &is, std::ostream &os) { // Parse VCF
 	  os << std::endl;
 	  continue;
 	} // Fallthrough
-	RJBUtil::Splitter<std::string> splitter(line, " \t");
-	chr = splitter[0];
-	long pos = std::stol(splitter[1]);
+        RJBUtil::Splitter<std::string> splitter(line, " \t");
+        chr = splitter.str(0);
+        long pos = std::stol(splitter.str(1));
 
 	if (!boost::starts_with(chr, "chr")) {
 	  chr = "chr" + chr;
@@ -92,7 +92,11 @@ void Parser::parse(std::istream &is, std::ostream &os) { // Parse VCF
 	Variant var{
 		location_stream.str()
 	};
-	std::transform(splitter.begin() + 9, splitter.end(), std::back_inserter(var.data), &Parser::variant_converter);
+        std::transform(splitter.begin() + 9, splitter.end(), std::back_inserter(var.data),
+                       [](auto v) {
+                         return Parser::variant_converter(
+                             RJBUtil::Splitter<std::string>::str(v));
+                       });
 
 	std::vector<std::shared_ptr<Gene>> match = ref_.get_gene(chr, pos);
 	for (const auto &p : match) {

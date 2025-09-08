@@ -617,21 +617,26 @@ auto Reporter::sort_simple(const TaskParams &tp) -> void {
     RJBUtil::Splitter<std::string> emp_ci_splitter(splitter[4], ",");
     RJBUtil::Splitter<std::string> emp_midci_splitter(splitter[6], ",");
 
-      ResultLine rs =
-          ResultLine{splitter[0], splitter[1], std::stold(splitter[2]),
-                     // std::stod(splitter[3]),
-                     std::stod(splitter[3]),
-                     std::make_pair(std::stod(emp_ci_splitter[0]),
-                                    std::stod(emp_ci_splitter[1])),
-                     std::stod(splitter[5]),
-                     std::make_pair(std::stod(emp_midci_splitter[0]),
-                                    std::stod(emp_midci_splitter[1])),
-                     std::stod(splitter[7]), std::stod(splitter[8]),
-                     std::stoul(splitter[9]), std::stoul(splitter[10]),
-                     std::stod(splitter[11]), std::stoul(splitter[12])};
+      ResultLine rs = ResultLine{
+          splitter.str(0),
+          splitter.str(1),
+          std::stold(splitter.str(2)),
+          // std::stod(splitter[3]),
+          std::stod(splitter.str(3)),
+          std::make_pair(std::stod(emp_ci_splitter.str(0)),
+                         std::stod(emp_ci_splitter.str(1))),
+          std::stod(splitter.str(5)),
+          std::make_pair(std::stod(emp_midci_splitter.str(0)),
+                         std::stod(emp_midci_splitter.str(1))),
+          std::stod(splitter.str(7)),
+          std::stod(splitter.str(8)),
+          std::stoul(splitter.str(9)),
+          std::stoul(splitter.str(10)),
+          std::stod(splitter.str(11)),
+          std::stoul(splitter.str(12))};
 
       for (int i = 13; i < splitter.size(); i++) {
-        rs.stats.push_back(splitter[i]);
+        rs.stats.push_back(splitter.str(i));
       }
       results.push_back(rs);
     // catch (std::exception &e) {

@@ -342,15 +342,15 @@ private:
       if (split[static_cast<int>(Indices::gene)] == gene_) {
         add_line(current, line, split);
       } else {
-        if (previous_genes.contains(split[static_cast<int>(Indices::gene)])) {
-              throw std::runtime_error(
-              "Gene list must be sorted by gene name. Gene " +
-              split[static_cast<int>(Indices::gene)] +
-              " appears again on line " +
-              std::to_string(lineno) + " of the gene stream. " +
-              "Please sort the gene stream by gene name and transcript.");
+        auto gene_token = split.str(static_cast<int>(Indices::gene));
+        if (previous_genes.contains(gene_token)) {
+          throw std::runtime_error(
+              "Gene list must be sorted by gene name. Gene " + gene_token +
+              " appears again on line " + std::to_string(lineno) +
+              " of the gene stream. Please sort the gene stream by gene name "
+              "and transcript.");
         } else {
-              previous_genes.insert(split[static_cast<int>(Indices::gene)]);
+          previous_genes.insert(gene_token);
         }
         // Have we read a gene yet?
         if (!gene_.empty()) {
@@ -437,7 +437,8 @@ private:
             if (!gene_data.is_skippable())
               multiple_dispatch(gene_data);
 
-            auto fit = find_gene(split[static_cast<int>(Indices::gene)]);
+            auto gene_name = split.str(static_cast<int>(Indices::gene));
+            auto fit = find_gene(gene_name);
             if (fit != gene_list_.cend()) {
               // Next gene is in list
               split = RJBUtil::Splitter<std::string>(line, "\t");
@@ -455,7 +456,8 @@ private:
           }
         } else {
           // Skip until we find the first gene in our list.
-          auto fit = find_gene(split[static_cast<int>(Indices::gene)]);
+          auto gene_name = split.str(static_cast<int>(Indices::gene));
+          auto fit = find_gene(gene_name);
           if (fit == gene_list_.cend()) {
             continue;
           } else {
@@ -591,11 +593,11 @@ private:
         // Variant not masked
         ss << line << "\n";
         // Track number of variants in each transcript
-        if (nvariants_.find(split[static_cast<int>(Indices::transcript)]) ==
-            nvariants_.end()) {
-          nvariants_[split[static_cast<int>(Indices::transcript)]] = 1;
+        auto transcript = split.str(static_cast<int>(Indices::transcript));
+        if (nvariants_.find(transcript) == nvariants_.end()) {
+          nvariants_[transcript] = 1;
         } else {
-          nvariants_[split[static_cast<int>(Indices::transcript)]]++;
+          nvariants_[transcript]++;
         }
       }
     } else {
@@ -603,11 +605,11 @@ private:
         // Variant not masked
         ss << line << "\n";
         // Track number of variants in each transcript
-        if (nvariants_.find(split[static_cast<int>(Indices::transcript)]) ==
-            nvariants_.end()) {
-          nvariants_[split[static_cast<int>(Indices::transcript)]] = 1;
+        auto transcript = split.str(static_cast<int>(Indices::transcript));
+        if (nvariants_.find(transcript) == nvariants_.end()) {
+          nvariants_[transcript] = 1;
         } else {
-          nvariants_[split[static_cast<int>(Indices::transcript)]]++;
+          nvariants_[transcript]++;
         }
       }
     }

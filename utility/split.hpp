@@ -103,6 +103,12 @@ public:
 
   view_type &at(int_type i) { return tokens_.at(i); }
 
+  string_type str(int_type i) const { return string_type(tokens_[i]); }
+
+  string_type at_str(int_type i) const { return string_type(tokens_.at(i)); }
+
+  static string_type str(view_type v) { return string_type(v); }
+
 private:
   /**
    * @brief A split member function to simplify multiple constructors should be
