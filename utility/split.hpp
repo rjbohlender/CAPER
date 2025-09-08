@@ -44,9 +44,12 @@ public:
   }
 
   Splitter(const string_type &&str, const string_type &delim)
-	  : data_(str), delim_(delim) {
-	split();
+          : data_(str), delim_(delim) {
+        split();
   }
+
+  Splitter(const Splitter &rhs) = default;
+  Splitter(Splitter &&rhs) noexcept = default;
 
   Splitter &operator=(const Splitter &rhs) {
 	data_ = rhs.data_;

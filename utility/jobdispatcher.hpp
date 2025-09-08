@@ -9,6 +9,7 @@
 #include <string>
 #include <memory>
 #include <chrono>
+#include <utility>
 
 #include "reporter.hpp"
 #include "../data/covariates.hpp"
@@ -30,21 +31,25 @@ template<typename Operation_t, typename Task_t, typename Reporter_t>
 class JobDispatcher {
 public:
   JobDispatcher(TaskParams &tp, std::shared_ptr<Reporter_t> reporter)
-	  : tp_(tp), tq_(tp.nthreads - 1, reporter, tp),
-		cov_(std::make_shared<Covariates>(tp)) {
+          : tp_(std::move(tp)),
+            gene_list_(tp_.gene_list ? RJBUtil::Splitter<std::string>(std::move(*tp_.gene_list), ",")
+                                    : RJBUtil::Splitter<std::string>()),
+            tq_(tp_.nthreads - 1, reporter, tp_),
+            cov_(std::make_shared<Covariates>(tp_)) {
+    if (tp_.gene_list) {
+      // Clear the moved-from string but keep flag indicating presence
+      tp_.gene_list = std::string();
+    }
     if (tp_.seed) {
       permute_ = Permute(*tp_.seed);
     }
-	// Initialize bed and weights
-	if (tp_.gene_list) {
-	  gene_list_ = RJBUtil::Splitter<std::string>(*tp_.gene_list, ",");
-	}
-	if (tp_.bed) {
-	  bed_ = Bed(*tp_.bed);
-	}
-	if (tp_.weight) {
-	  weight_ = Weight(*tp_.weight);
-	}
+        // Initialize bed and weights
+        if (tp_.bed) {
+          bed_ = Bed(*tp_.bed);
+        }
+        if (tp_.weight) {
+          weight_ = Weight(*tp_.weight);
+        }
 
 	// Update case/control count for reporter
 	if(!tp_.power) {
@@ -550,11 +555,11 @@ private:
 
   // Member variables
   TaskParams tp_;
+  RJBUtil::Splitter<std::string> gene_list_;
   TaskQueue<Operation_t, Task_t, Reporter_t> tq_;
   Bed bed_;
   Weight weight_;
   Permute permute_;
-  RJBUtil::Splitter<std::string> gene_list_;
 
   // Gene parsing
   std::ifstream gt_ifs_;
