@@ -11,3 +11,7 @@ add_executable(vcf2matrix
                vcf2matrix.cpp reference.cpp reference.hpp ../../utility/filesystem.cpp ../../utility/filesystem.hpp parser.cpp parser.hpp ../../utility/jointhreads.hpp)
 
 target_link_libraries(vcf2matrix ${Boost_LIBRARIES})
+
+target_compile_options(vcf2matrix PRIVATE
+        "$<$<BOOL:${ENABLE_NATIVE_OPTIMIZATIONS}>:$<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-march=native>>"
+        "$<$<AND:$<BOOL:${ENABLE_NATIVE_OPTIMIZATIONS}>,$<CXX_COMPILER_ID:GNU>>:-fno-openmp>")
