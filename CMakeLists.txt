@@ -21,8 +21,6 @@ message(${CMAKE_CXX_FLAGS_RELEASE}) # print "-O3 -DNDEBUG"
 #
 # set(CMAKE_CXX_FLAGS_RELEASE  "${CMAKE_CXX_FLAGS_RELEASE} -Og")
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
-
 find_package(Armadillo 8.6 REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Boost 1.66.0 COMPONENTS program_options iostreams REQUIRED)
