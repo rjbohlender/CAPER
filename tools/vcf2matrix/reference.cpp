@@ -61,15 +61,18 @@ void Reference::parse_refFlat(std::istream &ifs) {
 		}
 		data_[splitter[static_cast<int>(refFlat::chri)]].back()->chromosome = splitter[static_cast<int>(refFlat::chri)];
 		data_[splitter[static_cast<int>(refFlat::chri)]].back()->strand = splitter[static_cast<int>(refFlat::strandi)];
-		data_[splitter[static_cast<int>(refFlat::chri)]].back()->positions[splitter[static_cast<int>(refFlat::txi)]] =
-			std::make_pair(std::stol(splitter[static_cast<int>(refFlat::starti)]), std::stol(splitter[static_cast<int>(refFlat::endi)]));
-		data_[splitter[static_cast<int>(refFlat::chri)]].back()->cds[splitter[static_cast<int>(refFlat::txi)]] =
-			std::make_pair(std::stol(splitter[static_cast<int>(refFlat::cds_starti)]), std::stol(splitter[static_cast<int>(refFlat::cds_endi)]));
-		data_[splitter[static_cast<int>(refFlat::chri)]].back()->exons[splitter[static_cast<int>(refFlat::txi)]] = std::stol(splitter[static_cast<int>(refFlat::exonsi)]);
-		data_[splitter[static_cast<int>(refFlat::chri)]].back()->exon_spans[splitter[static_cast<int>(refFlat::txi)]] = std::vector<std::pair<long, long>>();
-		for (int i = 0; i < ex_start.size(); i++) {
-		  data_[splitter[static_cast<int>(refFlat::chri)]].back()->exon_spans[splitter[static_cast<int>(refFlat::txi)]]
-			  .push_back(std::make_pair(std::stol(ex_start[i]), std::stol(ex_end[i])));
+                  data_[splitter[static_cast<int>(refFlat::chri)]].back()->positions[splitter[static_cast<int>(refFlat::txi)]] =
+                          std::make_pair(std::stol(splitter.str(static_cast<int>(refFlat::starti))),
+                                         std::stol(splitter.str(static_cast<int>(refFlat::endi))));
+                  data_[splitter[static_cast<int>(refFlat::chri)]].back()->cds[splitter[static_cast<int>(refFlat::txi)]] =
+                          std::make_pair(std::stol(splitter.str(static_cast<int>(refFlat::cds_starti))),
+                                         std::stol(splitter.str(static_cast<int>(refFlat::cds_endi))));
+                  data_[splitter[static_cast<int>(refFlat::chri)]].back()->exons[splitter[static_cast<int>(refFlat::txi)]] =
+                      std::stol(splitter.str(static_cast<int>(refFlat::exonsi)));
+                  data_[splitter[static_cast<int>(refFlat::chri)]].back()->exon_spans[splitter[static_cast<int>(refFlat::txi)]] = std::vector<std::pair<long, long>>();
+                  for (int i = 0; i < ex_start.size(); i++) {
+                    data_[splitter[static_cast<int>(refFlat::chri)]].back()->exon_spans[splitter[static_cast<int>(refFlat::txi)]]
+                            .push_back(std::make_pair(std::stol(ex_start.str(i)), std::stol(ex_end.str(i))));
 		}
 	  } catch(std::invalid_argument &e) {
 	    std::cerr << e.what() << std::endl;
@@ -87,17 +90,17 @@ void Reference::parse_refFlat(std::istream &ifs) {
 		gene_map_[splitter[static_cast<int>(refFlat::genei)]]->transcript.push_back(splitter[static_cast<int>(refFlat::txi)]);
 	  }
 	  if (gene_map_[splitter[static_cast<int>(refFlat::genei)]]->positions.count(splitter[static_cast<int>(refFlat::txi)]) == 0) {
-		gene_map_[splitter[static_cast<int>(refFlat::genei)]]->positions[splitter[static_cast<int>(refFlat::txi)]] = std::make_pair(std::stol(splitter[static_cast<int>(refFlat::starti)]), std::stol(splitter[static_cast<int>(refFlat::endi)]));
+                  gene_map_[splitter[static_cast<int>(refFlat::genei)]]->positions[splitter[static_cast<int>(refFlat::txi)]] = std::make_pair(std::stol(splitter.str(static_cast<int>(refFlat::starti))), std::stol(splitter.str(static_cast<int>(refFlat::endi))));
 	  }
 	  if (gene_map_[splitter[static_cast<int>(refFlat::genei)]]->cds.count(splitter[static_cast<int>(refFlat::txi)]) == 0) {
-		gene_map_[splitter[static_cast<int>(refFlat::genei)]]->cds[splitter[static_cast<int>(refFlat::txi)]] = std::make_pair(std::stol(splitter[static_cast<int>(refFlat::cds_starti)]), std::stol(splitter[static_cast<int>(refFlat::cds_endi)]));
+                  gene_map_[splitter[static_cast<int>(refFlat::genei)]]->cds[splitter[static_cast<int>(refFlat::txi)]] = std::make_pair(std::stol(splitter.str(static_cast<int>(refFlat::cds_starti))), std::stol(splitter.str(static_cast<int>(refFlat::cds_endi))));
 	  }
 	  if (gene_map_[splitter[static_cast<int>(refFlat::genei)]]->exons.count(splitter[static_cast<int>(refFlat::txi)]) == 0) {
-		gene_map_[splitter[static_cast<int>(refFlat::genei)]]->exons[splitter[static_cast<int>(refFlat::txi)]] = std::stol(splitter[static_cast<int>(refFlat::exonsi)]);
+                  gene_map_[splitter[static_cast<int>(refFlat::genei)]]->exons[splitter[static_cast<int>(refFlat::txi)]] = std::stol(splitter.str(static_cast<int>(refFlat::exonsi)));
 	  }
 	  if (gene_map_[splitter[static_cast<int>(refFlat::genei)]]->exon_spans.count(splitter[static_cast<int>(refFlat::txi)]) == 0) {
 		for (int i = 0; i < ex_start.size(); i++) {
-		  gene_map_[splitter[static_cast<int>(refFlat::genei)]]->exon_spans[splitter[static_cast<int>(refFlat::txi)]].push_back(std::make_pair(std::stol(ex_start[i]), std::stol(ex_end[i])));
+                    gene_map_[splitter[static_cast<int>(refFlat::genei)]]->exon_spans[splitter[static_cast<int>(refFlat::txi)]].push_back(std::make_pair(std::stol(ex_start.str(i)), std::stol(ex_end.str(i))));
 		}
 	  }
 	}

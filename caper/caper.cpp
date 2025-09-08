@@ -410,8 +410,8 @@ int main(int argc, char **argv) {
   tp.saddlepoint = saddlepoint;
   tp.var_collapsing = var_collapsing;
   // Beta weights
-  tp.a = std::stoi(beta_split[0]);
-  tp.b = std::stoi(beta_split[1]);
+    tp.a = std::stoi(beta_split.str(0));
+    tp.b = std::stoi(beta_split.str(1));
   // Testability
   tp.testable = testable;
   tp.biallelic = biallelic;
@@ -499,7 +499,7 @@ int main(int argc, char **argv) {
   if (tp.bed) {
     RJBUtil::Splitter<std::string> bed_paths(*tp.bed, ",");
     for (const auto &f : bed_paths) {
-      if (!check_file_exists(f)) {
+      if (!check_file_exists(std::string(f))) {
         std::cerr << "Incorrect file path for bed_file." << std::endl;
         std::cerr << visible << "\n";
         std::exit(1);

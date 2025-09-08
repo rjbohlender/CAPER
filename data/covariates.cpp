@@ -182,7 +182,7 @@ void Covariates::parse_cov(const std::string &covfile) {
       }
 
       // Retrieve sample identifier from the first field.
-      std::string sampleid = splitter[0];
+      std::string sampleid = splitter.str(0);
       // Ensure that the sample has enough columns; otherwise, mark sample as skipped.
       if (splitter.size() < nfields + 1) {
         skip_.emplace(sampleid);
@@ -216,10 +216,10 @@ void Covariates::parse_cov(const std::string &covfile) {
             std::exit(-1);
           }
           // Convert field to double.
-          data[sampleid][i] = std::stod(splitter[i + 1]);
+          data[sampleid][i] = std::stod(splitter.str(i + 1));
         } catch (...) {
           // Conversion failed; store the value for categorical processing.
-          unconvertible[i].push_back(splitter[i + 1]);
+          unconvertible[i].push_back(splitter.str(i + 1));
         }
       }
       lineno++;
@@ -347,22 +347,22 @@ void Covariates::parse_ped(const std::string &pedfile, bool cov_provided) {
 
     FileValidator::validate_ped_line(splitter, lineno);
 
-    std::string sample_id = splitter[1];
+      std::string sample_id = splitter.str(1);
     ped_samples_.insert(sample_id);
     ped_samples_ordered_.push_back(sample_id);
     nsamples_++;
     if (linear_) {
-      try {
-        sample_phen_map_[sample_id] = std::stod(splitter[5]);
+        try {
+          sample_phen_map_[sample_id] = std::stod(splitter.str(5));
       } catch (std::exception &e) {
         std::cerr << "Failed to convert quantitative phenotype in .ped file "
                      "column 7.\n";
         throw(e);
       }
     } else {
-      try {
-        double phen = std::stoi(splitter[5]);
-        sample_phen_map_[sample_id] = phen - 1;
+        try {
+          double phen = std::stoi(splitter.str(5));
+          sample_phen_map_[sample_id] = phen - 1;
       } catch (std::exception &e) {
         std::cerr
             << "Failed to convert binary phenotype in .ped file column 6.\n";
@@ -405,15 +405,15 @@ void Covariates::parse(const std::string &covfile, const std::string &pedfile) {
     lineno++;
     RJBUtil::Splitter<std::string> splitter(line, " \t");
     FileValidator::validate_cov_line(splitter, lineno);
-    if(this->contains(splitter[0])) {
-      covariates.emplace_back(std::vector<double>());
-      unsigned long i = 0;
-      for (const auto &v : splitter) {
-        if (i == 0) {
-          // Get phenotype of current sample
-          auto phen = sample_phen_map_[v];
+      if(this->contains(splitter[0])) {
+        covariates.emplace_back(std::vector<double>());
+        unsigned long i = 0;
+        for (const auto &v : splitter) {
+          if (i == 0) {
+            // Get phenotype of current sample
+            auto phen = sample_phen_map_[RJBUtil::Splitter<std::string>::str(v)];
 
-          cov_samples_.push_back(v);
+            cov_samples_.push_back(RJBUtil::Splitter<std::string>::str(v));
 
           if (phen == 1) {
             ncases_++;
@@ -422,9 +422,10 @@ void Covariates::parse(const std::string &covfile, const std::string &pedfile) {
           }
 
           phenotypes.push_back(phen);
-        } else {
-          covariates.back().push_back(std::stod(v));
-        }
+          } else {
+            covariates.back().push_back(
+                std::stod(RJBUtil::Splitter<std::string>::str(v)));
+          }
         i++;
       }
     }
@@ -475,22 +476,22 @@ void Covariates::parse(std::stringstream &ped_ss, std::stringstream &cov_ss) {
     }
     RJBUtil::Splitter<std::string> splitter(line, "\t");
 
-    std::string sample_id = splitter[1];
+      std::string sample_id = splitter.str(1);
     ped_samples_.insert(sample_id);
 
     nsamples_++;
     if (linear_) {
-      try {
-        sample_phen_map[sample_id] = std::stod(splitter[5]);
+        try {
+          sample_phen_map[sample_id] = std::stod(splitter.str(5));
       } catch (std::exception &e) {
         std::cerr << "Failed to convert quantitative phenotype in .ped file "
                      "column 7.\n";
         throw(e);
       }
     } else {
-      try {
-        double phen = std::stoi(splitter[5]);
-        sample_phen_map[sample_id] = phen - 1;
+        try {
+          double phen = std::stoi(splitter.str(5));
+          sample_phen_map[sample_id] = phen - 1;
       } catch (std::exception &e) {
         std::cerr
             << "Failed to convert binary phenotype in .ped file column 6.\n";
@@ -502,16 +503,16 @@ void Covariates::parse(std::stringstream &ped_ss, std::stringstream &cov_ss) {
   // Parse the PCA matrix file
   while (std::getline(cov_ss, line, '\n')) {
     RJBUtil::Splitter<std::string> splitter(line, " \t");
-    if (this->contains(splitter[0])) {
-      covariates.emplace_back(std::vector<double>());
+      if (this->contains(splitter[0])) {
+        covariates.emplace_back(std::vector<double>());
 
-      unsigned long i = 0;
-      for (const auto &v : splitter) {
-        if (i == 0) {
-          // Get phenotype of current sample
-          auto phen = sample_phen_map[v];
+        unsigned long i = 0;
+        for (const auto &v : splitter) {
+          if (i == 0) {
+            // Get phenotype of current sample
+            auto phen = sample_phen_map[RJBUtil::Splitter<std::string>::str(v)];
 
-          cov_samples_.push_back(v);
+            cov_samples_.push_back(RJBUtil::Splitter<std::string>::str(v));
 
           if (phen == 1) {
             ncases_++;
@@ -520,9 +521,10 @@ void Covariates::parse(std::stringstream &ped_ss, std::stringstream &cov_ss) {
           }
 
           phenotypes.push_back(phen);
-        } else {
-          covariates.back().push_back(std::stod(v));
-        }
+          } else {
+            covariates.back().push_back(
+                std::stod(RJBUtil::Splitter<std::string>::str(v)));
+          }
         i++;
       }
     }
@@ -641,8 +643,9 @@ void Covariates::sort_covariates(const std::string &header) {
 
     seen.clear();
     for (const auto &v : splitter) {
-      if (!seen.contains(v)) {
-        seen.insert(v);
+      auto token = std::string(v);
+      if (!seen.contains(token)) {
+        seen.insert(std::move(token));
       } else {
         std::cerr << "header duplicate: " << v << std::endl;
       }

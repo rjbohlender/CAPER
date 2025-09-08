@@ -25,8 +25,8 @@ void FileValidator::validate_matrix_line(RJBUtil::Splitter<std::string> &line,
                             lineno);
     throw(std::runtime_error(msg.c_str()));
   }
-  if (!matrix_variant_types.contains(line[static_cast<int>(Indices::type)])
-  ) {
+  if (!matrix_variant_types.contains(
+          line.str(static_cast<int>(Indices::type)))) {
     const std::string msg = build_error_message(
         "ERROR: Matrix Line Validation -- Variant type incorrect. Must be one "
         "of {SNV, insertion, deletion, SPDA, complex_substitution}.",
@@ -88,7 +88,7 @@ void FileValidator::validate_weight_line(RJBUtil::Splitter<std::string> &line,
                             lineno);
     throw(std::runtime_error(msg.c_str()));
   }
-  if (!matrix_variant_types.contains(line[weight_type_index])) {
+  if (!matrix_variant_types.contains(line.str(weight_type_index))) {
     const std::string msg = build_error_message(
         "ERROR: Weight Line Validation -- Variant type "
         "incorrect. Must be one of {SNV, insertion, deletion, "
@@ -97,7 +97,7 @@ void FileValidator::validate_weight_line(RJBUtil::Splitter<std::string> &line,
     throw(std::runtime_error(msg.c_str()));
   }
   try {
-    std::stod(line.back());
+    std::stod(line.str(line.size() - 1));
   } catch (std::exception &e) {
     const std::string msg =
         build_error_message("ERROR: Weight Line Validation -- Non-numeric "
