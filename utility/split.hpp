@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace RJBUtil {
@@ -17,101 +18,90 @@ namespace RJBUtil {
  * @brief A utility for quickly splitting strings into readable substring
  * segments.
  *
- * @remark  Removed string_view, as string_views can't be built from iterators.
+ * The implementation uses string_view to reference substrings without
+ * copying, providing a light-weight view over the original data.
  */
 template <typename String_t, typename Integral_t = size_t> class Splitter {
 public:
   /** Aliases */
   using string_type = String_t;
   using int_type = Integral_t;
-  using const_iter = typename string_type::const_iterator;
-  using size_type = typename String_t::size_type;
+  using view_type = std::basic_string_view<typename string_type::value_type>;
+  using container_type = std::vector<view_type>;
+  using iterator = typename container_type::iterator;
+  using const_iterator = typename container_type::const_iterator;
 
   /** Constructors */
   Splitter() = default;
-  Splitter(const string_type &str, const string_type &delim, int_type n = 0, bool split_adjacent = false)
+
+  // View-based constructor (non-owning)
+  Splitter(view_type str, view_type delim, int_type n = 0,
+           bool split_adjacent = false)
       : n_(n), data_(str), delim_(delim), split_adjacent_(split_adjacent) {
-    if (n > 0) {
-      split_up_to_n();
-    } else {
-      split();
-    }
+    split_tokens();
   }
 
-  Splitter(const string_type &&str, const string_type &&delim, int_type n = 0, bool split_adjacent = false)
+  // Lvalue string constructor (non-owning)
+  Splitter(const string_type &str, view_type delim, int_type n = 0,
+           bool split_adjacent = false)
       : n_(n), data_(str), delim_(delim), split_adjacent_(split_adjacent) {
-    if (n > 0) {
-      split_up_to_n();
-    } else {
-      split();
-    }
+    split_tokens();
   }
 
-  Splitter(const string_type &str, const string_type &&delim, int_type n = 0, bool split_adjacent = false)
-      : n_(n), data_(str), delim_(delim), split_adjacent_(split_adjacent) {
-    if (n > 0) {
-      split_up_to_n();
-    } else {
-      split();
-    }
+  // Rvalue string constructor (owning)
+  Splitter(string_type &&str, view_type delim, int_type n = 0,
+           bool split_adjacent = false)
+      : n_(n), storage_(std::move(str)), data_(storage_), delim_(delim),
+        split_adjacent_(split_adjacent) {
+    split_tokens();
   }
 
-  Splitter(const string_type &&str, const string_type &delim, int_type n = 0, bool split_adjacent = false)
-      : n_(n),  data_(str), delim_(delim), split_adjacent_(split_adjacent) {
-    if (n > 0) {
-      split_up_to_n();
-    } else {
-      split();
-    }
+  Splitter(const Splitter &rhs)
+      : n_(rhs.n_), storage_(rhs.storage_), delim_(rhs.delim_),
+        split_adjacent_(rhs.split_adjacent_) {
+    data_ = storage_.empty() ? rhs.data_ : view_type(storage_);
+    split_tokens();
   }
+
+  Splitter(Splitter &&) noexcept = default;
 
   Splitter &operator=(const Splitter &rhs) {
-    data_ = rhs.data_;
-    delim_ = rhs.delim_;
-    tokens_ = rhs.tokens_;
-    n_ = rhs.n_;
-    split_adjacent_ = rhs.split_adjacent_;
-
+    if (this != &rhs) {
+      n_ = rhs.n_;
+      storage_ = rhs.storage_;
+      delim_ = rhs.delim_;
+      split_adjacent_ = rhs.split_adjacent_;
+      data_ = storage_.empty() ? rhs.data_ : view_type(storage_);
+      split_tokens();
+    }
     return *this;
   }
 
-  Splitter &operator=(Splitter &&rhs) noexcept {
-    data_ = std::move(rhs.data_);
-    delim_ = std::move(rhs.delim_);
-    tokens_ = std::move(rhs.tokens_);
-    n_ = rhs.n_;
-    split_adjacent_ = std::move(rhs.split_adjacent_);
+  Splitter &operator=(Splitter &&rhs) noexcept = default;
 
-    return *this;
-  }
+  iterator begin() { return tokens_.begin(); }
 
-  auto begin() { return tokens_.begin(); }
+  const_iterator cbegin() const { return tokens_.cbegin(); }
 
-  auto cbegin() { return tokens_.cbegin(); }
+  iterator end() { return tokens_.end(); }
 
-  auto end() { return tokens_.end(); }
+  const_iterator cend() const { return tokens_.cend(); }
 
-  auto cend() { return tokens_.cend(); }
+  size_t size() const { return tokens_.size(); }
 
-  auto size() { return tokens_.size(); }
+  bool empty() const { return tokens_.empty(); }
 
-  auto empty() { return tokens_.empty(); }
+  iterator erase(iterator pos) { return tokens_.erase(pos); }
 
-  auto erase(std::vector<std::string>::iterator &pos) { tokens_.erase(pos); }
+  iterator erase(const_iterator pos) { return tokens_.erase(pos); }
 
-  auto erase(std::vector<std::string>::const_iterator &pos) {
-    tokens_.erase(pos);
-  }
+  view_type &front() { return tokens_.front(); }
 
-  auto &front() { return tokens_.front(); }
+  view_type &back() { return tokens_.back(); }
 
-  auto &back() { return tokens_.back(); }
+  view_type &operator[](int_type i) { return tokens_[i]; }
 
-  auto &operator[](int_type i) {
-    return tokens_[i];
-  }
-
-  auto &at(int_type i) { return tokens_.at(i); }
+  view_type &at(int_type i) { return tokens_.at(i); }
 
 private:
   /**
@@ -157,8 +147,7 @@ private:
 
       if (split_adjacent_) {
         tokens_.emplace_back(first, second - first);
-      }
-      else if(first != second)
+      } else if (first != second)
         tokens_.emplace_back(first, second - first);
     }
 #endif
@@ -176,8 +165,7 @@ private:
 
       if (split_adjacent_) {
         tokens_.emplace_back(first, second - first);
-      }
-      else if (first != second)
+      } else if (first != second)
         tokens_.emplace_back(first, second - first);
       cur++;
       if (cur >= n_) {
@@ -190,11 +178,20 @@ private:
   }
 
   /** Private members */
-  size_t n_;
-  string_type data_;
-  string_type delim_;
-  std::vector<std::string> tokens_;
-  bool split_adjacent_;
+  void split_tokens() {
+    tokens_.clear();
+    if (n_ > 0)
+      split_up_to_n();
+    else
+      split();
+  }
+
+  size_t n_{};
+  string_type storage_{};
+  view_type data_{};
+  view_type delim_{};
+  container_type tokens_{};
+  bool split_adjacent_{};
 };
 } // namespace RJBUtil
 #endif // PGEN_SPLIT_HPP
