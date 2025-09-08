@@ -5,21 +5,11 @@ set(CMAKE_CXX_STANDARD 20)
 
 set(Boost_USE_MULTITHREADED TRUE)
 
-macro(remove_cxx_flag flag)
-    string(REPLACE "${flag}" "" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
-endmacro()
+option(ENABLE_NATIVE_OPTIMIZATIONS "Enable native architecture-specific optimizations" OFF)
 
-include(CheckCXXCompilerFlag)
-CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
-if (COMPILER_SUPPORTS_MARCH_NATIVE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
-endif ()
-
-message(${CMAKE_CXX_FLAGS_RELEASE}) # print "-O3 -DNDEBUG"
-# remove_cxx_flag("-O3")
-# message(${CMAKE_CXX_FLAGS_RELEASE}) # print "-DNDEBUG"
-#
-# set(CMAKE_CXX_FLAGS_RELEASE  "${CMAKE_CXX_FLAGS_RELEASE} -Og")
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    message(STATUS "GNU C++ compiler detected")
+endif()
 
 find_package(Armadillo 8.6 REQUIRED)
 find_package(Threads REQUIRED)
@@ -37,17 +27,8 @@ if (UNIX)
     find_package(BLAS REQUIRED)
 endif ()
 
-if (CMAKE_COMPILER_IS_GNUCXX)
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-openmp")
-else ()
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
-endif ()
-
 add_subdirectory(tools/vcf2matrix)
 add_subdirectory(tools/matrix_indexer)
-
-message(${CMAKE_CXX_FLAGS_DEBUG})
-message(${CMAKE_CXX_FLAGS_RELEASE})
 
 set(PROJECT_SUPPORT_FILES
     data/covariates.hpp
@@ -146,6 +127,10 @@ target_link_libraries(caper ${LAPACK_LIBRARIES})
 target_link_libraries(caper ${BLAS_LIBRARIES})
 target_link_libraries(caper ${ZLIB_LIBRARIES})
 
+target_compile_options(caper PRIVATE
+        "$<$<BOOL:${ENABLE_NATIVE_OPTIMIZATIONS}>:$<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-march=native>>"
+        "$<$<AND:$<BOOL:${ENABLE_NATIVE_OPTIMIZATIONS}>,$<CXX_COMPILER_ID:GNU>>:-fno-openmp>")
+
 target_compile_definitions(caper PRIVATE MAXCOLORS=10000000)
 
 add_executable(power power/power.cpp ${PROJECT_SUPPORT_FILES} utility/jointhreads.hpp)
@@ -155,6 +140,10 @@ target_link_libraries(power ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(power ${Boost_LIBRARIES})
 target_link_libraries(power ${LAPACK_LIBRARIES})
 target_link_libraries(power ${BLAS_LIBRARIES})
+
+target_compile_options(power PRIVATE
+        "$<$<BOOL:${ENABLE_NATIVE_OPTIMIZATIONS}>:$<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-march=native>>"
+        "$<$<AND:$<BOOL:${ENABLE_NATIVE_OPTIMIZATIONS}>,$<CXX_COMPILER_ID:GNU>>:-fno-openmp>")
 
 target_compile_definitions(power PRIVATE MAXCOLORS=10000000)
 
@@ -179,5 +168,9 @@ target_link_libraries(catch_test ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(catch_test ${Boost_LIBRARIES})
 target_link_libraries(catch_test ${LAPACK_LIBRARIES})
 target_link_libraries(catch_test ${BLAS_LIBRARIES})
+
+target_compile_options(catch_test PRIVATE
+        "$<$<BOOL:${ENABLE_NATIVE_OPTIMIZATIONS}>:$<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-march=native>>"
+        "$<$<AND:$<BOOL:${ENABLE_NATIVE_OPTIMIZATIONS}>,$<CXX_COMPILER_ID:GNU>>:-fno-openmp>")
 
 target_compile_definitions(catch_test PRIVATE MAXCOLORS=10000000)
