@@ -74,6 +74,12 @@ public:
     }
   }
 
+  // Block until the number of queued tasks is at or below max_size
+  void wait_for_space(size_t max_size) {
+    std::unique_lock<std::mutex> lock(lock_);
+    cv_space_.wait(lock, [this, max_size] { return q_.size() <= max_size; });
+  }
+
   void dispatch(Task_t &args) {
     std::unique_lock<std::mutex> lock(lock_);
 
@@ -165,6 +171,7 @@ private:
   std::mutex cont_lock_;
   std::queue<Operation_t> q_;
   std::condition_variable cv_;
+  std::condition_variable cv_space_;
   std::vector<std::thread> threads_;
   bool quit_;
   const size_t nthreads_;
@@ -203,17 +210,18 @@ private:
         } else {
           op.finish();
 
-          if (tp_.gene_list) {
-            lock.lock();
-            results_.emplace_back(op.carvaTask);
-            lock.unlock();
-          }
+        if (tp_.gene_list) {
+          lock.lock();
+          results_.emplace_back(op.carvaTask);
+          lock.unlock();
         }
-        lock.lock();
-        ntasks_--;
       }
-    } while (!quit_ || ntasks_ > 0);
-  }
+      lock.lock();
+      ntasks_--;
+      cv_space_.notify_all();
+    }
+  } while (!quit_ || ntasks_ > 0);
+}
 };
 
 #endif // PERMUTE_ASSOCIATE_TASKQUEUE_HPP
