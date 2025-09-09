@@ -570,34 +570,16 @@ private:
 
   void add_line(std::stringstream &ss, std::string &line,
                 RJBUtil::Splitter<std::string> &split) {
-    // Is variant masked?
+    // Build variant id once and check mask status
     std::stringstream varid;
-    varid << split[0] << "," << split[1] << "," << split[2] << "," << split[3] << "," << split[4];
-    if (split[static_cast<int>(Indices::end)] !=
-        split[static_cast<int>(Indices::start)]) {
-      if (!bed_.check_variant(varid.str())) {
-        // Variant not masked
-        ss << line << "\n";
-        // Track number of variants in each transcript
-        auto transcript = split.str(static_cast<int>(Indices::transcript));
-        if (nvariants_.find(transcript) == nvariants_.end()) {
-          nvariants_[transcript] = 1;
-        } else {
-          nvariants_[transcript]++;
-        }
-      }
-    } else {
-      if (!bed_.check_variant(varid.str())) {
-        // Variant not masked
-        ss << line << "\n";
-        // Track number of variants in each transcript
-        auto transcript = split.str(static_cast<int>(Indices::transcript));
-        if (nvariants_.find(transcript) == nvariants_.end()) {
-          nvariants_[transcript] = 1;
-        } else {
-          nvariants_[transcript]++;
-        }
-      }
+    varid << split[0] << "," << split[1] << "," << split[2] << "," << split[3]
+          << "," << split[4];
+    if (!bed_.check_variant(varid.str())) {
+      // Variant not masked
+      ss << line << "\n";
+      // Track number of variants in each transcript
+      auto transcript = split.str(static_cast<int>(Indices::transcript));
+      ++nvariants_[transcript];
     }
   }
 
