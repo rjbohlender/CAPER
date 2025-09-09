@@ -3,10 +3,10 @@
 //
 
 #define CATCH_CONFIG_MAIN
+#define CATCH_CONFIG_NO_POSIX_SIGNALS
 
 #include <armadillo>
 #include <catch2/catch.hpp>
-#include <mach-o/dyld.h>
 #include <map>
 #include <sstream>
 #include <string>
