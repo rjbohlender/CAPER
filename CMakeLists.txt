@@ -18,6 +18,13 @@ find_package(Threads REQUIRED)
 find_package(Boost 1.66.0 COMPONENTS program_options iostreams REQUIRED)
 find_package(ZLIB REQUIRED)
 
+if(NOT TARGET Armadillo::armadillo)
+    add_library(Armadillo::armadillo INTERFACE IMPORTED)
+    set_target_properties(Armadillo::armadillo PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${ARMADILLO_INCLUDE_DIRS}"
+        INTERFACE_LINK_LIBRARIES "${ARMADILLO_LIBRARIES}")
+endif()
+
 if (APPLE)
     # -fsanitize=address -fsanitize=undefined -Wall -pedantic
     # set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O1 -fsanitize=address -fsanitize-blacklist=/Users/rjbohlender/CLionProjects/CAPER/Asan.supp -Wall -pedantic")
@@ -109,25 +116,22 @@ set(PROJECT_SUPPORT_FILES
     data/matrix_indices.hpp)
 
 
-include_directories("${CMAKE_CURRENT_LIST_DIR}/third_party")
-include_directories("${CMAKE_CURRENT_LIST_DIR}/third_party/sse2neon/")
-include_directories(${ARMADILLO_INCLUDE_DIRS})
-include_directories(${Boost_INCLUDE_DIRS})
-include_directories(${LAPACK_INCLUDE_DIRS})
-include_directories(${BLAS_INCLUDE_DIRS})
-include_directories(${ZLIB_INCLUDE_DIRS})
-
 add_executable(caper caper/caper.cpp ${PROJECT_SUPPORT_FILES} utility/jointhreads.hpp)
 
 if (FALSE)
     target_link_libraries(caper nvblas)
 endif ()
-target_link_libraries(caper ${ARMADILLO_LIBRARIES})
-target_link_libraries(caper ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(caper ${Boost_LIBRARIES})
-target_link_libraries(caper ${LAPACK_LIBRARIES})
-target_link_libraries(caper ${BLAS_LIBRARIES})
-target_link_libraries(caper ${ZLIB_LIBRARIES})
+target_include_directories(caper PRIVATE
+        "${CMAKE_CURRENT_LIST_DIR}/third_party"
+        "${CMAKE_CURRENT_LIST_DIR}/third_party/sse2neon")
+target_link_libraries(caper PRIVATE
+        Armadillo::armadillo
+        Threads::Threads
+        Boost::program_options
+        Boost::iostreams
+        LAPACK::LAPACK
+        BLAS::BLAS
+        ZLIB::ZLIB)
 
 target_compile_options(caper PRIVATE
         "$<$<BOOL:${ENABLE_NATIVE_OPTIMIZATIONS}>:$<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-march=native>>"
@@ -136,12 +140,16 @@ target_compile_options(caper PRIVATE
 target_compile_definitions(caper PRIVATE MAXCOLORS=10000000)
 
 add_executable(power power/power.cpp ${PROJECT_SUPPORT_FILES} utility/jointhreads.hpp)
-
-target_link_libraries(power ${ARMADILLO_LIBRARIES})
-target_link_libraries(power ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(power ${Boost_LIBRARIES})
-target_link_libraries(power ${LAPACK_LIBRARIES})
-target_link_libraries(power ${BLAS_LIBRARIES})
+target_include_directories(power PRIVATE
+        "${CMAKE_CURRENT_LIST_DIR}/third_party"
+        "${CMAKE_CURRENT_LIST_DIR}/third_party/sse2neon")
+target_link_libraries(power PRIVATE
+        Armadillo::armadillo
+        Threads::Threads
+        Boost::program_options
+        Boost::iostreams
+        LAPACK::LAPACK
+        BLAS::BLAS)
 
 target_compile_options(power PRIVATE
         "$<$<BOOL:${ENABLE_NATIVE_OPTIMIZATIONS}>:$<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-march=native>>"
@@ -164,12 +172,16 @@ target_compile_definitions(power PRIVATE MAXCOLORS=10000000)
 add_executable(catch_test
         catch_test/test.cpp
         ${PROJECT_SUPPORT_FILES})
-
-target_link_libraries(catch_test ${ARMADILLO_LIBRARIES})
-target_link_libraries(catch_test ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(catch_test ${Boost_LIBRARIES})
-target_link_libraries(catch_test ${LAPACK_LIBRARIES})
-target_link_libraries(catch_test ${BLAS_LIBRARIES})
+target_include_directories(catch_test PRIVATE
+        "${CMAKE_CURRENT_LIST_DIR}/third_party"
+        "${CMAKE_CURRENT_LIST_DIR}/third_party/sse2neon")
+target_link_libraries(catch_test PRIVATE
+        Armadillo::armadillo
+        Threads::Threads
+        Boost::program_options
+        Boost::iostreams
+        LAPACK::LAPACK
+        BLAS::BLAS)
 
 target_compile_options(catch_test PRIVATE
         "$<$<BOOL:${ENABLE_NATIVE_OPTIMIZATIONS}>:$<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-march=native>>"
