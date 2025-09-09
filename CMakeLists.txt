@@ -18,6 +18,11 @@ find_package(Threads REQUIRED)
 find_package(Boost 1.66.0 COMPONENTS program_options iostreams REQUIRED)
 find_package(ZLIB REQUIRED)
 
+add_library(caper_utils STATIC utility/filesystem.cpp)
+target_include_directories(caper_utils PUBLIC
+        "${CMAKE_CURRENT_LIST_DIR}")
+target_link_libraries(caper_utils PUBLIC Boost::iostreams)
+
 if(NOT TARGET Armadillo::armadillo)
     add_library(Armadillo::armadillo INTERFACE IMPORTED)
     set_target_properties(Armadillo::armadillo PROPERTIES
