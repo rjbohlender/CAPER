@@ -116,15 +116,11 @@ set(PROJECT_SUPPORT_FILES
     data/matrix_indices.hpp)
 
 
-add_executable(caper caper/caper.cpp ${PROJECT_SUPPORT_FILES} utility/jointhreads.hpp)
-
-if (FALSE)
-    target_link_libraries(caper nvblas)
-endif ()
-target_include_directories(caper PRIVATE
+add_library(caper_core STATIC ${PROJECT_SUPPORT_FILES})
+target_include_directories(caper_core PUBLIC
         "${CMAKE_CURRENT_LIST_DIR}/third_party"
         "${CMAKE_CURRENT_LIST_DIR}/third_party/sse2neon")
-target_link_libraries(caper PRIVATE
+target_link_libraries(caper_core PUBLIC
         Armadillo::armadillo
         Threads::Threads
         Boost::program_options
@@ -133,29 +129,22 @@ target_link_libraries(caper PRIVATE
         BLAS::BLAS
         ZLIB::ZLIB)
 
-target_compile_options(caper PRIVATE
+target_compile_options(caper_core PUBLIC
         "$<$<BOOL:${ENABLE_NATIVE_OPTIMIZATIONS}>:$<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-march=native>>"
         "$<$<AND:$<BOOL:${ENABLE_NATIVE_OPTIMIZATIONS}>,$<CXX_COMPILER_ID:GNU>>:-fno-openmp>")
 
-target_compile_definitions(caper PRIVATE MAXCOLORS=10000000)
+target_compile_definitions(caper_core PUBLIC MAXCOLORS=10000000)
 
-add_executable(power power/power.cpp ${PROJECT_SUPPORT_FILES} utility/jointhreads.hpp)
-target_include_directories(power PRIVATE
-        "${CMAKE_CURRENT_LIST_DIR}/third_party"
-        "${CMAKE_CURRENT_LIST_DIR}/third_party/sse2neon")
-target_link_libraries(power PRIVATE
-        Armadillo::armadillo
-        Threads::Threads
-        Boost::program_options
-        Boost::iostreams
-        LAPACK::LAPACK
-        BLAS::BLAS)
 
-target_compile_options(power PRIVATE
-        "$<$<BOOL:${ENABLE_NATIVE_OPTIMIZATIONS}>:$<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-march=native>>"
-        "$<$<AND:$<BOOL:${ENABLE_NATIVE_OPTIMIZATIONS}>,$<CXX_COMPILER_ID:GNU>>:-fno-openmp>")
+add_executable(caper caper/caper.cpp)
 
-target_compile_definitions(power PRIVATE MAXCOLORS=10000000)
+if (FALSE)
+    target_link_libraries(caper nvblas)
+endif ()
+target_link_libraries(caper PRIVATE caper_core)
+
+add_executable(power power/power.cpp)
+target_link_libraries(power PRIVATE caper_core)
 
 # add_executable(caese
 #         caese/caese.cpp
@@ -170,21 +159,5 @@ target_compile_definitions(power PRIVATE MAXCOLORS=10000000)
 # target_compile_definitions(caese PRIVATE MAXCOLORS=10000000)
 
 add_executable(catch_test
-        catch_test/test.cpp
-        ${PROJECT_SUPPORT_FILES})
-target_include_directories(catch_test PRIVATE
-        "${CMAKE_CURRENT_LIST_DIR}/third_party"
-        "${CMAKE_CURRENT_LIST_DIR}/third_party/sse2neon")
-target_link_libraries(catch_test PRIVATE
-        Armadillo::armadillo
-        Threads::Threads
-        Boost::program_options
-        Boost::iostreams
-        LAPACK::LAPACK
-        BLAS::BLAS)
-
-target_compile_options(catch_test PRIVATE
-        "$<$<BOOL:${ENABLE_NATIVE_OPTIMIZATIONS}>:$<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-march=native>>"
-        "$<$<AND:$<BOOL:${ENABLE_NATIVE_OPTIMIZATIONS}>,$<CXX_COMPILER_ID:GNU>>:-fno-openmp>")
-
-target_compile_definitions(catch_test PRIVATE MAXCOLORS=10000000)
+        catch_test/test.cpp)
+target_link_libraries(catch_test PRIVATE caper_core)
