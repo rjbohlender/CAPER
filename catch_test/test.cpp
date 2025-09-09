@@ -14,7 +14,9 @@
 #include "../data/bed.hpp"
 #include "../data/covariates.hpp"
 #include "../data/gene.hpp"
+#include "../link/binomial.hpp"
 #include "../statistics/methods.hpp"
+#include "../statistics/glm.hpp"
 #include "../utility/math.hpp"
 
 TEST_CASE("Data Construction & Methods") {
@@ -835,4 +837,26 @@ TEST_CASE("Data Construction & Methods") {
       REQUIRE(cmc == Approx(0.2252).epsilon(0.001));
     }
   }
+}
+
+TEST_CASE("Gradient descent supports non-canonical links", "[glm]") {
+  arma::arma_rng::set_seed(0);
+
+  // Simple dataset with intercept and one predictor
+  arma::mat X{{1.0, -2.0},
+              {1.0, -1.0},
+              {1.0, 0.0},
+              {1.0, 1.0},
+              {1.0, 2.0},
+              {1.0, 3.0}};
+  arma::vec Y{0, 0, 0, 1, 1, 1};
+
+  // Fit using gradient descent with a non-canonical link
+  TaskParams tp_gd;
+  tp_gd.optimizer = "gradient_descent";
+  Binomial cloglog_link("cloglog");
+  GLM<Binomial> gd_model(X, Y, cloglog_link, tp_gd);
+
+  REQUIRE(gd_model.success_);
+  REQUIRE(arma::is_finite(gd_model.beta_));
 }

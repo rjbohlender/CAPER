@@ -128,8 +128,20 @@ auto GLM<LinkT>::gradient_descent(arma::mat &X, arma::colvec &Y) -> arma::vec {
   auto b = arma::vec(A.n_cols, arma::fill::randn);
   auto grad = b;
   do {
-    // Vectorized update
-    grad = (A.t() * (link.linkinv(A, b) - Y)) / m;
+    // Compute mean and linear predictor
+    arma::vec eta = A * b;
+    arma::vec mu = link.linkinv(eta);
+    arma::vec residual = mu - Y;
+    arma::vec working = residual % link.mueta(eta);
+
+    // Use existing weights if provided, otherwise divide by the variance
+    if (arma::approx_equal(weights_, arma::vec(mu.n_elem, arma::fill::ones), "absdiff", 0.0)) {
+      working /= link.variance(mu);
+    } else {
+      working %= weights_;
+    }
+
+    grad = (A.t() * working) / m;
     gti += arma::pow(grad, 2);
     arma::vec adjusted_grad = grad / (arma::sqrt(gti) + 1e-6);
     b -= adjusted_grad * alpha;
@@ -141,7 +153,7 @@ auto GLM<LinkT>::gradient_descent(arma::mat &X, arma::colvec &Y) -> arma::vec {
     std::cerr << "Adaptive gradient descent failed to converge." << std::endl;
   }
 
-  dev_ = arma::sum(link.dev_resids(Y, link.linkinv(A, b),
+  dev_ = arma::sum(link.dev_resids(Y, link.linkinv(A * b),
                                    arma::vec(A.n_rows, arma::fill::ones)));
 
   return b;
