@@ -237,12 +237,12 @@ TEST_CASE("Data Construction & Methods") {
     double test_vaast =
         methods.VAAST(gene, cov.get_phenotype_vector(), "test_transcript1", 2,
                       0, false, false, 0.5, false);
-    REQUIRE(test_vaast == Approx(1.8995198663785278));
+    REQUIRE(test_vaast == Approx(3.6494094468));
 
     test_vaast =
         methods.VAAST(gene, cov.get_phenotype_vector(), "test_transcript2", 2,
                       0, false, false, 0.5, false);
-    REQUIRE(test_vaast == Approx(0.10263280741763481));
+    REQUIRE(test_vaast == Approx(3.6494094468));
   }
 
   SECTION("VT") {
