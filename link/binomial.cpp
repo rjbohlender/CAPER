@@ -88,7 +88,7 @@ arma::vec Binomial::linkinv(const arma::mat &X,
   case Binomial::LinkID::Probit:
     return arma::normcdf(X * beta);
   case Binomial::LinkID::cloglog: {
-    arma::vec ret(beta.n_elem);
+    arma::vec ret(X.n_rows);
     auto vit = ret.begin();
     for (auto &v : arma::vec(X * beta)) {
       *vit = -std::expm1(-std::exp(v));
@@ -99,7 +99,7 @@ arma::vec Binomial::linkinv(const arma::mat &X,
     return ret;
   }
   case Binomial::LinkID::Cauchit: {
-    arma::vec ret(beta.n_elem);
+    arma::vec ret(X.n_rows);
     auto vit = ret.begin();
     boost::math::cauchy dist(0.0, 1.0);
     for (auto &v : arma::vec(X * beta)) {

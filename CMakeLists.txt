@@ -164,5 +164,6 @@ target_link_libraries(power PRIVATE caper_core)
 # target_compile_definitions(caese PRIVATE MAXCOLORS=10000000)
 
 add_executable(catch_test
-        catch_test/test.cpp)
+        catch_test/test.cpp
+        catch_test/jobdispatcher_test.cpp)
 target_link_libraries(catch_test PRIVATE caper_core)
