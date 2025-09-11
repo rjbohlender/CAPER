@@ -56,7 +56,8 @@ auto CAPEROp::op() -> void {
     if (!res.is_set) {
       res.case_alt = arma::accu(gene.genotypes[transcript].t() *
                                 cov.get_original_phenotypes());
-      res.case_ref = 2 * arma::accu(cov.get_original_phenotypes()) - res.case_alt;
+      res.case_ref =
+          2 * arma::accu(cov.get_original_phenotypes()) - res.case_alt;
       res.cont_alt = arma::accu(gene.genotypes[transcript].t() *
                                 (1. - cov.get_original_phenotypes()));
       res.cont_ref =
@@ -107,8 +108,8 @@ auto CAPEROp::op() -> void {
       // Update total number of permutations
       res.permutations++;
 
-      check_perm(carvaTask, carvaTask.tp, perm_val, carvaTask.success_threshold, res,
-                 carvaTask.termination);
+      check_perm(carvaTask, carvaTask.tp, perm_val, carvaTask.success_threshold,
+                 res, carvaTask.termination);
     }
     // Stop iterating if everything is done
     if (std::all_of(carvaTask.results.cbegin(), carvaTask.results.cend(),
@@ -121,7 +122,8 @@ auto CAPEROp::op() -> void {
   int ts_no = 0;
   for (auto &[transcript, res] : carvaTask.results) {
     // For runs with 0 nperm
-    check_done(carvaTask.tp, carvaTask.success_threshold, res, carvaTask.termination);
+    check_done(carvaTask.tp, carvaTask.success_threshold, res,
+               carvaTask.termination);
     double empirical;
     double midp;
     // If we stopped early, use the geometric correction, otherwise calculate
@@ -183,9 +185,9 @@ auto CAPEROp::op() -> void {
   }
 }
 
-auto CAPEROp::check_perm(const CAPERTask &ct, const TaskParams &tp, double perm_val,
-                         long success_threshold,
-                         Result &res, unsigned long termination) -> void {
+auto CAPEROp::check_perm(const CAPERTask &ct, const TaskParams &tp,
+                         double perm_val, long success_threshold, Result &res,
+                         unsigned long termination) -> void {
   // Some methods return a pvalue, so we need to reverse the success inequality
   if (tp.analytic) {
     if (perm_val <= res.original) {
@@ -313,7 +315,7 @@ auto CAPEROp::check_done(const TaskParams &tp, long success_threshold,
     }
   } else {
     if (tp.gene_list) {
-      res.done |= (res.permutations >= (tp.nperm / (tp.nthreads - 1)));
+      res.done |= res.permutations >= termination;
     } else {
       res.done |= res.permutations >= tp.nperm;
     }
