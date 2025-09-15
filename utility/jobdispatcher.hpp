@@ -585,12 +585,12 @@ private:
 
   // Member variables
   TaskParams tp_;
+  RJBUtil::Splitter<std::string> gene_list_;
   TaskQueue<Operation_t, Task_t, Reporter_t> tq_;
   boost::iostreams::filtering_istream gt_ifs_;
   Bed bed_;
   Weight weight_;
   Permute permute_;
-  RJBUtil::Splitter<std::string> gene_list_;
 
   // Gene parsing
   std::string header_;
