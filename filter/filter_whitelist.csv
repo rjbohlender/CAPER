@@ -1,0 +1,19 @@
+Variant,BURDEN,CALPHA,CMC,CMC1df,VT,WSS,RVT1,RVT2,SKAT,SKATO,VAAST,SKATC
+TYPE:SNV,1,1,1,1,1,1,1,1,1,1,1,1
+TYPE:insertion,1,1,1,1,1,1,1,1,1,1,1,1
+TYPE:deletion,1,1,1,1,1,1,1,1,1,1,1,1
+TYPE:SPDA,1,1,1,1,1,1,1,1,1,1,1,1
+TYPE:complex_substitution,1,1,1,1,1,1,1,1,1,1,1,1
+FUNCTION:synonymous,0,0,0,0,0,0,0,0,0,0,0,0
+FUNCTION:synonymous SNV,0,0,0,0,0,0,0,0,0,0,0,0
+FUNCTION:nonsynonymous,1,1,1,1,1,1,1,1,1,1,1,1
+FUNCTION:nonsynonymous SNV,1,1,1,1,1,1,1,1,1,1,1,1
+FUNCTION:frameshift,1,1,1,1,1,1,1,1,1,1,1,1
+FUNCTION:frameshift substitution,1,1,1,1,1,1,1,1,1,1,1,1
+FUNCTION:nonframeshift,1,1,1,1,1,1,1,1,1,1,1,1
+FUNCTION:nonframeshift substitution,1,1,1,1,1,1,1,1,1,1,1,1
+FUNCTION:stopgain,1,1,1,1,1,1,1,1,1,1,1,1
+FUNCTION:stoploss,1,1,1,1,1,1,1,1,1,1,1,1
+FUNCTION:unknown,1,1,1,1,1,1,1,1,1,1,1,1
+FUNCTION:-,1,1,1,1,1,1,1,1,1,1,1,1
+FUNCTION:splicing,1,1,1,1,1,1,1,1,1,1,1,1

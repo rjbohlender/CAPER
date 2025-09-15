@@ -9,7 +9,7 @@
 #include <boost/math/distributions/chi_squared.hpp>
 #include <boost/multiprecision/cpp_bin_float.hpp>
 
-namespace mp = boost::multiprecision;
+namespace multi = boost::multiprecision;
 
 /**
  * @brief Log N choose K function using log gamma function
@@ -23,7 +23,7 @@ T lcnk(T n, T k) {
   if (n == k) {
 	return 0;
   }
-  return mp::lgamma(n + 1) - (mp::lgamma(k + 1) + mp::lgamma(n - k + 1));
+  return multi::lgamma(n + 1) - (multi::lgamma(k + 1) + multi::lgamma(n - k + 1));
 }
 
 /**
@@ -40,11 +40,11 @@ std::pair<T, T> poisson_ci(T successes, T permutations, double lower = 0.025, do
   boost::math::chi_squared hi_dist(2 * successes + 2);
   if (successes > 0) {
 	boost::math::chi_squared lo_dist(2 * successes);
-	lo_ci = boost::math::quantile(lo_dist, lower) / 2.;
+	lo_ci = boost::math::quantile(lo_dist, lower) * 0.5;
   } else {
 	lo_ci = 0;
   }
-  hi_ci = boost::math::quantile(hi_dist, upper) / 2.;
+  hi_ci = boost::math::quantile(hi_dist, upper) * 0.5;
 
   return std::make_pair(lo_ci / permutations, hi_ci / permutations);
 }
@@ -56,8 +56,7 @@ std::pair<T, T> poisson_ci(T successes, T permutations, double lower = 0.025, do
  * @param y An iterable collection of elements, possibly with duplicates
  * @return A modified copy of x
  */
-template<typename T>
-T setdiff(T x, T y) {
+template<typename T> [[maybe_unused]] T setdiff(T x, T y) {
   typename T::iterator it;
   for (size_t j = 0; j < y.size(); j++) {
 	while (*(it = std::find(x.begin(), x.end(), y[j])) == y[j]) {
@@ -81,5 +80,40 @@ T setdiff(T x, T y) {
 template<typename T>
 double geometric_p(T m, T n) {
   return (m - 1.) / (n - 1.);
+}
+
+/**
+ * @brief Find the percentile of a score given a distribution.
+ * @tparam T Floating point numeric type.
+ * @param score The score to find the percentile of.
+ * @param dist The distribution to find the percentile of the score in.
+ * @param greater Should values greater than the score be counted, or values less than the score?
+ * @return The percentile of the score.
+ */
+template<typename T>
+double percentile_of_score(T score, std::vector<T> dist, bool greater=false) {
+  T init = 0.;
+  double ret = std::accumulate(dist.begin(), dist.end(), init, [&greater, &score](T a, T b) { if (greater) { return a + (score >= b); } else { return a + (score <= b); } });
+  ret = (ret + 1.) / (dist.size() + 1.);
+  return ret;
+}
+
+/**
+ * @brief Return the Wilson Score Interval for a binomial proportion
+ * @tparam T floating point type
+ * @param successes Number of successes in binomial experiment
+ * @param permutations Number of total permutations
+ * @return A pair containing the Wilson Score Interval
+ */
+template<typename T>
+[[maybe_unused]] std::pair<T, T> wilson_interval(T successes, T permutations) {
+  const double z = 1.96;
+  const double ns = successes;
+  const double n = permutations;
+  const double nf = permutations - successes;
+  const double p = (ns + 0.5 * std::pow(z, 2)) / (n + std::pow(z, 2));
+  const double ci_low = p - z / (n + std::pow(z, 2)) * std::sqrt(ns * nf / n + std::pow(z, 2) / 4.);
+  const double ci_hi = p + z / (n + std::pow(z, 2)) * std::sqrt(ns * nf / n + std::pow(z, 2) / 4.);
+  return std::make_pair(ci_low, ci_hi);
 }
 #endif //PERMUTE_ASSOCIATE_MATH_HPP

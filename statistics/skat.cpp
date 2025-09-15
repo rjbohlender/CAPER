@@ -11,27 +11,32 @@
 #include <boost/math/distributions/non_central_chi_squared.hpp>
 
 #include <boost/math/tools/roots.hpp>
+#include <utility>
 
-
-double SKAT_pval(double Q, const arma::vec &lambda) {
+double SKAT_pval(double Q, const arma::vec &lambda, bool sadd) {
   if (std::isnan(Q)) {
     return 1;
   }
 
-  std::vector<double> lb1 = arma::conv_to<std::vector<double>>::from(lambda);
-  std::vector<double> nc1(lb1.size(), 0);
-  std::vector<int> df(lb1.size(), 1);
-  double sigma = 0;
-  int lim1 = 1000000;
-  double acc = 1e-9;
+  if (!sadd) {
+    std::vector<double> lb1 = arma::conv_to<std::vector<double>>::from(lambda);
+    std::vector<double> nc1(lb1.size(), 0);
+    std::vector<int> df(lb1.size(), 1);
+    double sigma = 0;
+    int lim1 = 1000000;
+    double acc = 1e-9;
 
-  QFC qfc(lb1, nc1, df, sigma, Q, lim1, acc);
+    QFC qfc(lb1, nc1, df, sigma, Q, lim1, acc);
 
-  double pval = 1. - qfc.get_res();
-  if (pval >= 1 || pval <= 0 || qfc.get_fault() > 0) {
-    pval = Saddlepoint(Q, lambda);
+    double pval = 1. - qfc.get_res();
+    if (pval >= 1 || pval <= 0 || qfc.get_fault() > 0) {
+      pval = Saddlepoint(Q, lambda);
+    }
+    return pval;
+  } else {
+    double pval = Saddlepoint(Q, lambda);
+    return pval;
   }
-  return pval;
 }
 
 double Liu_qval_mod(double pval, const arma::vec &lambda) {
@@ -67,7 +72,8 @@ double Liu_qval_mod(double pval, const arma::vec &lambda) {
   double q = boost::math::quantile(boost::math::complement(chisq,
                                                            pval > 0 ? pval
                                                                     : std::sqrt(std::numeric_limits<double>::min())));
-  return (q - muX) / sigmaX * sigmaQ + muQ; // Does match the Liu (2009) paper.
+  // return (q - muX) / sigmaX * sigmaQ + muQ; // Does match the Liu (2009) paper.
+  return (q - df) / (arma::datum::sqrt2 * df) * sigmaQ + muQ; // Matches SKATR package.
 }
 
 
@@ -137,7 +143,7 @@ double Saddlepoint(double Q, const arma::vec &lambda) {
   auto kppprime0 = [&](double &zeta) -> double {
     return 8 * arma::accu(arma::pow(ulambda, 3) / arma::pow(1 - 2 * (zeta * ulambda), 3));
   };
-#if 0
+#if 1
   auto hatzetafn = [&](double zeta) -> double {
     return kprime0(zeta) - Q;
   };
@@ -160,12 +166,16 @@ double Saddlepoint(double Q, const arma::vec &lambda) {
   lmax = arma::min(1 / (2 * ulambda(arma::find(ulambda > 0)))) * 0.99999;
 
   // Root finding
-#if 0
+#if 1
   int digits = std::numeric_limits<double>::digits - 3;
   boost::math::tools::eps_tolerance<double> tol(digits);
   boost::uintmax_t max_iter = 1000;
-  std::pair<double, double>
-      tmp = boost::math::tools::bisect(hatzetafn, lmin, lmax, tol, max_iter);
+  std::pair<double, double> tmp;
+  try {
+    tmp = boost::math::tools::bisect(hatzetafn, lmin, lmax, tol, max_iter);
+  } catch(boost::math::evaluation_error &e) {
+    return Liu_pval(Q * d, lambda);
+  }
 #elif 0
   int digits = std::numeric_limits<double>::digits - 3;
   boost::math::tools::eps_tolerance<double> tol(digits);
@@ -179,26 +189,47 @@ double Saddlepoint(double Q, const arma::vec &lambda) {
   int tol = static_cast<int>(digits * 0.6);
   boost::uintmax_t max_iter = 1000;
   double guess = (lmax - lmin) / 2.;
-  double hatzeta = boost::math::tools::halley_iterate(hatzetafn, guess, lmin, lmax, tol, max_iter);
-
 #endif
+  try {
+#ifdef __clang__
+    // double hatzeta = boost::math::tools::halley_iterate(hatzetafn, guess, lmin, lmax, tol, max_iter);
+    // double hatzeta = boost::math::tools::schroder_iterate(hatzetafn, guess, lmin, lmax, tol, max_iter);
+#else
+    // double hatzeta = boost::math::tools::schroder_iterate(hatzetafn, guess, lmin, lmax, tol, max_iter);
+#endif
+    // double hatzeta = boost::math::tools::newton_raphson_iterate(hatzetafn, guess, lmin, lmax, tol, max_iter);
+    double hatzeta = tmp.first + (tmp.second - tmp.first) / 2.;
 
-  // double hatzeta = tmp.first + (tmp.second - tmp.first) / 2.;
+    double w = sgn(hatzeta) * std::sqrt(2 * (hatzeta * Q - k0(hatzeta)));
+    double v = hatzeta * std::sqrt(kpprime0(hatzeta));
 
-  double w = sgn(hatzeta) * std::sqrt(2 * (hatzeta * Q - k0(hatzeta)));
-  double v = hatzeta * std::sqrt(kpprime0(hatzeta));
-
-  if (std::abs(hatzeta) < 1e-4 || std::isnan(w) || std::isnan(v)) {
-    return Liu_pval(Q * d, lambda);
-  } else {
-    boost::math::normal norm(0, 1);
-    return boost::math::cdf(boost::math::complement(norm, w + std::log(v / w) / w));
+    if (std::abs(hatzeta) < 1e-4 || std::isnan(w) || std::isnan(v)) {
+      if(std::isnan(w)) {
+        std::cerr << "w is nan." << std::endl;
+        std::cerr << "hatzeta: " << hatzeta << std::endl;
+        std::cerr << "Q: " << Q << std::endl;
+        std::cerr << "k0: " << k0(hatzeta) << std::endl;
+      }
+      if(std::isnan(v)) {
+        std::cerr << "v is nan." << std::endl;
+        std::cerr << "hatzeta: " << hatzeta << std::endl;
+        std::cerr << "Q: " << Q << std::endl;
+        std::cerr << "k0: " << k0(hatzeta) << std::endl;
+      }
+      return Liu_pval(Q * d, lambda);
+    } else {
+      boost::math::normal norm(0, 1);
+      return boost::math::cdf(boost::math::complement(norm, w + std::log(v / w) / w));
+    }
+  } catch (boost::math::evaluation_error &e) {
+    return SKAT_pval(Q, lambda, false);
   }
+
 }
 
 
-SKATR_Null::SKATR_Null(std::shared_ptr<Covariates> cov)
-: crand(std::random_device{}()), cov_(*cov) {
+SKATR_Null::SKATR_Null(Covariates cov)
+: crand(std::random_device{}()), cov_(std::move(cov)) {
   X = cov_.get_covariate_matrix();
   Y = cov_.get_phenotype_vector();
   pi0 = cov_.get_fitted();
@@ -275,7 +306,7 @@ auto SKATR_Null::get_X() noexcept -> const arma::mat & {
 }
 
 SKATR_Linear_Null::SKATR_Linear_Null(Covariates cov)
-: cov_(cov) {
+: cov_(std::move(cov)) {
   X = cov_.get_covariate_matrix();
   Y = cov_.get_phenotype_vector();
 

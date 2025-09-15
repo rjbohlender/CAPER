@@ -7,25 +7,25 @@
 
 #define ARMA_DONT_USE_WRAPPER
 
-#include <string>
-#include <vector>
-#include <fstream>
-#include <iostream>
 #include <armadillo>
+#include <fstream>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
-#include "../utility/split.hpp"
-#include "../statistics/logistic_regression.hpp"
-#include "permutation.hpp"
 #include "../utility/taskparams.hpp"
+#include "permutation.hpp"
 
 class Covariates {
 public:
-  Covariates(TaskParams tp);
-  Covariates(std::stringstream &ped_ss, std::stringstream& cov_ss);
+  explicit Covariates(TaskParams tp);
+  Covariates(std::stringstream &ped_ss, std::stringstream &cov_ss,
+             TaskParams tp);
 
   Covariates(const Covariates &cov) = default;
 
-  Covariates(Covariates &&cov) = delete; // Covariates should never be moved and always copied.
+  // Covariates(Covariates &&cov) = delete; // Covariates should never be moved and always copied.
 
   Covariates &operator=(const Covariates &cov) = default;
 
@@ -35,17 +35,20 @@ public:
   arma::colvec &get_phenotype_vector();
   void set_phenotype_vector(const arma::vec &vec);
   void set_phenotype_vector(const std::vector<int32_t> &vec);
+  bool contains(const std::string &sample) const;
+  bool contains(const std::string_view &sample) const;
 
-  arma::uword get_nsamples() const;
-  arma::uword get_ncases() const;
+  [[nodiscard]] arma::uword get_nsamples() const;
+  [[nodiscard]] arma::uword get_ncases() const;
 
   arma::mat &get_covariate_matrix();
   arma::vec &get_odds();
   arma::vec &get_original_phenotypes();
   arma::vec &get_fitted();
-  arma::vec get_residuals() const;
+  [[nodiscard]] arma::vec get_residuals() const;
   arma::vec &get_mean();
-  arma::vec & get_coef();
+  arma::vec &get_coef();
+  std::vector<std::string> get_samples();
 
   // Permute
   void refit_permuted();
@@ -54,8 +57,8 @@ public:
   void clear();
 
   // Sort covariates
-  void sort_covariates(std::string &header);
-  bool is_sorted();
+  void sort_covariates(const std::string &header);
+  bool is_sorted() const;
 
 private:
   TaskParams tp_;
@@ -65,7 +68,10 @@ private:
 
   CRandomMersenne crand;
   std::vector<std::string> cov_samples_;
-  std::vector<std::string> ped_samples_;
+  std::vector<std::string> ped_samples_ordered_;
+  std::unordered_set<std::string> ped_samples_;
+  std::unordered_set<std::string> skip_;  // Skip samples with missing cov values
+  std::unordered_map<std::string, double> sample_phen_map_;
   arma::vec phenotypes_; // Possibly permuted phenotype vector
   arma::vec original_; // Original phenotype vector
   arma::mat design_; // Design matrix
@@ -84,10 +90,14 @@ private:
   bool sorted_;
   bool linear_;
 
-  void parse(const std::string& ifile, const std::string& pedfile);
+  void parse_ped(const std::string& pedfile, bool cov_provided);
+  void parse_cov(const std::string &covfile);
+  void parse(const std::string& covfile, const std::string& pedfile);
   void parse(std::stringstream &ped_ss, std::stringstream &cov_ss);
 
   void fit_null();
+
+  static void sort_by_index(std::vector<std::string> &samples, const arma::uvec &indices);
 };
 
 #endif //PERMUTE_ASSOCIATE_COVARIATES_HPP

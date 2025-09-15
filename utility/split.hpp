@@ -7,119 +7,112 @@
 #ifndef PGEN_SPLIT_HPP
 #define PGEN_SPLIT_HPP 1
 
-#include <string>
-#include <vector>
 #include <algorithm>
+#include <string>
+#include <string_view>
+#include <vector>
 
 namespace RJBUtil {
 /**
  * @class Splitter split.hpp "src/util/split.hpp"
- * @brief A utility for quickly splitting strings into readable substring segments.
+ * @brief A utility for quickly splitting strings into readable substring
+ * segments.
  *
- * @remark  Removed string_view, as string_views can't be built from iterators.
+ * The implementation uses string_view to reference substrings without
+ * copying, providing a light-weight view over the original data.
  */
-template<typename _String_t>
-class Splitter {
+template <typename String_t, typename Integral_t = size_t> class Splitter {
 public:
   /** Aliases */
-  using string_type = _String_t;
-  using const_iter = typename string_type::const_iterator;
-  using size_type = typename _String_t::size_type;
+  using string_type = String_t;
+  using int_type = Integral_t;
+  using view_type = std::basic_string_view<typename string_type::value_type>;
+  using container_type = std::vector<view_type>;
+  using iterator = typename container_type::iterator;
+  using const_iterator = typename container_type::const_iterator;
 
   /** Constructors */
   Splitter() = default;
-  Splitter(const string_type &str, const string_type &delim)
-	  : data_(str), delim_(delim) {
-	split();
+
+  // View-based constructor (non-owning)
+  Splitter(view_type str, view_type delim, int_type n = 0,
+           bool split_adjacent = false)
+      : n_(n), data_(str), delim_(delim), split_adjacent_(split_adjacent) {
+    split_tokens();
   }
 
-  Splitter(const string_type &&str, const string_type &&delim)
-	  : data_(str), delim_(delim) {
-	split();
+  // Lvalue string constructor (non-owning)
+  Splitter(const string_type &str, view_type delim, int_type n = 0,
+           bool split_adjacent = false)
+      : n_(n), data_(str), delim_(delim), split_adjacent_(split_adjacent) {
+    split_tokens();
   }
 
-  Splitter(const string_type &str, const string_type &&delim)
-	  : data_(str), delim_(delim) {
-	split();
+  // Rvalue string constructor (owning)
+  Splitter(string_type &&str, view_type delim, int_type n = 0,
+           bool split_adjacent = false)
+      : n_(n), storage_(std::move(str)), data_(storage_), delim_(delim),
+        split_adjacent_(split_adjacent) {
+    split_tokens();
   }
 
-  Splitter(const string_type &&str, const string_type &delim)
-          : data_(str), delim_(delim) {
-        split();
+  Splitter(const Splitter &rhs)
+      : n_(rhs.n_), storage_(rhs.storage_), delim_(rhs.delim_),
+        split_adjacent_(rhs.split_adjacent_) {
+    data_ = storage_.empty() ? rhs.data_ : view_type(storage_);
+    split_tokens();
   }
 
-  Splitter(const Splitter &rhs) = default;
-  Splitter(Splitter &&rhs) noexcept = default;
+  Splitter(Splitter &&) noexcept = default;
 
   Splitter &operator=(const Splitter &rhs) {
-	data_ = rhs.data_;
-	delim_ = rhs.delim_;
-	tokens_ = rhs.tokens_;
-
-	return *this;
+    if (this != &rhs) {
+      n_ = rhs.n_;
+      storage_ = rhs.storage_;
+      delim_ = rhs.delim_;
+      split_adjacent_ = rhs.split_adjacent_;
+      data_ = storage_.empty() ? rhs.data_ : view_type(storage_);
+      split_tokens();
+    }
+    return *this;
   }
 
-  Splitter &operator=(Splitter &&rhs) noexcept {
-	data_ = std::move(rhs.data_);
-	delim_ = std::move(rhs.delim_);
-	tokens_ = std::move(rhs.tokens_);
+  Splitter &operator=(Splitter &&rhs) noexcept = default;
 
-	return *this;
-  }
+  iterator begin() { return tokens_.begin(); }
 
-  auto begin() {
-	return tokens_.begin();
-  }
+  const_iterator cbegin() const { return tokens_.cbegin(); }
 
-  auto cbegin() {
-	return tokens_.cbegin();
-  }
+  iterator end() { return tokens_.end(); }
 
-  auto end() {
-	return tokens_.end();
-  }
+  const_iterator cend() const { return tokens_.cend(); }
 
-  auto cend() {
-	return tokens_.cend();
-  }
+  size_t size() const { return tokens_.size(); }
 
-  auto size() {
-	return tokens_.size();
-  }
+  bool empty() const { return tokens_.empty(); }
 
-  auto empty() {
-	return tokens_.empty();
-  }
+  iterator erase(iterator pos) { return tokens_.erase(pos); }
 
-  auto erase(std::vector<std::string>::iterator &pos) {
-    tokens_.erase(pos);
-  }
+  iterator erase(const_iterator pos) { return tokens_.erase(pos); }
 
-  auto erase(std::vector<std::string>::const_iterator &pos) {
-	tokens_.erase(pos);
-  }
+  view_type &front() { return tokens_.front(); }
 
-  auto front() {
-    return tokens_.front();
-  }
+  view_type &back() { return tokens_.back(); }
 
-  auto back() {
-    return tokens_.back();
-  }
+  view_type &operator[](int_type i) { return tokens_[i]; }
 
-  template<typename _Integer>
-  auto operator[](_Integer i) {
-	return tokens_[i];
-  }
+  view_type &at(int_type i) { return tokens_.at(i); }
 
-  template<typename _Integer>
-  auto at(_Integer i) {
-	return tokens_.at(i);
-  }
+  string_type str(int_type i) const { return string_type(tokens_[i]); }
+
+  string_type at_str(int_type i) const { return string_type(tokens_.at(i)); }
+
+  static string_type str(view_type v) { return string_type(v); }
 
 private:
   /**
-   * @brief A split member function to simplify multiple constructors should be need them.
+   * @brief A split member function to simplify multiple constructors should be
+   * need them.
    */
   void split() {
 #if 0
@@ -150,20 +143,61 @@ private:
 
 	}
 #else
-	// Faster version described at: https://www.bfilipek.com/2018/07/string-view-perf-followup.html
-	for(auto first = data_.data(), second = data_.data(), last = first + data_.size(); second != last && first != last; first = second + 1) {
-	  second = std::find_first_of(first, last, std::cbegin(delim_), std::cend(delim_));
+    // Faster version described at:
+    // https://www.bfilipek.com/2018/07/string-view-perf-followup.html
+    for (auto first = data_.data(), second = data_.data(),
+              last = first + data_.size();
+         second != last && first != last; first = second + 1) {
+      second = std::find_first_of(first, last, std::cbegin(delim_),
+                                  std::cend(delim_));
 
-	  if(first != second)
-	    tokens_.emplace_back(first, second-first);
-	}
+      if (split_adjacent_) {
+        tokens_.emplace_back(first, second - first);
+      } else if (first != second)
+        tokens_.emplace_back(first, second - first);
+    }
 #endif
+  }
+  void split_up_to_n() {
+    int cur = 0;
+    tokens_.reserve(n_ + 1);
+    // Faster version described at:
+    // https://www.bfilipek.com/2018/07/string-view-perf-followup.html
+    for (auto first = data_.data(), second = data_.data(),
+              last = first + data_.size();
+         second != last && first != last; first = second + 1) {
+      second = std::find_first_of(first, last, std::cbegin(delim_),
+                                  std::cend(delim_));
+
+      if (split_adjacent_) {
+        tokens_.emplace_back(first, second - first);
+      } else if (first != second)
+        tokens_.emplace_back(first, second - first);
+      cur++;
+      if (cur >= n_) {
+        if (second != last) {
+          tokens_.emplace_back(second + 1, last - (second + 1));
+        }
+        break;
+      }
+    }
   }
 
   /** Private members */
-  string_type data_;
-  string_type delim_;
-  std::vector<std::string> tokens_;
+  void split_tokens() {
+    tokens_.clear();
+    if (n_ > 0)
+      split_up_to_n();
+    else
+      split();
+  }
+
+  size_t n_{};
+  string_type storage_{};
+  view_type data_{};
+  view_type delim_{};
+  container_type tokens_{};
+  bool split_adjacent_{};
 };
-}
+} // namespace RJBUtil
 #endif // PGEN_SPLIT_HPP

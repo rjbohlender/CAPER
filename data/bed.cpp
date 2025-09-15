@@ -4,8 +4,9 @@
 
 #include <iostream>
 
-#include "bed.hpp"
 #include "../utility/filesystem.hpp"
+#include "../utility/filevalidator.hpp"
+#include "bed.hpp"
 
 BedRange::BedRange(std::pair<int, int> &range) : range(range) {}
 
@@ -13,127 +14,67 @@ BedRange::BedRange(int first, int second) : range({first, second}) {}
 
 bool BedRange::operator<(int rhs) const { return range.second < rhs; }
 bool BedRange::operator>(int rhs) const { return range.first > rhs; }
-bool BedRange::operator==(int rhs) const { return range.first <= rhs && range.second >= rhs; }
+bool BedRange::operator==(int rhs) const {
+  return range.first <= rhs && range.second >= rhs;
+}
 bool BedRange::operator<=(int rhs) const { return range.first <= rhs; }
 bool BedRange::operator>=(int rhs) const { return range.second >= rhs; }
 int BedRange::operator-(int rhs) const { return range.second - rhs; }
 
 Bed::Bed(const std::string &ifile) {
-  if(!check_file_exists(ifile)) {
-    std::cerr << "No mask file provided or incorrect path."  << std::endl;
-    return;
+  using namespace RJBUtil;
+  Splitter<std::string> files(ifile, ",");
+  size_t reserve = 1000000;
+  variants_.reserve(reserve);
+  for (const auto &f : files) {
+    auto path = std::string(f);
+    if (!check_file_exists(path)) {
+      std::cerr << "No mask file provided or incorrect path to mask file. "
+                << f << std::endl;
+      return;
+    }
+    std::ifstream ifs(path);
+    std::string line;
+    int lineno = -1;
+
+    while (std::getline(ifs, line)) {
+      lineno++;
+      if (lineno == reserve) {
+        reserve += 1000000;
+        variants_.reserve(reserve);
+      }
+      RJBUtil::Splitter<std::string> splitter(line, "\t");
+      FileValidator::validate_bed_line(splitter, lineno);
+
+      std::stringstream ss;
+      ss << splitter[0] << "," << splitter[1] << "," << splitter[2] << "," << splitter[3] << "," << splitter[4];
+
+      variants_.emplace(ss.str());
+    }
   }
-  std::ifstream ifs(ifile);
+}
+
+Bed::Bed(std::stringstream &iss) {
+  using namespace RJBUtil;
   std::string line;
+  int lineno = -1;
 
-  while (std::getline(ifs, line)) {
-	RJBUtil::Splitter<std::string> splitter(line, "\t");
+  while (std::getline(iss, line)) {
+    lineno++;
+    RJBUtil::Splitter<std::string> splitter(line, "\t");
+    FileValidator::validate_bed_line(splitter, lineno);
 
-	int first = std::stoi(splitter[1]);
-	int second = std::stoi(splitter[2]);
+    std::stringstream ss;
+    ss << splitter[0] << "," << splitter[1] << "," << splitter[2] << "," << splitter[3] << "," << splitter[4];
 
-	// Initialize vector for chromosome
-	if (ranges_.find(splitter[0]) == ranges_.end())
-	  ranges_[splitter[0]] = std::vector<BedRange>();
-
-	auto it = std::lower_bound(ranges_[splitter[0]].begin(), ranges_[splitter[0]].end(), first);
-
-	if (it == ranges_[splitter[0]].end()) {
-	  ranges_[splitter[0]].insert(it, {first, second});
-	} else {
-	  // Check if this is a duplicate
-	  BedRange br{first, second};
-	  if ((*it) == first) {
-		if (br.range.second > (*it).range.second) {
-		  (*it).range.second = br.range.second;
-		}
-	  } else {
-		ranges_[splitter[0]].emplace(it, std::move(br));
-	  }
-	}
+    variants_.emplace(ss.str());
   }
 }
 
-Bed::Bed(std::stringstream &ss) {
-  std::string line;
-
-  while (std::getline(ss, line, '\n')) {
-	RJBUtil::Splitter<std::string> splitter(line, "\t");
-
-	int first = std::stoi(splitter[1]);
-	int second = std::stoi(splitter[2]);
-
-	// Initialize vector for chromosome
-	if (ranges_.find(splitter[0]) == ranges_.end())
-	  ranges_[splitter[0]] = std::vector<BedRange>();
-
-	auto it = std::lower_bound(ranges_[splitter[0]].begin(), ranges_[splitter[0]].end(), first);
-
-	if (it == ranges_[splitter[0]].end()) {
-	  ranges_[splitter[0]].insert(it, {first, second});
-	} else {
-	  // Check if this is a duplicate
-	  BedRange br{first, second};
-	  if ((*it) == first) {
-		if (br.range.second > (*it).range.second) {
-		  (*it).range.second = br.range.second;
-		}
-	  } else {
-		ranges_[splitter[0]].emplace(it, std::move(br));
-	  }
-	}
-  }
+bool Bed::check_variant(const std::string &variant) {
+  return variants_.contains(variant);
 }
 
-bool Bed::check_variant(const std::string &chr, std::pair<std::string, std::string> &&pos) {
-  int start = std::stoi(pos.first);
-  int end = std::stoi(pos.second);
+bool Bed::empty() { return variants_.empty(); }
 
-  if (ranges_.find(chr) == ranges_.end()) {
-    return false;
-  }
-
-  auto it = std::lower_bound(ranges_[chr].begin(), ranges_[chr].end(), start); // First range >= start
-  if (it == ranges_[chr].end()) {
-    return false;
-  }
-  return *it <= end;
-}
-
-bool Bed::check_variant(const std::string &chr, const std::string &pos) {
-  int ipos = std::stoi(pos);
-
-  if (ranges_.find(chr) == ranges_.end()) {
-    return false;
-  }
-
-  auto it = std::lower_bound(ranges_[chr].begin(), ranges_[chr].end(), ipos);
-  if (it == ranges_[chr].end()) {
-	return false;
-  }
-  return *it == ipos;
-}
-
-bool Bed::check_variant(const std::string &chr, int pos) {
-  if (ranges_.find(chr) == ranges_.end()) {
-	throw std::out_of_range("Chromosome not in bed file.");
-  }
-
-  auto it = std::lower_bound(ranges_[chr].begin(), ranges_[chr].end(), pos);
-  if (it == ranges_[chr].end()) {
-	return false;
-  }
-  return *it == pos;
-}
-
-bool Bed::empty() {
-  return ranges_.empty();
-}
-
-unsigned long Bed::size() {
-  return ranges_.size();
-}
-
-unsigned long Bed::chromosome_count(const std::string &k) {
-  return ranges_[k].size();
-}
+unsigned long Bed::size() { return variants_.size(); }

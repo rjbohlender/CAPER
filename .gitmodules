@@ -1,0 +1,4 @@
+[submodule "third_party/sse2neon"]
+	path = third_party/sse2neon
+	url = https://github.com/DLTcollab/sse2neon
+	ignore = dirty

@@ -7,8 +7,8 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <sstream>
 #include "parser.hpp"
-#include "../../utility/filesystem.hpp"
-#include "../../utility/split.hpp"
+#include "utility/filesystem.hpp"
+#include "utility/split.hpp"
 
 Parser::Parser(const std::string &path, const std::string &outpath, Reference ref)
 	: ref_(std::move(ref)) {
@@ -53,8 +53,9 @@ void Parser::parse(std::istream &is, std::ostream &os) { // Parse VCF
 	  continue;
 	} else if (boost::starts_with(line, "#C")) {
 	  // Handle samples
-	  RJBUtil::Splitter<std::string> splitter(line, " \t");
-	  std::copy(splitter.begin() + 9, splitter.end(), std::back_inserter(header));
+          RJBUtil::Splitter<std::string> splitter(line, " \t");
+          std::transform(splitter.begin() + 9, splitter.end(), std::back_inserter(header),
+                         [](auto v) { return RJBUtil::Splitter<std::string>::str(v); });
 
 	  // Output header
 	  os << header[0];
@@ -64,9 +65,9 @@ void Parser::parse(std::istream &is, std::ostream &os) { // Parse VCF
 	  os << std::endl;
 	  continue;
 	} // Fallthrough
-	RJBUtil::Splitter<std::string> splitter(line, " \t");
-	chr = splitter[0];
-	long pos = std::stol(splitter[1]);
+        RJBUtil::Splitter<std::string> splitter(line, " \t");
+        chr = splitter.str(0);
+        long pos = std::stol(splitter.str(1));
 
 	if (!boost::starts_with(chr, "chr")) {
 	  chr = "chr" + chr;
@@ -74,7 +75,7 @@ void Parser::parse(std::istream &is, std::ostream &os) { // Parse VCF
 
 	cull(chr, pos, os); // Output completed genes.
 
-	Type type = variant_classifier(splitter[3], splitter[4]);
+        Type type = variant_classifier(splitter.str(3), splitter.str(4));
 
 	std::stringstream location_stream;
 
@@ -92,7 +93,11 @@ void Parser::parse(std::istream &is, std::ostream &os) { // Parse VCF
 	Variant var{
 		location_stream.str()
 	};
-	std::transform(splitter.begin() + 9, splitter.end(), std::back_inserter(var.data), &Parser::variant_converter);
+        std::transform(splitter.begin() + 9, splitter.end(), std::back_inserter(var.data),
+                       [](auto v) {
+                         return Parser::variant_converter(
+                             RJBUtil::Splitter<std::string>::str(v));
+                       });
 
 	std::vector<std::shared_ptr<Gene>> match = ref_.get_gene(chr, pos);
 	for (const auto &p : match) {

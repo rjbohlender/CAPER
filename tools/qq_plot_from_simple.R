@@ -23,12 +23,12 @@ df <- read.table(opt$simple, header=T)
 
 pdf(opt$output, 6.5, 6.5)
 
-if (opt$test_statistic) {
-   pvals <- df$Test_Statistic
+if ( !is.null(opt$test_statistic)) {
+  pvals <- df$Test_Statistic
 } else {
-  pvals <- df$Empirical_MidP
+  pvals <- df$Empirical_P
 }
 names(pvals) <- df$Gene
 
-pQQ(pvals[!duplicated(df$Gene)], nlabs=5)
+pQQ(pvals[!duplicated(df$Gene)], nlabs=0)
 dev.off()

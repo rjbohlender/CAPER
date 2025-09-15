@@ -71,12 +71,12 @@ struct VAASTLogic {
   // Constructors
   VAASTLogic(Gene &gene,
 			 arma::vec &Y_,
-			 const std::string &k,
+			 const std::string &ts,
 			 double site_penalty,
 			 arma::uword group_threshold,
 			 bool detail,
 			 bool biallelic,
-			 double soft_maf_filter,
+			 double smf,
 			 bool legacy_);
   VAASTLogic(arma::sp_mat X_,
 			 arma::vec &Y_,
@@ -86,19 +86,18 @@ struct VAASTLogic {
 			 bool biallelic,
 			 arma::uword group_threshold,
 			 double site_penalty,
-			 double soft_maf_filter,
+			 double smf,
 			 bool legacy_);
 
-  void check_weights(Gene &gene);
   double Score();
   double Score(const arma::sp_mat &X, const arma::vec &Y, const arma::vec &w);
   arma::vec LRT();
   arma::vec log_likelihood(arma::vec &freq, arma::vec &allele0, arma::vec &allele1);
-  void variant_grouping(const arma::sp_mat &X,
+  void alternate_grouping(const arma::sp_mat &X,
 					   const arma::vec &Y,
 					   const arma::vec &w,
 					   std::vector<std::string> &positions);
-  void legacy_grouping(const arma::sp_mat &X,
+  void vaast_grouping(const arma::sp_mat &X,
 					   const arma::vec &Y,
 					   const arma::vec &w,
 					   std::vector<std::string> &positions);

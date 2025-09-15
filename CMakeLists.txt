@@ -1,48 +1,48 @@
-cmake_minimum_required(VERSION 2.8)
-project(Permute_Associate C CXX)
+cmake_minimum_required(VERSION 3.15)
+project(CAPER VERSION 1.0 LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(Boost_USE_MULTITHREADED TRUE)
 
-macro(remove_cxx_flag flag)
-    string(REPLACE "${flag}" "" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
-endmacro()
+option(ENABLE_NATIVE_OPTIMIZATIONS "Enable native architecture-specific optimizations" OFF)
 
-message(${CMAKE_CXX_FLAGS_RELEASE}) # print "-O3 -DNDEBUG"
-# remove_cxx_flag("-O3")
-# message(${CMAKE_CXX_FLAGS_RELEASE}) # print "-DNDEBUG"
-#
-# set(CMAKE_CXX_FLAGS_RELEASE  "${CMAKE_CXX_FLAGS_RELEASE} -Og")
-
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    message(STATUS "GNU C++ compiler detected")
+endif()
 
 find_package(Armadillo 8.6 REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Boost 1.66.0 COMPONENTS program_options iostreams REQUIRED)
+find_package(ZLIB REQUIRED)
+
+add_library(caper_utils STATIC utility/filesystem.cpp)
+target_include_directories(caper_utils PUBLIC
+        "${CMAKE_CURRENT_LIST_DIR}")
+target_link_libraries(caper_utils PUBLIC Boost::iostreams)
+
+if(NOT TARGET Armadillo::armadillo)
+    add_library(Armadillo::armadillo INTERFACE IMPORTED)
+    set_target_properties(Armadillo::armadillo PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${ARMADILLO_INCLUDE_DIRS}"
+        INTERFACE_LINK_LIBRARIES "${ARMADILLO_LIBRARIES}")
+endif()
 
 if (APPLE)
     # -fsanitize=address -fsanitize=undefined -Wall -pedantic
-    # set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O1 -fsanitize=address -fsanitize-blacklist=/Users/rjbohlender/CLionProjects/Permute_Associate/Asan.supp -Wall -pedantic")
+    # set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O1 -fsanitize=address -fsanitize-blacklist=/Users/rjbohlender/CLionProjects/CAPER/Asan.supp -Wall -pedantic")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -pedantic")
 endif ()
 
 if (UNIX)
     find_package(LAPACK REQUIRED)
     find_package(BLAS REQUIRED)
-endif()
-
-if (CMAKE_COMPILER_IS_GNUCXX)
-    set(CMAKE_CXX_FLAGS_RELEASE  "${CMAKE_CXX_FLAGS_RELEASE} -fno-openmp")
-else()
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
 endif ()
 
 add_subdirectory(tools/vcf2matrix)
 add_subdirectory(tools/matrix_indexer)
-
-message(${CMAKE_CXX_FLAGS_DEBUG})
-message(${CMAKE_CXX_FLAGS_RELEASE})
 
 set(PROJECT_SUPPORT_FILES
     data/covariates.hpp
@@ -50,7 +50,7 @@ set(PROJECT_SUPPORT_FILES
     statistics/methods.cpp
     statistics/methods.hpp
     data/gene.hpp
-    carva/carvatask.hpp
+    caper/capertask.hpp
     third_party/stocc/stocc.h
     third_party/stocc/stoc1.cpp
     third_party/stocc/stoc2.cpp
@@ -78,7 +78,7 @@ set(PROJECT_SUPPORT_FILES
     data/weight.cpp
     third_party/QFC/qfc2.cpp
     third_party/QFC/qfc2.hpp
-    carva/carvatask.cpp
+    caper/capertask.cpp
     data/covariates.cpp
     statistics/vaast.cpp
     statistics/vaast.hpp
@@ -96,15 +96,13 @@ set(PROJECT_SUPPORT_FILES
     statistics/bayesianglm.hpp
     statistics/vt.cpp
     statistics/vt.hpp
-    data/calccasm.cpp
-    data/calccasm.hpp
     statistics/skat.cpp
     statistics/skat.hpp
     power/powerop.cpp
     power/powerop.hpp
     utility/taskqueue.hpp
-    carva/carvaop.cpp
-    carva/carvaop.hpp
+    caper/caperop.cpp
+    caper/caperop.hpp
     power/powertask.cpp
     power/powertask.hpp
     caese/caeseop.cpp
@@ -114,62 +112,59 @@ set(PROJECT_SUPPORT_FILES
     statistics/fishertest.cpp
     statistics/fishertest.hpp
     utility/jointhreads.hpp
-    utility/indexsort.hpp utility/math.hpp utility/filevalidator.cpp utility/filevalidator.hpp)
+    utility/indexsort.hpp
+    utility/math.hpp
+    utility/filevalidator.cpp
+    utility/filevalidator.hpp
+    data/filter.cpp
+    data/filter.hpp
+    data/matrix_indices.hpp)
 
 
-include_directories("${CMAKE_CURRENT_LIST_DIR}/third_party")
-include_directories(${ARMADILLO_INCLUDE_DIRS})
-include_directories(${Boost_INCLUDE_DIRS})
-include_directories(${LAPACK_INCLUDE_DIRS})
-include_directories(${BLAS_INCLUDE_DIRS})
+add_library(caper_core STATIC ${PROJECT_SUPPORT_FILES})
+target_include_directories(caper_core PUBLIC
+        "${CMAKE_CURRENT_LIST_DIR}/third_party"
+        "${CMAKE_CURRENT_LIST_DIR}/third_party/sse2neon")
+target_link_libraries(caper_core PUBLIC
+        Armadillo::armadillo
+        Threads::Threads
+        Boost::program_options
+        Boost::iostreams
+        LAPACK::LAPACK
+        BLAS::BLAS
+        ZLIB::ZLIB)
 
-add_executable(carva
-               carva/carva.cpp
-               ${PROJECT_SUPPORT_FILES} utility/jointhreads.hpp)
+target_compile_options(caper_core PUBLIC
+        "$<$<BOOL:${ENABLE_NATIVE_OPTIMIZATIONS}>:$<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-march=native>>"
+        "$<$<AND:$<BOOL:${ENABLE_NATIVE_OPTIMIZATIONS}>,$<CXX_COMPILER_ID:GNU>>:-fno-openmp>")
 
-if(FALSE)
-	target_link_libraries(carva nvblas)
-endif()
-target_link_libraries(carva ${ARMADILLO_LIBRARIES})
-target_link_libraries(carva ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(carva ${Boost_LIBRARIES})
-target_link_libraries(carva ${LAPACK_LIBRARIES})
-target_link_libraries(carva ${BLAS_LIBRARIES})
+target_compile_definitions(caper_core PUBLIC MAXCOLORS=10000000)
 
-target_compile_definitions(carva PRIVATE MAXCOLORS=10000000)
 
-add_executable(power
-               power/power.cpp
-               ${PROJECT_SUPPORT_FILES} utility/jointhreads.hpp)
+add_executable(caper caper/caper.cpp)
 
-target_link_libraries(power ${ARMADILLO_LIBRARIES})
-target_link_libraries(power ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(power ${Boost_LIBRARIES})
-target_link_libraries(power ${LAPACK_LIBRARIES})
-target_link_libraries(power ${BLAS_LIBRARIES})
+if (FALSE)
+    target_link_libraries(caper nvblas)
+endif ()
+target_link_libraries(caper PRIVATE caper_core)
 
-target_compile_definitions(power PRIVATE MAXCOLORS=10000000)
+add_executable(power power/power.cpp)
+target_link_libraries(power PRIVATE caper_core)
 
-add_executable(caese
-               caese/caese.cpp
-               ${PROJECT_SUPPORT_FILES} caese/caese.cpp utility/jointhreads.hpp)
-
-target_link_libraries(caese ${ARMADILLO_LIBRARIES})
-target_link_libraries(caese ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(caese ${Boost_LIBRARIES})
-target_link_libraries(caese ${LAPACK_LIBRARIES})
-target_link_libraries(caese ${BLAS_LIBRARIES})
-
-target_compile_definitions(caese PRIVATE MAXCOLORS=10000000)
+# add_executable(caese
+#         caese/caese.cpp
+#         ${PROJECT_SUPPORT_FILES} caese/caese.cpp utility/jointhreads.hpp)
+#
+# target_link_libraries(caese ${ARMADILLO_LIBRARIES})
+# target_link_libraries(caese ${CMAKE_THREAD_LIBS_INIT})
+# target_link_libraries(caese ${Boost_LIBRARIES})
+# target_link_libraries(caese ${LAPACK_LIBRARIES})
+# target_link_libraries(caese ${BLAS_LIBRARIES})
+#
+# target_compile_definitions(caese PRIVATE MAXCOLORS=10000000)
 
 add_executable(catch_test
-               catch_test/test.cpp
-               ${PROJECT_SUPPORT_FILES})
-
-target_link_libraries(catch_test ${ARMADILLO_LIBRARIES})
-target_link_libraries(catch_test ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(catch_test ${Boost_LIBRARIES})
-target_link_libraries(catch_test ${LAPACK_LIBRARIES})
-target_link_libraries(catch_test ${BLAS_LIBRARIES})
-
-target_compile_definitions(catch_test PRIVATE MAXCOLORS=10000000)
+        catch_test/test.cpp
+        catch_test/jobdispatcher_test.cpp
+        catch_test/permutation_split_test.cpp)
+target_link_libraries(catch_test PRIVATE caper_core)

@@ -8,7 +8,7 @@
 #include "../data/covariates.hpp"
 
 // Davies method
-double SKAT_pval(double Q, const arma::vec& lambda);
+double SKAT_pval(double Q, const arma::vec &lambda, bool sadd);
 
 // Liu Method
 double Liu_qval_mod(double pval, const arma::vec& lambda);
@@ -22,7 +22,7 @@ int sgn(T x) {
 
 class SKATR_Null {
 public:
-  explicit SKATR_Null(std::shared_ptr<Covariates> cov);
+  explicit SKATR_Null(Covariates cov);
 
   // Handle permutation
   auto shuffle(arma::vec &phenotypes) -> void;

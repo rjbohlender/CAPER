@@ -61,7 +61,7 @@ auto LogisticRegression::gradient_descent(arma::mat &Xmat, arma::colvec &Yvec) -
 
 
     iterations++;
-  } while(iterations < max_iter && arma::any(grad > tol));
+  } while(iterations < max_iter && arma::any(arma::abs(grad) > tol));
   return t;
 }
 

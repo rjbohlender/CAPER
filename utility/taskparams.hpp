@@ -15,13 +15,17 @@
 struct TaskParams {
   // Base command
   std::string base;
+  std::string program_directory;
   // Permutation paramters
   arma::uword success_threshold;
 
   boost::optional<int> seed;
 
   arma::uword nperm;
+  arma::uword max_levels;
   boost::optional<arma::uword> max_perms;
+
+  bool whole_gene = false;
 
   // For external permutations
   bool external;
@@ -31,22 +35,27 @@ struct TaskParams {
   // For SKATO, SKAT, BURDEN
   bool alternate_permutation;
   bool analytic;
-  bool linear;
+  bool qtl;
   bool quantitative;
+  bool saddlepoint;
 
   // Method
   std::string method;
 
   // General options
   std::string program_path;
-  std::string genotypes_path;
+  std::string input_path;
   std::string covariates_path;
   std::string ped_path;
+  std::string whitelist_path;
   arma::uword mac;
   double maf;
   double min_variant_count;
   double min_minor_allele_count;
   bool nocovadj;
+  bool no_weights;
+  bool impute_to_mean;
+  bool aaf_filter;
 
   boost::optional<int> range_start;
   boost::optional<int> range_end;
@@ -58,9 +67,12 @@ struct TaskParams {
 
   double soft_maf_filter;
   double vaast_site_penalty;
-  bool legacy_grouping;
+  bool alternate_grouping;
 
   bool verbose;
+
+  // RVT test options
+  bool wald;
 
   // Output permutations
   boost::optional<std::string> permute_set;
@@ -78,17 +90,18 @@ struct TaskParams {
 
   // VAAST
   arma::uword group_size;
-  bool testable;
+  boost::optional<double> testable;
   bool biallelic;
 
   // CMC
   double cmcmaf;
+  bool hotellings = false;
 
   size_t nthreads;
 
   // Gene list
   boost::optional<std::string> gene_list;
-  bool nodetail;
+  bool no_detail;
 
   // Run power analysis
   bool power;
@@ -101,6 +114,7 @@ struct TaskParams {
   std::string kernel; // Kernel selection
   int a; // Beta weight parameters
   int b; // Beta weight parameters
+  bool var_collapsing;
 };
 
 #endif //PERMUTE_ASSOCIATE_TASKPARAMS_HPP

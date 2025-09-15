@@ -138,7 +138,7 @@ int main(int argc, char **argv) {
 			 ("score_only_alternative",
 			  po::bool_switch(&score_only_alternative),
 			  "Score only alternative alleles in VAAST.")
-			 ("testable",
+			 ("check_testability",
 			  po::bool_switch(&testable),
 			  "Return scores only for genes with at least scoreable variants in VAAST.")
 			 ("biallelic",
@@ -274,7 +274,7 @@ int main(int argc, char **argv) {
   tp.method = vm["method"].as<std::string>();
   // File paths and option status
   tp.program_path = argv[0];
-  tp.genotypes_path = vm["input"].as<std::string>();
+  tp.input_path = vm["input"].as<std::string>();
   tp.covariates_path = vm["covariates"].as<std::string>();
   tp.ped_path = vm["ped"].as<std::string>();
   tp.output_path = vm["output"].as<std::string>();
@@ -291,7 +291,7 @@ int main(int argc, char **argv) {
   // Options
   tp.verbose = verbose;
   tp.gene_list = gene_list;
-  tp.nodetail = nodetail;
+  tp.no_detail = nodetail;
   tp.top_only = top_only;
   tp.mac = vm["mac"].as<arma::uword>();
   tp.pthresh = pthresh;
@@ -300,8 +300,8 @@ int main(int argc, char **argv) {
   tp.adjust = adjust;
   tp.linear = linear;
   // Beta weights
-  tp.a = std::stoi(beta_split[0]);
-  tp.b = std::stoi(beta_split[1]);
+  tp.a = std::stoi(beta_split.str(0));
+  tp.b = std::stoi(beta_split.str(1));
   // Testability
   tp.testable = testable;
   tp.biallelic = biallelic;
@@ -316,9 +316,21 @@ int main(int argc, char **argv) {
 
 	std::vector<double> alpha_tmp;
 
-	std::transform(alpha_splitter.begin(), alpha_splitter.end(), std::back_inserter(alpha_tmp), [](std::string &v) { return std::stod(v); });
-	std::transform(ncase_splitter.begin(), ncase_splitter.end(), std::back_inserter(tp.ncases), [](std::string &v) { return std::stoul(v); });
-	std::transform(ncontrol_splitter.begin(), ncontrol_splitter.end(), std::back_inserter(tp.ncontrols), [](std::string &v) { return std::stoul(v); });
+        std::transform(alpha_splitter.begin(), alpha_splitter.end(),
+                       std::back_inserter(alpha_tmp),
+                       [](auto v) {
+                         return std::stod(RJBUtil::Splitter<std::string>::str(v));
+                       });
+        std::transform(ncase_splitter.begin(), ncase_splitter.end(),
+                       std::back_inserter(tp.ncases),
+                       [](auto v) {
+                         return std::stoul(RJBUtil::Splitter<std::string>::str(v));
+                       });
+        std::transform(ncontrol_splitter.begin(), ncontrol_splitter.end(),
+                       std::back_inserter(tp.ncontrols),
+                       [](auto v) {
+                         return std::stoul(RJBUtil::Splitter<std::string>::str(v));
+                       });
 
 	tp.alpha = arma::conv_to<arma::vec>::from(alpha_tmp);
 
@@ -354,7 +366,7 @@ int main(int argc, char **argv) {
   }
 
   if (tp.verbose) {
-	std::cerr << "genotypes: " << tp.genotypes_path << "\n";
+	std::cerr << "genotypes: " << tp.input_path << "\n";
 	std::cerr << "covariates: " << tp.covariates_path << "\n";
 	if(tp.bed)
 	  std::cerr << "bed_file: " << *tp.bed << "\n";
@@ -371,7 +383,7 @@ int main(int argc, char **argv) {
   }
 
   // Check for correct file paths
-  if (!check_file_exists(tp.genotypes_path)) {
+  if (!check_file_exists(tp.input_path)) {
 	std::cerr << "Incorrect file path for genotypes." << std::endl;
 	std::cerr << visible << "\n";
 	std::exit(1);

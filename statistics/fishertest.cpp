@@ -9,7 +9,7 @@
 FisherTest::FisherTest(Gene &gene, arma::vec &Y, const std::string &ts)
 	: or_(1), p_(1) {
   // Build 2x2 table
-  arma::sp_mat X = gene.get_matrix(ts);
+  arma::sp_mat X = gene.genotypes[ts];
   arma::vec collapse(arma::sum(X, 1));
   collapse(arma::find(collapse > 0)).ones();
 
@@ -135,7 +135,7 @@ FisherTest::FisherTest(Gene &gene, arma::vec &Y, const std::string &ts)
   };
 
   or_ = mle(x);
-  std::cerr << "case_alt: " << case_alt << " cont_alt: " << cont_alt << " case_ref: " << case_ref << " cont_ref: " << cont_ref <<  " OR: " << or_ << std::endl;
+  // std::cerr << "case_alt: " << case_alt << " cont_alt: " << cont_alt << " case_ref: " << case_ref << " cont_ref: " << cont_ref <<  " OR: " << or_ << std::endl;
 }
 
 auto FisherTest::get_or() -> double {

@@ -1,22 +1,21 @@
 FROM debian:bullseye AS builder
+# FROM alpine AS builder
 
 ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-get -y update && apt-get install -y --no-install-recommends apt-utils
+# RUN apk update
 
 RUN apt-get install -y --no-install-recommends \
-      ca-certificates \
-      file \
-      sudo \
-      unzip \
-      wget
+     ca-certificates \
+     file \
+     sudo \
+     unzip \
+     wget
+RUN apt-get install -y --no-install-recommends build-essential cmake libboost-all-dev libarmadillo-dev
+# RUN apk add make g++ cmake
 
-RUN apt-get install -y --no-install-recommends \
-      build-essential \
-      cmake \
-      lcov
-
-RUN apt-get install -y --no-install-recommends libboost-program-options-dev libboost-iostreams-dev libarmadillo-dev cmake
+# RUN apk add boost-dev armadillo-dev blas-dev lapack-dev
 
 COPY . /src/
 
@@ -24,8 +23,7 @@ WORKDIR /src/build
 
 RUN cmake -DCMAKE_BUILD_TYPE=Release ../.
 
-RUN make carva
-RUN make vcf2matrix
+RUN cmake --build . --target caper
 
 FROM debian:bullseye
 
@@ -33,8 +31,10 @@ ENV DEBIAN_FRONTEND noninteractive
 
 WORKDIR /
 
-COPY --from=builder /src/build/carva /bin
+COPY --from=builder /src/build/caper /bin
+RUN mkdir -p /filter
+COPY --from=builder /src/filter/filter_whitelist.csv /filter/filter_whitelist.csv
 
-RUN apt-get -y update && apt-get install -y --no-install-recommends apt-utils
+RUN apt-get update
 
-RUN apt-get install -y --no-install-recommends libboost-program-options-dev libboost-iostreams-dev libarmadillo-dev
+RUN apt-get install -y --no-install-recommends libboost-program-options1.74.0 libboost-iostreams1.74.0 libarmadillo10

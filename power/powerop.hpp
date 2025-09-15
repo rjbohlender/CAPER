@@ -21,9 +21,11 @@ public:
   auto finish() -> void;
   auto is_done() const -> bool;
   auto get_task() -> PowerTask;
+
+  bool done_;
+  PowerTask carvaTask;
 private:
   // Paramters
-  PowerTask pt_;
   std::shared_ptr<PowerReporter> reporter_;
 
   auto power() -> void;
@@ -43,7 +45,6 @@ private:
   arma::uvec case_idx_;
   arma::uvec control_idx_;
 
-  bool done_;
 
   // Result storage
   std::map<std::string, std::vector<arma::vec>> success_map_;
