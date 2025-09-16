@@ -494,7 +494,7 @@ private:
         Task_t ta(stage_, gene, cov_, tp_, tp_.success_threshold, tp_.nperm, 0,
                   tp_.nperm, *permutation_ptr_);
         tq_.wait_for_space(tp_.nthreads - 1);
-        tq_.dispatch(ta);
+        tq_.dispatch(std::move(ta));
         ngenes_++;
         return;
       }
@@ -512,7 +512,7 @@ private:
                     *permutation_ptr_);
 
           tq_.wait_for_space(tq_.get_nthreads());
-          tq_.dispatch(ta);
+          tq_.dispatch(std::move(ta));
         } else {
           Task_t ta(stage_,
                     gene,
@@ -529,7 +529,7 @@ private:
           total_success += succ_step;
 
           tq_.wait_for_space(tq_.get_nthreads());
-          tq_.dispatch(ta);
+          tq_.dispatch(std::move(ta));
         }
       }
       ngenes_++;
