@@ -304,7 +304,7 @@ public:
     tq_.join();
 
     // TODO: Free permutation memory
-    if (permutation_ptr_.use_count() == 1) {
+    if (!tp_.external && permutation_ptr_.use_count() == 1) {
       permutation_ptr_.reset();
     }
 
