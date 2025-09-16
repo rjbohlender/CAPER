@@ -421,7 +421,6 @@ private:
         fv.validate_matrix_line(split, lineno);
         add_line(current, line, split);
       } else {
-        ntranscripts_ = nvariants_.size();
         // Have we read a gene yet?
         if (!gene_.empty()) {
           if (std::any_of(nvariants_.cbegin(), nvariants_.cend(),
@@ -600,7 +599,6 @@ private:
   std::unordered_map<std::string, arma::uword> nvariants_;
 
   // Counters
-  arma::uword ntranscripts_ = 0;
   arma::uword ngenes_ = 0;
   size_t external_pos = 0;
 
