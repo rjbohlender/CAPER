@@ -212,7 +212,7 @@ private:
 
         if (tp_.gene_list) {
           lock.lock();
-          results_.emplace_back(op.carvaTask);
+          results_.emplace_back(op.caperTask);
           lock.unlock();
         }
       }

@@ -21,7 +21,7 @@ public:
 
   bool done_;
   bool verbose_;
-  CAPERTask carvaTask;
+  CAPERTask caperTask;
 
 private:
   auto op() -> void;
