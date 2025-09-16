@@ -113,6 +113,65 @@ TEST_CASE("JobDispatcher dispatches tasks for each gene") {
     REQUIRE(reporter->genes[1] == "Gene2");
 }
 
+TEST_CASE("gene_list_dispatcher only dispatches listed genes") {
+    namespace fs = std::filesystem;
+    auto tmp = fs::temp_directory_path();
+
+    auto ped_path = tmp / "jd_ped.ped";
+    std::ofstream ped(ped_path);
+    ped << "#FID\tIID\tFather\tMother\tSex\tPhenotype\n";
+    ped << "control1\tcontrol1\t0\t0\t0\t1\n";
+    ped << "control2\tcontrol2\t0\t0\t0\t1\n";
+    ped << "case1\tcase1\t0\t0\t0\t2\n";
+    ped << "case2\tcase2\t0\t0\t0\t2\n";
+    ped.close();
+
+    auto input_path = tmp / "jd_input.tsv";
+    std::ofstream input(input_path);
+    input << "Chr\tStart\tEnd\tRef\tAlt\tType\tGenes\tTranscripts\tRegion\tFunction\tAnnotation(c.change:p.change)\tcase1\tcase2\tcontrol1\tcontrol2\n";
+    input.close();
+
+    TaskParams tp{};
+    tp.covariates_path.clear();
+    tp.ped_path = ped_path.string();
+    tp.input_path = input_path.string();
+    tp.whitelist_path = (fs::path(__FILE__).parent_path().parent_path() / "filter" / "filter_whitelist.csv").string();
+    tp.nthreads = 2;
+    tp.nperm = 0;
+    tp.max_perms = 0; // prevent constructor from auto-dispatching
+    tp.mac = std::numeric_limits<arma::uword>::max();
+    tp.maf = 1.0;
+    tp.min_variant_count = 0;
+    tp.min_minor_allele_count = 0;
+    tp.no_weights = true;
+    tp.nocovadj = true;
+    tp.optimizer = "irls";
+    tp.method = "BURDEN";
+    tp.gene_list = std::string("Gene2");
+
+    auto reporter = std::make_shared<DummyReporter>();
+    JobDispatcher<DummyOp, DummyTask, DummyReporter> jd(tp, reporter);
+
+    // JobDispatcher frees its covariates after construction; reinitialize for manual dispatch
+    jd.cov_ = std::make_shared<Covariates>(tp);
+    jd.cov_->sort_covariates(jd.header_);
+
+    std::stringstream ss;
+    ss << "chr1\t1\t1\tA\tG\tSNV\tGene1\tTranscript1\tcoding\tnonsynonymous SNV\t.\t0101\n";
+    ss << "chr1\t2\t2\tT\tC\tSNV\tGene2\tTranscript2\tcoding\tnonsynonymous SNV\t.\t0101\n";
+    ss << "chr1\t3\t3\tG\tA\tSNV\tGene3\tTranscript3\tcoding\tnonsynonymous SNV\t.\t0101\n";
+
+    Filter filter(tp.whitelist_path);
+    jd.gene_list_dispatcher(ss, filter);
+
+    REQUIRE(jd.tq_.size() == 1);
+    REQUIRE(jd.ngenes_ == 1);
+    REQUIRE(jd.gene_list_.empty());
+    REQUIRE(reporter->tasks.size() == 1);
+    REQUIRE(reporter->genes.size() == 1);
+    REQUIRE(reporter->genes[0] == "Gene2");
+}
+
 TEST_CASE("JobDispatcher throws when genes are not sorted") {
     namespace fs = std::filesystem;
     auto tmp = fs::temp_directory_path();
