@@ -23,7 +23,7 @@ public:
   auto get_task() -> PowerTask;
 
   bool done_;
-  PowerTask carvaTask;
+  PowerTask caperTask;
 private:
   // Paramters
   std::shared_ptr<PowerReporter> reporter_;

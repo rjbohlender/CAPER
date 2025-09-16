@@ -41,18 +41,18 @@ public:
 class DummyOp {
 public:
     bool done_;
-    DummyTask carvaTask;
+    DummyTask caperTask;
     std::shared_ptr<DummyReporter> reporter_;
 
     DummyOp(DummyTask &t, std::shared_ptr<DummyReporter> reporter, double, bool)
-        : done_(true), carvaTask(t), reporter_(std::move(reporter)) {
-        reporter_->genes.push_back(carvaTask.gene);
-        reporter_->tasks.push_back(carvaTask);
+        : done_(true), caperTask(t), reporter_(std::move(reporter)) {
+        reporter_->genes.push_back(caperTask.gene);
+        reporter_->tasks.push_back(caperTask);
     }
     DummyOp(DummyTask &&t, std::shared_ptr<DummyReporter> reporter, double, bool)
-        : done_(true), carvaTask(std::move(t)), reporter_(std::move(reporter)) {
-        reporter_->genes.push_back(carvaTask.gene);
-        reporter_->tasks.push_back(carvaTask);
+        : done_(true), caperTask(std::move(t)), reporter_(std::move(reporter)) {
+        reporter_->genes.push_back(caperTask.gene);
+        reporter_->tasks.push_back(caperTask);
     }
     void run() {}
     void finish() {}

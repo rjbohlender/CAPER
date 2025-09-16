@@ -7,21 +7,21 @@
 
 CAPEROp::CAPEROp(CAPERTask &ct, std::shared_ptr<Reporter> reporter, double seed,
                  bool verbose)
-    : done_(false), verbose_(verbose), carvaTask(ct),
+    : done_(false), verbose_(verbose), caperTask(ct),
       reporter_(std::move(reporter)) {}
 
 CAPEROp::CAPEROp(CAPERTask &&ct, std::shared_ptr<Reporter> reporter,
                  double seed, bool verbose)
-    : done_(false), verbose_(verbose), carvaTask(std::move(ct)),
+    : done_(false), verbose_(verbose), caperTask(std::move(ct)),
       reporter_(std::move(reporter)) {}
 
 auto CAPEROp::run() -> void {
-  Stage stage = carvaTask.stage;
+  Stage stage = caperTask.stage;
 
   if (stage == Stage::Stage1) {
     op();
   } else if (stage == Stage::Done) {
-    carvaTask.methods.clear(carvaTask.gene.get_transcripts());
+    caperTask.methods.clear(caperTask.gene.get_transcripts());
     this->done_ = true;
     return;
   } else {
@@ -30,25 +30,25 @@ auto CAPEROp::run() -> void {
 }
 
 auto CAPEROp::finish() -> void {
-  carvaTask.calc_multitranscript_pvalues();
+  caperTask.calc_multitranscript_pvalues();
   // Finalize result calculations and free memory
-  carvaTask.cleanup();
+  caperTask.cleanup();
 
   // Report results for non-gene_list run
-  if (!carvaTask.tp.gene_list) {
-    reporter_->sync_write_simple(carvaTask.results, carvaTask.tp);
-    reporter_->sync_write_detail(carvaTask.gene.get_detail(),
-                                 carvaTask.gene.testable);
-    reporter_->sync_write_vaast(carvaTask, carvaTask.tp);
+  if (!caperTask.tp.gene_list) {
+    reporter_->sync_write_simple(caperTask.results, caperTask.tp);
+    reporter_->sync_write_detail(caperTask.gene.get_detail(),
+                                 caperTask.gene.testable);
+    reporter_->sync_write_vaast(caperTask, caperTask.tp);
   }
 }
 
 auto CAPEROp::op() -> void {
-  auto &gene = carvaTask.gene;
-  auto &cov = carvaTask.get_cov();
+  auto &gene = caperTask.gene;
+  auto &cov = caperTask.get_cov();
 
   // Set original value
-  for (auto &[transcript, res] : carvaTask.results) {
+  for (auto &[transcript, res] : caperTask.results) {
     if (!gene.is_polymorphic(transcript)) {
       res.done = true;
       continue;
@@ -62,17 +62,17 @@ auto CAPEROp::op() -> void {
                                 (1. - cov.get_original_phenotypes()));
       res.cont_ref =
           2 * arma::accu(1. - cov.get_original_phenotypes()) - res.case_alt;
-      res.original = carvaTask.methods.call(
+      res.original = caperTask.methods.call(
           gene, cov, cov.get_original_phenotypes(), transcript, true);
       res.is_set = true;
     }
   }
 
   int iter = 0;
-  while (iter < carvaTask.npermutations) {
+  while (iter < caperTask.npermutations) {
     int transcript_no = -1;
 
-    for (auto &[transcript, res] : carvaTask.results) {
+    for (auto &[transcript, res] : caperTask.results) {
       transcript_no++;
 
       // Skip transcripts with no variants
@@ -81,38 +81,38 @@ auto CAPEROp::op() -> void {
       }
 
       arma::vec phenotypes = arma::conv_to<arma::vec>::from(
-          carvaTask.get_permutations()[carvaTask.offset + iter]);
+          caperTask.get_permutations()[caperTask.offset + iter]);
 #ifndef NDEBUG
       if (arma::accu(phenotypes) != arma::accu(cov.get_original_phenotypes())) {
         std::cerr
             << "vec count: "
             << std::accumulate(
-                   carvaTask.get_permutations()[carvaTask.offset + iter]
+                   caperTask.get_permutations()[caperTask.offset + iter]
                        .begin(),
-                   carvaTask.get_permutations()[carvaTask.offset + iter].end(),
+                   caperTask.get_permutations()[caperTask.offset + iter].end(),
                    0)
             << std::endl;
         std::cerr << "Permuted count: " << arma::accu(phenotypes) << std::endl;
         std::cerr << "Original count: "
-                  << arma::accu(carvaTask.cov->get_original_phenotypes())
+                  << arma::accu(caperTask.cov->get_original_phenotypes())
                   << std::endl;
         throw(std::runtime_error("Failed to properly generate permutation."));
       }
 #endif
 
       double perm_val =
-          carvaTask.methods.call(gene, cov, phenotypes, transcript, false);
+          caperTask.methods.call(gene, cov, phenotypes, transcript, false);
 
       res.permuted.push_back(perm_val);
 
       // Update total number of permutations
       res.permutations++;
 
-      check_perm(carvaTask, carvaTask.tp, perm_val, carvaTask.success_threshold,
-                 res, carvaTask.termination);
+      check_perm(caperTask, caperTask.tp, perm_val, caperTask.success_threshold,
+                 res, caperTask.termination);
     }
     // Stop iterating if everything is done
-    if (std::all_of(carvaTask.results.cbegin(), carvaTask.results.cend(),
+    if (std::all_of(caperTask.results.cbegin(), caperTask.results.cend(),
                     [](const auto &v) { return v.second.done; })) {
       break;
     }
@@ -120,23 +120,23 @@ auto CAPEROp::op() -> void {
   }
 
   int ts_no = 0;
-  for (auto &[transcript, res] : carvaTask.results) {
+  for (auto &[transcript, res] : caperTask.results) {
     // For runs with 0 nperm
-    check_done(carvaTask.tp, carvaTask.success_threshold, res,
-               carvaTask.termination);
+    check_done(caperTask.tp, caperTask.success_threshold, res,
+               caperTask.termination);
     double empirical;
     double midp;
     // If we stopped early, use the geometric correction, otherwise calculate
     // for binomial p-hat
-    if (carvaTask.tp.max_perms) { // We're looping multiple times
-      if (res.permutations < *carvaTask.tp.max_perms) {
+    if (caperTask.tp.max_perms) { // We're looping multiple times
+      if (res.permutations < *caperTask.tp.max_perms) {
         empirical = geometric_p(res.successes, res.permutations);
       } else {
         empirical = (1. + res.successes) / (1. + res.permutations);
       }
       midp = (0.5 + res.mid_successes) / (1. + res.permutations);
     } else { // We're looping a single time
-      if (res.permutations < carvaTask.tp.nperm) {
+      if (res.permutations < caperTask.tp.nperm) {
         empirical = geometric_p(res.successes, res.permutations);
       } else {
         empirical = (1. + res.successes) / (1. + res.permutations);
@@ -173,15 +173,15 @@ auto CAPEROp::op() -> void {
   // True only when all are finished, or we've exhausted permutations
   if (done_) {
     if (verbose_) {
-      for (const auto &[ts, result] : carvaTask.results) {
+      for (const auto &[ts, result] : caperTask.results) {
         std::cerr << gene.gene_name << "\t" << ts << "\t";
         std::cerr << std::defaultfloat << std::setprecision(6)
                   << result.original << std::endl;
       }
     }
-    carvaTask.stage = Stage::Done;
+    caperTask.stage = Stage::Done;
   } else {
-    carvaTask.stage = Stage::Stage1;
+    caperTask.stage = Stage::Stage1;
   }
 }
 
