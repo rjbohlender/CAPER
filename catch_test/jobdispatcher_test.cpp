@@ -113,6 +113,59 @@ TEST_CASE("JobDispatcher dispatches tasks for each gene") {
     REQUIRE(reporter->genes[1] == "Gene2");
 }
 
+TEST_CASE("JobDispatcher loads external permutations from file") {
+    namespace fs = std::filesystem;
+    auto tmp = fs::temp_directory_path();
+
+    auto ped_path = tmp / "jd_ped.ped";
+    std::ofstream ped(ped_path);
+    ped << "#FID\tIID\tFather\tMother\tSex\tPhenotype\n";
+    ped << "control1\tcontrol1\t0\t0\t0\t1\n";
+    ped << "control2\tcontrol2\t0\t0\t0\t1\n";
+    ped << "case1\tcase1\t0\t0\t0\t2\n";
+    ped << "case2\tcase2\t0\t0\t0\t2\n";
+    ped.close();
+
+    auto input_path = tmp / "jd_input.tsv";
+    std::ofstream input(input_path);
+    input << "Chr\tStart\tEnd\tRef\tAlt\tType\tGenes\tTranscripts\tRegion\tFunction\tAnnotation(c.change:p.change)\tcase1\tcase2\tcontrol1\tcontrol2\n";
+    input.close();
+
+    auto external_path = tmp / "jd_external_perms.txt";
+    std::ofstream external(external_path);
+    external << "0101\n";
+    external << "1010\n";
+    external.close();
+
+    TaskParams tp{};
+    tp.covariates_path.clear();
+    tp.ped_path = ped_path.string();
+    tp.input_path = input_path.string();
+    tp.whitelist_path = (fs::path(__FILE__).parent_path().parent_path() / "filter" / "filter_whitelist.csv").string();
+    tp.nthreads = 2;
+    tp.nperm = 0;
+    tp.max_perms.reset();
+    tp.mac = std::numeric_limits<arma::uword>::max();
+    tp.maf = 1.0;
+    tp.min_variant_count = 0;
+    tp.min_minor_allele_count = 0;
+    tp.no_weights = true;
+    tp.nocovadj = true;
+    tp.optimizer = "irls";
+    tp.method = "BURDEN";
+    tp.external = true;
+    tp.external_path = external_path.string();
+
+    auto reporter = std::make_shared<DummyReporter>();
+    JobDispatcher<DummyOp, DummyTask, DummyReporter> jd(tp, reporter);
+
+    REQUIRE(jd.permutation_ptr_ != nullptr);
+    REQUIRE(jd.permutation_ptr_->size() == 2);
+    REQUIRE(jd.permutation_ptr_->at(0) == std::vector<int8_t>{0, 1, 0, 1});
+    REQUIRE(jd.permutation_ptr_->at(1) == std::vector<int8_t>{1, 0, 1, 0});
+    REQUIRE(jd.tp_.nperm == 2);
+}
+
 TEST_CASE("gene_list_dispatcher only dispatches listed genes") {
     namespace fs = std::filesystem;
     auto tmp = fs::temp_directory_path();
