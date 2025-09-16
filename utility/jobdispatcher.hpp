@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "../caper/caperop.hpp"
 #include "../caper/capertask.hpp"
@@ -42,7 +43,10 @@ public:
     }
     // Initialize bed and weights
     if (tp_.gene_list) {
-      gene_list_ = RJBUtil::Splitter<std::string>(*tp_.gene_list, ",");
+      RJBUtil::Splitter<std::string> gene_split(*tp_.gene_list, ",");
+      for (const auto &gene_token : gene_split) {
+        gene_list_.emplace(RJBUtil::Splitter<std::string>::str(gene_token));
+      }
     }
     if (tp_.bed) {
       bed_ = Bed(*tp_.bed);
@@ -398,11 +402,6 @@ private:
     ngenes_++;
   }
 
-  // Gene list
-  auto find_gene(const std::string &gene) {
-    return std::find(gene_list_.cbegin(), gene_list_.cend(), gene);
-  }
-
   void gene_list_dispatcher(std::istream &gt_stream, Filter &filter) {
     std::string line;
     std::stringstream current;
@@ -433,12 +432,11 @@ private:
               multiple_dispatch(gene_data);
 
             auto gene_name = split.str(static_cast<int>(Indices::gene));
-            auto fit = find_gene(gene_name);
-            if (fit != gene_list_.cend()) {
+            if (gene_list_.contains(gene_name)) {
               // Next gene is in list
               split = RJBUtil::Splitter<std::string>(line, "\t");
               fv.validate_matrix_line(split, lineno);
-              gene_list_.erase(fit);
+              gene_list_.erase(gene_name);
               new_gene(current, line, split);
             } else {
               // Check if we're done
@@ -452,12 +450,10 @@ private:
         } else {
           // Skip until we find the first gene in our list.
           auto gene_name = split.str(static_cast<int>(Indices::gene));
-          auto fit = find_gene(gene_name);
-          if (fit == gene_list_.cend()) {
+          if (!gene_list_.contains(gene_name)) {
             continue;
-          } else {
-            gene_list_.erase(fit);
           }
+          gene_list_.erase(gene_name);
           split = RJBUtil::Splitter<std::string>(line, "\t");
           fv.validate_matrix_line(split, lineno);
           // Setup initial gene
@@ -600,7 +596,7 @@ private:
 
   // Member variables
   TaskParams tp_;
-  RJBUtil::Splitter<std::string> gene_list_;
+  std::unordered_set<std::string> gene_list_;
   TaskQueue<Operation_t, Task_t, Reporter_t> tq_;
   boost::iostreams::filtering_istream gt_ifs_;
   Bed bed_;
