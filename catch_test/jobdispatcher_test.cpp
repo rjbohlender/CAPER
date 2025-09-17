@@ -6,6 +6,8 @@
 #include <sstream>
 #include <vector>
 #include <algorithm>
+#include <atomic>
+#include <mutex>
 
 #define private public
 #include "../utility/jobdispatcher.hpp"
@@ -19,10 +21,12 @@ public:
     arma::uword success;
     arma::uword perm_count;
     int perm_offset;
-    DummyTask(Stage, Gene &g, std::shared_ptr<Covariates>, TaskParams &, std::vector<std::vector<int8_t>> &)
-        : gene(g.gene_name), success(0), perm_count(0), perm_offset(0) {}
-    DummyTask(Stage, Gene &g, std::shared_ptr<Covariates>, TaskParams &, arma::uword s, arma::uword pc, int off, arma::uword, std::vector<std::vector<int8_t>> &)
-        : gene(g.gene_name), success(s), perm_count(pc), perm_offset(off) {}
+    std::vector<std::vector<int8_t>> *permutations;
+    TaskParams *params;
+    DummyTask(Stage, Gene &g, std::shared_ptr<Covariates>, TaskParams &tp, std::vector<std::vector<int8_t>> &perms)
+        : gene(g.gene_name), success(0), perm_count(0), perm_offset(0), permutations(&perms), params(&tp) {}
+    DummyTask(Stage, Gene &g, std::shared_ptr<Covariates>, TaskParams &tp, arma::uword s, arma::uword pc, int off, arma::uword, std::vector<std::vector<int8_t>> &perms)
+        : gene(g.gene_name), success(s), perm_count(pc), perm_offset(off), permutations(&perms), params(&tp) {}
 };
 
 class DummyReporter {
@@ -56,6 +60,56 @@ public:
     }
     void run() {}
     void finish() {}
+};
+
+class RedispatchRecordingOp {
+public:
+    inline static std::atomic<int> run_calls{0};
+    inline static std::atomic<int> finish_calls{0};
+    inline static std::atomic<int> total_permutations{0};
+    inline static std::mutex batches_mutex;
+    inline static std::vector<int> batch_sizes;
+
+    static void reset() {
+        run_calls = 0;
+        finish_calls = 0;
+        total_permutations = 0;
+        std::lock_guard<std::mutex> lock(batches_mutex);
+        batch_sizes.clear();
+    }
+
+    static std::vector<int> batches() {
+        std::lock_guard<std::mutex> lock(batches_mutex);
+        return batch_sizes;
+    }
+
+    bool done_;
+    DummyTask caperTask;
+    std::shared_ptr<DummyReporter> reporter_;
+
+    RedispatchRecordingOp(DummyTask &t, std::shared_ptr<DummyReporter> reporter, double, bool)
+        : done_(false), caperTask(t), reporter_(std::move(reporter)) {}
+    RedispatchRecordingOp(DummyTask &&t, std::shared_ptr<DummyReporter> reporter, double, bool)
+        : done_(false), caperTask(std::move(t)), reporter_(std::move(reporter)) {}
+
+    void run() {
+        auto perms = caperTask.permutations ? static_cast<int>(caperTask.permutations->size()) : 0;
+        auto previous = total_permutations.fetch_add(perms);
+        run_calls.fetch_add(1);
+        {
+            std::lock_guard<std::mutex> lock(batches_mutex);
+            batch_sizes.push_back(perms);
+        }
+        if (caperTask.params && caperTask.params->max_perms) {
+            if (previous + perms >= static_cast<int>(*caperTask.params->max_perms)) {
+                done_ = true;
+            }
+        }
+    }
+
+    void finish() {
+        finish_calls.fetch_add(1);
+    }
 };
 
 TEST_CASE("JobDispatcher dispatches tasks for each gene") {
@@ -472,5 +526,72 @@ TEST_CASE("multiple_dispatch splits permutation ranges without overlap") {
     }
     REQUIRE(total_perm == tp.nperm);
     REQUIRE(total_success == tp.success_threshold);
+}
+
+TEST_CASE("JobDispatcher redispatches until max_perms reached") {
+    namespace fs = std::filesystem;
+    auto tmp = fs::temp_directory_path();
+
+    auto ped_path = tmp / "jd_ped_redispatch.ped";
+    std::ofstream ped(ped_path);
+    ped << "#FID\tIID\tFather\tMother\tSex\tPhenotype\n";
+    ped << "control1\tcontrol1\t0\t0\t0\t1\n";
+    ped << "control2\tcontrol2\t0\t0\t0\t1\n";
+    ped << "case1\tcase1\t0\t0\t0\t2\n";
+    ped << "case2\tcase2\t0\t0\t0\t2\n";
+    ped.close();
+
+    auto input_path = tmp / "jd_input_redispatch.tsv";
+    std::ofstream input(input_path);
+    input << "Chr\tStart\tEnd\tRef\tAlt\tType\tGenes\tTranscripts\tRegion\tFunction\tAnnotation(c.change:p.change)\tcase1\tcase2\tcontrol1\tcontrol2\n";
+    input << "chr1\t1\t1\tA\tG\tSNV\tGeneLoop\tTranscript1\tcoding\tnonsynonymous SNV\t.\t0101\n";
+    input.close();
+
+    TaskParams tp{};
+    tp.success_threshold = 0;
+    tp.covariates_path.clear();
+    tp.ped_path = ped_path.string();
+    tp.input_path = input_path.string();
+    tp.whitelist_path = (fs::path(__FILE__).parent_path().parent_path() / "filter" / "filter_whitelist.csv").string();
+    tp.nthreads = 2;
+    tp.nperm = 2;
+    tp.max_perms = 5;
+    tp.mac = std::numeric_limits<arma::uword>::max();
+    tp.maf = 1.0;
+    tp.min_variant_count = 0;
+    tp.min_minor_allele_count = 0;
+    tp.no_weights = true;
+    tp.nocovadj = true;
+    tp.optimizer = "irls";
+    tp.method = "BURDEN";
+    tp.permute_set = (tmp / "jd_permute_set.txt").string();
+
+    RedispatchRecordingOp::reset();
+
+    auto reporter = std::make_shared<DummyReporter>();
+    JobDispatcher<RedispatchRecordingOp, DummyTask, DummyReporter> jd(tp, reporter);
+
+    REQUIRE(jd.tq_.continue_.size() == 0);
+
+    auto run_calls = RedispatchRecordingOp::run_calls.load();
+    auto finish_calls = RedispatchRecordingOp::finish_calls.load();
+    auto total_perms = RedispatchRecordingOp::total_permutations.load();
+    auto batches = RedispatchRecordingOp::batches();
+
+    REQUIRE(run_calls == 3);
+    REQUIRE(finish_calls == 1);
+    REQUIRE(total_perms == static_cast<int>(*tp.max_perms));
+    REQUIRE(batches == std::vector<int>{2, 2, 1});
+
+    std::ifstream permute_set(*tp.permute_set);
+    REQUIRE(permute_set.good());
+    int line_count = 0;
+    std::string line;
+    while (std::getline(permute_set, line)) {
+        if (!line.empty()) {
+            ++line_count;
+        }
+    }
+    REQUIRE(line_count == static_cast<int>(*tp.max_perms));
 }
 
