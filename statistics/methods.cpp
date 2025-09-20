@@ -611,15 +611,18 @@ double Methods::VT(Gene &gene, arma::vec &phenotypes, const std::string &ts) {
 }
 
 double Methods::WSS(Gene &gene, arma::vec &Y, const std::string &k) {
-  arma::mat X(gene.genotypes[k]);
+  const arma::sp_mat &X = gene.genotypes.at(k);
 
   double n = Y.n_rows;
 
-  arma::vec count = arma::sum(X, 0).t();         // Total count for each variant
+  arma::vec count(X.n_cols, arma::fill::zeros);
+  for (arma::sp_mat::const_iterator it = X.begin(); it != X.end(); ++it) {
+    count[it.col()] += *it;
+  }
   arma::vec freq = (1. + count) / (2. + 2. * n); // Frequency with a prior
   arma::vec weight =
       1. / arma::sqrt(freq % (1. - freq)); // Reciprocal of Binomial SD
-  arma::vec count_weight = arma::vec(X * weight);
+  arma::vec count_weight = X * weight;
 
   return arma::accu(count_weight % Y);
 }
