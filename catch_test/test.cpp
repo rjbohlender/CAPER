@@ -7,9 +7,14 @@
 
 #include <armadillo>
 #include <catch2/catch.hpp>
+#include <cmath>
+#include <limits>
 #include <map>
 #include <sstream>
 #include <string>
+
+#include <boost/math/distributions/chi_squared.hpp>
+#include <boost/math/distributions/fisher_f.hpp>
 
 #include "../data/bed.hpp"
 #include "../data/covariates.hpp"
@@ -18,6 +23,157 @@
 #include "../statistics/glm.hpp"
 #include "../statistics/methods.hpp"
 #include "../utility/math.hpp"
+
+namespace {
+double cmc_dense_reference(const arma::mat &X, const arma::vec &Y,
+                           double rare_freq, bool hotellings,
+                           arma::uword nperm) {
+  if (hotellings) {
+    const double N = static_cast<double>(Y.n_rows);
+    const double nA = arma::accu(Y);
+    const double nU = N - nA;
+
+    arma::rowvec maf = arma::sum(X, 0) / (2.0 * N);
+    const arma::uvec rare = arma::find(maf < rare_freq);
+    const arma::uvec common = arma::find(maf >= rare_freq);
+
+    arma::mat Xnew;
+    if (rare.n_elem <= 1) {
+      Xnew = X;
+    } else {
+      arma::mat collapse = arma::sum(X.cols(rare), 1);
+      collapse.transform([](double value) { return value > 1.0 ? 1.0 : value; });
+
+      if (common.n_elem > 0) {
+        Xnew = arma::join_horiz(X.cols(common), collapse);
+      } else {
+        Xnew = collapse;
+      }
+    }
+
+    Xnew -= 1.0;
+
+    arma::mat cases = Xnew.rows(arma::find(Y == 1));
+    arma::mat controls = Xnew.rows(arma::find(Y == 0));
+
+    arma::rowvec case_mean = arma::mean(cases);
+    arma::rowvec control_mean = arma::mean(controls);
+
+    arma::mat cov =
+        ((nA - 1.0) * arma::cov(cases) + (nU - 1.0) * arma::cov(controls)) /
+        (N - 2.0);
+    arma::mat inv;
+    if (!arma::inv_sympd(inv, cov)) {
+      arma::pinv(inv, cov);
+    }
+
+    const double ret = arma::as_scalar((case_mean - control_mean) * inv *
+                                       (case_mean - control_mean).t() * nA *
+                                       nU / N);
+    const double p = static_cast<double>(case_mean.n_elem);
+    double stat = ret * (nA + nU - 1.0 - p) / (p * (nA + nU - 2.0));
+    if (stat < 0.0) {
+      stat = 0.0;
+    }
+
+    if (nperm > 0) {
+      return stat;
+    }
+
+    boost::math::fisher_f fisher_f(p, nA + nU - 1.0 - p);
+    if (std::isnan(stat)) {
+      return 1.0;
+    }
+
+    return boost::math::cdf(boost::math::complement(fisher_f, stat));
+  }
+
+  arma::rowvec freq = arma::sum(X, 0) /
+                      (2.0 * static_cast<double>(X.n_rows));
+  const arma::uvec rare = arma::find(freq < rare_freq);
+  const arma::uvec common = arma::find(freq >= rare_freq);
+
+  arma::mat Xnew;
+  if (rare.n_elem > 0) {
+    arma::mat collapse = arma::sum(X.cols(rare), 1);
+    if (common.n_elem > 0) {
+      Xnew = arma::join_horiz(X.cols(common), collapse);
+    } else {
+      Xnew = collapse;
+    }
+  } else {
+    Xnew = X;
+  }
+
+  if (Xnew.n_cols == 1) {
+    arma::vec collapsed = arma::sum(Xnew, 1);
+    collapsed.transform(
+        [](double value) { return value > 0.0 ? 1.0 : 0.0; });
+
+    const double total_alt = arma::accu(collapsed);
+    const double freq_mutated =
+        total_alt / static_cast<double>(collapsed.n_elem);
+
+    const double ncase = arma::accu(Y);
+    const double ncont = static_cast<double>(Y.n_elem) - ncase;
+
+    const double case_alt = arma::dot(collapsed, Y);
+    const double cont_alt = total_alt - case_alt;
+    const double case_ref = ncase - case_alt;
+    const double cont_ref = ncont - cont_alt;
+
+    const double case_alt_exp = ncase * freq_mutated;
+    const double case_ref_exp = ncase * (1.0 - freq_mutated);
+    const double cont_alt_exp = ncont * freq_mutated;
+    const double cont_ref_exp = ncont * (1.0 - freq_mutated);
+
+    double stat = std::pow(case_alt - case_alt_exp, 2) / case_alt_exp +
+                  std::pow(case_ref - case_ref_exp, 2) / case_ref_exp +
+                  std::pow(cont_alt - cont_alt_exp, 2) / cont_alt_exp +
+                  std::pow(cont_ref - cont_ref_exp, 2) / cont_ref_exp;
+
+    if (nperm == 0) {
+      boost::math::chi_squared chisq(1);
+      if (stat < 0.0) {
+        stat = std::numeric_limits<double>::epsilon();
+      }
+      return boost::math::cdf(boost::math::complement(chisq, stat));
+    }
+
+    return stat;
+  }
+
+  const double n = arma::accu(Xnew);
+
+  arma::rowvec case_counts = Y.t() * Xnew;
+  arma::rowvec control_counts = (1.0 - Y).t() * Xnew;
+
+  const double case_total = arma::accu(case_counts);
+  const double control_total = arma::accu(control_counts);
+
+  arma::rowvec variant_totals = case_counts + control_counts;
+
+  arma::rowvec case_expected = case_total * variant_totals / n;
+  arma::rowvec control_expected = control_total * variant_totals / n;
+
+  arma::rowvec case_chi =
+      arma::pow(case_counts - case_expected, 2) / case_expected;
+  arma::rowvec control_chi =
+      arma::pow(control_counts - control_expected, 2) / control_expected;
+
+  if (nperm == 0) {
+    const int df = static_cast<int>(case_counts.n_elem) - 1;
+    boost::math::chi_squared chisq(df);
+    double stat = arma::accu(case_chi + control_chi);
+    if (stat < 0.0) {
+      stat = std::numeric_limits<double>::epsilon();
+    }
+    return boost::math::cdf(boost::math::complement(chisq, stat));
+  }
+
+  return arma::accu(case_chi + control_chi);
+}
+} // namespace
 
 TEST_CASE("Data Construction & Methods") {
   std::stringstream test_data;
@@ -268,6 +424,65 @@ TEST_CASE("Data Construction & Methods") {
 
     wss = methods.WSS(gene, cov.get_phenotype_vector(), "test_transcript2");
     REQUIRE(wss == Approx(14.7115));
+  }
+
+  SECTION("CMC sparse partitioning aligns with dense reference") {
+    const arma::mat dense = arma::mat(gene.genotypes["test_transcript1"]);
+    const arma::vec phen = cov.get_phenotype_vector();
+
+    auto expect_equal = [](double lhs, double rhs) {
+      if (std::isnan(rhs)) {
+        REQUIRE(std::isnan(lhs));
+      } else {
+        REQUIRE(lhs == Approx(rhs).epsilon(1e-10));
+      }
+    };
+
+    TaskParams cmc_multi{};
+    cmc_multi.method = "CMC";
+    cmc_multi.nperm = 0;
+    Methods multi_methods(cmc_multi, cov_ptr);
+    const double multi_threshold = 0.4;
+    arma::vec phen_multi = phen;
+    const double sparse_multi =
+        multi_methods.CMC(gene, phen_multi, "test_transcript1", multi_threshold);
+    const double dense_multi =
+        cmc_dense_reference(dense, phen, multi_threshold, false, 0);
+    expect_equal(sparse_multi, dense_multi);
+
+    TaskParams cmc_switch{};
+    cmc_switch.method = "CMC";
+    cmc_switch.nperm = 5;
+    Methods switch_methods(cmc_switch, cov_ptr);
+    const double switch_threshold = 0.6;
+    arma::vec phen_switch = phen;
+    const double sparse_switch = switch_methods.CMC(
+        gene, phen_switch, "test_transcript1", switch_threshold);
+    const double dense_switch =
+        cmc_dense_reference(dense, phen, switch_threshold, false, 5);
+    expect_equal(sparse_switch, dense_switch);
+
+    TaskParams cmc_hot{};
+    cmc_hot.method = "CMC";
+    cmc_hot.hotellings = true;
+    cmc_hot.nperm = 0;
+    Methods hot_methods(cmc_hot, cov_ptr);
+    const double hot_threshold = 0.4;
+    arma::vec phen_hot = phen;
+    const double sparse_hot =
+        hot_methods.CMC(gene, phen_hot, "test_transcript1", hot_threshold);
+    const double dense_hot =
+        cmc_dense_reference(dense, phen, hot_threshold, true, 0);
+    expect_equal(sparse_hot, dense_hot);
+
+    cmc_hot.nperm = 11;
+    Methods hot_stat_methods(cmc_hot, cov_ptr);
+    arma::vec phen_hot_stat = phen;
+    const double sparse_hot_stat = hot_stat_methods.CMC(
+        gene, phen_hot_stat, "test_transcript1", hot_threshold);
+    const double dense_hot_stat =
+        cmc_dense_reference(dense, phen, hot_threshold, true, 11);
+    expect_equal(sparse_hot_stat, dense_hot_stat);
   }
 
   SECTION("CMC") {
