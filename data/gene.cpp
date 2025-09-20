@@ -477,6 +477,8 @@ void Gene::generate_detail(Covariates &cov,
   std::stringstream detail;
 
   arma::vec Y = cov.get_original_phenotypes();
+  arma::uvec cases = arma::find(Y == 1);
+  arma::uvec controls = arma::find(Y == 0);
 
   std::unordered_map<std::string, std::vector<std::string>> pos_ts_map;
   std::unordered_map<std::string, double> pos_score_map;
@@ -497,10 +499,7 @@ void Gene::generate_detail(Covariates &cov,
   for (const auto &ts : transcripts) {
     arma::uword i = 0;
 
-    arma::uvec cases = arma::find(Y == 1);
-    arma::uvec controls = arma::find(Y == 0);
-
-    arma::sp_mat X(genotypes[ts]);
+    const arma::sp_mat &X = genotypes[ts];
 
     arma::rowvec maf = arma::rowvec(arma::mean(X) / 2.);
     // Ref/Alt Counts
