@@ -189,7 +189,12 @@ void Gene::collapse_variants() {
     // Variants with minor allele count <= 10
     arma::uvec rare = arma::find(sums <= 10);
     // Collapse rare variants into a single pseudo_variant with a 1 in each carrier
-    arma::vec pseudo_variant = arma::sum(arma::mat(gts[ts]).cols(rare), 1);
+    arma::sp_mat rare_selector(gts[ts].n_cols, 1);
+    for (arma::uword i = 0; i < rare.n_elem; ++i) {
+      rare_selector(rare[i], 0) = 1.0;
+    }
+    arma::sp_mat pseudo_variant_sparse = (gts[ts] * rare_selector);
+    arma::vec pseudo_variant(pseudo_variant_sparse);
     arma::uvec nonzero = arma::find(pseudo_variant > 0);
     pseudo_variant(nonzero).fill(1);
 
