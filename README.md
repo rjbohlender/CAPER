@@ -9,7 +9,7 @@ only objects, and elimination of data that is no longer needed. Total concurrent
 of threads. By default, the software uses half of the available number of cpus, but this can be controlled.
 
 All methods are available for the analysis of binary traits. Quantitative traits can be analyzed using the BURDEN, RVT1,
-RVT2, SKAT, and SKATO methods currently.
+RVT2, SKAT, SKATO, SKATC, and VT methods currently.
 
 ## Approach ##
 
@@ -27,16 +27,17 @@ Methods can be chosen using the -m, or --method option. The default method is VA
 	- CALPHA (Neale et al. 2011)
 	- CMC (Li, Leal 2008)
 	- CMC1df -- OR as test statistic
-	- RVT1 (Morris, Zeggini 2010)
-	- RVT2 (Morris, Zeggini 2010)
-	- SKAT (Wu et al. 2011; Wu, Guan, Pankow 2016)
-	- SKATO (Lee, Wu, Lin 2012; Wu, Guan, Pankow 2016)
-	- VAAST (Yandell et al. 2011) -- Default
-	- VT (Price et al. 2010)
-	- WSS (Madsen, Browning 2009)
+        - RVT1 (Morris, Zeggini 2010)
+        - RVT2 (Morris, Zeggini 2010)
+        - SKAT (Wu et al. 2011; Wu, Guan, Pankow 2016)
+        - SKATO (Lee, Wu, Lin 2012; Wu, Guan, Pankow 2016)
+        - SKATC
+        - VAAST (Yandell et al. 2011) -- Default
+        - VT (Price et al. 2010)
+        - WSS (Madsen, Browning 2009)
 
-A subset of methods can provide analytic p-values if run with --nperm 0. Those include, BURDEN, CMC, RVT1, RVT2, SKAT,
-and SKATO.
+A subset of methods can provide analytic p-values if run with --nperm 0. Those include, BURDEN, CMC, CMC1df, RVT1, RVT2,
+SKAT, SKATO, and SKATC.
 
 ### SKAT / SKAT-O ###
 
