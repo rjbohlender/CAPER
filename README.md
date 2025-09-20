@@ -272,7 +272,7 @@ VAAST Options:
     --alternate_grouping                  If enabled variants are grouped all together, otherwise by VAAST 2.0 type annotation.
 
 SKAT Options:
-    -k [ --kernel ] arg (=Linear)         Kernel for use with SKAT. One of: {Linear, wLinear}.
+    -k [ --kernel ] arg (=wLinear)        Kernel for use with SKAT. One of: {wLinear, Linear}.
     --qtl                                 Analyze a quantitative trait. Values are assumed to be finite floating point values.
     --beta_weights arg (=1,25)            Parameters for the beta distribution. Two values, comma separated corresponding to a,b.
     --saddlepoint                         Force the saddlepoint approximation. Useful for highly skewed case/control sample sizes.
