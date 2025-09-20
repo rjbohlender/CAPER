@@ -248,7 +248,7 @@ Optional:
     --nperm arg (=10000)                  The maximum number of permutations to be performed.
     --mac arg                             Alternative or minor allele count cutoff per variant.
     -r [ --maf ] arg (=0.5)               Alternative or minor allele frequency cutoff per variant. We recommend using an external sample and filtering variants based on the frequency in that sample, rather than filtering within. Can result in a reduction in power for variants near the threshold.
-    --aaf                                 Filter variants where the alternate allele is the major allele.
+    --ma_count                            Treat genotypes as minor-allele counts and disable the automatic alternate-allele filter.
     -j [ --pthresh ] arg                  The threshold to terminate permutation based on whether it is outside the p-value CI.
     --top_only                            Output only the top transcript in the simple file.
     -s [ --successes ] arg (=200)         Number of successes for early termination.
@@ -282,6 +282,8 @@ CMC Options:
     --hotellings                          Use Hotellings T2 instead of a chi-square test.
 
 ```
+
+Without `--ma_count`, CAPER applies the alternate-allele frequency filter by default.
 
 Here are some examples of how to run the program:
 
