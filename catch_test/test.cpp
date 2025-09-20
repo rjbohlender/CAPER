@@ -157,6 +157,28 @@ TEST_CASE("Data Construction & Methods") {
     REQUIRE(arma::all(gene.weights["test_transcript1"] == weights));
   }
 
+  SECTION("WSS matches dense computation") {
+    TaskParams wss_tp = tp;
+    wss_tp.method = "WSS";
+    Methods methods(wss_tp, cov_ptr);
+
+    arma::vec Y = cov.get_phenotype_vector();
+    const std::string transcript = "test_transcript1";
+
+    double sparse_stat = methods.WSS(gene, Y, transcript);
+
+    arma::mat dense = arma::mat(gene.genotypes[transcript]);
+    double n = Y.n_rows;
+
+    arma::vec count = arma::sum(dense, 0).t();
+    arma::vec freq = (1. + count) / (2. + 2. * n);
+    arma::vec weight = 1. / arma::sqrt(freq % (1. - freq));
+    arma::vec count_weight = dense * weight;
+    double dense_stat = arma::accu(count_weight % Y);
+
+    REQUIRE(sparse_stat == Approx(dense_stat).epsilon(1e-12));
+  }
+
   SECTION("BED") {
     std::stringstream test_bed;
 
