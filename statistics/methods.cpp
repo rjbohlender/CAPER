@@ -83,6 +83,24 @@ arma::vec rank(arma::vec &v, const char *direction, int method) {
   return ranks;
 }
 
+namespace {
+arma::rowvec sparse_column_sums(const arma::sp_mat &matrix) {
+  arma::rowvec sums(matrix.n_cols, arma::fill::zeros);
+  for (auto it = matrix.begin(); it != matrix.end(); ++it) {
+    sums(it.col()) += *it;
+  }
+  return sums;
+}
+
+arma::vec sparse_row_sums(const arma::sp_mat &matrix) {
+  arma::vec sums(matrix.n_rows, arma::fill::zeros);
+  for (auto it = matrix.begin(); it != matrix.end(); ++it) {
+    sums(it.row()) += *it;
+  }
+  return sums;
+}
+} // namespace
+
 Methods::Methods(const TaskParams &tp, const std::shared_ptr<Covariates> &cov)
     : method_(tp.method), tp(tp) {
   if (tp.kernel == "Linear") {
@@ -242,30 +260,40 @@ double Methods::CALPHA(Gene &gene, arma::vec &Y, const std::string &ts) {
 double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &ts,
                     double rare_freq) const {
   if (tp.hotellings) {
-    arma::mat X(gene.genotypes[ts]);
+    const arma::sp_mat &X = gene.genotypes[ts];
 
-    double N = Y.n_rows;
-    double nA = arma::sum(Y); // Case count
-    double nU = N - nA;       // Control count
+    const double N = static_cast<double>(Y.n_rows);
+    const double nA = arma::accu(Y); // Case count
+    const double nU = N - nA;        // Control count
 
-    arma::rowvec MAF = arma::mean(X, 0) / 2;
+    const arma::rowvec MAF = sparse_column_sums(X) / (2.0 * N);
 
     // Collapse rare variants
-    arma::uvec rare = arma::find(MAF < rare_freq);
-    arma::uvec common = arma::find(MAF >= rare_freq);
+    const arma::uvec rare = arma::find(MAF < rare_freq);
+    const arma::uvec common = arma::find(MAF >= rare_freq);
 
-    arma::mat Xnew;
-    if (rare.size() <= 1) {
-      Xnew = X;
+    arma::sp_mat Xnew_sp;
+    if (rare.n_elem <= 1) {
+      Xnew_sp = arma::sp_mat(X);
     } else {
-      arma::mat Xcollapse = arma::sum(X.cols(rare), 1);
-      Xcollapse(arma::find(Xcollapse > 1)).ones();
-      Xnew = X.cols(common);
-      Xnew.insert_cols(Xnew.n_cols, Xcollapse);
+      arma::sp_mat rare_cols = X.cols(rare);
+      arma::vec collapse_dense = sparse_row_sums(rare_cols);
+      collapse_dense.transform(
+          [](double value) { return value > 1.0 ? 1.0 : value; });
+      arma::sp_mat collapse_sp(X.n_rows, 1);
+      collapse_sp.col(0) = collapse_dense;
+
+      if (common.n_elem > 0) {
+        Xnew_sp = arma::join_horiz(X.cols(common), collapse_sp);
+      } else {
+        Xnew_sp = collapse_sp;
+      }
     }
 
+    arma::mat Xnew = arma::mat(Xnew_sp);
+
     // Rescale to -1, 0, 1
-    Xnew -= 1;
+    Xnew -= 1.;
 
     // Calculate two-sample Hotelling's T2 statistic
     arma::mat Xx = Xnew.rows(arma::find(Y == 1));
@@ -308,44 +336,54 @@ double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &ts,
     }
     return pval;
   } else {
-    arma::mat X(gene.genotypes[ts]);
+    const arma::sp_mat &X = gene.genotypes[ts];
 
-    const arma::rowvec freq = arma::mean(X, 0) / 2.;
+    const arma::rowvec freq =
+        sparse_column_sums(X) / (2.0 * static_cast<double>(X.n_rows));
 
     // Collapse rare variants
     const arma::uvec rare = arma::find(freq < rare_freq);
     const arma::uvec common = arma::find(freq >= rare_freq);
 
-    arma::mat Xnew;
-    double ncollapse = rare.n_elem;
-    if (ncollapse > 0) {
-      const double combined_freq = arma::accu(freq(rare));
-      arma::mat Xcollapse = arma::sum(X.cols(rare), 1);
-      Xnew = X.cols(common);
-      Xnew.insert_cols(Xnew.n_cols, Xcollapse);
+    arma::sp_mat Xnew;
+    if (rare.n_elem > 0) {
+      arma::sp_mat rare_cols = X.cols(rare);
+      arma::vec collapse_dense = sparse_row_sums(rare_cols);
+      arma::sp_mat collapse_sp(X.n_rows, 1);
+      collapse_sp.col(0) = collapse_dense;
+
+      if (common.n_elem > 0) {
+        Xnew = arma::join_horiz(X.cols(common), collapse_sp);
+      } else {
+        Xnew = collapse_sp;
+      }
     } else {
-      Xnew = X;
+      Xnew = arma::sp_mat(X);
     }
 
     if (Xnew.n_cols == 1) { // Switch test
-      Xnew(arma::find(Xnew > 0)).ones();
+      arma::vec collapsed = sparse_row_sums(Xnew);
+      collapsed.transform(
+          [](double value) { return value > 0.0 ? 1.0 : 0.0; });
 
-      double freq_mutated = arma::accu(arma::mean(Xnew, 0));
+      const double total_alt = arma::accu(collapsed);
+      const double freq_mutated =
+          total_alt / static_cast<double>(collapsed.n_elem);
 
-      arma::uword ncase = arma::accu(Y);
-      arma::uword ncont = arma::accu(1 - Y);
+      const double ncase = arma::accu(Y);
+      const double ncont = static_cast<double>(Y.n_elem) - ncase;
 
       // Observed
-      double case_alt = arma::accu(Xnew % Y);
-      double cont_alt = arma::accu(Xnew % (1 - Y));
-      double case_ref = ncase - case_alt;
-      double cont_ref = ncont - cont_alt;
+      const double case_alt = arma::dot(collapsed, Y);
+      const double cont_alt = total_alt - case_alt;
+      const double case_ref = ncase - case_alt;
+      const double cont_ref = ncont - cont_alt;
 
       // Expected
-      double case_alt_exp = ncase * freq_mutated;
-      double case_ref_exp = ncase * (1. - freq_mutated);
-      double cont_alt_exp = ncont * freq_mutated;
-      double cont_ref_exp = ncont * (1. - freq_mutated);
+      const double case_alt_exp = ncase * freq_mutated;
+      const double case_ref_exp = ncase * (1. - freq_mutated);
+      const double cont_alt_exp = ncont * freq_mutated;
+      const double cont_ref_exp = ncont * (1. - freq_mutated);
 
       double stat = std::pow(case_alt - case_alt_exp, 2) / case_alt_exp +
                     std::pow(case_ref - case_ref_exp, 2) / case_ref_exp +
@@ -365,27 +403,27 @@ double Methods::CMC(Gene &gene, arma::vec &Y, const std::string &ts,
       }
     } else {
 
-      double n = arma::accu(Xnew); // Total of table observations
+      const double n = arma::accu(Xnew); // Total of table observations
 
-      arma::rowvec case_counts = Y.t() * Xnew;
-      arma::rowvec control_counts = (1. - Y).t() * Xnew;
+      arma::vec case_counts = Xnew.t() * Y;
+      arma::rowvec variant_totals_row = sparse_column_sums(Xnew);
+      arma::vec variant_totals = variant_totals_row.t();
+      arma::vec control_counts = variant_totals - case_counts;
 
-      double case_total = arma::accu(case_counts);
-      double control_total = arma::accu(control_counts);
+      const double case_total = arma::accu(case_counts);
+      const double control_total = arma::accu(control_counts);
 
-      arma::rowvec variant_totals = case_counts + control_counts;
+      arma::vec case_expected = (case_total / n) * variant_totals;
+      arma::vec control_expected = (control_total / n) * variant_totals;
 
-      arma::rowvec case_expected = case_total * variant_totals / n;
-      arma::rowvec control_expected = control_total * variant_totals / n;
-
-      arma::rowvec case_chi =
-          arma::pow(case_counts - case_expected, 2) / case_expected;
-      arma::rowvec control_chi =
-          arma::pow(control_counts - control_expected, 2) / control_expected;
+      arma::vec case_chi =
+          arma::square(case_counts - case_expected) / case_expected;
+      arma::vec control_chi =
+          arma::square(control_counts - control_expected) / control_expected;
 
       if (tp.nperm == 0) {
         // Formula is df = (r -1)(c - 1) and r == 2 always, so it's just c - 1.
-        const int df = case_counts.n_elem - 1;
+        const int df = static_cast<int>(case_counts.n_elem) - 1;
         boost::math::chi_squared chisq(df);
         double stat = arma::accu(case_chi + control_chi);
         if (stat < 0) {
