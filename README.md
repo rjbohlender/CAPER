@@ -293,7 +293,7 @@ A simple run with 10,000 permutations and no covariates.
 A run with covariates and 1,000,000 permutations. This run will generate permutations in sets of 10,000 to prevent
 exhaustion of memory.
 ```bash
-./caper -i matrix.txt -p phenotypes.ped -o output_dir -m VAAST -n 10000 --max-perm 1000000 -c covariates.txt
+./caper -i matrix.txt -p phenotypes.ped -o output_dir -m VAAST -n 10000 --max_perms 1000000 -c covariates.txt
 ```
 
 A run with a gene range, and a seed for the random number generator. This will only analyze genes 100 to 200 in the matrix file.
