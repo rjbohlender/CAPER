@@ -166,5 +166,6 @@ target_link_libraries(power PRIVATE caper_core)
 add_executable(catch_test
         catch_test/test.cpp
         catch_test/jobdispatcher_test.cpp
-        catch_test/permutation_split_test.cpp)
+        catch_test/permutation_split_test.cpp
+        catch_test/powerop_sample_test.cpp)
 target_link_libraries(catch_test PRIVATE caper_core)
