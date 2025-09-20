@@ -1,4 +1,4 @@
-FROM debian:bullseye AS builder
+FROM ubuntu:24.04 AS builder
 # FROM alpine AS builder
 
 ENV DEBIAN_FRONTEND noninteractive
@@ -31,7 +31,7 @@ RUN cmake -DCMAKE_BUILD_TYPE=Release ../.
 
 RUN cmake --build . --target caper
 
-FROM debian:bullseye
+FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND noninteractive
 
@@ -43,8 +43,8 @@ COPY --from=builder /src/filter/filter_whitelist.csv /filter/filter_whitelist.cs
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        libboost-program-options1.74.0 \
-        libboost-iostreams1.74.0 \
-        libarmadillo10 && \
+        libboost-program-options1.83.0 \
+        libboost-iostreams1.83.0 \
+        libarmadillo12 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
