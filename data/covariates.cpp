@@ -3,6 +3,7 @@
 //
 
 #include <algorithm>
+#include <map>
 #include <set>
 #include <stdexcept>
 #include <unordered_map>
@@ -235,60 +236,89 @@ void Covariates::parse_cov(const std::string &covfile) {
   }
 
   // Handle unconvertible fields by treating them as categorical variables; convert to dummy variables.
+  const unsigned long raw_nfields = nfields;
+  std::vector<int> field_widths(raw_nfields, 1);
+  std::vector<unsigned long> field_offsets(raw_nfields, 0);
+  std::vector<bool> is_categorical(raw_nfields, false);
+  std::vector<std::map<std::string, int>> categorical_levels(raw_nfields);
+
   int fieldno = 0;
-  int offset = 0;
   for (const auto &field : unconvertible) {
     if (!field.empty()) {
-      // Determine unique categorical levels for the field.
       std::set<std::string> unique(field.begin(), field.end());
       std::map<std::string, int> levels;
 
       if (tp_.verbose) {
-        std::cerr << "In reading covariates, could not convert column " << fieldno + 1 << " to double." << std::endl;
+        std::cerr << "In reading covariates, could not convert column " << fieldno + 1
+                  << " to double." << std::endl;
         std::cerr << "Levels: ";
       }
 
-      // Map each unique level to its index.
-      for (auto it = unique.begin(); it != unique.end(); ++it) {
-        levels.emplace(std::make_pair(*it, std::distance(unique.begin(), it)));
+      int level_index = 0;
+      for (const auto &value : unique) {
+        levels.emplace(value, level_index);
         if (tp_.verbose) {
-          std::cerr << *it << " : " << std::distance(unique.begin(), it) << " ";
+          std::cerr << value << " : " << level_index << " ";
         }
+        level_index++;
       }
       if (tp_.verbose) {
         std::cerr << std::endl;
       }
 
-      int sampleno = 0;
-      int nlevels = levels.size() - 1;
-      // Check if the number of levels exceeds the maximum allowed.
+      int nlevels = static_cast<int>(levels.size()) - 1;
       if (nlevels > tp_.max_levels) {
-        std::cerr << "ERROR: Too many unconvertible fields. Reduce number of levels in variables. Ensure all non-categorical features are numeric." << std::endl;
+        std::cerr << "ERROR: Too many unconvertible fields. Reduce number of levels in variables. Ensure all non-categorical features are numeric."
+                  << std::endl;
         std::exit(-1);
       }
-      // Convert categorical values to dummy variables.
-      for (const auto &v : field) {
-        for (int j = 0; j < nlevels; j++) {
-          if (j == 0) {
-            if (j == levels[v]) {
-              data[cov_samples_[sampleno]][fieldno + offset] = 1.0;
-            } else {
-              data[cov_samples_[sampleno]][fieldno + offset] = 0.0;
-            }
-          } else {
-            if (j == levels[v]) {
-              data[cov_samples_[sampleno]].insert(data[cov_samples_[sampleno]].begin() + fieldno + offset + j, 1.0);
-            } else {
-              data[cov_samples_[sampleno]].insert(data[cov_samples_[sampleno]].begin() + fieldno + offset + j, 0.0);
-            }
-          }
-        }
-        sampleno++;
-      }
-      offset += nlevels - 1;
-      nfields += nlevels - 1;
+
+      is_categorical[fieldno] = true;
+      categorical_levels[fieldno] = std::move(levels);
+      field_widths[fieldno] = std::max(0, nlevels);
     }
     fieldno++;
+  }
+
+  unsigned long final_nfields = 0;
+  for (unsigned long i = 0; i < raw_nfields; ++i) {
+    field_offsets[i] = final_nfields;
+    if (is_categorical[i]) {
+      final_nfields += static_cast<unsigned long>(field_widths[i]);
+    } else {
+      final_nfields += 1;
+    }
+  }
+  nfields = final_nfields;
+
+  for (std::size_t sample_idx = 0; sample_idx < cov_samples_.size(); ++sample_idx) {
+    const auto &sample_id = cov_samples_[sample_idx];
+    auto &sample_data = data[sample_id];
+    std::vector<double> widened(nfields, 0.0);
+
+    for (unsigned long field_idx = 0; field_idx < raw_nfields; ++field_idx) {
+      const unsigned long base_index = field_offsets[field_idx];
+      if (is_categorical[field_idx]) {
+        const int width = field_widths[field_idx];
+        if (width == 0 || sample_idx >= unconvertible[field_idx].size()) {
+          continue;
+        }
+
+        const auto &levels = categorical_levels[field_idx];
+        const auto &value = unconvertible[field_idx][sample_idx];
+        auto it = levels.find(value);
+        if (it != levels.end()) {
+          int level_index = it->second;
+          if (level_index < width) {
+            widened[base_index + level_index] = 1.0;
+          }
+        }
+      } else if (base_index < widened.size()) {
+        widened[base_index] = sample_data[field_idx];
+      }
+    }
+
+    sample_data = std::move(widened);
   }
 
   // Resize and populate the design matrix.
