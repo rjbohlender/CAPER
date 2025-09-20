@@ -7,6 +7,8 @@
 
 #include <armadillo>
 #include <catch2/catch.hpp>
+#include <filesystem>
+#include <fstream>
 #include <map>
 #include <sstream>
 #include <string>
@@ -860,6 +862,61 @@ TEST_CASE("Data Construction & Methods") {
       REQUIRE(cmc == Approx(0.2252).epsilon(0.001));
     }
   }
+}
+
+TEST_CASE("Categorical covariates expand to a single widened pass", "[covariates]") {
+  namespace fs = std::filesystem;
+
+  auto temp_dir = fs::temp_directory_path() / "caper_covariates_test";
+  fs::remove_all(temp_dir);
+  fs::create_directories(temp_dir);
+  auto ped_path = temp_dir / "categorical.ped";
+  auto cov_path = temp_dir / "categorical.cov";
+
+  {
+    std::ofstream ped_stream(ped_path);
+    ped_stream << "#pedigree\n";
+    ped_stream << "fam s1 0 0 0 1\n";
+    ped_stream << "fam s2 0 0 0 2\n";
+    ped_stream << "fam s3 0 0 0 1\n";
+    ped_stream << "fam s4 0 0 0 2\n";
+  }
+
+  {
+    std::ofstream cov_stream(cov_path);
+    cov_stream << "s1 10 blue 1\n";
+    cov_stream << "s2 12 green 2\n";
+    cov_stream << "s3 14 red 3\n";
+    cov_stream << "s4 16 yellow 4\n";
+  }
+
+  TaskParams tp{};
+  tp.ped_path = ped_path.string();
+  tp.covariates_path = cov_path.string();
+  tp.max_levels = 10;
+  tp.verbose = false;
+  tp.qtl = false;
+
+  Covariates cov(tp);
+
+  const arma::mat &design = cov.get_covariate_matrix();
+  REQUIRE(design.n_rows == 4);
+  REQUIRE(design.n_cols == 6);
+
+  arma::rowvec expected_row1{1.0, 10.0, 1.0, 0.0, 0.0, 1.0};
+  arma::rowvec expected_row2{1.0, 12.0, 0.0, 1.0, 0.0, 2.0};
+  arma::rowvec expected_row3{1.0, 14.0, 0.0, 0.0, 1.0, 3.0};
+  arma::rowvec expected_row4{1.0, 16.0, 0.0, 0.0, 0.0, 4.0};
+
+  REQUIRE(arma::approx_equal(design.row(0), expected_row1, "absdiff", 1e-9));
+  REQUIRE(arma::approx_equal(design.row(1), expected_row2, "absdiff", 1e-9));
+  REQUIRE(arma::approx_equal(design.row(2), expected_row3, "absdiff", 1e-9));
+  REQUIRE(arma::approx_equal(design.row(3), expected_row4, "absdiff", 1e-9));
+
+  REQUIRE(cov.get_ncases() == 2);
+  REQUIRE(arma::accu(cov.get_phenotype_vector()) == Approx(2.0));
+
+  fs::remove_all(temp_dir);
 }
 
 TEST_CASE("Gradient descent supports non-canonical links", "[glm]") {
