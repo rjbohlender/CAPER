@@ -257,6 +257,10 @@ Optional:
     --no_detail                           Don't produce detailed, variant level output.
     --output_stats                        Write permuted statistics to .simple file following default output.
     --permute_out arg                     Output permutations to the given file. Exits after generating permutations.
+    --wald                                Use a Wald test instead of the deviance for RVT2.
+    --var_collapsing                      Collapse variants with <10 minor allele count into a single pseudo variant. Will convert to minor allele counting instead of alternate allele counting.
+    --external arg                        Use external permutations.
+    -q [ --quiet ]                        Don't print status messages.
     --min_minor_allele_count arg (=1)     Minimum number of minor allele copies to test a gene.
     --min_variant_count arg (=1)          Minimum number of variants to test a gene.
     --max_levels arg (=100)               Maximum number of levels for a single variable. Will be split into n-1 dummy variables.
