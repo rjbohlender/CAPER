@@ -3,16 +3,22 @@ FROM debian:bullseye AS builder
 
 ENV DEBIAN_FRONTEND noninteractive
 
-RUN apt-get -y update && apt-get install -y --no-install-recommends apt-utils
-# RUN apk update
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        apt-utils \
+        ca-certificates \
+        file \
+        sudo \
+        unzip \
+        wget \
+        build-essential \
+        cmake \
+        libboost-all-dev \
+        libarmadillo-dev && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-RUN apt-get install -y --no-install-recommends \
-     ca-certificates \
-     file \
-     sudo \
-     unzip \
-     wget
-RUN apt-get install -y --no-install-recommends build-essential cmake libboost-all-dev libarmadillo-dev
+# RUN apk update
 # RUN apk add make g++ cmake
 
 # RUN apk add boost-dev armadillo-dev blas-dev lapack-dev
