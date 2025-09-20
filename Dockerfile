@@ -41,6 +41,10 @@ COPY --from=builder /src/build/caper /bin
 RUN mkdir -p /filter
 COPY --from=builder /src/filter/filter_whitelist.csv /filter/filter_whitelist.csv
 
-RUN apt-get update
-
-RUN apt-get install -y --no-install-recommends libboost-program-options1.74.0 libboost-iostreams1.74.0 libarmadillo10
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        libboost-program-options1.74.0 \
+        libboost-iostreams1.74.0 \
+        libarmadillo10 && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
