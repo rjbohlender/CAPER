@@ -13,7 +13,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     message(STATUS "GNU C++ compiler detected")
 endif()
 
-find_package(Armadillo 8.6 REQUIRED)
+find_package(Armadillo 12.6 REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Boost 1.66.0 COMPONENTS program_options iostreams REQUIRED)
 find_package(ZLIB REQUIRED)

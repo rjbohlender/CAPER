@@ -52,7 +52,7 @@ used with permutation, the costly calculation of the p-value is skipped, and the
 ## Compiling ##
 
 Dependencies: 
-- Tested with Armadillo >= 8.600
+- Tested with Armadillo >= 12.600
 - C++ compiler supporting C++20
 - C++ Boost Library > 1.66 (required for quadrature)
 
