@@ -5,6 +5,7 @@
 #include "powerop.hpp"
 #include <iostream>
 #include <iomanip>
+#include <vector>
 
 PowerOp::PowerOp(PowerTask &pt, std::shared_ptr<PowerReporter> reporter, double seed, bool verbose)
 	: caperTask(pt), reporter_(reporter), gen_(seed), bootstrapped_(caperTask.gene), done_(false) {
@@ -198,7 +199,6 @@ auto PowerOp::power() -> void {
 }
 
 arma::sp_mat PowerOp::sample(arma::sp_mat &X, arma::uword ncases, arma::uword ncontrols) {
-  arma::mat Xmat(X); // Convert to dense matrix for smarter subsetting
   case_idx_ = arma::uvec(ncases, arma::fill::zeros);
   control_idx_ = arma::uvec(ncontrols, arma::fill::zeros);
 
@@ -207,16 +207,42 @@ arma::sp_mat PowerOp::sample(arma::sp_mat &X, arma::uword ncases, arma::uword nc
   std::uniform_int_distribution<> control_dis(0, controls_.n_elem - 1);
 
   for (arma::uword i = 0; i < ncases; i++) {
-	case_idx_[i] = static_cast<arma::uword>(case_dis(gen_));
+        case_idx_[i] = static_cast<arma::uword>(case_dis(gen_));
   }
   for (arma::uword i = 0; i < ncontrols; i++) {
-	control_idx_[i] = static_cast<arma::uword>(control_dis(gen_));
+        control_idx_[i] = static_cast<arma::uword>(control_dis(gen_));
   }
 
   arma::uvec uniq_case = arma::unique(case_idx_);
   arma::uvec uniq_control = arma::unique(control_idx_);
 
-  arma::sp_mat ret(arma::join_cols(Xmat.rows(cases_(case_idx_)), Xmat.rows(controls_(control_idx_))));
+  arma::uvec sample_indices = arma::join_cols(cases_(case_idx_), controls_(control_idx_));
+
+  std::vector<arma::uword> row_locations;
+  std::vector<arma::uword> col_locations;
+  std::vector<double> values;
+  row_locations.reserve(X.n_nonzero);
+  col_locations.reserve(X.n_nonzero);
+  values.reserve(X.n_nonzero);
+
+  for (arma::uword row = 0; row < sample_indices.n_elem; ++row) {
+        arma::uword src_row = sample_indices[row];
+        for (arma::sp_mat::const_row_iterator it = X.begin_row(src_row); it != X.end_row(src_row); ++it) {
+          row_locations.push_back(row);
+          col_locations.push_back(it.col());
+          values.push_back(*it);
+        }
+  }
+
+  arma::umat locations(2, values.size());
+  arma::vec vals(values.size());
+  for (arma::uword i = 0; i < values.size(); ++i) {
+        locations(0, i) = row_locations[i];
+        locations(1, i) = col_locations[i];
+        vals[i] = values[i];
+  }
+
+  arma::sp_mat ret(locations, vals, sample_indices.n_elem, X.n_cols);
 
   return ret;
 }
