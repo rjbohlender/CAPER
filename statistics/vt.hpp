@@ -5,7 +5,10 @@
 #ifndef PERMUTE_ASSOCIATE_VT_HPP
 #define PERMUTE_ASSOCIATE_VT_HPP
 
-#include "../data/covariates.hpp"
+#include <armadillo>
+#include <map>
+#include <string>
+
 #include "../data/gene.hpp"
 
 class VT_Res {
