@@ -177,8 +177,7 @@ double VAASTLogic::Score(const arma::sp_mat &X, const arma::vec &Y,
     arma::vec variant(n_case + n_control, arma::fill::zeros);
 
     if (collapse.n_elem > 0) {
-      variant =
-          arma::conv_to<arma::vec>::from(arma::sum(X.cols(collapse), 1));
+      variant = arma::sum(arma::mat(X.cols(collapse)), 1);
     }
     variant(arma::find(variant == 1)).fill(0); // Set all single hets to 0
     variant(arma::find(variant > 1))

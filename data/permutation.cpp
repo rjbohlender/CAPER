@@ -142,6 +142,7 @@ Permute::epsilon_permutation(int nperm, arma::vec &odds, arma::uword ncases,
   arma::uword msize = std::accumulate(m.begin(), m.end(), 0);
   assert(msize == odds.n_rows);
 #endif
+  ret.assign(nperm, std::vector<int8_t>(odds.n_rows));
   for (int i = 0; i < nperm; i++) {
     std::vector<int32_t> tmp(bin_odds.size(), 0);
     sto.MultiFishersNCHyp(&tmp[0], &(m[0]), &(bin_odds[0]), ncases,
