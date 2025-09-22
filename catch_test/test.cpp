@@ -14,6 +14,7 @@
 #include <map>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include <boost/math/distributions/chi_squared.hpp>
 #include <boost/math/distributions/fisher_f.hpp>
@@ -175,6 +176,68 @@ double cmc_dense_reference(const arma::mat &X, const arma::vec &Y,
 
   return arma::accu(case_chi + control_chi);
 }
+
+double vt_dense_reference(const arma::mat &X, const arma::vec &phenotypes) {
+  if (X.n_cols == 0 || X.n_rows == 0) {
+    return 0.0;
+  }
+
+  const arma::uword n_rows = X.n_rows;
+  const arma::uword n_cols = X.n_cols;
+
+  arma::vec geno = arma::vectorise(X);
+  arma::vec pheno = arma::repmat(phenotypes, n_cols, 1);
+
+  arma::vec repeated_counts(geno.n_elem, arma::fill::zeros);
+  for (arma::uword j = 0; j < n_cols; ++j) {
+    arma::span span(j * n_rows, (j + 1) * n_rows - 1);
+    const double count = arma::accu(X.col(j));
+    repeated_counts(span).fill(count);
+  }
+
+  arma::vec unique_counts = arma::unique(repeated_counts);
+  if (unique_counts.is_empty()) {
+    return 0.0;
+  }
+
+  arma::vec group(repeated_counts.n_elem, arma::fill::zeros);
+  for (arma::uword idx = 0; idx < repeated_counts.n_elem; ++idx) {
+    group(idx) = arma::accu(unique_counts < repeated_counts(idx));
+  }
+
+  const arma::uword len = unique_counts.n_elem;
+  std::vector<arma::uvec> whiches;
+  whiches.reserve(len);
+  for (arma::uword g = 0; g < len; ++g) {
+    whiches.emplace_back(arma::find(group == static_cast<double>(g)));
+  }
+
+  auto sum_groups = [&](const arma::vec &values) {
+    arma::vec ret(len, arma::fill::zeros);
+    for (arma::uword g = 0; g < len; ++g) {
+      if (!whiches[g].is_empty()) {
+        ret(g) = arma::accu(values(whiches[g]));
+      }
+    }
+    return ret;
+  };
+
+  arma::vec count = sum_groups(geno);
+  arma::vec count_square = sum_groups(arma::square(geno));
+  arma::vec csCount = arma::cumsum(count);
+  arma::vec csCountSquare = arma::cumsum(count_square);
+  arma::vec csCountMeanpheno = csCount * arma::mean(phenotypes);
+  arma::vec sqrtCsCountSquare = arma::sqrt(csCountSquare);
+
+  arma::vec phenoCount = pheno % geno;
+  arma::vec csPhenoCount = arma::cumsum(sum_groups(phenoCount));
+
+  if (sqrtCsCountSquare.is_empty()) {
+    return 0.0;
+  }
+
+  return arma::max((csPhenoCount - csCountMeanpheno) / sqrtCsCountSquare);
+}
 } // namespace
 
 TEST_CASE("Data Construction & Methods") {
@@ -335,6 +398,23 @@ TEST_CASE("Data Construction & Methods") {
     double dense_stat = arma::accu(count_weight % Y);
 
     REQUIRE(sparse_stat == Approx(dense_stat).epsilon(1e-12));
+  }
+
+  SECTION("VT matches dense computation") {
+    TaskParams vt_tp = tp;
+    vt_tp.method = "VT";
+    Methods methods(vt_tp, cov_ptr);
+
+    arma::vec phenotypes = cov.get_phenotype_vector();
+    for (const std::string &transcript : gene.get_transcripts()) {
+      arma::vec Y = phenotypes;
+      double sparse_stat = methods.VT(gene, Y, transcript);
+
+      arma::mat dense = arma::mat(gene.genotypes[transcript]);
+      double dense_stat = vt_dense_reference(dense, phenotypes);
+
+      REQUIRE(sparse_stat == Approx(dense_stat).epsilon(1e-12));
+    }
   }
 
   SECTION("BED") {

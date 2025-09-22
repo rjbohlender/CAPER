@@ -596,17 +596,17 @@ double Methods::VAAST(Gene &gene, arma::vec &Y, const std::string &ts,
 }
 
 double Methods::VT(Gene &gene, arma::vec &phenotypes, const std::string &ts) {
-  // Convert data to match their format
-  arma::vec pheno = arma::repmat(phenotypes, gene.genotypes[ts].n_cols, 1);
   if (!vt_obj_->is_initialized(ts)) {
-    vt_obj_->initialize(gene, pheno, ts);
+    vt_obj_->initialize(gene, phenotypes, ts);
   }
-  arma::vec phenoCount =
-      pheno % vt_obj_->get_mCount(ts); // Changes under permutation
-  arma::vec csPhenoCount = arma::cumsum(vt_obj_->sum_groups(
-      phenoCount, vt_obj_->get_oneToLen(ts), ts)); // Changes under permutation
+  arma::vec variant_totals = gene.genotypes[ts].t() * phenotypes;
+  arma::vec cumulative = vt_obj_->accumulate_thresholds(ts, variant_totals);
 
-  return arma::max((csPhenoCount - vt_obj_->get_csCountMeanpheno(ts)) /
+  if (cumulative.is_empty()) {
+    return 0.;
+  }
+
+  return arma::max((cumulative - vt_obj_->get_csCountMeanpheno(ts)) /
                    vt_obj_->get_sqrtCsCountSquare(ts));
 }
 
