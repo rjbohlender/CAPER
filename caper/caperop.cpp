@@ -165,8 +165,7 @@ auto CAPEROp::op() -> void {
     double n = 2. * gene.get_samples().size();
     const arma::sp_mat column_sums =
         arma::sum(gene.genotypes[transcript], 1);
-    double nmac = static_cast<double>(
-        arma::find(column_sums.as_dense() > 0).n_elem);
+    double nmac = static_cast<double>(column_sums.n_nonzero);
     double nmaj = n - nmac;
 
     res.calc_exact_p(nmac, nmaj);
