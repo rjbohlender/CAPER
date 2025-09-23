@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <memory>
 #include <numeric>
 #include <vector>
 
@@ -102,4 +103,104 @@ TEST_CASE("Permute::fisher_yates matches manual shuffle with same seed") {
   }
 
   REQUIRE(input == expected);
+}
+
+TEST_CASE("Permute generates permutations without rebuilding bins") {
+  arma::colvec odds{0.2, 0.4, 0.6, 0.8};
+  const double epsilon = 0.01;
+  Permute perm(2024);
+  perm.build_bins(odds, epsilon);
+
+  REQUIRE(perm.bins_built);
+  const auto initial_m = perm.m;
+  const auto initial_bin_odds = perm.bin_odds;
+  const arma::uvec initial_sort_idx = perm.sort_idx;
+
+  const int nperm = 5;
+  const int nthreads = 3;
+  const arma::uword nsamples = odds.n_rows;
+
+  auto validate_permutations = [&](const auto &perms,
+                                   arma::uword expected_ncases) {
+    REQUIRE(perms.size() == static_cast<std::size_t>(nperm));
+    for (const auto &p : perms) {
+      REQUIRE(p.size() == nsamples);
+      const int sum = std::accumulate(p.begin(), p.end(), 0);
+      REQUIRE(sum == static_cast<int>(expected_ncases));
+    }
+  };
+
+  SECTION("ncases is zero") {
+    const arma::uword ncases = 0;
+    auto permutations =
+        std::make_shared<std::vector<std::vector<int8_t>>>();
+
+    perm.generate_permutations(permutations, odds, ncases, nperm, nthreads,
+                               epsilon);
+    validate_permutations(*permutations, ncases);
+    REQUIRE(perm.m == initial_m);
+    REQUIRE(perm.bin_odds == initial_bin_odds);
+    REQUIRE(arma::all(perm.sort_idx == initial_sort_idx));
+
+    const auto epsilon_result =
+        perm.epsilon_permutation(nperm, odds, ncases, "transcript", epsilon);
+    validate_permutations(epsilon_result, ncases);
+    REQUIRE(perm.m == initial_m);
+    REQUIRE(perm.bin_odds == initial_bin_odds);
+    REQUIRE(arma::all(perm.sort_idx == initial_sort_idx));
+
+    for (const auto &p : *permutations) {
+      REQUIRE(std::all_of(p.begin(), p.end(), [](int8_t value) {
+        return value == 0;
+      }));
+    }
+    REQUIRE(epsilon_result == *permutations);
+  }
+
+  SECTION("ncases is intermediate") {
+    const arma::uword ncases = 2;
+    auto permutations =
+        std::make_shared<std::vector<std::vector<int8_t>>>();
+
+    perm.generate_permutations(permutations, odds, ncases, nperm, nthreads,
+                               epsilon);
+    validate_permutations(*permutations, ncases);
+    REQUIRE(perm.m == initial_m);
+    REQUIRE(perm.bin_odds == initial_bin_odds);
+    REQUIRE(arma::all(perm.sort_idx == initial_sort_idx));
+
+    const auto epsilon_result =
+        perm.epsilon_permutation(nperm, odds, ncases, "transcript", epsilon);
+    validate_permutations(epsilon_result, ncases);
+    REQUIRE(perm.m == initial_m);
+    REQUIRE(perm.bin_odds == initial_bin_odds);
+    REQUIRE(arma::all(perm.sort_idx == initial_sort_idx));
+  }
+
+  SECTION("ncases equals total sample size") {
+    const arma::uword ncases = nsamples;
+    auto permutations =
+        std::make_shared<std::vector<std::vector<int8_t>>>();
+
+    perm.generate_permutations(permutations, odds, ncases, nperm, nthreads,
+                               epsilon);
+    validate_permutations(*permutations, ncases);
+    REQUIRE(perm.m == initial_m);
+    REQUIRE(perm.bin_odds == initial_bin_odds);
+    REQUIRE(arma::all(perm.sort_idx == initial_sort_idx));
+
+    const auto epsilon_result =
+        perm.epsilon_permutation(nperm, odds, ncases, "transcript", epsilon);
+    validate_permutations(epsilon_result, ncases);
+    REQUIRE(perm.m == initial_m);
+    REQUIRE(perm.bin_odds == initial_bin_odds);
+    REQUIRE(arma::all(perm.sort_idx == initial_sort_idx));
+
+    for (const auto &p : *permutations) {
+      REQUIRE(std::all_of(p.begin(), p.end(), [](int8_t value) {
+        return value == 1;
+      }));
+    }
+    REQUIRE(epsilon_result == *permutations);
+  }
 }
