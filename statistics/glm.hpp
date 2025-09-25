@@ -419,12 +419,11 @@ auto GLM<LinkT>::irls(arma::mat &X, arma::colvec &Y) -> arma::vec {
     mu_ = link.linkinv(eta_);
     arma::vec muprime = link.mueta(eta_);
     arma::vec z = eta_ + (Y - mu_) / muprime;
-    arma::vec W = arma::pow(muprime, 2) / link.variance(mu_);
+    arma::vec W = weights_ % arma::pow(muprime, 2) / link.variance(mu_);
     xold = beta_;
     beta_ = arma::solve(X.t() * (X.each_col() % W), X.t() * (W % z));
     devold = dev_;
-    dev_ = arma::sum(link.dev_resids(Y, link.linkinv(X * beta_),
-                                     arma::vec(X.n_rows, arma::fill::ones)));
+    dev_ = arma::sum(link.dev_resids(Y, link.linkinv(X * beta_), weights_));
     if (!std::isfinite(dev_)) {
       int i = 0;
       while (!std::isfinite(dev_)) {
@@ -435,8 +434,7 @@ auto GLM<LinkT>::irls(arma::mat &X, arma::colvec &Y) -> arma::vec {
         beta_ = (beta_ + xold) / 2.;
         eta_ = X * beta_;
         mu_ = link.linkinv(eta_);
-        dev_ = arma::sum(
-            link.dev_resids(Y, mu_, arma::vec(X.n_rows, arma::fill::ones)));
+        dev_ = arma::sum(link.dev_resids(Y, mu_, weights_));
         i++;
       }
     }

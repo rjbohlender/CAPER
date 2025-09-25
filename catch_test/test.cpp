@@ -1231,3 +1231,62 @@ TEST_CASE("Gradient descent supports non-canonical links", "[glm]") {
   REQUIRE(gd_model.success_);
   REQUIRE(arma::is_finite(gd_model.beta_));
 }
+
+TEST_CASE("Weighted IRLS matches QR implementation", "[glm]") {
+  arma::mat X{{1.0, -1.0}, {1.0, -0.2}, {1.0, 0.0},
+              {1.0, 0.6},  {1.0, 1.2},  {1.0, 1.8}};
+  arma::vec Y{0.0, 1.0, 0.0, 1.0, 0.0, 1.0};
+  arma::vec weights{0.75, 1.25, 1.5, 2.0, 2.25, 2.75};
+
+  TaskParams tp_irls;
+  tp_irls.optimizer = "irls";
+
+  Binomial logit_link_irls;
+  GLM<Binomial> irls_model(X, Y, logit_link_irls, tp_irls);
+  irls_model.weights_ = weights;
+  irls_model.link.initialize(Y, irls_model.n_, irls_model.mu_, irls_model.weights_);
+  irls_model.beta_ = arma::vec(X.n_cols, arma::fill::zeros);
+  irls_model.eta_ = X * irls_model.beta_;
+  irls_model.mu_ = irls_model.link.linkinv(irls_model.eta_);
+  irls_model.dev_ =
+      arma::accu(irls_model.link.dev_resids(Y, irls_model.mu_, irls_model.weights_));
+  arma::vec beta_irls = irls_model.irls(X, Y);
+
+  TaskParams tp_qr;
+  tp_qr.optimizer = "irls_qr";
+
+  Binomial logit_link_qr;
+  GLM<Binomial> qr_model(X, Y, logit_link_qr, tp_qr);
+  qr_model.weights_ = weights;
+  qr_model.link.initialize(Y, qr_model.n_, qr_model.mu_, qr_model.weights_);
+  qr_model.beta_ = arma::vec(X.n_cols, arma::fill::zeros);
+  qr_model.eta_ = X * qr_model.beta_;
+  qr_model.mu_ = qr_model.link.linkinv(qr_model.eta_);
+  qr_model.dev_ =
+      arma::accu(qr_model.link.dev_resids(Y, qr_model.mu_, qr_model.weights_));
+  arma::vec beta_qr = qr_model.irls_qr(X, Y);
+  qr_model.beta_ = beta_qr;
+
+  std::ostringstream weights_stream;
+  weights_stream << weights.t();
+  INFO("weights: " << weights_stream.str());
+
+  std::ostringstream beta_irls_stream;
+  beta_irls_stream << beta_irls.t();
+  INFO("beta_irls: " << beta_irls_stream.str());
+  std::ostringstream beta_qr_stream;
+  beta_qr_stream << beta_qr.t();
+  INFO("beta_qr: " << beta_qr_stream.str());
+
+  REQUIRE(arma::approx_equal(beta_irls, beta_qr, "absdiff", 1e-8));
+
+  arma::vec fitted_irls = irls_model.link.linkinv(X * beta_irls);
+  arma::vec fitted_qr = qr_model.link.linkinv(X * beta_qr);
+  REQUIRE(arma::approx_equal(fitted_irls, fitted_qr, "absdiff", 1e-8));
+
+  REQUIRE(qr_model.dev_ == Approx(irls_model.dev_).margin(1e-8));
+  REQUIRE(arma::accu(irls_model.link.dev_resids(Y, fitted_irls, weights)) ==
+          Approx(irls_model.dev_).margin(1e-8));
+  REQUIRE(arma::accu(qr_model.link.dev_resids(Y, fitted_qr, weights)) ==
+          Approx(qr_model.dev_).margin(1e-8));
+}
