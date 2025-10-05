@@ -61,7 +61,7 @@ auto CAPEROp::op() -> void {
       res.cont_alt = arma::accu(gene.genotypes[transcript].t() *
                                 (1. - cov.get_original_phenotypes()));
       res.cont_ref =
-          2 * arma::accu(1. - cov.get_original_phenotypes()) - res.case_alt;
+          2 * arma::accu(1. - cov.get_original_phenotypes()) - res.cont_alt;
       res.original = caperTask.methods.call(
           gene, cov, cov.get_original_phenotypes(), transcript, true);
       res.is_set = true;
