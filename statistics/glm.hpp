@@ -280,6 +280,11 @@ auto GLM<LinkT>::irls_qr(arma::mat &X, arma::colvec &Y) -> arma::vec {
   arma::uword m = X.n_rows;
   arma::uword n = X.n_cols;
 
+  if (!arma::approx_equal(weights_, arma::vec(m, arma::fill::ones), "absdiff",
+                          0.0)) {
+    return irls_qr_R(X, Y);
+  }
+
   // A = QR
   arma::mat Q, R;
   bool qr_success = arma::qr_econ(Q, R, X);
@@ -309,7 +314,7 @@ auto GLM<LinkT>::irls_qr(arma::mat &X, arma::colvec &Y) -> arma::vec {
     arma::vec W = arma::sqrt(weights_ % arma::pow(mueta, 2) / var_);
 
     arma::mat Lt;
-    arma::mat QWQ = Q.t() * arma::diagmat(W) * Q;
+    arma::mat QWQ = Q.t() * arma::diagmat(arma::square(W)) * Q;
     bool chol_success = arma::chol(Lt, QWQ);
     double jitter = 1e-9;
     while (!chol_success && jitter < 1.) {
@@ -321,7 +326,8 @@ auto GLM<LinkT>::irls_qr(arma::mat &X, arma::colvec &Y) -> arma::vec {
       throw(std::runtime_error("Cholesky decomposition of QWQ matrix failed."));
     }
 
-    s = arma::solve(arma::trimatl(Lt.t()), Q.t() * (W % z));
+    arma::vec rhs = Q.t() * (arma::square(W) % z);
+    s = arma::solve(arma::trimatl(Lt.t()), rhs);
     s = arma::solve(arma::trimatu(Lt), s);
 
     eta_ = Q * s;

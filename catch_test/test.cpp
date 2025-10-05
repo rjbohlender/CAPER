@@ -12,6 +12,7 @@
 #include <filesystem>
 #include <fstream>
 #include <map>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -23,6 +24,7 @@
 #include "../data/covariates.hpp"
 #include "../data/gene.hpp"
 #include "../link/binomial.hpp"
+#include "../caper/caperop.hpp"
 #include "../statistics/glm.hpp"
 #include "../statistics/methods.hpp"
 #include "../utility/math.hpp"
@@ -414,6 +416,38 @@ TEST_CASE("Data Construction & Methods") {
       double dense_stat = vt_dense_reference(dense, phenotypes);
 
       REQUIRE(sparse_stat == Approx(dense_stat).epsilon(1e-12));
+    }
+  }
+
+  SECTION("CAPEROp computes allele counts correctly") {
+    TaskParams caper_tp = tp;
+    caper_tp.method = "CMC";
+    caper_tp.nperm = 0;
+    caper_tp.success_threshold = 0;
+    caper_tp.cmcmaf = 0.05;
+
+    std::vector<std::vector<int8_t>> permutations;
+    CAPERTask caper_task(Stage::Stage1, gene, cov_ptr, caper_tp, permutations);
+    CAPEROp caper_op(caper_task, std::shared_ptr<Reporter>(), 0.0, false);
+
+    caper_op.run();
+
+    arma::vec phenotypes = cov_ptr->get_original_phenotypes();
+    arma::vec controls = 1. - phenotypes;
+
+    for (const std::string &transcript : gene.get_transcripts()) {
+      const auto &genotype = gene.genotypes[transcript];
+      Result &res = caper_task.results.at(transcript);
+
+      double expected_case_alt = arma::accu(genotype.t() * phenotypes);
+      double expected_case_ref =
+          2 * arma::accu(phenotypes) - expected_case_alt;
+      double expected_cont_alt = arma::accu(genotype.t() * controls);
+      double expected_cont_ref =
+          2 * arma::accu(controls) - expected_cont_alt;
+
+      REQUIRE(res.case_ref == Approx(expected_case_ref).epsilon(1e-12));
+      REQUIRE(res.cont_ref == Approx(expected_cont_ref).epsilon(1e-12));
     }
   }
 
@@ -1244,12 +1278,13 @@ TEST_CASE("Weighted IRLS matches QR implementation", "[glm]") {
   Binomial logit_link_irls;
   GLM<Binomial> irls_model(X, Y, logit_link_irls, tp_irls);
   irls_model.weights_ = weights;
-  irls_model.link.initialize(Y, irls_model.n_, irls_model.mu_, irls_model.weights_);
+  irls_model.link.initialize(Y, irls_model.n_, irls_model.mu_,
+                             irls_model.weights_);
+  arma::vec initial_eta = irls_model.link.link(irls_model.mu_);
   irls_model.beta_ = arma::vec(X.n_cols, arma::fill::zeros);
-  irls_model.eta_ = X * irls_model.beta_;
-  irls_model.mu_ = irls_model.link.linkinv(irls_model.eta_);
-  irls_model.dev_ =
-      arma::accu(irls_model.link.dev_resids(Y, irls_model.mu_, irls_model.weights_));
+  irls_model.eta_ = initial_eta;
+  irls_model.dev_ = arma::accu(
+      irls_model.link.dev_resids(Y, irls_model.mu_, irls_model.weights_));
   arma::vec beta_irls = irls_model.irls(X, Y);
 
   TaskParams tp_qr;
@@ -1260,10 +1295,9 @@ TEST_CASE("Weighted IRLS matches QR implementation", "[glm]") {
   qr_model.weights_ = weights;
   qr_model.link.initialize(Y, qr_model.n_, qr_model.mu_, qr_model.weights_);
   qr_model.beta_ = arma::vec(X.n_cols, arma::fill::zeros);
-  qr_model.eta_ = X * qr_model.beta_;
-  qr_model.mu_ = qr_model.link.linkinv(qr_model.eta_);
-  qr_model.dev_ =
-      arma::accu(qr_model.link.dev_resids(Y, qr_model.mu_, qr_model.weights_));
+  qr_model.eta_ = initial_eta;
+  qr_model.dev_ = arma::accu(
+      qr_model.link.dev_resids(Y, qr_model.mu_, qr_model.weights_));
   arma::vec beta_qr = qr_model.irls_qr(X, Y);
   qr_model.beta_ = beta_qr;
 
