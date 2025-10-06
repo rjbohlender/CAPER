@@ -392,6 +392,10 @@ int main(int argc, char **argv) {
   tp.max_levels = vm["max_levels"].as<arma::uword>();
   // Threading
   tp.nthreads = vm["nthreads"].as<size_t>();
+  if (tp.nthreads < 2) {
+    std::cerr << "Thread count must be >= 2." << std::endl;
+    std::exit(1);
+  }
   // Options
   tp.verbose = verbose;
   tp.gene_list = gene_list;
@@ -448,11 +452,6 @@ int main(int argc, char **argv) {
     std::cerr
         << "WARNING: This software is concerned with evaluating rare events. With a minor allele cutoff > 500, you should consider analyzing those variants using single marker tests."
         << std::endl;
-  }
-
-  if (tp.nthreads < 2) {
-    std::cerr << "Thread count must be >= 2." << std::endl;
-    std::cerr << visible << std::endl;
   }
 
   if (tp.verbose) {

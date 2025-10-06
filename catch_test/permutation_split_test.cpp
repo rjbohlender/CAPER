@@ -54,3 +54,24 @@ TEST_CASE("permutation splitting totals match requested count") {
     REQUIRE(total == tp.nperm);
   }
 }
+
+TEST_CASE("check_done handles single-thread gene list with max perms") {
+  TaskParams tp{};
+  tp.nthreads = 1;
+  tp.gene_list = std::string("GeneA");
+  tp.max_perms = arma::uword(12);
+
+  Result res("GeneA", "Transcript1", false);
+
+  SECTION("below termination threshold remains unfinished") {
+    res.permutations = 5;
+    CAPEROp::check_done(tp, 1, res, 6);
+    REQUIRE_FALSE(res.done);
+  }
+
+  SECTION("reaching termination completes result") {
+    res.permutations = 6;
+    CAPEROp::check_done(tp, 1, res, 6);
+    REQUIRE(res.done);
+  }
+}

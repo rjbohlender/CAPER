@@ -310,7 +310,13 @@ auto CAPEROp::check_done(const TaskParams &tp, long success_threshold,
   if (tp.max_perms) {
     if (tp.gene_list) {
       res.done |= res.permutations >= termination;
-      res.done |= (res.permutations >= (*tp.max_perms / (tp.nthreads - 1)));
+      const auto worker_threads = tp.nthreads > 1 ? tp.nthreads - 1 : 0;
+      if (worker_threads > 0) {
+        res.done |=
+            (res.permutations >= (*tp.max_perms / worker_threads));
+      } else {
+        res.done |= res.permutations >= *tp.max_perms;
+      }
     } else {
       res.done |= res.permutations >= *tp.max_perms;
     }
