@@ -451,6 +451,40 @@ TEST_CASE("Data Construction & Methods") {
     }
   }
 
+  SECTION("CAPEROp early termination keeps empirical p-values finite") {
+    TaskParams caper_tp = tp;
+    caper_tp.method = "CMC";
+    caper_tp.nperm = 10;
+    caper_tp.success_threshold = 1;
+    caper_tp.cmcmaf = 0.05;
+
+    std::vector<std::vector<int8_t>> permutations;
+    arma::vec original = cov_ptr->get_original_phenotypes();
+    std::vector<int8_t> first_perm;
+    first_perm.reserve(original.n_elem);
+    for (arma::uword idx = 0; idx < original.n_elem; ++idx) {
+      first_perm.push_back(static_cast<int8_t>(original(idx)));
+    }
+    permutations.push_back(std::move(first_perm));
+
+    CAPERTask caper_task(Stage::Stage1, gene, cov_ptr, caper_tp, permutations);
+    CAPEROp caper_op(caper_task, std::shared_ptr<Reporter>(), 0.0, false);
+
+    caper_op.run();
+
+    for (const auto &entry : caper_task.results) {
+      const Result &res = entry.second;
+      INFO(entry.first);
+      REQUIRE(res.permutations == 1);
+      REQUIRE(res.successes >= caper_tp.success_threshold);
+      REQUIRE(std::isfinite(res.empirical_p));
+      REQUIRE(std::isfinite(res.empirical_midp));
+      const double expected =
+          binomial_estimate(res.successes, res.permutations);
+      REQUIRE(res.empirical_p == Approx(expected));
+    }
+  }
+
   SECTION("BED") {
     std::stringstream test_bed;
 

@@ -67,6 +67,22 @@ template<typename T> [[maybe_unused]] T setdiff(T x, T y) {
 }
 
 /**
+ * @brief Laplace-smoothed binomial estimator used for permutation p-values.
+ *
+ * @tparam SuccessT Numeric type representing the number of successes.
+ * @tparam TrialT Numeric type representing the number of trials.
+ * @param successes The number of successes observed.
+ * @param permutations The number of trials performed.
+ * @return A finite estimate of the binomial probability regardless of
+ *         successes/permutations being zero.
+ */
+template<typename SuccessT, typename TrialT>
+double binomial_estimate(SuccessT successes, TrialT permutations) {
+  return (1. + static_cast<double>(successes)) /
+         (1. + static_cast<double>(permutations));
+}
+
+/**
  * @brief Unbiased estimator of p in a geometric trial.
  * @tparam T A numeric type.
  * @param m The number of successes.
@@ -79,7 +95,11 @@ template<typename T> [[maybe_unused]] T setdiff(T x, T y) {
  */
 template<typename T>
 double geometric_p(T m, T n) {
-  return (m - 1.) / (n - 1.);
+  const double n_d = static_cast<double>(n);
+  if (n_d <= 1.) {
+    return binomial_estimate(m, n);
+  }
+  return (static_cast<double>(m) - 1.) / (n_d - 1.);
 }
 
 /**
