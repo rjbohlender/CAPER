@@ -51,12 +51,19 @@ used with permutation, the costly calculation of the p-value is skipped, and the
 
 ## Compiling ##
 
-Dependencies: 
+Dependencies:
 - Tested with Armadillo >= 12.600
 - C++ compiler supporting C++20
 - C++ Boost Library > 1.66 (required for quadrature)
 
-The dependencies can be installed via your package manager. Using Homebrew on macOS:
+The dependencies can be installed via your package manager. On Debian or Ubuntu based
+systems you can install the prerequisites with:
+
+```bash
+sudo apt-get install libarmadillo-dev libboost-all-dev
+```
+
+Using Homebrew on macOS:
 
 ```bash
 brew install armadillo
