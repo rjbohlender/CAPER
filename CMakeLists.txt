@@ -5,6 +5,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+include(FetchContent)
+
 set(Boost_USE_MULTITHREADED TRUE)
 
 option(ENABLE_NATIVE_OPTIMIZATIONS "Enable native architecture-specific optimizations" OFF)
@@ -13,9 +15,74 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     message(STATUS "GNU C++ compiler detected")
 endif()
 
-find_package(Armadillo 12.6 REQUIRED)
+find_package(Armadillo 12.6 QUIET)
+set(USING_SYSTEM_ARMADILLO ${Armadillo_FOUND})
+
+if (NOT USING_SYSTEM_ARMADILLO)
+    message(STATUS "System Armadillo >= 12.6 not found, fetching 12.6.4")
+    include(FetchContent)
+    FetchContent_Declare(armadillo
+        URL https://downloads.sourceforge.net/project/arma/armadillo-12.6.4.tar.xz
+        URL_HASH SHA256=eb7f243ffc32f18324bc7fa978d0358637e7357ca7836bec55b4eb56e9749380
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+    FetchContent_MakeAvailable(armadillo)
+
+    if (NOT TARGET Armadillo::armadillo)
+        add_library(Armadillo::armadillo INTERFACE IMPORTED)
+    endif ()
+
+    set(ARMADILLO_INCLUDE_DIRS "${armadillo_SOURCE_DIR}/include")
+    set(ARMADILLO_LIBRARIES "")
+    set_target_properties(Armadillo::armadillo PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${ARMADILLO_INCLUDE_DIRS}")
+    target_compile_definitions(Armadillo::armadillo INTERFACE ARMA_DONT_USE_WRAPPER ARMA_DONT_USE_LAPACK ARMA_DONT_USE_BLAS)
+else ()
+    message(STATUS "Using system Armadillo ${Armadillo_VERSION}")
+endif ()
+
 find_package(Threads REQUIRED)
-find_package(Boost 1.66.0 COMPONENTS program_options iostreams REQUIRED)
+find_package(Boost 1.66.0 COMPONENTS program_options iostreams QUIET)
+set(USING_SYSTEM_BOOST ${Boost_FOUND})
+
+if (NOT Boost_FOUND)
+    message(STATUS "System Boost >= 1.66 not found, fetching 1.82.0")
+    FetchContent_Declare(boost
+        URL https://downloads.sourceforge.net/project/boost/boost/1.82.0/boost_1_82_0.tar.gz
+        URL_HASH SHA256=66a469b6e608a51f8347236f4912e27dc5c60c60d7d53ae9bfe4683316c6f04c
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+    FetchContent_MakeAvailable(boost)
+
+    FetchContent_Declare(zstd
+        URL https://github.com/facebook/zstd/archive/refs/tags/v1.5.5.tar.gz
+        URL_HASH SHA256=98e9c3d949d1b924e28e01eccb7deed865eefebf25c2f21c702e5cd5b63b85e1
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+        SOURCE_SUBDIR build/cmake)
+    FetchContent_MakeAvailable(zstd)
+
+    set(Boost_FOUND TRUE)
+    set(Boost_VERSION 108200)
+    set(Boost_INCLUDE_DIRS "${boost_SOURCE_DIR}")
+
+    file(GLOB BOOST_PROGRAM_OPTIONS_SOURCES
+        "${boost_SOURCE_DIR}/libs/program_options/src/*.cpp")
+
+    add_library(boost_program_options STATIC ${BOOST_PROGRAM_OPTIONS_SOURCES})
+    target_include_directories(boost_program_options PUBLIC "${Boost_INCLUDE_DIRS}")
+    target_compile_definitions(boost_program_options PUBLIC BOOST_ALL_NO_LIB)
+
+    add_library(boost_iostreams STATIC
+        "${boost_SOURCE_DIR}/libs/iostreams/src/file_descriptor.cpp"
+        "${boost_SOURCE_DIR}/libs/iostreams/src/gzip.cpp"
+        "${boost_SOURCE_DIR}/libs/iostreams/src/mapped_file.cpp"
+        "${boost_SOURCE_DIR}/libs/iostreams/src/zlib.cpp"
+        "${boost_SOURCE_DIR}/libs/iostreams/src/zstd.cpp")
+    target_include_directories(boost_iostreams PUBLIC "${Boost_INCLUDE_DIRS}")
+    target_compile_definitions(boost_iostreams PUBLIC BOOST_ALL_NO_LIB BOOST_IOSTREAMS_NO_BZIP2 BOOST_IOSTREAMS_NO_LZMA)
+    target_link_libraries(boost_iostreams PUBLIC ZLIB::ZLIB libzstd_static)
+
+    add_library(Boost::program_options ALIAS boost_program_options)
+    add_library(Boost::iostreams ALIAS boost_iostreams)
+endif ()
 find_package(ZLIB REQUIRED)
 
 add_library(caper_utils STATIC utility/filesystem.cpp)
@@ -36,9 +103,11 @@ if (APPLE)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -pedantic")
 endif ()
 
-if (UNIX)
-    find_package(LAPACK REQUIRED)
-    find_package(BLAS REQUIRED)
+if (USING_SYSTEM_ARMADILLO)
+    if (UNIX)
+        find_package(LAPACK REQUIRED)
+        find_package(BLAS REQUIRED)
+    endif ()
 endif ()
 
 add_subdirectory(tools/vcf2matrix)
@@ -130,9 +199,11 @@ target_link_libraries(caper_core PUBLIC
         Threads::Threads
         Boost::program_options
         Boost::iostreams
-        LAPACK::LAPACK
-        BLAS::BLAS
         ZLIB::ZLIB)
+
+if (USING_SYSTEM_ARMADILLO)
+    target_link_libraries(caper_core PUBLIC LAPACK::LAPACK BLAS::BLAS)
+endif ()
 
 target_compile_options(caper_core PUBLIC
         "$<$<BOOL:${ENABLE_NATIVE_OPTIMIZATIONS}>:$<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-march=native>>"

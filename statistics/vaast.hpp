@@ -5,7 +5,9 @@
 #ifndef PERMUTE_ASSOCIATE_VAAST_HPP
 #define PERMUTE_ASSOCIATE_VAAST_HPP
 
+#ifndef ARMA_DONT_USE_WRAPPER
 #define ARMA_DONT_USE_WRAPPER
+#endif
 #include <armadillo>
 
 #include "../data/gene.hpp"

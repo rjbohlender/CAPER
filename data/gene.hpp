@@ -5,7 +5,9 @@
 #ifndef PERMUTE_ASSOCIATE_GENE_HPP
 #define PERMUTE_ASSOCIATE_GENE_HPP
 
+#ifndef ARMA_DONT_USE_WRAPPER
 #define ARMA_DONT_USE_WRAPPER
+#endif
 
 #include "../utility/split.hpp"
 #include "../utility/taskparams.hpp"
