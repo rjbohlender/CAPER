@@ -5,7 +5,9 @@
 #ifndef PERMUTE_ASSOCIATE_LOGISTIC_REGRESSION_HPP
 #define PERMUTE_ASSOCIATE_LOGISTIC_REGRESSION_HPP 1
 
+#ifndef ARMA_DONT_USE_WRAPPER
 #define ARMA_DONT_USE_WRAPPER
+#endif
 
 #include <armadillo>
 #include <cmath>

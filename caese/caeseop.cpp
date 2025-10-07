@@ -4,6 +4,7 @@
 
 #include "caeseop.hpp"
 #include "../statistics/fishertest.hpp"
+#include "../utility/math.hpp"
 
 CAESEOp::CAESEOp(CAESETask &ct, std::shared_ptr<CAESEReporter> reporter, double seed, bool verbose)
 	: gen_(seed), ta_(ct), done_(false), verbose_(verbose), reporter_(reporter) {
@@ -141,7 +142,7 @@ auto CAESEOp::effectsize() -> void {
 	  empirical = v.second.successes / (1. + dis(gen_));
 	  midp = v.second.mid_successes / (1 + dis(gen_));
 	} else {
-	  empirical = (1. + v.second.successes) / (1. + v.second.permutations);
+          empirical = binomial_estimate(v.second.successes, v.second.permutations);
 	  midp = (1. + v.second.mid_successes) / (1. + v.second.permutations);
 	}
 

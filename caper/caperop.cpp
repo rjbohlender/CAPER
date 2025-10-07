@@ -130,16 +130,24 @@ auto CAPEROp::op() -> void {
     // for binomial p-hat
     if (caperTask.tp.max_perms) { // We're looping multiple times
       if (res.permutations < *caperTask.tp.max_perms) {
-        empirical = geometric_p(res.successes, res.permutations);
+        if (res.permutations <= 1) {
+          empirical = binomial_estimate(res.successes, res.permutations);
+        } else {
+          empirical = geometric_p(res.successes, res.permutations);
+        }
       } else {
-        empirical = (1. + res.successes) / (1. + res.permutations);
+        empirical = binomial_estimate(res.successes, res.permutations);
       }
       midp = (0.5 + res.mid_successes) / (1. + res.permutations);
     } else { // We're looping a single time
       if (res.permutations < caperTask.tp.nperm) {
-        empirical = geometric_p(res.successes, res.permutations);
+        if (res.permutations <= 1) {
+          empirical = binomial_estimate(res.successes, res.permutations);
+        } else {
+          empirical = geometric_p(res.successes, res.permutations);
+        }
       } else {
-        empirical = (1. + res.successes) / (1. + res.permutations);
+        empirical = binomial_estimate(res.successes, res.permutations);
       }
       midp = (0.5 + res.mid_successes) / (1. + res.permutations);
     }

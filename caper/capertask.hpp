@@ -5,7 +5,9 @@
 #ifndef PERMUTE_ASSOCIATE_CAPERTASK_HPP
 #define PERMUTE_ASSOCIATE_CAPERTASK_HPP
 
+#ifndef ARMA_DONT_USE_WRAPPER
 #define ARMA_DONT_USE_WRAPPER
+#endif
 
 #include <armadillo>
 #include <cassert>

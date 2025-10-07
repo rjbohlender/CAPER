@@ -5,7 +5,9 @@
 #ifndef PERMUTE_ASSOCIATE_GLM_HPP
 #define PERMUTE_ASSOCIATE_GLM_HPP
 
+#ifndef ARMA_DONT_USE_WRAPPER
 #define ARMA_DONT_USE_WRAPPER
+#endif
 
 #include <armadillo>
 #include <boost/math/tools/toms748_solve.hpp>

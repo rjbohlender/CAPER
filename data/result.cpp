@@ -175,14 +175,14 @@ Result &Result::combine(const Result &res, const TaskParams &tp) {
     if (permutations < *tp.max_perms) {
       empirical_p = geometric_p(successes, permutations);
     } else {
-      empirical_p = (1. + successes) / (1. + permutations);
+      empirical_p = binomial_estimate(successes, permutations);
     }
     empirical_midp = (0.5 + mid_successes) / (1. + permutations);
   } else {
     if (permutations < tp.nperm) {
       empirical_p = geometric_p(successes, permutations);
     } else {
-      empirical_p = (1. + successes) / (1. + permutations);
+      empirical_p = binomial_estimate(successes, permutations);
     }
     empirical_midp = (0.5 + mid_successes) / (1. + permutations);
   }

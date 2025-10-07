@@ -5,7 +5,9 @@
 #ifndef PERMUTE_ASSOCIATE_QRFC2_HPP
 #define PERMUTE_ASSOCIATE_QRFC2_HPP
 
+#ifndef ARMA_DONT_USE_WRAPPER
 #define ARMA_DONT_USE_WRAPPER
+#endif
 
 #include <armadillo>
 #include <csetjmp>
