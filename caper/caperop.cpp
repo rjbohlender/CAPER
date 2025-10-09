@@ -62,7 +62,7 @@ auto CAPEROp::op() -> void {
                                 (1. - cov.get_original_phenotypes()));
       res.cont_ref =
           2 * arma::accu(1. - cov.get_original_phenotypes()) - res.cont_alt;
-      res.original = caperTask.methods.call(
+      res.original = caperTask.methods.evaluate(
           gene, cov, cov.get_original_phenotypes(), transcript, true);
       res.is_set = true;
     }
@@ -101,7 +101,7 @@ auto CAPEROp::op() -> void {
 #endif
 
       double perm_val =
-          caperTask.methods.call(gene, cov, phenotypes, transcript, false);
+          caperTask.methods.evaluate(gene, cov, phenotypes, transcript, false);
 
       res.permuted.push_back(perm_val);
 

@@ -8,6 +8,7 @@
 #define ARMA_DONT_USE_WRAPPER
 
 #include <armadillo>
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
@@ -27,8 +28,12 @@ public:
   Methods(const TaskParams &tp, const std::shared_ptr<Covariates> &cov);
   Methods(const TaskParams &tp, const Covariates &cov);
 
-  double call(Gene &gene, Covariates &cov, arma::vec &phenotypes,
-              const std::string &transcript, bool detail);
+  using MethodFn =
+      std::function<double(Gene &, Covariates &, arma::vec &,
+                           const std::string &, bool)>;
+
+  double evaluate(Gene &gene, Covariates &cov, arma::vec &phenotypes,
+                  const std::string &transcript, bool detail);
 
   std::string str();
 
@@ -66,7 +71,7 @@ public:
   static double WSS(Gene &gene, arma::vec &Y, const std::string &k);
 
 private:
-  const std::string method_;
+  MethodFn method_fn_;
 
   // SKAT support fields
   Kernel kernel_;
@@ -77,6 +82,7 @@ private:
   // Check weighting
   void check_weights(Gene &gene, const std::string &transcript, int a = 1,
                      int b = 25, bool no_weight = false);
+  void initialize_method_fn();
 
   // SKAT Null Model
   std::shared_ptr<SKATR_Null> obj_;

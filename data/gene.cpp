@@ -675,7 +675,7 @@ bool Gene::check_testability(const std::string &transcript, Covariates &cov,
   assert(arma::accu(extreme_phen) == ncase);
 
   Gene tmp = *this;
-  double score = methods.call(tmp, cov, extreme_phen, transcript, true);
+  double score = methods.evaluate(tmp, cov, extreme_phen, transcript, true);
 
   if (tp.method == "VAAST" || tp.method == "SKAT") {
     bool testable_variants =
