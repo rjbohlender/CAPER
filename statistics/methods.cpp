@@ -102,7 +102,7 @@ arma::vec sparse_row_sums(const arma::sp_mat &matrix) {
 } // namespace
 
 Methods::Methods(const TaskParams &tp, const std::shared_ptr<Covariates> &cov)
-    : method_(tp.method), tp(tp) {
+    : tp(tp) {
   if (tp.kernel == "Linear") {
     kernel_ = Kernel::Linear;
   } else if (tp.kernel == "wLinear") {
@@ -121,10 +121,12 @@ Methods::Methods(const TaskParams &tp, const std::shared_ptr<Covariates> &cov)
   } else if (tp.method == "VT") {
     vt_obj_ = std::make_shared<VT_Res>();
   }
+
+  initialize_method_fn();
 }
 
 Methods::Methods(const TaskParams &tp, const Covariates &cov)
-    : method_(tp.method), tp(tp) {
+    : tp(tp) {
   if (tp.kernel == "Linear") {
     kernel_ = Kernel::Linear;
   } else if (tp.kernel == "wLinear") {
@@ -143,6 +145,8 @@ Methods::Methods(const TaskParams &tp, const Covariates &cov)
   } else if (tp.method == "VT") {
     vt_obj_ = std::make_shared<VT_Res>();
   }
+
+  initialize_method_fn();
 }
 
 /**
@@ -627,7 +631,73 @@ double Methods::WSS(Gene &gene, arma::vec &Y, const std::string &k) {
   return arma::accu(count_weight % Y);
 }
 
-std::string Methods::str() { return method_; }
+std::string Methods::str() { return tp.method; }
+
+void Methods::initialize_method_fn() {
+  const std::map<std::string, MethodFn> dispatch = {
+      {"BURDEN", [this](Gene &gene, Covariates &, arma::vec &phenotypes,
+                         const std::string &transcript, bool) {
+         return BURDEN(gene, phenotypes, transcript, tp.nperm > 0);
+       }},
+      {"CALPHA", [this](Gene &gene, Covariates &, arma::vec &phenotypes,
+                         const std::string &transcript, bool) {
+         return CALPHA(gene, phenotypes, transcript);
+       }},
+      {"CMC", [this](Gene &gene, Covariates &, arma::vec &phenotypes,
+                      const std::string &transcript, bool) {
+         return CMC(gene, phenotypes, transcript, tp.cmcmaf);
+       }},
+      {"CMC1df", [this](Gene &gene, Covariates &, arma::vec &phenotypes,
+                         const std::string &transcript, bool) {
+         return CMC1df(gene, phenotypes, transcript, tp.nperm > 0);
+       }},
+      {"RVT1", [this](Gene &gene, Covariates &cov, arma::vec &phenotypes,
+                      const std::string &transcript, bool) {
+         return RVT1(gene, phenotypes, cov.get_covariate_matrix(),
+                     cov.get_coef(), transcript, tp.qtl);
+       }},
+      {"RVT2", [this](Gene &gene, Covariates &cov, arma::vec &phenotypes,
+                      const std::string &transcript, bool) {
+         return RVT2(gene, phenotypes, cov.get_covariate_matrix(),
+                     cov.get_coef(), transcript, tp.qtl);
+       }},
+      {"SKAT", [this](Gene &gene, Covariates &, arma::vec &phenotypes,
+                       const std::string &transcript, bool detail) {
+         return SKAT(gene, phenotypes, transcript, tp.a, tp.b, detail, tp.qtl,
+                     tp.nperm > 0);
+       }},
+      {"SKATO", [this](Gene &gene, Covariates &, arma::vec &phenotypes,
+                        const std::string &transcript, bool detail) {
+         return SKATO(gene, phenotypes, transcript, tp.a, tp.b, detail,
+                      tp.qtl);
+       }},
+      {"SKATC", [this](Gene &gene, Covariates &, arma::vec &phenotypes,
+                        const std::string &transcript, bool detail) {
+         return SKATC(gene, phenotypes, transcript, tp.a, tp.b, detail,
+                      tp.qtl);
+       }},
+      {"VAAST", [this](Gene &gene, Covariates &, arma::vec &phenotypes,
+                        const std::string &transcript, bool detail) {
+         return VAAST(gene, phenotypes, transcript, tp.vaast_site_penalty,
+                      tp.group_size, detail, tp.biallelic,
+                      tp.soft_maf_filter, tp.alternate_grouping);
+       }},
+      {"VT", [this](Gene &gene, Covariates &, arma::vec &phenotypes,
+                     const std::string &transcript, bool) {
+         return VT(gene, phenotypes, transcript);
+       }},
+      {"WSS", [this](Gene &gene, Covariates &, arma::vec &phenotypes,
+                      const std::string &transcript, bool) {
+         return WSS(gene, phenotypes, transcript);
+       }}};
+
+  const auto it = dispatch.find(tp.method);
+  if (it == dispatch.end()) {
+    throw std::logic_error("Failed to find method " + tp.method);
+  }
+
+  method_fn_ = it->second;
+}
 
 /**
  * @brief Calculate SKAT with p-value following Wu, Guan, Pankow (2017)
@@ -949,38 +1019,7 @@ void Methods::check_weights(Gene &gene, const std::string &transcript, int a,
   }
 }
 
-double Methods::call(Gene &gene, Covariates &cov, arma::vec &phenotypes,
-                     const std::string &transcript, bool detail) {
-  if (method_ == "BURDEN") {
-    return BURDEN(gene, phenotypes, transcript, tp.nperm > 0);
-  } else if (method_ == "CALPHA") {
-    return CALPHA(gene, phenotypes, transcript);
-  } else if (method_ == "CMC") {
-    return CMC(gene, phenotypes, transcript, tp.cmcmaf);
-  } else if (method_ == "CMC1df") {
-    return CMC1df(gene, phenotypes, transcript, tp.nperm > 0);
-  } else if (method_ == "RVT1") {
-    return RVT1(gene, phenotypes, cov.get_covariate_matrix(), cov.get_coef(),
-                transcript, tp.qtl);
-  } else if (method_ == "RVT2") {
-    return RVT2(gene, phenotypes, cov.get_covariate_matrix(), cov.get_coef(),
-                transcript, tp.qtl);
-  } else if (method_ == "SKAT") {
-    return SKAT(gene, phenotypes, transcript, tp.a, tp.b, detail, tp.qtl,
-                tp.nperm > 0);
-  } else if (method_ == "SKATO") {
-    return SKATO(gene, phenotypes, transcript, tp.a, tp.b, detail, tp.qtl);
-  } else if (method_ == "SKATC") {
-    return SKATC(gene, phenotypes, transcript, tp.a, tp.b, detail, tp.qtl);
-  } else if (method_ == "VAAST") {
-    return VAAST(gene, phenotypes, transcript, tp.vaast_site_penalty,
-                 tp.group_size, detail, tp.biallelic, tp.soft_maf_filter,
-                 tp.alternate_grouping);
-  } else if (method_ == "VT") {
-    return VT(gene, phenotypes, transcript);
-  } else if (method_ == "WSS") {
-    return WSS(gene, phenotypes, transcript);
-  } else {
-    throw(std::logic_error("Failed to find "));
-  }
+double Methods::evaluate(Gene &gene, Covariates &cov, arma::vec &phenotypes,
+                         const std::string &transcript, bool detail) {
+  return method_fn_(gene, cov, phenotypes, transcript, detail);
 }
