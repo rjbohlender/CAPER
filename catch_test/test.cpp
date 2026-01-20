@@ -20,6 +20,10 @@
 #include <boost/math/distributions/chi_squared.hpp>
 #include <boost/math/distributions/fisher_f.hpp>
 
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
+
 #include "../data/bed.hpp"
 #include "../data/covariates.hpp"
 #include "../data/gene.hpp"
@@ -258,15 +262,16 @@ TEST_CASE("Data Construction & Methods") {
   tp.no_weights = false;
   tp.aaf_filter = false;
   // File paths and option status
-  uint32_t pathbufsize = 1000;
-  char pathbuf[pathbufsize];
+  char pathbuf[1024];
+  uint32_t pathbufsize = sizeof(pathbuf);
   for (int i = 0; i < pathbufsize; i++) {
     pathbuf[i] = '\0';
   }
 #ifdef __APPLE__
   int ret = _NSGetExecutablePath(pathbuf, &pathbufsize);
 #else
-  ssize_t len = readlink("/proc/self/exe", pathbuf, 1000);
+  ssize_t len = readlink("/proc/self/exe", pathbuf, sizeof(pathbuf) - 1);
+  if (len != -1) pathbuf[len] = '\0';
 #endif
   tp.program_path = pathbuf;
   int i = strlen(pathbuf);
@@ -472,7 +477,7 @@ TEST_CASE("Data Construction & Methods") {
 
     caper_op.run();
 
-    for (const auto &entry : caper_task.results) {
+    for (const auto &entry : caper_op.caperTask.results) {
       const Result &res = entry.second;
       INFO(entry.first);
       REQUIRE(res.permutations == 1);
@@ -1288,7 +1293,7 @@ TEST_CASE("Gradient descent supports non-canonical links", "[glm]") {
   // Simple dataset with intercept and one predictor
   arma::mat X{{1.0, -2.0}, {1.0, -1.0}, {1.0, 0.0},
               {1.0, 1.0},  {1.0, 2.0},  {1.0, 3.0}};
-  arma::vec Y{0, 0, 0, 1, 1, 1};
+  arma::vec Y{0, 0, 1, 0, 1, 1};
 
   // Fit using gradient descent with a non-canonical link
   TaskParams tp_gd;
@@ -1297,7 +1302,7 @@ TEST_CASE("Gradient descent supports non-canonical links", "[glm]") {
   GLM<Binomial> gd_model(X, Y, cloglog_link, tp_gd);
 
   REQUIRE(gd_model.success_);
-  REQUIRE(arma::is_finite(gd_model.beta_));
+  REQUIRE(gd_model.beta_.is_finite());
 }
 
 TEST_CASE("Weighted IRLS matches QR implementation", "[glm]") {

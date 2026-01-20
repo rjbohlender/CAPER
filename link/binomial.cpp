@@ -170,6 +170,7 @@ arma::vec Binomial::mueta(const arma::vec &eta) noexcept {
     }
     ret = arma::clamp(ret, std::numeric_limits<double>::min(),
                       1. - std::numeric_limits<double>::min());
+    return ret;
   }
   case LinkID::Log:
     return arma::clamp(arma::exp(eta), std::numeric_limits<double>::min(),
@@ -188,7 +189,7 @@ Binomial::LinkID Binomial::check_linkid(const std::string &link) {
     return Binomial::LinkID::Probit;
   } else if (link == "cloglog") {
     return Binomial::LinkID::cloglog;
-  } else if (link == "cauchit") {
+  } else if (link == "Cauchit") {
     return Binomial::LinkID::Cauchit;
   } else {
     return Binomial::LinkID::Log;

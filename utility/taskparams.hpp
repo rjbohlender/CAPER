@@ -19,27 +19,27 @@ struct TaskParams {
   std::string base;
   std::string program_directory;
   // Permutation paramters
-  arma::uword success_threshold;
+  arma::uword success_threshold = 0;
 
   boost::optional<int> seed;
 
-  arma::uword nperm;
-  arma::uword max_levels;
+  arma::uword nperm = 0;
+  arma::uword max_levels = 100;
   boost::optional<arma::uword> max_perms;
 
   bool whole_gene = false;
 
   // For external permutations
-  bool external;
+  bool external = false;
   std::string external_path;
-  bool output_stats;
+  bool output_stats = false;
 
   // For SKATO, SKAT, BURDEN
-  bool alternate_permutation;
-  bool analytic;
-  bool qtl;
-  bool quantitative;
-  bool saddlepoint;
+  bool alternate_permutation = false;
+  bool analytic = false;
+  bool qtl = false;
+  bool quantitative = false;
+  bool saddlepoint = false;
 
   // Method
   std::string method;
@@ -50,14 +50,14 @@ struct TaskParams {
   std::string covariates_path;
   std::string ped_path;
   std::string whitelist_path;
-  arma::uword mac;
-  double maf;
-  double min_variant_count;
-  double min_minor_allele_count;
-  bool nocovadj;
-  bool no_weights;
-  bool impute_to_mean;
-  bool aaf_filter;
+  arma::uword mac = 0;
+  double maf = 0.5;
+  double min_variant_count = 1;
+  double min_minor_allele_count = 1;
+  bool nocovadj = false;
+  bool no_weights = false;
+  bool impute_to_mean = false;
+  bool aaf_filter = false;
 
   boost::optional<int> range_start;
   boost::optional<int> range_end;
@@ -65,16 +65,16 @@ struct TaskParams {
   boost::optional<std::string> bed;
   boost::optional<std::string> weight;
 
-  double bin_epsilon;
+  double bin_epsilon = 0.0001;
 
-  double soft_maf_filter;
-  double vaast_site_penalty;
-  bool alternate_grouping;
+  double soft_maf_filter = 0.0;
+  double vaast_site_penalty = 0.0;
+  bool alternate_grouping = false;
 
-  bool verbose;
+  bool verbose = false;
 
   // RVT test options
-  bool wald;
+  bool wald = false;
 
   // Output permutations
   boost::optional<std::string> permute_set;
@@ -88,35 +88,35 @@ struct TaskParams {
   // Detailed VAAST output
   std::string full_command;
   std::string output_path;
-  bool top_only;
+  bool top_only = false;
 
   // VAAST
-  arma::uword group_size;
+  arma::uword group_size = 4;
   boost::optional<double> testable;
-  bool biallelic;
+  bool biallelic = false;
 
   // CMC
-  double cmcmaf;
+  double cmcmaf = 0.005;
   bool hotellings = false;
 
-  size_t nthreads;
+  size_t nthreads = 1;
 
   // Gene list
   boost::optional<std::string> gene_list;
-  bool no_detail;
+  bool no_detail = false;
 
   // Run power analysis
-  bool power;
+  bool power = false;
   arma::vec alpha;
-  arma::uword bootstrap_reps;
+  arma::uword bootstrap_reps = 0;
   std::vector<arma::uword> ncases;
   std::vector<arma::uword> ncontrols;
 
   // SKAT Parameters
   std::string kernel; // Kernel selection
-  int a; // Beta weight parameters
-  int b; // Beta weight parameters
-  bool var_collapsing;
+  int a = 1; // Beta weight parameters
+  int b = 25; // Beta weight parameters
+  bool var_collapsing = false;
 };
 
 #endif //PERMUTE_ASSOCIATE_TASKPARAMS_HPP

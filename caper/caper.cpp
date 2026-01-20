@@ -344,15 +344,16 @@ int main(int argc, char **argv) {
   tp.method = vm["method"].as<std::string>();
   tp.optimizer = vm["optimizer"].as<std::string>();
   // File paths and option status
-  uint32_t pathbufsize = 1000;
-  char pathbuf[pathbufsize];
+  char pathbuf[1024];
+  uint32_t pathbufsize = sizeof(pathbuf);
   for(int i = 0; i < pathbufsize; i++) {
     pathbuf[i] = '\0';
   }
 #ifdef __APPLE__
   int ret = _NSGetExecutablePath(pathbuf, &pathbufsize);
 #else
-  ssize_t len = readlink("/proc/self/exe", pathbuf, 1000);
+  ssize_t len = readlink("/proc/self/exe", pathbuf, sizeof(pathbuf) - 1);
+  if (len != -1) pathbuf[len] = '\0';
 #endif
   tp.program_path = pathbuf;
   ssize_t i = strlen(pathbuf);

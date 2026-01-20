@@ -129,7 +129,7 @@ auto BayesianGLM<LinkT>::irls(arma::mat &X, arma::colvec &Y) -> arma::vec {
 
     if(link.family == "gaussian")
       prior_scale = prior_scale_0;
-    if(!arma::is_finite(prior_df)) {
+    if(!prior_df.is_finite()) {
       prior_sd = prior_scale;
     } else {
       prior_sd = arma::sqrt(

@@ -86,3 +86,4 @@ bernoulli.R
 /R_test/
 /cmake-build-relwithdebinfo/
 /filter/filter_whitelist_test.csv
+/build/

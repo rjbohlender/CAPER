@@ -31,6 +31,10 @@ if(NOT TARGET Armadillo::armadillo)
 endif()
 
 if (APPLE)
+    find_library(ACCELERATE_FRAMEWORK Accelerate)
+    if (ACCELERATE_FRAMEWORK)
+        message(STATUS "Found Accelerate framework: ${ACCELERATE_FRAMEWORK}")
+    endif()
     # -fsanitize=address -fsanitize=undefined -Wall -pedantic
     # set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O1 -fsanitize=address -fsanitize-blacklist=/Users/rjbohlender/CLionProjects/CAPER/Asan.supp -Wall -pedantic")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -pedantic")
@@ -133,6 +137,11 @@ target_link_libraries(caper_core PUBLIC
         LAPACK::LAPACK
         BLAS::BLAS
         ZLIB::ZLIB)
+
+if (ACCELERATE_FRAMEWORK)
+    target_link_libraries(caper_core PUBLIC ${ACCELERATE_FRAMEWORK})
+    target_compile_definitions(caper_core PUBLIC ACCELERATE_NEW_LAPACK)
+endif()
 
 target_compile_options(caper_core PUBLIC
         "$<$<BOOL:${ENABLE_NATIVE_OPTIMIZATIONS}>:$<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-march=native>>"

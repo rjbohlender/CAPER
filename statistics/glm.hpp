@@ -42,7 +42,7 @@ template <typename LinkT> struct GLM {
       return;
     } else {
       link.initialize(Y, n_, mu_, weights_);
-      eta_ = link.linkinv(mu_);
+      eta_ = link.link(mu_);
       dev_ = arma::accu(
           link.dev_resids(Y, mu_, arma::vec(X.n_rows, arma::fill::ones)));
     }
@@ -127,7 +127,7 @@ auto GLM<LinkT>::gradient_descent(arma::mat &X, arma::colvec &Y) -> arma::vec {
   auto m = static_cast<double>(X.n_rows);
   arma::vec gti = arma::vec(X.n_cols, arma::fill::zeros);
   arma::mat &A = X;
-  auto b = arma::vec(A.n_cols, arma::fill::randn);
+  auto b = arma::vec(A.n_cols, arma::fill::zeros);
   auto grad = b;
   do {
     // Compute mean and linear predictor
@@ -304,7 +304,7 @@ auto GLM<LinkT>::irls_qr(arma::mat &X, arma::colvec &Y) -> arma::vec {
   do {
     mu_ = link.linkinv(eta_);
     var_ = link.variance(mu_);
-    if (!arma::is_finite(var_)) {
+    if (!var_.is_finite()) {
       throw(std::runtime_error("Non-finite values in V(mu)."));
     }
     if (arma::any(var_ == 0)) {
@@ -369,7 +369,7 @@ auto GLM<LinkT>::irls_qr_R(arma::mat &X, arma::colvec &Y) -> arma::vec {
   do {
     mu_ = link.linkinv(eta_);
     var_ = link.variance(mu_);
-    if (!arma::is_finite(var_)) {
+    if (!var_.is_finite()) {
       throw(std::runtime_error("Non-finite values in V(mu)."));
     }
     if (arma::any(var_ == 0)) {
