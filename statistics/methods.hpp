@@ -29,6 +29,8 @@ class Methods {
 public:
   Methods(const TaskParams &tp, const std::shared_ptr<Covariates> &cov);
   Methods(const TaskParams &tp, const Covariates &cov);
+  Methods(const Methods &other);
+  Methods(Methods &&other) noexcept;
 
   using MethodFn =
       std::function<double(Gene &, Covariates &, arma::vec &,
@@ -94,7 +96,7 @@ private:
   std::shared_ptr<VT_Res> vt_obj_;
 
   // TaskParams
-  const TaskParams tp;
+  TaskParams tp;
 };
 
 #endif // PERMUTE_ASSOCIATE_METHODS_HPP

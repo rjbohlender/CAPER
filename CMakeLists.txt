@@ -13,9 +13,17 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     message(STATUS "GNU C++ compiler detected")
 endif()
 
+# Source - https://stackoverflow.com/a/79147222
+# Posted by usr1234567, modified by community. See post 'Timeline' for change history
+# Retrieved 2026-02-02, License - CC BY-SA 4.0
+
+if(POLICY CMP0167)
+    cmake_policy(SET CMP0167 NEW)
+endif()
+
 find_package(Armadillo 12.6 REQUIRED)
 find_package(Threads REQUIRED)
-find_package(Boost 1.66.0 COMPONENTS program_options iostreams REQUIRED)
+find_package(Boost 1.70.0 COMPONENTS program_options iostreams REQUIRED)
 find_package(ZLIB REQUIRED)
 
 add_library(caper_utils STATIC utility/filesystem.cpp)

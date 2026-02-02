@@ -30,6 +30,11 @@ void Permute::generate_permutations(
     (*permutations)[i].resize(odds.n_rows);
   }
 
+  if (nthreads <= 1) {
+    permute_thread(permutations, ncases, 0, nperm, sto.IRandom(0, std::numeric_limits<int>::max()));
+    return;
+  }
+
   int step = nperm / nthreads;
   int remaining = nperm;
   { // Force scope so that threads automatically join and exit when done via

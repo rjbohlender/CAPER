@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
   bool alternate_grouping = false;
   bool no_weights = false;
   bool impute_to_mean = false;
-  bool ma_count = true;
+  bool ma_count = false;
   bool whole_gene = false;
   bool saddlepoint = false;
   bool hotellings = false;
@@ -312,7 +312,8 @@ int main(int argc, char **argv) {
    **********************/
   TaskParams tp;
 
-  RJBUtil::Splitter<std::string> beta_split(vm["beta_weights"].as<std::string>(), ",");
+  std::string beta_str = vm["beta_weights"].as<std::string>();
+  RJBUtil::Splitter<std::string> beta_split(beta_str, ",");
 
   // Store full command
   std::stringstream cmd_ss;
@@ -415,8 +416,8 @@ int main(int argc, char **argv) {
   tp.saddlepoint = saddlepoint;
   tp.var_collapsing = var_collapsing;
   // Beta weights
-    tp.a = std::stoi(beta_split.str(0));
-    tp.b = std::stoi(beta_split.str(1));
+  tp.a = std::stoi(beta_split.str(0));
+  tp.b = std::stoi(beta_split.str(1));
   // Testability
   tp.testable = testable;
   tp.biallelic = biallelic;

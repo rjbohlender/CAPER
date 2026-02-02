@@ -101,8 +101,8 @@ arma::vec sparse_row_sums(const arma::sp_mat &matrix) {
 }
 } // namespace
 
-Methods::Methods(const TaskParams &tp, const std::shared_ptr<Covariates> &cov)
-    : tp(tp) {
+Methods::Methods(const TaskParams &tp_, const std::shared_ptr<Covariates> &cov_)
+    : tp(tp_) {
   if (tp.kernel == "Linear") {
     kernel_ = Kernel::Linear;
   } else if (tp.kernel == "wLinear") {
@@ -111,13 +111,13 @@ Methods::Methods(const TaskParams &tp, const std::shared_ptr<Covariates> &cov)
 
   if ((tp.method == "SKAT" || tp.method == "SKATO" || tp.method == "BURDEN" || tp.method == "SKATC") &&
       !tp.qtl) {
-    obj_ = std::make_shared<SKATR_Null>(*cov);
+    obj_ = std::make_shared<SKATR_Null>(*cov_);
     lin_obj_ = nullptr;
   } else if ((tp.method == "SKAT" || tp.method == "SKATO" ||
               tp.method == "BURDEN" || tp.method == "SKATC") &&
              tp.qtl) {
     obj_ = nullptr;
-    lin_obj_ = std::make_shared<SKATR_Linear_Null>(*cov);
+    lin_obj_ = std::make_shared<SKATR_Linear_Null>(*cov_);
   } else if (tp.method == "VT") {
     vt_obj_ = std::make_shared<VT_Res>();
   }
@@ -125,8 +125,8 @@ Methods::Methods(const TaskParams &tp, const std::shared_ptr<Covariates> &cov)
   initialize_method_fn();
 }
 
-Methods::Methods(const TaskParams &tp, const Covariates &cov)
-    : tp(tp) {
+Methods::Methods(const TaskParams &tp_, const Covariates &cov)
+    : tp(tp_) {
   if (tp.kernel == "Linear") {
     kernel_ = Kernel::Linear;
   } else if (tp.kernel == "wLinear") {
@@ -146,6 +146,19 @@ Methods::Methods(const TaskParams &tp, const Covariates &cov)
     vt_obj_ = std::make_shared<VT_Res>();
   }
 
+  initialize_method_fn();
+}
+
+Methods::Methods(const Methods &other)
+    : tp(other.tp), kernel_(other.kernel_), obj_(other.obj_),
+      lin_obj_(other.lin_obj_), vt_obj_(other.vt_obj_) {
+  initialize_method_fn();
+}
+
+Methods::Methods(Methods &&other) noexcept
+    : tp(std::move(other.tp)), kernel_(other.kernel_),
+      obj_(std::move(other.obj_)), lin_obj_(std::move(other.lin_obj_)),
+      vt_obj_(std::move(other.vt_obj_)) {
   initialize_method_fn();
 }
 

@@ -475,10 +475,20 @@ private:
     if (std::any_of(nvariants_.cbegin(), nvariants_.cend(),
                     [&](const auto &v) { return v.second > 0; })) {
 
+      long n_workers = tq_.get_nthreads();
+      if (n_workers <= 1) {
+          Task_t ta(stage_, gene, cov_, tp_, tp_.success_threshold, tp_.nperm, 0,
+                    tp_.nperm, *permutation_ptr_);
+          tq_.wait_for_space(tp_.nthreads - 1);
+          tq_.dispatch(std::move(ta));
+          ngenes_++;
+          return;
+      }
+
       long total_perm = 0;
       long total_success = 0;
-      long perm_step = tp_.nperm / tq_.get_nthreads();
-      long succ_step = tp_.success_threshold / tq_.get_nthreads();
+      long perm_step = tp_.nperm / n_workers;
+      long succ_step = tp_.success_threshold / n_workers;
       long max_loops = 1;
       if (tp_.max_perms) {
         max_loops = std::ceil(*tp_.max_perms / (double)tp_.nperm);
@@ -495,8 +505,8 @@ private:
         return;
       }
 
-      for (int i = 0; i < tq_.get_nthreads(); i++) {
-        if (i == tq_.get_nthreads() - 1) {
+      for (int i = 0; i < n_workers; i++) {
+        if (i == n_workers - 1) {
           Task_t ta(stage_,
                     gene,
                     cov_,
@@ -507,7 +517,7 @@ private:
                     max_loops * (tp_.nperm - total_perm),
                     *permutation_ptr_);
 
-          tq_.wait_for_space(tq_.get_nthreads());
+          tq_.wait_for_space(n_workers);
           tq_.dispatch(std::move(ta));
         } else {
           Task_t ta(stage_,
@@ -524,7 +534,7 @@ private:
           total_perm += perm_step;
           total_success += succ_step;
 
-          tq_.wait_for_space(tq_.get_nthreads());
+          tq_.wait_for_space(n_workers);
           tq_.dispatch(std::move(ta));
         }
       }
