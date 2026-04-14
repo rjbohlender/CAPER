@@ -177,7 +177,10 @@ int main(int argc, char **argv) {
          "A defined seed passed to the random number generators used for each gene.")
         ("check_testability",
          po::value(&testable),
-         "Return results for genes with a minimum achievable p-value less than or equal to what is given.");
+         "Return results for genes with a minimum achievable p-value less than or equal to what is given.")
+        ("var_collapsing",
+         po::bool_switch(&var_collapsing),
+         "Collapse variants with <10 minor allele count into a single pseudo variant. Will convert to minor allele counting instead of alternate allele counting.");
     vaast.add_options()
         ("group_size,g",
          po::value<arma::uword>()->default_value(4),
@@ -218,9 +221,6 @@ int main(int argc, char **argv) {
         ("wald",
          po::bool_switch(&wald),
          "Use a Wald test instead of the deviance for RVT2.")
-        ("var_collapsing",
-         po::bool_switch(&var_collapsing),
-         "Collapse variants with <10 minor allele count into a single pseudo variant. Will convert to minor allele counting instead of alternate allele counting.")
         ("external", po::value<std::string>(), "Use external permutations.")
         ("help,h", "Print this help message.")
         ("quiet,q", "Don't print status messages.");
