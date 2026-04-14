@@ -10,16 +10,10 @@
 
 #include <boost/program_options.hpp>
 #include <boost/optional.hpp>
-#include <unistd.h>
-
 #include "../statistics/methods.hpp"
 #include "../utility/filesystem.hpp"
 #include "../utility/jobdispatcher.hpp"
 #include "../power/powerop.hpp"
-
-#ifdef __APPLE__
-#include <mach-o/dyld.h>
-#endif
 
 namespace po = boost::program_options;
 
@@ -345,29 +339,12 @@ int main(int argc, char **argv) {
   tp.method = vm["method"].as<std::string>();
   tp.optimizer = vm["optimizer"].as<std::string>();
   // File paths and option status
-  char pathbuf[1024];
-  uint32_t pathbufsize = sizeof(pathbuf);
-  for(int i = 0; i < pathbufsize; i++) {
-    pathbuf[i] = '\0';
-  }
-#ifdef __APPLE__
-  int ret = _NSGetExecutablePath(pathbuf, &pathbufsize);
-#else
-  ssize_t len = readlink("/proc/self/exe", pathbuf, sizeof(pathbuf) - 1);
-  if (len != -1) pathbuf[len] = '\0';
-#endif
-  tp.program_path = pathbuf;
-  ssize_t i = strlen(pathbuf);
-  for (; i >= 0; i--) {
-    if (pathbuf[i] == '/') {
-      break;
-    }
-  }
-  tp.program_directory = std::string(pathbuf).substr(0, i + 1);
+  tp.program_path = get_executable_path();
+  tp.program_directory = get_executable_directory();
   if (vm.count("filter") > 0) {
     tp.whitelist_path = vm["filter"].as<std::string>();
   } else {
-    tp.whitelist_path = tp.program_directory + "../filter/filter_whitelist.csv";
+    tp.whitelist_path = resolve_default_filter_whitelist_path(tp.program_path);
   }
   std::cerr << "Program directory: " << tp.program_directory << std::endl;
   std::cerr << "Whitelist path: " << tp.whitelist_path << std::endl;

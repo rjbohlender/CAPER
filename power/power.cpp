@@ -26,10 +26,6 @@
 #include "stocc/randomc.h"
 #include "stocc/stocc.h"
 
-#ifdef __APPLE__
-#include <mach-o/dyld.h>
-#endif
-
 namespace po = boost::program_options;
 
 int main(int argc, char **argv) {
@@ -293,25 +289,8 @@ int main(int argc, char **argv) {
   tp.method = vm["method"].as<std::string>();
   tp.nperm = vm["nperm"].as<arma::uword>();
   // File paths and option status
-  char pathbuf[1024];
-  uint32_t pathbufsize = sizeof(pathbuf);
-  for(int i = 0; i < pathbufsize; i++) {
-    pathbuf[i] = '\0';
-  }
-#ifdef __APPLE__
-  int ret = _NSGetExecutablePath(pathbuf, &pathbufsize);
-#else
-  ssize_t len = readlink("/proc/self/exe", pathbuf, sizeof(pathbuf) - 1);
-  if (len != -1) pathbuf[len] = '\0';
-#endif
-  tp.program_path = pathbuf;
-  ssize_t i = strlen(pathbuf);
-  for (; i >= 0; i--) {
-    if (pathbuf[i] == '/') {
-      break;
-    }
-  }
-  tp.program_directory = std::string(pathbuf).substr(0, i + 1);
+  tp.program_path = get_executable_path();
+  tp.program_directory = get_executable_directory();
   tp.input_path = vm["input"].as<std::string>();
   tp.covariates_path = vm["covariates"].as<std::string>();
   tp.ped_path = vm["ped"].as<std::string>();

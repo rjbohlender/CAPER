@@ -3,12 +3,36 @@
 //
 
 #include <boost/iostreams/filter/bzip2.hpp>
+#include <array>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <stdexcept>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include "filesystem.hpp"
 #include "split.hpp"
+
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
+
+namespace fs = std::filesystem;
+
+namespace {
+std::string path_to_string(const fs::path &path) {
+  return path.lexically_normal().string();
+}
+
+std::string directory_with_separator(const fs::path &path) {
+  auto normalized = path_to_string(path);
+  if (!normalized.empty() && normalized.back() != fs::path::preferred_separator) {
+    normalized.push_back(fs::path::preferred_separator);
+  }
+  return normalized;
+}
+} // namespace
 
 bool check_file_exists(const std::string &path) {
   std::ifstream ifs(path);
@@ -68,4 +92,49 @@ bool make_directory(const std::string &path) {
     }
   }
   return true;
+}
+
+std::string get_executable_path() {
+  char pathbuf[4096] = {0};
+
+#ifdef __APPLE__
+  uint32_t pathbufsize = sizeof(pathbuf);
+  if (_NSGetExecutablePath(pathbuf, &pathbufsize) != 0) {
+    throw std::runtime_error("Unable to determine executable path.");
+  }
+#else
+  const ssize_t len = readlink("/proc/self/exe", pathbuf, sizeof(pathbuf) - 1);
+  if (len == -1) {
+    throw std::runtime_error("Unable to determine executable path.");
+  }
+  pathbuf[len] = '\0';
+#endif
+
+  return path_to_string(fs::path(pathbuf));
+}
+
+std::string get_executable_directory() {
+  return directory_with_separator(fs::path(get_executable_path()).parent_path());
+}
+
+std::string resolve_default_filter_whitelist_path(
+    const std::string &executable_path) {
+  const fs::path executable =
+      executable_path.empty() ? fs::path(get_executable_path())
+                              : fs::path(executable_path);
+  const fs::path executable_directory = executable.parent_path();
+  const std::array<fs::path, 4> candidates = {
+      executable_directory.parent_path() / "filter" / "filter_whitelist.csv",
+      executable_directory / "filter" / "filter_whitelist.csv",
+      fs::path("/filter/filter_whitelist.csv"),
+      fs::current_path() / "filter" / "filter_whitelist.csv",
+  };
+
+  for (const auto &candidate : candidates) {
+    if (check_file_exists(candidate.string())) {
+      return path_to_string(candidate);
+    }
+  }
+
+  return path_to_string(candidates.front());
 }

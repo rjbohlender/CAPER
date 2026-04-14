@@ -13,5 +13,9 @@ bool check_directory_exists(const std::string &path);
 bool is_gzipped(const std::string &path);
 bool is_zstd(const std::string &path);
 bool make_directory(const std::string &path);
+std::string get_executable_path();
+std::string get_executable_directory();
+std::string resolve_default_filter_whitelist_path(
+    const std::string &executable_path = "");
 
 #endif //PERMUTE_ASSOCIATE_FILESYSTEM_HPP
