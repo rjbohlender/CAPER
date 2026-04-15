@@ -20,10 +20,6 @@
 #include <boost/math/distributions/chi_squared.hpp>
 #include <boost/math/distributions/fisher_f.hpp>
 
-#ifdef __APPLE__
-#include <mach-o/dyld.h>
-#endif
-
 #include "../data/bed.hpp"
 #include "../data/covariates.hpp"
 #include "../data/gene.hpp"
@@ -31,6 +27,7 @@
 #include "../caper/caperop.hpp"
 #include "../statistics/glm.hpp"
 #include "../statistics/methods.hpp"
+#include "../utility/filesystem.hpp"
 #include "../utility/math.hpp"
 
 namespace {
@@ -262,25 +259,8 @@ TEST_CASE("Data Construction & Methods") {
   tp.no_weights = false;
   tp.aaf_filter = false;
   // File paths and option status
-  char pathbuf[1024];
-  uint32_t pathbufsize = sizeof(pathbuf);
-  for (int i = 0; i < pathbufsize; i++) {
-    pathbuf[i] = '\0';
-  }
-#ifdef __APPLE__
-  int ret = _NSGetExecutablePath(pathbuf, &pathbufsize);
-#else
-  ssize_t len = readlink("/proc/self/exe", pathbuf, sizeof(pathbuf) - 1);
-  if (len != -1) pathbuf[len] = '\0';
-#endif
-  tp.program_path = pathbuf;
-  int i = strlen(pathbuf);
-  for (; i >= 0; i--) {
-    if (pathbuf[i] == '/') {
-      break;
-    }
-  }
-  tp.program_directory = std::string(pathbuf).substr(0, i + 1);
+  tp.program_path = get_executable_path();
+  tp.program_directory = get_executable_directory();
   Filter filter(tp.program_directory + "../filter/filter_whitelist.csv");
 
   // Header
