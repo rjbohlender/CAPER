@@ -244,7 +244,7 @@ auto GLM<LinkT>::irls_svdnewton(arma::mat &X, arma::colvec &Y) -> arma::vec {
   }
 
   dev_ = arma::accu(link.dev_resids(Y, mu_, weights_));
-  beta_ = (V * (arma::diagmat(1. / S) * (Ugood.t() * eta_(good))));
+  beta_ = V * ((Ugood.t() * eta_(good)) / S);
   return beta_;
 }
 template <typename LinkT>
@@ -316,7 +316,9 @@ auto GLM<LinkT>::irls_qr(arma::mat &X, arma::colvec &Y) -> arma::vec {
     arma::vec W = arma::sqrt(weights_ % arma::pow(mueta, 2) / var_);
 
     arma::mat Lt;
-    arma::mat QWQ = Q.t() * arma::diagmat(arma::square(W)) * Q;
+    arma::vec W2 = arma::square(W);
+    arma::mat weighted_Q = Q.each_col() % W2;
+    arma::mat QWQ = Q.t() * weighted_Q;
     bool chol_success = arma::chol(Lt, QWQ);
     double jitter = 1e-9;
     while (!chol_success && jitter < 1.) {
@@ -464,7 +466,8 @@ auto GLM<LinkT>::newton_rhapson(arma::mat &X, arma::vec &Y) -> arma::vec {
     mu_ = link.linkinv(eta_);
     var_ = link.variance(mu_);
 
-    arma::mat D = X.t() * arma::diagmat(var_) * X;
+    arma::mat weighted_X = X.each_col() % var_;
+    arma::mat D = X.t() * weighted_X;
     arma::vec r = X.t() * (Y - mu_);
     arma::vec delta_beta = arma::solve(D, r);
 

@@ -176,12 +176,14 @@ auto LogisticRegression::irls_svdnewton(arma::mat &Xmat, arma::colvec &Yvec) -> 
     iter++;
   } while(iter < max_iter && update > tol);
 
-  return (V * (arma::diagmat(1. / S) * (U.t() * t))).t();
+  return (V * ((U.t() * t) / S)).t();
 }
 
 auto LogisticRegression::hessian(arma::mat &X) -> arma::mat {
-  arma::rowvec v = h(X, theta_) % (1. - h(X, theta_)); // Variance function
-  return X * arma::diagmat(v) * X.t();
+  arma::rowvec p = h(X, theta_);
+  arma::rowvec v = p % (1. - p); // Variance function
+  arma::mat weighted_X = X.each_row() % v;
+  return weighted_X * X.t();
 }
 
 auto LogisticRegression::get_theta() -> arma::rowvec& {

@@ -99,6 +99,23 @@ arma::vec sparse_row_sums(const arma::sp_mat &matrix) {
   }
   return sums;
 }
+
+arma::sp_mat scale_sparse_rows(const arma::sp_mat &matrix,
+                               const arma::vec &weights) {
+  arma::sp_mat scaled(matrix);
+  for (auto it = scaled.begin(); it != scaled.end(); ++it) {
+    *it *= weights(it.row());
+  }
+  return scaled;
+}
+
+arma::mat sandwich_with_diagonal(const arma::mat &matrix,
+                                 const arma::vec &weights) {
+  arma::mat scaled = matrix.t();
+  scaled.each_col() %= weights;
+  scaled.each_row() %= weights.t();
+  return scaled;
+}
 } // namespace
 
 Methods::Methods(const TaskParams &tp_, const std::shared_ptr<Covariates> &cov_)
@@ -187,8 +204,6 @@ double Methods::BURDEN(Gene &gene, arma::vec &phenotypes, const std::string &ts,
   check_weights(gene, ts, tp.a, tp.b, tp.no_weights);
   arma::vec weights = gene.get_weights(ts);
 
-  arma::mat W = arma::diagmat(weights);
-
   arma::mat tmp;
   if (tp.qtl) {
     tmp = lin_obj_->get_Ux().t() * G;
@@ -200,15 +215,14 @@ double Methods::BURDEN(Gene &gene, arma::vec &phenotypes, const std::string &ts,
   arma::rowvec Zs;
   if (tp.qtl) {
     Gs = G.t() * G - tmp.t() * tmp;
-    Zs = arma::sum(arma::diagmat(lin_obj_->get_U0()) * G) /
-         std::sqrt(lin_obj_->get_s2());
+    Zs = (G.t() * lin_obj_->get_U0()).t() / std::sqrt(lin_obj_->get_s2());
   } else {
-    Gs = (arma::diagmat(obj_->get_Yv()) * G).t() * G - tmp.t() * tmp;
-    Zs = arma::sum(arma::diagmat(obj_->get_U0()) * G);
+    Gs = G.t() * scale_sparse_rows(G, obj_->get_Yv()) - tmp.t() * tmp;
+    Zs = (G.t() * obj_->get_U0()).t();
   }
 
-  arma::mat R = (Gs * W).t() * W;
-  arma::mat Z = Zs * W;
+  arma::mat R = sandwich_with_diagonal(Gs, weights);
+  arma::rowvec Z = Zs % weights.t();
 
   double Qb = std::pow(arma::accu(Z), 2);
 
@@ -253,9 +267,12 @@ double Methods::CALPHA(Gene &gene, arma::vec &Y, const std::string &ts) {
   }
 
   arma::vec g(X.n_cols, arma::fill::zeros);
-  arma::uvec case_idx = arma::find(Y == 1);
+  arma::Col<uint8_t> is_case(Y.n_elem, arma::fill::zeros);
+  for (arma::uword i = 0; i < Y.n_elem; ++i) {
+    is_case(i) = Y(i) == 1.0;
+  }
   for (auto it = X.begin(); it != X.end(); ++it) {
-    if (arma::find(case_idx == it.row()).eval().n_elem > 0) {
+    if (is_case(it.row())) {
       g(it.col())++;
     }
   }
@@ -534,7 +551,9 @@ double Methods::RVT1(Gene &gene, arma::vec &Y, arma::mat design,
 
     if (tp.wald) {
       // Calculate the MSE of the fit
-      arma::mat var_beta_ = arma::inv(d2.t() * arma::diagmat(fit2.mu_ % (1. - fit2.mu_)) * d2);
+      const arma::vec binomial_var = fit2.mu_ % (1. - fit2.mu_);
+      const arma::mat weighted_d2 = d2.each_col() % binomial_var;
+      arma::mat var_beta_ = arma::inv(d2.t() * weighted_d2);
       const double var_beta = var_beta_(var_beta_.n_rows - 1, var_beta_.n_cols - 1);
 
       stat = std::pow(fit2.beta_(fit2.beta_.n_elem - 1), 2) / var_beta;
@@ -587,7 +606,9 @@ double Methods::RVT2(Gene &gene, arma::vec &Y, arma::mat design,
 
     if (tp.wald) {
       // Calculate the variance of the betas
-      arma::mat var_beta_ = arma::inv(d2.t() * arma::diagmat(fit2.mu_ % (1. - fit2.mu_)) * d2);
+      const arma::vec binomial_var = fit2.mu_ % (1. - fit2.mu_);
+      const arma::mat weighted_d2 = d2.each_col() % binomial_var;
+      arma::mat var_beta_ = arma::inv(d2.t() * weighted_d2);
       const double var_beta = var_beta_(var_beta_.n_rows - 1, var_beta_.n_cols - 1);
 
       stat = std::pow(fit2.beta_(fit2.beta_.n_elem - 1), 2) / var_beta;
@@ -737,18 +758,15 @@ double Methods::SKAT(Gene &gene, arma::vec &phenotypes,
 
   check_weights(gene, transcript, a, b, tp.no_weights);
   arma::vec weights = gene.get_weights(transcript);
-
-  arma::mat W = arma::diagmat(weights);
   // We're permuting, only calculate the Q-value
   if (permute) {
     arma::rowvec Zs;
     if (linear) {
-      Zs = arma::sum(arma::diagmat(lin_obj_->get_U0()) * G) /
-           std::sqrt(lin_obj_->get_s2());
+      Zs = (G.t() * lin_obj_->get_U0()).t() / std::sqrt(lin_obj_->get_s2());
     } else {
-      Zs = arma::sum(arma::diagmat(obj_->get_U0()) * G);
+      Zs = (G.t() * obj_->get_U0()).t();
     }
-    arma::mat Z = Zs * W;
+    arma::rowvec Z = Zs % weights.t();
 
     double Q = arma::accu(arma::pow(Z, 2));
 
@@ -766,15 +784,14 @@ double Methods::SKAT(Gene &gene, arma::vec &phenotypes,
     arma::rowvec Zs;
     if (linear) {
       Gs = G.t() * G - tmp.t() * tmp;
-      Zs = arma::sum(arma::diagmat(lin_obj_->get_U0()) * G) /
-           std::sqrt(lin_obj_->get_s2());
+      Zs = (G.t() * lin_obj_->get_U0()).t() / std::sqrt(lin_obj_->get_s2());
     } else {
-      Gs = (arma::diagmat(obj_->get_Yv()) * G).t() * G - tmp.t() * tmp;
-      Zs = arma::sum(arma::diagmat(obj_->get_U0()) * G);
+      Gs = G.t() * scale_sparse_rows(G, obj_->get_Yv()) - tmp.t() * tmp;
+      Zs = (G.t() * obj_->get_U0()).t();
     }
 
-    arma::mat R = (Gs * W).t() * W;
-    arma::mat Z = Zs * W;
+    arma::mat R = sandwich_with_diagonal(Gs, weights);
+    arma::rowvec Z = Zs % weights.t();
 
     arma::vec s;
     arma::svd(s, R);
@@ -805,8 +822,6 @@ double Methods::SKATO(Gene &gene, arma::vec &phenotypes,
   check_weights(gene, transcript, a, b, tp.no_weights);
   arma::vec weights = gene.get_weights(transcript);
 
-  arma::mat W = arma::diagmat(weights);
-
   arma::mat tmp;
   if (linear) {
     tmp = lin_obj_->get_Ux().t() * G;
@@ -818,15 +833,14 @@ double Methods::SKATO(Gene &gene, arma::vec &phenotypes,
   arma::rowvec Zs;
   if (linear) {
     Gs = G.t() * G - tmp.t() * tmp;
-    Zs = arma::sum(arma::diagmat(lin_obj_->get_U0()) * G) /
-         std::sqrt(lin_obj_->get_s2());
+    Zs = (G.t() * lin_obj_->get_U0()).t() / std::sqrt(lin_obj_->get_s2());
   } else {
-    Gs = (arma::diagmat(obj_->get_Yv()) * G).t() * G - tmp.t() * tmp;
-    Zs = arma::sum(arma::diagmat(obj_->get_U0()) * G);
+    Gs = G.t() * scale_sparse_rows(G, obj_->get_Yv()) - tmp.t() * tmp;
+    Zs = (G.t() * obj_->get_U0()).t();
   }
 
-  arma::mat R = (Gs * W).t() * W;
-  arma::mat Z = Zs * W;
+  arma::mat R = sandwich_with_diagonal(Gs, weights);
+  arma::rowvec Z = Zs % weights.t();
 
   arma::vec s;
   arma::svd(s, R);
