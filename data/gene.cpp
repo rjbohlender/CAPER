@@ -47,8 +47,9 @@ void Gene::aaf_filter() { // Mark gene skippable to start
 
     arma::rowvec aaf = arma::rowvec(arma::mean(genotypes[ts]) / 2.);
     for (arma::sword k = sums.n_elem - 1; k >= 0; --k) {
+      bool is_collapsed = type[ts][k] == "Collapsed";
       bool bmac = sums[k] > tp.mac;
-      bool baaf = aaf[k] >= tp.maf;
+      bool baaf = !is_collapsed && aaf[k] >= tp.maf;
       bool bwht = false; // whitelist bool
       if (!to_remove[ts].empty()) {
         bwht = k == to_remove[ts].top();
@@ -120,8 +121,9 @@ void Gene::maf_filter() {
 
     arma::rowvec maf = arma::rowvec(arma::mean(genotypes[ts]) / 2.);
     for (arma::sword k = sums.n_elem - 1; k >= 0; --k) {
+      bool is_collapsed = type[ts][k] == "Collapsed";
       bool bmac = sums[k] > tp.mac;
-      bool bmaf = maf[k] > tp.maf;
+      bool bmaf = !is_collapsed && maf[k] > tp.maf;
       bool bwht = false; // whitelist bool
       if (!to_remove[ts].empty()) {
         bwht = k == to_remove[ts].top();
@@ -188,6 +190,9 @@ void Gene::collapse_variants() {
     arma::rowvec sums = arma::rowvec(arma::sum(gts[ts], 0));
     // Variants with minor allele count <= 10
     arma::uvec rare = arma::find(sums <= 10);
+    if (rare.n_elem == 0) {
+      continue;
+    }
     // Collapse rare variants into a single pseudo_variant with a 1 in each carrier
     arma::sp_mat rare_selector(gts[ts].n_cols, 1);
     for (arma::uword i = 0; i < rare.n_elem; ++i) {
@@ -197,6 +202,16 @@ void Gene::collapse_variants() {
     arma::vec pseudo_variant(pseudo_variant_sparse);
     arma::uvec nonzero = arma::find(pseudo_variant > 0);
     pseudo_variant(nonzero).fill(1);
+
+    arma::sp_mat missing_selector(missing_variant_carriers_[ts].n_cols, 1);
+    for (arma::uword i = 0; i < rare.n_elem; ++i) {
+      missing_selector(rare[i], 0) = 1.0;
+    }
+    arma::sp_mat pseudo_missing_sparse =
+        (missing_variant_carriers_[ts] * missing_selector);
+    arma::vec pseudo_missing(pseudo_missing_sparse);
+    arma::uvec missing_nonzero = arma::find(pseudo_missing > 0);
+    pseudo_missing(missing_nonzero).fill(1);
 
     std::vector<double> weight_vec{};
 
@@ -220,6 +235,10 @@ void Gene::collapse_variants() {
     // Add the pseudo variant to the end of the sparse matrix and update the number of variants
     genotypes[ts].resize(genotypes[ts].n_rows, genotypes[ts].n_cols + 1);
     genotypes[ts].col(genotypes[ts].n_cols - 1) = pseudo_variant;
+    missing_variant_carriers_[ts].resize(missing_variant_carriers_[ts].n_rows,
+                                         missing_variant_carriers_[ts].n_cols + 1);
+    missing_variant_carriers_[ts].col(missing_variant_carriers_[ts].n_cols - 1) =
+        pseudo_missing;
     nvariants[ts]++;
 
     // Average the weights of the collapsed variants and add the new weight to the end of the vector

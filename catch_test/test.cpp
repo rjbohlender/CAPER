@@ -1212,6 +1212,70 @@ TEST_CASE("Data Construction & Methods") {
   }
 }
 
+TEST_CASE("Collapsed variants bypass allele frequency filtering", "[gene]") {
+  std::stringstream test_data_builder;
+  std::stringstream test_cov_builder;
+  std::stringstream test_ped_builder;
+  std::string header;
+
+  TaskParams tp;
+  tp.maf = 0.1;
+  tp.mac = std::numeric_limits<arma::uword>::max();
+  tp.method = "VAAST";
+  tp.optimizer = "irls";
+  tp.var_collapsing = true;
+  tp.program_path = get_executable_path();
+  tp.program_directory = get_executable_directory();
+
+  Filter filter(tp.program_directory + "../filter/filter_whitelist.csv");
+
+  test_data_builder << "Chr\tStart\tEnd\tRef\tAlt\tType\tGenes\tTranscripts\tRegion\tFu"
+                       "nction\tAnnotation(c.change:p.change)"
+                       "\tcase1\tcase2\tcontrol1\tcontrol2\n";
+  test_data_builder << "chr1\t1\t1\tA\tC\tSNV\tcollapse_gene\tcollapse_transcript\t"
+                       "coding\tnonsynonymous SNV\t.\t1111\n";
+
+  test_cov_builder << "control2\t0\t1.5\t1.5\n";
+  test_cov_builder << "case2\t1\t0.5\t0.5\n";
+  test_cov_builder << "control1\t0\t0.5\t1\n";
+  test_cov_builder << "case1\t1\t1\t0.5\n";
+
+  test_ped_builder << "control1\tcontrol1\t0\t0\t0\t1\n";
+  test_ped_builder << "control2\tcontrol2\t0\t0\t0\t1\n";
+  test_ped_builder << "case1\tcase1\t0\t0\t0\t2\n";
+  test_ped_builder << "case2\tcase2\t0\t0\t0\t2\n";
+
+  const std::string test_data = test_data_builder.str();
+  const std::string test_cov = test_cov_builder.str();
+  const std::string test_ped = test_ped_builder.str();
+
+  std::stringstream ped_stream(test_ped);
+  std::stringstream cov_stream(test_cov);
+  Covariates cov(ped_stream, cov_stream, tp);
+  cov.sort_covariates(header);
+  std::shared_ptr<Covariates> cov_ptr = std::make_shared<Covariates>(cov);
+
+  Weight weights;
+  std::unordered_map<std::string, arma::uword> nvariants{
+      {"collapse_transcript", 1}};
+
+  for (bool aaf_filter : {true, false}) {
+    tp.aaf_filter = aaf_filter;
+    std::stringstream data_stream(test_data);
+
+    std::unique_ptr<Gene> gene;
+    REQUIRE_NOTHROW(gene = std::make_unique<Gene>(
+                        data_stream, cov_ptr, cov.get_nsamples(), nvariants,
+                        weights, tp, filter));
+
+    REQUIRE_FALSE(gene->is_skippable());
+    REQUIRE(gene->genotypes["collapse_transcript"].n_cols == 1);
+    REQUIRE(gene->get_positions("collapse_transcript").size() == 1);
+    REQUIRE(gene->type["collapse_transcript"].size() == 1);
+    REQUIRE(gene->type["collapse_transcript"][0] == "Collapsed");
+  }
+}
+
 TEST_CASE("Categorical covariates expand to a single widened pass", "[covariates]") {
   namespace fs = std::filesystem;
 
