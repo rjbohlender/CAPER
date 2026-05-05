@@ -189,7 +189,7 @@ void Gene::collapse_variants() {
   for (const auto &ts : transcripts) {
     arma::rowvec sums = arma::rowvec(arma::sum(gts[ts], 0));
     // Variants with minor allele count <= 10
-    arma::uvec rare = arma::find(sums <= 10);
+    arma::uvec rare = arma::find(sums <= *tp.var_collapsing);
     if (rare.n_elem == 0) {
       continue;
     }

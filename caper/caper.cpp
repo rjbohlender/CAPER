@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
   bool saddlepoint = false;
   bool hotellings = false;
   bool wald = false;
-  bool var_collapsing = false;
+  boost::optional<int> var_collapsing;
   std::vector<int> gene_range;
   std::vector<std::string> power;
   boost::optional<std::string> bed;
@@ -173,8 +173,8 @@ int main(int argc, char **argv) {
          po::value(&testable),
          "Return results for genes with a minimum achievable p-value less than or equal to what is given.")
         ("var_collapsing",
-         po::bool_switch(&var_collapsing),
-         "Collapse variants with <10 minor allele count into a single pseudo variant. Will convert to minor allele counting instead of alternate allele counting.");
+         po::value<int>()->implicit_value(10),
+         "Collapse variants with a default <10 minor allele count into a single pseudo variant. If a value is passed a different threshold can be set. Will convert to minor allele counting instead of alternate allele counting.");
     vaast.add_options()
         ("group_size,g",
          po::value<arma::uword>()->default_value(4),
@@ -250,6 +250,9 @@ int main(int argc, char **argv) {
   } catch (std::exception &e) {
     std::cerr << "Error: " << e.what() << "\n";
     return 1;
+  }
+  if (vm.contains("var_collapsing")) {
+      var_collapsing = vm["var_collapsing"].as<int>();
   }
 
   const std::set<std::string> method_choices = {
@@ -391,7 +394,9 @@ int main(int argc, char **argv) {
   tp.kernel = vm["kernel"].as<std::string>();
   tp.qtl = linear;
   tp.saddlepoint = saddlepoint;
-  tp.var_collapsing = var_collapsing;
+  if (var_collapsing) {
+        tp.var_collapsing = var_collapsing;
+  }
   // Beta weights
   tp.a = std::stoi(beta_split.str(0));
   tp.b = std::stoi(beta_split.str(1));
