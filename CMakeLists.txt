@@ -8,7 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(Boost_USE_MULTITHREADED TRUE)
 
 option(ENABLE_NATIVE_OPTIMIZATIONS "Enable native architecture-specific optimizations" OFF)
-option(ENABLE_QUADPACK_SKATO_COMPARE "Build Netlib QUADPACK DQAGS comparison path for SKATO integration" ON)
+option(ENABLE_QUADPACK_SKATO_COMPARE "Build Netlib QUADPACK DQAGS comparison path for SKATO integration" OFF)
 
 if(ENABLE_QUADPACK_SKATO_COMPARE)
     include(CheckLanguage)
@@ -188,6 +188,7 @@ target_compile_definitions(caper_core PUBLIC MAXCOLORS=10000000)
 
 
 add_executable(caper caper/caper.cpp)
+set_target_properties(caper PROPERTIES LINKER_LANGUAGE CXX)
 
 if (FALSE)
     target_link_libraries(caper nvblas)
@@ -195,6 +196,7 @@ endif ()
 target_link_libraries(caper PRIVATE caper_core)
 
 add_executable(power power/power.cpp)
+set_target_properties(power PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(power PRIVATE caper_core)
 
 # add_executable(caese
@@ -215,4 +217,5 @@ add_executable(catch_test
         catch_test/permutation_split_test.cpp
         catch_test/powerop_sample_test.cpp
         catch_test/permutation_test.cpp)
+set_target_properties(catch_test PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(catch_test PRIVATE caper_core)
