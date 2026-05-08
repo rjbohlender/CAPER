@@ -116,6 +116,15 @@ arma::mat sandwich_with_diagonal(const arma::mat &matrix,
   scaled.each_row() %= weights.t();
   return scaled;
 }
+
+double burden_pval(double Qb, double R1) {
+  boost::math::chi_squared chisq(1);
+  double stat = Qb / R1;
+  if (!std::isfinite(stat)) {
+    return 1.;
+  }
+  return boost::math::cdf(boost::math::complement(chisq, stat));
+}
 } // namespace
 
 Methods::Methods(const TaskParams &tp_, const std::shared_ptr<Covariates> &cov_)
@@ -859,6 +868,9 @@ double Methods::SKATO(Gene &gene, arma::vec &phenotypes,
 
   arma::vec Rs = arma::sum(R, 1);
   double R1 = arma::accu(Rs);
+  if (N == 1) {
+    return burden_pval(Qb, R1);
+  }
   double R2 = arma::accu(arma::pow(Rs, 2));
   // double R3 = arma::accu(Rs % arma::sum(R.each_col() % Rs).t());
   double R3 = arma::accu(Rs.t() * R * Rs);
@@ -872,13 +884,7 @@ double Methods::SKATO(Gene &gene, arma::vec &phenotypes,
   for (arma::uword i = 0; i < K; i++) {
     // Pure burden
     if (rho_[i] == 1) {
-      boost::math::chi_squared chisq(1); // 1-df chisq
-      double stat = Qb / R1;
-      if (!std::isfinite(stat)) {
-        pval[i] = 1.;
-      } else {
-        pval[i] = boost::math::cdf(boost::math::complement(chisq, stat));
-      }
+      pval[i] = burden_pval(Qb, R1);
       continue;
     }
 

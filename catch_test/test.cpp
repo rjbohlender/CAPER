@@ -589,6 +589,39 @@ TEST_CASE("Data Construction & Methods") {
     fs::remove_all(temp_dir);
   }
 
+  SECTION("Single-variant SKATO returns burden p-value") {
+    std::stringstream single_data;
+    single_data << "Chr\tStart\tEnd\tRef\tAlt\tType\tGenes\tTranscripts\tRegion\tFu"
+                   "nction\tAnnotation(c.change:p.change)"
+                << "\tcase1\tcase2\tcontrol1\tcontrol2\n";
+    single_data << "chr1\t1\t1\tA\tC\tSNV\tsingle_gene\tsingle_transcript\t"
+                   "coding\tnonsynonymous SNV\t.\t1000\n";
+
+    TaskParams single_tp = tp;
+    single_tp.method = "SKATO";
+    single_tp.kernel = "Linear";
+    single_tp.no_weights = true;
+    single_tp.qtl = false;
+
+    std::unordered_map<std::string, arma::uword> single_nvariants{
+        {"single_transcript", 1}};
+    Weight empty_weights;
+    Gene single_gene(single_data, cov_ptr, cov.get_nsamples(), single_nvariants,
+                     empty_weights, single_tp, filter);
+
+    Methods methods(single_tp, cov_ptr);
+    arma::vec phenotypes = cov.get_phenotype_vector();
+    arma::vec burden_phenotypes = phenotypes;
+    arma::vec skato_phenotypes = phenotypes;
+    double burden =
+        methods.BURDEN(single_gene, burden_phenotypes, "single_transcript", false);
+    double skato = methods.SKATO(single_gene, skato_phenotypes,
+                                 "single_transcript", 1, 25, false, false);
+
+    REQUIRE(std::isfinite(skato));
+    REQUIRE(skato == Approx(burden).epsilon(1e-12));
+  }
+
   SECTION("VAAST") {
     tp.method = "VAAST";
     tp.group_size = 0;
