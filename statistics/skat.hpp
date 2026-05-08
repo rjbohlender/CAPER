@@ -66,6 +66,7 @@ public:
 private:
   arma::vec U0;          // Residuals
   double s2;             // The residual variance
+  arma::uword residual_df;
   arma::mat Ux;          // ;
   arma::rowvec coef;     // model coefficients -- theta_
   arma::vec Y;           // Phenotype

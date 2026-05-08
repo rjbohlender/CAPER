@@ -6,11 +6,13 @@
 
 #include "../third_party/QFC/qfc2.hpp"
 
+#include <algorithm>
 #include <boost/math/distributions/normal.hpp>
 #include <boost/math/distributions/chi_squared.hpp>
 #include <boost/math/distributions/non_central_chi_squared.hpp>
 
 #include <boost/math/tools/roots.hpp>
+#include <limits>
 #include <utility>
 
 double SKAT_pval(double Q, const arma::vec &lambda, bool sadd) {
@@ -306,17 +308,29 @@ auto SKATR_Null::get_X() noexcept -> const arma::mat & {
 }
 
 SKATR_Linear_Null::SKATR_Linear_Null(Covariates cov)
-: cov_(std::move(cov)) {
+: s2(0), residual_df(0), cov_(std::move(cov)) {
   X = cov_.get_covariate_matrix();
   Y = cov_.get_phenotype_vector();
 
   arma::mat U, V;
   arma::vec s;
-  arma::svd_econ(U, s, V, X.t());
+  bool success = arma::svd_econ(U, s, V, X, "left");
+  if (!success) {
+    throw(std::runtime_error(
+        "Failed to calculate SVD for linear SKAT null model."));
+  }
 
   Ux = U;
   U0 = cov_.get_residuals();
-  s2 = arma::accu(arma::pow(U0, 2)) / (Y.n_elem - X.n_rows); // Residual sum of squares over residual df
+  const double tol = std::max(X.n_rows, X.n_cols) * s.max() *
+                     std::numeric_limits<double>::epsilon();
+  arma::uword rank = arma::accu(s > tol);
+  if (Y.n_elem <= rank) {
+    throw(std::runtime_error(
+        "Linear SKAT null model has no residual degrees of freedom."));
+  }
+  residual_df = Y.n_elem - rank;
+  s2 = arma::accu(arma::pow(U0, 2)) / residual_df;
 }
 
 auto SKATR_Linear_Null::shuffle(arma::vec &phenotypes) -> void {
@@ -326,7 +340,7 @@ auto SKATR_Linear_Null::shuffle(arma::vec &phenotypes) -> void {
   Y = phenotypes;
 
   U0 = cov_.get_residuals();
-  s2 = arma::accu(arma::pow(U0, 2)) / (Y.n_elem - X.n_rows);
+  s2 = arma::accu(arma::pow(U0, 2)) / residual_df;
 }
 
 auto SKATR_Linear_Null::get_U0() noexcept -> arma::vec {

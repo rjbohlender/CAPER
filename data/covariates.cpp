@@ -94,7 +94,7 @@ void Covariates::refit_permuted() {
     double lambda = arma::datum::pi / std::sqrt(3);
     Binomial alt_link("logit");
     arma::vec temp_mu = alt_link.linkinv(
-        ((lambda * coef_ / std::sqrt(fit.dev_)) * design_).t());
+        design_ * (lambda * coef_ / std::sqrt(fit.dev_)));
     p_odds_ =
         temp_mu /
         (1. - temp_mu); // Individual odds, as if the data were dichotomized
@@ -610,7 +610,7 @@ void Covariates::fit_null() {
     double lambda = arma::datum::pi / std::sqrt(3);
     Binomial alt_link("logit");
     arma::vec temp_mu = alt_link.linkinv(
-        ((lambda * coef_ / std::sqrt(fit.dev_)) * design_).t());
+        design_ * (lambda * coef_ / std::sqrt(fit.dev_)));
     odds_ = temp_mu /
             (1. - temp_mu); // Individual odds, as if the data were dichotomized
 

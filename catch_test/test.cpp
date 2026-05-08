@@ -543,6 +543,52 @@ TEST_CASE("Data Construction & Methods") {
     REQUIRE(skat == Approx(0.0));
   }
 
+  SECTION("Quantitative SKAT and SKATO return finite p-values") {
+    namespace fs = std::filesystem;
+    const auto temp_dir = fs::temp_directory_path() / "caper_qtl_skat_test";
+    fs::create_directories(temp_dir);
+    const auto ped_path = temp_dir / "test.ped";
+
+    {
+      std::ofstream ped_file(ped_path);
+      ped_file << "#fid\tiid\tfather\tmother\tsex\tphenotype\n";
+      ped_file << "control1\tcontrol1\t0\t0\t0\t0.2\n";
+      ped_file << "control2\tcontrol2\t0\t0\t0\t1.1\n";
+      ped_file << "case1\tcase1\t0\t0\t0\t1.7\n";
+      ped_file << "case2\tcase2\t0\t0\t0\t2.4\n";
+    }
+
+    TaskParams qtl_tp = tp;
+    qtl_tp.qtl = true;
+    qtl_tp.kernel = "Linear";
+    qtl_tp.ped_path = ped_path.string();
+    qtl_tp.covariates_path.clear();
+
+    Covariates qtl_cov(qtl_tp);
+    qtl_cov.sort_covariates(header);
+    auto qtl_cov_ptr = std::make_shared<Covariates>(qtl_cov);
+
+    qtl_tp.method = "SKAT";
+    Methods skat_methods(qtl_tp, qtl_cov_ptr);
+    arma::vec skat_phenotypes = qtl_cov.get_phenotype_vector();
+    double skat = skat_methods.SKAT(gene, skat_phenotypes, "test_transcript1", 1,
+                                    25, false, true, false);
+    REQUIRE(std::isfinite(skat));
+    REQUIRE(skat >= 0.0);
+    REQUIRE(skat <= 1.0);
+
+    qtl_tp.method = "SKATO";
+    Methods skato_methods(qtl_tp, qtl_cov_ptr);
+    arma::vec skato_phenotypes = qtl_cov.get_phenotype_vector();
+    double skato = skato_methods.SKATO(gene, skato_phenotypes,
+                                       "test_transcript1", 1, 25, false, true);
+    REQUIRE(std::isfinite(skato));
+    REQUIRE(skato >= 0.0);
+    REQUIRE(skato <= 1.0);
+
+    fs::remove_all(temp_dir);
+  }
+
   SECTION("VAAST") {
     tp.method = "VAAST";
     tp.group_size = 0;
