@@ -1269,7 +1269,7 @@ TEST_CASE("Collapsed variants bypass allele frequency filtering", "[gene]") {
   tp.mac = std::numeric_limits<arma::uword>::max();
   tp.method = "VAAST";
   tp.optimizer = "irls";
-  tp.var_collapsing = true;
+  tp.var_collapsing = 10;
   tp.program_path = get_executable_path();
   tp.program_directory = get_executable_directory();
 
