@@ -15,6 +15,30 @@
 #include "filter.hpp"
 #include "gene.hpp"
 
+namespace {
+void convert_to_minor_allele_count(
+    arma::sp_mat &genotypes, const arma::sp_mat &missing_variant_carriers,
+    const std::vector<std::string> &types) {
+  arma::rowvec maf = arma::rowvec(arma::mean(genotypes) / 2.);
+  for (arma::uword k : arma::find(maf > 0.5).eval()) {
+    if (k < types.size() && types[k] == "Collapsed") {
+      continue;
+    }
+
+    genotypes.col(k).replace(0, 3); // Placeholder to unique value
+    genotypes.col(k).replace(2, 0);
+    genotypes.col(k).replace(3, 2);
+
+    // No-calls are imputed to the major allele. After a minor-allele flip,
+    // rows that were no-calls must remain 0 minor alleles, not become 2.
+    arma::vec missing_col(missing_variant_carriers.col(k));
+    for (arma::uword row : arma::find(missing_col > 0).eval()) {
+      genotypes(row, k) = 0;
+    }
+  }
+}
+} // namespace
+
 Gene::Gene(std::stringstream &ss, const std::shared_ptr<Covariates> &cov,
            unsigned long nsamples,
            std::unordered_map<std::string, arma::uword> nvariants,
@@ -103,15 +127,8 @@ void Gene::aaf_filter() { // Mark gene skippable to start
 
 void Gene::maf_filter() {
   // Switch to counting minor allele
-  for (auto &v : genotypes) {
-    arma::rowvec maf = arma::rowvec(arma::mean(v.second) / 2.);
-    // For each variant
-    for (arma::uword k : arma::find(maf > 0.5).eval()) {
-      // Swap assignment
-      v.second.col(k).replace(0, 3); // Placeholder to unique value
-      v.second.col(k).replace(2, 0);
-      v.second.col(k).replace(3, 2);
-    }
+  for (auto &[ts, gt] : genotypes) {
+    convert_to_minor_allele_count(gt, missing_variant_carriers_[ts], type[ts]);
   }
   // Mark gene skippable to start
   skippable = true;
@@ -174,17 +191,8 @@ void Gene::maf_filter() {
 void Gene::collapse_variants() {
   auto gts = genotypes;
   // Switch to counting minor allele
-  if (tp.aaf_filter) {
-    for (auto &[ts, gt] : gts) {
-      arma::rowvec maf = arma::rowvec(arma::mean(gt) / 2.);
-      // For each variant
-      for (arma::uword k : arma::find(maf > 0.5).eval()) {
-        // Swap assignment
-        gt.col(k).replace(0, 3); // Placeholder to unique value
-        gt.col(k).replace(2, 0);
-        gt.col(k).replace(3, 2);
-      }
-    }
+  for (auto &[ts, gt] : gts) {
+    convert_to_minor_allele_count(gt, missing_variant_carriers_[ts], type[ts]);
   }
   for (const auto &ts : transcripts) {
     arma::rowvec sums = arma::rowvec(arma::sum(gts[ts], 0));
@@ -528,11 +536,18 @@ void Gene::generate_detail(Covariates &cov,
     arma::rowvec maf = arma::rowvec(arma::mean(X) / 2.);
     // Ref/Alt Counts
     arma::vec case_alt = X.t() * Y;
-    arma::vec case_ref = 2 * cases.n_elem - case_alt;
+    arma::vec case_ref_default = 2 * cases.n_elem - case_alt;
     arma::vec cont_alt = X.t() * (1. - Y);
-    arma::vec cont_ref = 2 * controls.n_elem - cont_alt;
+    arma::vec cont_ref_default = 2 * controls.n_elem - cont_alt;
     if (!tp.qtl) {
       for (const auto &pos : positions[ts]) {
+        bool is_collapsed = type[ts][i] == "Collapsed";
+        double allele_scale = is_collapsed ? 1. : 2.;
+        double case_ref = allele_scale * cases.n_elem - case_alt(i);
+        double cont_ref = allele_scale * controls.n_elem - cont_alt(i);
+        double freq = is_collapsed
+                          ? arma::accu(X.col(i)) / static_cast<double>(X.n_rows)
+                          : maf(i);
         // Get transcripts
         if (pos_ts_map.find(pos) == pos_ts_map.end()) {
           pos_ts_map[pos] = {ts};
@@ -548,17 +563,17 @@ void Gene::generate_detail(Covariates &cov,
         }
         // Get frequency
         if (pos_freq_map.find(pos) == pos_freq_map.end()) {
-          pos_freq_map[pos] = maf(i);
+          pos_freq_map[pos] = freq;
         }
         // Get counts
         if (pos_caseref_map.find(pos) == pos_caseref_map.end()) {
-          pos_caseref_map[pos] = case_ref(i);
+          pos_caseref_map[pos] = case_ref;
         }
         if (pos_casealt_map.find(pos) == pos_casealt_map.end()) {
           pos_casealt_map[pos] = case_alt(i);
         }
         if (pos_contref_map.find(pos) == pos_contref_map.end()) {
-          pos_contref_map[pos] = cont_ref(i);
+          pos_contref_map[pos] = cont_ref;
         }
         if (pos_contalt_map.find(pos) == pos_contalt_map.end()) {
           pos_contalt_map[pos] = cont_alt(i);
@@ -597,13 +612,13 @@ void Gene::generate_detail(Covariates &cov,
         }
         // Get counts
         if (pos_caseref_map.find(pos) == pos_caseref_map.end()) {
-          pos_caseref_map[pos] = case_ref(i);
+          pos_caseref_map[pos] = case_ref_default(i);
         }
         if (pos_casealt_map.find(pos) == pos_casealt_map.end()) {
           pos_casealt_map[pos] = case_alt(i);
         }
         if (pos_contref_map.find(pos) == pos_contref_map.end()) {
-          pos_contref_map[pos] = cont_ref(i);
+          pos_contref_map[pos] = cont_ref_default(i);
         }
         if (pos_contalt_map.find(pos) == pos_contalt_map.end()) {
           pos_contalt_map[pos] = cont_alt(i);

@@ -1322,6 +1322,147 @@ TEST_CASE("Collapsed variants bypass allele frequency filtering", "[gene]") {
   }
 }
 
+TEST_CASE("Variant collapsing imputes no-calls to the major allele", "[gene]") {
+  TaskParams tp;
+  tp.maf = 1.0;
+  tp.mac = std::numeric_limits<arma::uword>::max();
+  tp.method = "VAAST";
+  tp.optimizer = "irls";
+  tp.var_collapsing = 10;
+  tp.aaf_filter = true;
+  tp.program_path = get_executable_path();
+  tp.program_directory = get_executable_directory();
+
+  Filter filter(tp.program_directory + "../filter/filter_whitelist.csv");
+
+  std::stringstream cov_builder;
+  cov_builder << "control2\t0\t1.5\t1.5\n";
+  cov_builder << "case2\t1\t0.5\t0.5\n";
+  cov_builder << "control1\t0\t0.5\t1\n";
+  cov_builder << "case1\t1\t1\t0.5\n";
+
+  std::stringstream ped_builder;
+  ped_builder << "control1\tcontrol1\t0\t0\t0\t1\n";
+  ped_builder << "control2\tcontrol2\t0\t0\t0\t1\n";
+  ped_builder << "case1\tcase1\t0\t0\t0\t2\n";
+  ped_builder << "case2\tcase2\t0\t0\t0\t2\n";
+
+  std::string header;
+  Covariates cov(ped_builder, cov_builder, tp);
+  cov.sort_covariates(header);
+  auto cov_ptr = std::make_shared<Covariates>(cov);
+
+  std::stringstream data_builder;
+  data_builder << "Chr\tStart\tEnd\tRef\tAlt\tType\tGenes\tTranscripts\tRegion\tFu"
+                  "nction\tAnnotation(c.change:p.change)"
+               << "\tcase1\tcase2\tcontrol1\tcontrol2\n";
+  data_builder << "chr1\t1\t1\tA\tC\tSNV\tcollapse_gene\tcollapse_transcript\t"
+                  "coding\tnonsynonymous SNV\t.\t2223\n";
+
+  Weight weights;
+  std::unordered_map<std::string, arma::uword> nvariants{
+      {"collapse_transcript", 1}};
+
+  std::unique_ptr<Gene> gene;
+  REQUIRE_NOTHROW(gene = std::make_unique<Gene>(
+                      data_builder, cov_ptr, cov.get_nsamples(), nvariants,
+                      weights, tp, filter));
+
+  REQUIRE(gene->genotypes["collapse_transcript"].n_cols == 1);
+  REQUIRE(arma::accu(gene->genotypes["collapse_transcript"].col(0)) == 0);
+}
+
+TEST_CASE("Collapsed detail counts are carrier counts", "[gene]") {
+  TaskParams tp;
+  tp.maf = 1.0;
+  tp.mac = std::numeric_limits<arma::uword>::max();
+  tp.method = "SKAT";
+  tp.optimizer = "irls";
+  tp.var_collapsing = 10;
+  tp.aaf_filter = true;
+  tp.program_path = get_executable_path();
+  tp.program_directory = get_executable_directory();
+
+  Filter filter(tp.program_directory + "../filter/filter_whitelist.csv");
+
+  std::stringstream cov_builder;
+  cov_builder << "control2\t0\t1.5\t1.5\n";
+  cov_builder << "case2\t1\t0.5\t0.5\n";
+  cov_builder << "control1\t0\t0.5\t1\n";
+  cov_builder << "case1\t1\t1\t0.5\n";
+
+  std::stringstream ped_builder;
+  ped_builder << "control1\tcontrol1\t0\t0\t0\t1\n";
+  ped_builder << "control2\tcontrol2\t0\t0\t0\t1\n";
+  ped_builder << "case1\tcase1\t0\t0\t0\t2\n";
+  ped_builder << "case2\tcase2\t0\t0\t0\t2\n";
+
+  std::string header;
+  Covariates cov(ped_builder, cov_builder, tp);
+  cov.sort_covariates(header);
+  auto cov_ptr = std::make_shared<Covariates>(cov);
+
+  std::stringstream data_builder;
+  data_builder << "Chr\tStart\tEnd\tRef\tAlt\tType\tGenes\tTranscripts\tRegion\tFu"
+                  "nction\tAnnotation(c.change:p.change)"
+               << "\tcase1\tcase2\tcontrol1\tcontrol2\n";
+  data_builder << "chr1\t1\t1\tA\tC\tSNV\tcollapse_gene\tcollapse_transcript\t"
+                  "coding\tnonsynonymous SNV\t.\t1000\n";
+  data_builder << "chr1\t2\t2\tA\tC\tSNV\tcollapse_gene\tcollapse_transcript\t"
+                  "coding\tnonsynonymous SNV\t.\t0100\n";
+  data_builder << "chr1\t3\t3\tA\tC\tSNV\tcollapse_gene\tcollapse_transcript\t"
+                  "coding\tnonsynonymous SNV\t.\t3333\n";
+
+  Weight weights;
+  std::unordered_map<std::string, arma::uword> nvariants{
+      {"collapse_transcript", 3}};
+
+  std::unique_ptr<Gene> gene;
+  REQUIRE_NOTHROW(gene = std::make_unique<Gene>(
+                      data_builder, cov_ptr, cov.get_nsamples(), nvariants,
+                      weights, tp, filter));
+
+  REQUIRE(gene->genotypes["collapse_transcript"].n_cols == 1);
+  REQUIRE(arma::accu(gene->genotypes["collapse_transcript"].col(0)) == 2);
+
+  std::stringstream base_data_builder;
+  base_data_builder << "Chr\tStart\tEnd\tRef\tAlt\tType\tGenes\tTranscripts\tRegion\tFu"
+                       "nction\tAnnotation(c.change:p.change)"
+                    << "\tcase1\tcase2\tcontrol1\tcontrol2\n";
+  base_data_builder << "chr1\t1\t1\tA\tC\tSNV\tcollapse_gene\tcollapse_transcript\t"
+                       "coding\tnonsynonymous SNV\t.\t1000\n";
+  base_data_builder << "chr1\t2\t2\tA\tC\tSNV\tcollapse_gene\tcollapse_transcript\t"
+                       "coding\tnonsynonymous SNV\t.\t0100\n";
+  std::unordered_map<std::string, arma::uword> base_nvariants{
+      {"collapse_transcript", 2}};
+  std::unique_ptr<Gene> base_gene;
+  REQUIRE_NOTHROW(base_gene = std::make_unique<Gene>(
+                      base_data_builder, cov_ptr, cov.get_nsamples(),
+                      base_nvariants, weights, tp, filter));
+  REQUIRE(arma::approx_equal(
+      arma::vec(base_gene->genotypes["collapse_transcript"].col(0)),
+      arma::vec(gene->genotypes["collapse_transcript"].col(0)), "absdiff", 0.));
+
+  std::unordered_map<std::string, Result> results;
+  results["collapse_transcript"] =
+      Result("collapse_gene", "collapse_transcript", false);
+  gene->clear(cov, results, tp);
+
+  const std::string detail = gene->get_detail();
+  std::vector<std::string> fields;
+  std::stringstream detail_stream(detail);
+  std::string field;
+  while (std::getline(detail_stream, field, '\t')) {
+    fields.push_back(field);
+  }
+  REQUIRE(fields.size() >= 10);
+  arma::vec Y = cov.get_original_phenotypes();
+  double ncases = arma::accu(Y == 1);
+  double ncontrols = arma::accu(Y == 0);
+  REQUIRE(std::stod(fields[6]) + std::stod(fields[7]) == Approx(ncases));
+  REQUIRE(std::stod(fields[8]) + std::stod(fields[9]) == Approx(ncontrols));
+}
+
 TEST_CASE("Categorical covariates expand to a single widened pass", "[covariates]") {
   namespace fs = std::filesystem;
 
