@@ -938,8 +938,7 @@ double Methods::SKATO(Gene &gene, arma::vec &phenotypes,
       chisq, pmin > 0 ? pmin : std::sqrt(std::numeric_limits<double>::min())));
   double T0 = pmin;
 
-  // Integration
-  auto katint = [&](double xpar) -> double {
+  auto skato_tail = [&](double xpar) -> double {
     double eta1 = std::numeric_limits<double>::max();
     for (arma::uword i = 0; i < K - 1; i++) {
       double val = (qval[i] - tauk[i] * xpar) / (1 - rho_[i]);
@@ -947,28 +946,44 @@ double Methods::SKATO(Gene &gene, arma::vec &phenotypes,
         eta1 = val;
     }
     double x = (eta1 - MuQ) * sd1 + MuQ;
-    return SKAT_pval(x, lam, tp.saddlepoint) * boost::math::pdf(chisq, xpar);
+    return SKAT_pval(x, lam, tp.saddlepoint);
+  };
+
+  // Integration after x = u^2 substitution. This removes the chi-square(1)
+  // density singularity at zero while preserving the original integral.
+  auto katint = [&](double u) -> double {
+    double xpar = u * u;
+    double density = std::sqrt(2. / boost::math::constants::pi<double>()) *
+                     std::exp(-0.5 * xpar);
+    return skato_tail(xpar) * density;
   };
 
   double error_estimate;
-  unsigned int max_depth = 5;
-  double tolerance = 1e-9;
+  unsigned int max_depth = 15;
+  double tolerance = 1e-12;
   double p_value = 1;
-  // Can't calculate p-value, return alternate
-  if (q1 < std::numeric_limits<double>::min() * 10) {
+  double bonferroni = std::min(1., pmin * K);
+
+  // Can't calculate p-value, return conservative alternate
+  if (!std::isfinite(q1) || q1 <= 0) {
     return std::max(std::numeric_limits<double>::min(),
-                    std::min(p_value, pmin * K));
+                    bonferroni);
   }
-  p_value = T0 + boost::math::quadrature::gauss_kronrod<double, 15>::integrate(
-                     katint, std::numeric_limits<double>::min() * 10, q1,
-                     max_depth, tolerance, &error_estimate);
+  p_value = T0 + boost::math::quadrature::gauss_kronrod<double, 31>::integrate(
+                     katint, 0., std::sqrt(q1), max_depth, tolerance,
+                     &error_estimate);
+
+  if (!std::isfinite(p_value) || p_value <= 0) {
+    return std::max(std::numeric_limits<double>::min(),
+                    bonferroni);
+  }
 
   if (p_value >= 1 || pmin >= 1) {
     std::cerr << "p_value: " << p_value << " pmin: " << pmin << "\n";
   }
 
   return std::max(std::numeric_limits<double>::min(),
-                  std::min(p_value, pmin * K));
+                  std::min(p_value, bonferroni));
 }
 
 /**
