@@ -4,8 +4,11 @@
 
 #define ARMA_DONT_PRINT_ERRORS
 
+#include <cstdlib>
 #include <cmath>
+#include <functional>
 #include <iomanip>
+#include <vector>
 #include <armadillo>
 
 // Boost Math
@@ -84,6 +87,51 @@ arma::vec rank(arma::vec &v, const char *direction, int method) {
 }
 
 namespace {
+#ifdef CAPER_HAS_QUADPACK
+extern "C" {
+using QuadpackIntegrand = double (*)(double *);
+void dqags_(QuadpackIntegrand f, double *a, double *b, double *epsabs,
+            double *epsrel, double *result, double *abserr, int *neval,
+            int *ier, int *limit, int *lenw, int *last, int *iwork,
+            double *work);
+}
+
+thread_local const std::function<double(double)> *quadpack_integrand = nullptr;
+
+extern "C" double caper_quadpack_callback_(double *x) {
+  if (quadpack_integrand == nullptr) {
+    return 0.;
+  }
+  return (*quadpack_integrand)(*x);
+}
+
+struct QuadpackResult {
+  double result = 0.;
+  double abserr = 0.;
+  int neval = 0;
+  int ier = 0;
+  int last = 0;
+};
+
+QuadpackResult integrate_dqags(const std::function<double(double)> &f,
+                               double a, double b, double epsabs,
+                               double epsrel, int limit) {
+  QuadpackResult out;
+  int lenw = 4 * limit;
+  std::vector<int> iwork(limit);
+  std::vector<double> work(lenw);
+
+  const auto *previous = quadpack_integrand;
+  quadpack_integrand = &f;
+  dqags_(caper_quadpack_callback_, &a, &b, &epsabs, &epsrel, &out.result,
+         &out.abserr, &out.neval, &out.ier, &limit, &lenw, &out.last,
+         iwork.data(), work.data());
+  quadpack_integrand = previous;
+
+  return out;
+}
+#endif
+
 arma::rowvec sparse_column_sums(const arma::sp_mat &matrix) {
   arma::rowvec sums(matrix.n_cols, arma::fill::zeros);
   for (auto it = matrix.begin(); it != matrix.end(); ++it) {
@@ -978,6 +1026,34 @@ double Methods::SKATO(Gene &gene, arma::vec &phenotypes,
   p_value = T0 + boost::math::quadrature::gauss_kronrod<double, 31>::integrate(
                      katint, 0., std::sqrt(q1), max_depth, tolerance,
                      &error_estimate);
+
+#ifdef CAPER_HAS_QUADPACK
+  if (std::getenv("CAPER_SKATO_COMPARE_QUADPACK") != nullptr) {
+    std::function<double(double)> quadpack_integrand_fn = katint;
+    QuadpackResult quadpack =
+        integrate_dqags(quadpack_integrand_fn, 0., std::sqrt(q1), 0.,
+                        tolerance, 200);
+    double quadpack_p_value = T0 + quadpack.result;
+    double abs_diff = std::abs(p_value - quadpack_p_value);
+    std::cerr << std::setprecision(17)
+              << "SKATO integration comparison boost=" << p_value
+              << " quadpack=" << quadpack_p_value
+              << " abs_diff=" << abs_diff
+              << " boost_abserr=" << error_estimate
+              << " quadpack_abserr=" << quadpack.abserr
+              << " quadpack_ier=" << quadpack.ier
+              << " quadpack_neval=" << quadpack.neval
+              << " quadpack_last=" << quadpack.last << "\n";
+  }
+#else
+  static bool warned_missing_quadpack = false;
+  if (!warned_missing_quadpack &&
+      std::getenv("CAPER_SKATO_COMPARE_QUADPACK") != nullptr) {
+    warned_missing_quadpack = true;
+    std::cerr << "CAPER_SKATO_COMPARE_QUADPACK was requested, but this build "
+                 "does not include QUADPACK support.\n";
+  }
+#endif
 
   if (!std::isfinite(p_value) || p_value <= 0) {
     return std::max(std::numeric_limits<double>::min(),

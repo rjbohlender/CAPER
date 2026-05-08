@@ -8,6 +8,19 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(Boost_USE_MULTITHREADED TRUE)
 
 option(ENABLE_NATIVE_OPTIMIZATIONS "Enable native architecture-specific optimizations" OFF)
+option(ENABLE_QUADPACK_SKATO_COMPARE "Build Netlib QUADPACK DQAGS comparison path for SKATO integration" ON)
+
+if(ENABLE_QUADPACK_SKATO_COMPARE)
+    include(CheckLanguage)
+    check_language(Fortran)
+    if(CMAKE_Fortran_COMPILER)
+        enable_language(Fortran)
+        set(CAPER_ENABLE_QUADPACK_SKATO_COMPARE TRUE)
+        message(STATUS "Fortran compiler detected; enabling QUADPACK SKATO comparison")
+    else()
+        message(STATUS "Fortran compiler not found; QUADPACK SKATO comparison disabled")
+    endif()
+endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     message(STATUS "GNU C++ compiler detected")
@@ -52,6 +65,17 @@ if (UNIX)
     find_package(LAPACK REQUIRED)
     find_package(BLAS REQUIRED)
 endif ()
+
+if(CAPER_ENABLE_QUADPACK_SKATO_COMPARE)
+    set(QUADPACK_SUPPORT_FILES
+        third_party/quadpack/d1mach.f
+        third_party/quadpack/dqags.f
+        third_party/quadpack/dqagse.f
+        third_party/quadpack/dqelg.f
+        third_party/quadpack/dqk21.f
+        third_party/quadpack/dqpsrt.f
+        third_party/quadpack/xerror.f)
+endif()
 
 add_subdirectory(tools/vcf2matrix)
 add_subdirectory(tools/matrix_indexer)
@@ -130,7 +154,8 @@ set(PROJECT_SUPPORT_FILES
     utility/filevalidator.hpp
     data/filter.cpp
     data/filter.hpp
-    data/matrix_indices.hpp)
+    data/matrix_indices.hpp
+    ${QUADPACK_SUPPORT_FILES})
 
 
 add_library(caper_core STATIC ${PROJECT_SUPPORT_FILES})
@@ -149,6 +174,10 @@ target_link_libraries(caper_core PUBLIC
 if (ACCELERATE_FRAMEWORK)
     target_link_libraries(caper_core PUBLIC ${ACCELERATE_FRAMEWORK})
     target_compile_definitions(caper_core PUBLIC ACCELERATE_NEW_LAPACK)
+endif()
+
+if(CAPER_ENABLE_QUADPACK_SKATO_COMPARE)
+    target_compile_definitions(caper_core PUBLIC CAPER_HAS_QUADPACK)
 endif()
 
 target_compile_options(caper_core PUBLIC
