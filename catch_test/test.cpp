@@ -1295,7 +1295,10 @@ TEST_CASE("Collapsed variants bypass allele frequency filtering", "[gene]") {
   std::stringstream test_data_builder;
   std::stringstream test_cov_builder;
   std::stringstream test_ped_builder;
-  std::string header;
+  std::string header =
+      "Chr\tStart\tEnd\tRef\tAlt\tType\tGenes\tTranscripts\tRegion\tFu"
+      "nction\tAnnotation(c.change:p.change)"
+      "\tcase1\tcase2\tcontrol1\tcontrol2\n";
 
   TaskParams tp;
   tp.maf = 0.1;
@@ -1308,9 +1311,7 @@ TEST_CASE("Collapsed variants bypass allele frequency filtering", "[gene]") {
 
   Filter filter(tp.program_directory + "../filter/filter_whitelist.csv");
 
-  test_data_builder << "Chr\tStart\tEnd\tRef\tAlt\tType\tGenes\tTranscripts\tRegion\tFu"
-                       "nction\tAnnotation(c.change:p.change)"
-                       "\tcase1\tcase2\tcontrol1\tcontrol2\n";
+  test_data_builder << header;
   test_data_builder << "chr1\t1\t1\tA\tC\tSNV\tcollapse_gene\tcollapse_transcript\t"
                        "coding\tnonsynonymous SNV\t.\t1111\n";
 
@@ -1380,15 +1381,16 @@ TEST_CASE("Variant collapsing imputes no-calls to the major allele", "[gene]") {
   ped_builder << "case1\tcase1\t0\t0\t0\t2\n";
   ped_builder << "case2\tcase2\t0\t0\t0\t2\n";
 
-  std::string header;
+  std::string header =
+      "Chr\tStart\tEnd\tRef\tAlt\tType\tGenes\tTranscripts\tRegion\tFu"
+      "nction\tAnnotation(c.change:p.change)"
+      "\tcase1\tcase2\tcontrol1\tcontrol2\n";
   Covariates cov(ped_builder, cov_builder, tp);
   cov.sort_covariates(header);
   auto cov_ptr = std::make_shared<Covariates>(cov);
 
   std::stringstream data_builder;
-  data_builder << "Chr\tStart\tEnd\tRef\tAlt\tType\tGenes\tTranscripts\tRegion\tFu"
-                  "nction\tAnnotation(c.change:p.change)"
-               << "\tcase1\tcase2\tcontrol1\tcontrol2\n";
+  data_builder << header;
   data_builder << "chr1\t1\t1\tA\tC\tSNV\tcollapse_gene\tcollapse_transcript\t"
                   "coding\tnonsynonymous SNV\t.\t2223\n";
 
@@ -1430,15 +1432,16 @@ TEST_CASE("Collapsed detail counts are carrier counts", "[gene]") {
   ped_builder << "case1\tcase1\t0\t0\t0\t2\n";
   ped_builder << "case2\tcase2\t0\t0\t0\t2\n";
 
-  std::string header;
+  std::string header =
+      "Chr\tStart\tEnd\tRef\tAlt\tType\tGenes\tTranscripts\tRegion\tFu"
+      "nction\tAnnotation(c.change:p.change)"
+      "\tcase1\tcase2\tcontrol1\tcontrol2\n";
   Covariates cov(ped_builder, cov_builder, tp);
   cov.sort_covariates(header);
   auto cov_ptr = std::make_shared<Covariates>(cov);
 
   std::stringstream data_builder;
-  data_builder << "Chr\tStart\tEnd\tRef\tAlt\tType\tGenes\tTranscripts\tRegion\tFu"
-                  "nction\tAnnotation(c.change:p.change)"
-               << "\tcase1\tcase2\tcontrol1\tcontrol2\n";
+  data_builder << header;
   data_builder << "chr1\t1\t1\tA\tC\tSNV\tcollapse_gene\tcollapse_transcript\t"
                   "coding\tnonsynonymous SNV\t.\t1000\n";
   data_builder << "chr1\t2\t2\tA\tC\tSNV\tcollapse_gene\tcollapse_transcript\t"
@@ -1549,6 +1552,30 @@ TEST_CASE("Categorical covariates expand to a single widened pass", "[covariates
   REQUIRE(arma::accu(cov.get_phenotype_vector()) == Approx(2.0));
 
   fs::remove_all(temp_dir);
+}
+
+TEST_CASE("Covariate sorting rejects missing matrix samples", "[covariates]") {
+  std::stringstream cov_builder;
+  cov_builder << "control2\t0\t1.5\t1.5\n";
+  cov_builder << "case2\t1\t0.5\t0.5\n";
+  cov_builder << "control1\t0\t0.5\t1\n";
+  cov_builder << "case1\t1\t1\t0.5\n";
+
+  std::stringstream ped_builder;
+  ped_builder << "control1\tcontrol1\t0\t0\t0\t1\n";
+  ped_builder << "control2\tcontrol2\t0\t0\t0\t1\n";
+  ped_builder << "case1\tcase1\t0\t0\t0\t2\n";
+  ped_builder << "case2\tcase2\t0\t0\t0\t2\n";
+
+  TaskParams tp;
+  Covariates cov(ped_builder, cov_builder, tp);
+
+  const std::string missing_sample_header =
+      "Chr\tStart\tEnd\tRef\tAlt\tType\tGenes\tTranscripts\tRegion\tFu"
+      "nction\tAnnotation(c.change:p.change)"
+      "\tcase1\tcase2\tcontrol1\n";
+
+  REQUIRE_THROWS(cov.sort_covariates(missing_sample_header));
 }
 
 TEST_CASE("Gradient descent supports non-canonical links", "[glm]") {

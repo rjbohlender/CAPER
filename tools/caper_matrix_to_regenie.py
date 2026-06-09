@@ -48,7 +48,7 @@ class MatrixVariant:
 class SetRecord:
     chrom: str
     position: int
-    variants: OrderedDict[str, None] = field(default_factory=OrderedDict)
+    variants: List[str] = field(default_factory=list)
 
 
 def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
@@ -160,7 +160,13 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--set-id-format",
-        choices=("gene", "transcript", "gene-transcript"),
+        choices=(
+            "gene",
+            "transcript",
+            "gene-transcript",
+            "chrom-gene",
+            "chrom-gene-transcript",
+        ),
         default="gene",
         help="How to name regenie sets (default: gene)",
     )
@@ -169,6 +175,23 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         help=(
             "Custom Python format string for set IDs, using parser-layout "
             "fields like {gene} and {transcript}. Overrides --set-id-format."
+        ),
+    )
+    parser.add_argument(
+        "--autosome-only",
+        action="store_true",
+        help=(
+            "Only include variants on autosomes 1-22. Chromosome labels may "
+            "optionally use a 'chr' prefix."
+        ),
+    )
+    parser.add_argument(
+        "--strip-chr",
+        action="store_true",
+        help=(
+            "Remove a leading 'chr' prefix from chromosome labels before "
+            "deriving variant IDs, applying templates, and writing set-list "
+            "chromosomes."
         ),
     )
     return parser.parse_args(argv)
@@ -202,6 +225,26 @@ def parse_matrix_variant(raw_line: str, line_no: int) -> MatrixVariant:
 
     values = fields[: len(FIELD_NAMES)]
     return MatrixVariant(**dict(zip(FIELD_NAMES, values)))
+
+
+def is_autosome(chrom: str) -> bool:
+    normalized = strip_chr_prefix(chrom).strip().lower()
+    try:
+        chromosome = int(normalized)
+    except ValueError:
+        return False
+    return 1 <= chromosome <= 22
+
+
+def strip_chr_prefix(chrom: str) -> str:
+    if chrom.lower().startswith("chr"):
+        return chrom[3:]
+    return chrom
+
+
+def replace_metadata_commas(variant: MatrixVariant) -> None:
+    for name in FIELD_NAMES:
+        setattr(variant, name, getattr(variant, name).replace(",", "_"))
 
 
 def field_map(variant: MatrixVariant) -> Dict[str, str]:
@@ -254,6 +297,10 @@ def set_id(variant: MatrixVariant, args: argparse.Namespace) -> str:
         return variant.transcript
     if args.set_id_format == "gene-transcript":
         return f"{variant.gene}_{variant.transcript}"
+    if args.set_id_format == "chrom-gene":
+        return f"{variant.chrom}_{variant.gene}"
+    if args.set_id_format == "chrom-gene-transcript":
+        return f"{variant.chrom}_{variant.gene}_{variant.transcript}"
 
     raise ValueError(f"Unsupported set ID format: {args.set_id_format}")
 
@@ -310,23 +357,17 @@ def ensure_no_whitespace(value: str, kind: str, line_no: int) -> None:
 
 def ensure_valid_variant_id(value: str, line_no: int) -> None:
     ensure_no_whitespace(value, "variant ID", line_no)
-    if "," in value:
-        raise ValueError(
-            f"Line {line_no} produced a variant ID containing ',': {value!r}. "
-            "regenie's set-list uses commas to separate variant IDs, so choose "
-            "a comma-free --variant-id-template."
-        )
 
 
-def convert(args: argparse.Namespace) -> Tuple[int, int, int, int]:
+def convert(args: argparse.Namespace) -> Tuple[int, int, int, int, int]:
     sets: OrderedDict[str, SetRecord] = OrderedDict()
     anno_rows: List[Tuple[str, str, str]] = []
     anno_seen: set[Tuple[str, str, str]] = set()
-    variant_seen: set[str] = set()
     observed_categories: OrderedDict[str, None] = OrderedDict()
     masks: OrderedDict[str, OrderedDict[str, None]] = OrderedDict()
 
     n_rows = 0
+    n_filtered_autosome = 0
 
     with open_text(args.matrix) as handle:
         header = handle.readline()
@@ -347,27 +388,32 @@ def convert(args: argparse.Namespace) -> Tuple[int, int, int, int]:
             variant = parse_matrix_variant(raw_line, line_no)
             n_rows += 1
 
+            if args.autosome_only and not is_autosome(variant.chrom):
+                n_filtered_autosome += 1
+                continue
+            if args.strip_chr:
+                variant.chrom = strip_chr_prefix(variant.chrom)
+            replace_metadata_commas(variant)
+
             vid = variant_id(variant, args)
             sid = set_id(variant, args)
             ensure_valid_variant_id(vid, line_no)
             ensure_no_whitespace(sid, "set ID", line_no)
-            if vid in variant_seen:
-                continue
-            variant_seen.add(vid)
 
             start = parse_start(variant, line_no)
+            set_chrom = variant.chrom
             if sid not in sets:
-                sets[sid] = SetRecord(chrom=variant.chrom, position=start)
+                sets[sid] = SetRecord(chrom=set_chrom, position=start)
             else:
-                if sets[sid].chrom != variant.chrom:
+                if sets[sid].chrom != set_chrom:
                     raise ValueError(
                         f"Line {line_no} assigns set {sid!r} to chromosome "
-                        f"{variant.chrom!r}, but it was already seen on "
+                        f"{set_chrom!r}, but it was already seen on "
                         f"chromosome {sets[sid].chrom!r}"
                     )
                 sets[sid].position = min(sets[sid].position, start)
 
-            sets[sid].variants.setdefault(vid, None)
+            sets[sid].variants.append(vid)
 
             mask = mask_name(variant, args)
             ensure_no_whitespace(mask, "mask name", line_no)
@@ -384,6 +430,10 @@ def convert(args: argparse.Namespace) -> Tuple[int, int, int, int]:
 
     if n_rows == 0:
         raise ValueError(f"Matrix file contains no variant rows: {args.matrix}")
+    if args.autosome_only and n_filtered_autosome == n_rows:
+        raise ValueError(
+            f"Matrix file contains no autosomal variant rows: {args.matrix}"
+        )
 
     anno_file, set_list, mask_def = output_paths(args)
     for path in (anno_file, set_list, mask_def):
@@ -395,7 +445,7 @@ def convert(args: argparse.Namespace) -> Tuple[int, int, int, int]:
 
     with set_list.open("w", encoding="utf-8") as handle:
         for sid, record in sets.items():
-            variants = ",".join(record.variants.keys())
+            variants = ",".join(record.variants)
             handle.write(f"{sid}\t{record.chrom}\t{record.position}\t{variants}\n")
 
     categories = list(observed_categories.keys())
@@ -407,25 +457,37 @@ def convert(args: argparse.Namespace) -> Tuple[int, int, int, int]:
                 handle.write(f"{mask}\t{','.join(mask_categories.keys())}\n")
 
     n_set_variants = sum(len(record.variants) for record in sets.values())
-    return n_rows, len(sets), n_set_variants, len(categories)
+    return n_rows, len(sets), n_set_variants, len(categories), n_filtered_autosome
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = parse_args(argv)
     try:
-        n_rows, n_sets, n_set_variants, n_categories = convert(args)
+        (
+            n_rows,
+            n_sets,
+            n_set_variants,
+            n_categories,
+            n_filtered_autosome,
+        ) = convert(args)
     except Exception as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
 
     anno_file, set_list, mask_def = output_paths(args)
+    filter_message = ""
+    if args.autosome_only:
+        filter_message = (
+            f"\nSkipped {n_filtered_autosome} non-autosomal matrix rows."
+        )
     print(
         "Wrote regenie supplemental files:\n"
         f"  anno-file: {anno_file}\n"
         f"  set-list:  {set_list}\n"
         f"  mask-def:  {mask_def}\n"
         f"Parsed {n_rows} matrix rows into {n_sets} sets, "
-        f"{n_set_variants} set-variant entries, and {n_categories} categories.",
+        f"{n_set_variants} set-variant entries, and {n_categories} categories."
+        f"{filter_message}",
         file=sys.stderr,
     )
     return 0

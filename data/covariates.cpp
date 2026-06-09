@@ -7,6 +7,7 @@
 #include <set>
 #include <stdexcept>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "covariates.hpp"
 
@@ -645,41 +646,68 @@ void Covariates::fit_null() {
 void Covariates::sort_covariates(const std::string &header) {
   RJBUtil::Splitter<std::string> splitter(header, "\t");
 
-  std::map<std::string, arma::uword> header_map;
+  auto build_matrix_order = [&](const std::vector<std::string> &sample_order,
+                                const std::string &source_name) {
+    std::unordered_map<std::string, arma::uword> sample_index;
+    sample_index.reserve(sample_order.size());
+    for (arma::uword i = 0; i < sample_order.size(); ++i) {
+      auto [_, inserted] = sample_index.emplace(sample_order[i], i);
+      if (!inserted) {
+        throw std::runtime_error("Duplicate sample in " + source_name + ": " +
+                                 sample_order[i]);
+      }
+    }
+
+    std::vector<arma::uword> ordered_indices;
+    ordered_indices.reserve(sample_order.size());
+    std::unordered_set<std::string> header_samples;
+    for (auto i = static_cast<arma::uword>(Indices::first); i < splitter.size();
+         i++) {
+      std::string sample(splitter[i]);
+      while (!sample.empty() && (sample.back() == '\n' || sample.back() == '\r')) {
+        sample.pop_back();
+      }
+
+      if (!this->contains(sample)) {
+        continue;
+      }
+
+      if (!header_samples.emplace(sample).second) {
+        throw std::runtime_error("Duplicate sample in matrix header: " + sample);
+      }
+
+      const auto it = sample_index.find(sample);
+      if (it == sample_index.end()) {
+        throw std::runtime_error(
+            "Sample present in matrix header but not present in " +
+            source_name + ": " + sample);
+      }
+      ordered_indices.push_back(it->second);
+    }
+
+    if (ordered_indices.size() != sample_order.size()) {
+      for (const auto &sample : sample_order) {
+        if (!header_samples.contains(sample)) {
+          throw std::runtime_error(
+              "Sample present in " + source_name +
+              " but not present in matrix header: " + sample);
+        }
+      }
+      throw std::runtime_error("Matrix header sample count does not match " +
+                               source_name + " sample count.");
+    }
+
+    arma::uvec indices(ordered_indices.size(), arma::fill::zeros);
+    for (arma::uword i = 0; i < ordered_indices.size(); ++i) {
+      indices(i) = ordered_indices[i];
+    }
+    return indices;
+  };
 
   // Cov order
   if (!cov_samples_.empty()) {
-    arma::uvec cov_indices = arma::uvec(cov_samples_.size(), arma::fill::zeros);
-    arma::uword j = 0;
-    for(auto i = static_cast<arma::uword>(Indices::first); i < splitter.size(); i++) {
-      if (this->contains(splitter[i])) {
-        auto it = std::find(cov_samples_.begin(), cov_samples_.end(), splitter[i]);
-        if (it == cov_samples_.end()) {
-          std::cerr << "cov not found: " << splitter[i] << std::endl;
-          throw std::runtime_error("Sample present in ped file not present in covariate file. Exiting.");
-        }
-        cov_indices(j) = std::distance(cov_samples_.begin(), it);
-        j++;
-      }
-    }
-    std::set<std::string> seen;
-    for (const auto &v : cov_samples_) {
-      if (!seen.contains(v)) {
-        seen.insert(v);
-      } else {
-        std::cerr << "cov duplicate: " << v << std::endl;
-      }
-    }
-
-    seen.clear();
-    for (const auto &v : splitter) {
-      auto token = std::string(v);
-      if (!seen.contains(token)) {
-        seen.insert(std::move(token));
-      } else {
-        std::cerr << "header duplicate: " << v << std::endl;
-      }
-    }
+    arma::uvec cov_indices =
+        build_matrix_order(cov_samples_, "covariate file");
 
     // Sort the phenotypes and covariates according to the order in the matrix
     // file.
@@ -688,15 +716,7 @@ void Covariates::sort_covariates(const std::string &header) {
     design_ = design_.rows(cov_indices);
     sort_by_index(cov_samples_, cov_indices);
   } else {
-    arma::uvec indices = arma::uvec(ped_samples_ordered_.size(), arma::fill::zeros);
-    arma::uword j = 0;
-    for(auto i = static_cast<arma::uword>(Indices::first); i < splitter.size(); i++) {
-      if (this->contains(splitter[i])) {
-        auto it = std::find(ped_samples_ordered_.begin(), ped_samples_ordered_.end(), splitter[i]);
-        indices(j) = std::distance(ped_samples_ordered_.begin(), it);
-        j++;
-      }
-    }
+    arma::uvec indices = build_matrix_order(ped_samples_ordered_, "ped file");
 
     // Sort the phenotypes and covariates according to the order in the matrix
     // file.

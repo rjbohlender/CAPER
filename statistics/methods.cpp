@@ -5,9 +5,14 @@
 #define ARMA_DONT_PRINT_ERRORS
 
 #include <cstdlib>
+#include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <functional>
 #include <iomanip>
+#include <mutex>
+#include <sstream>
+#include <string>
 #include <vector>
 #include <armadillo>
 
@@ -87,6 +92,25 @@ arma::vec rank(arma::vec &v, const char *direction, int method) {
 }
 
 namespace {
+bool env_flag_enabled(const char *name) {
+  const char *value = std::getenv(name);
+  if (value == nullptr) {
+    return false;
+  }
+
+  std::string flag(value);
+  std::transform(flag.begin(), flag.end(), flag.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
+  return !(flag.empty() || flag == "0" || flag == "false" ||
+           flag == "off" || flag == "no");
+}
+
+void write_diagnostic(const std::string &message) {
+  static std::mutex diagnostic_mutex;
+  std::lock_guard<std::mutex> lock(diagnostic_mutex);
+  std::cerr << message;
+}
+
 #ifdef CAPER_HAS_QUADPACK
 extern "C" {
 using QuadpackIntegrand = double (*)(double *);
@@ -1027,31 +1051,59 @@ double Methods::SKATO(Gene &gene, arma::vec &phenotypes,
                      katint, 0., std::sqrt(q1), max_depth, tolerance,
                      &error_estimate);
 
+  bool use_quadpack = env_flag_enabled("CAPER_SKATO_USE_QUADPACK");
+  bool compare_quadpack = env_flag_enabled("CAPER_SKATO_COMPARE_QUADPACK");
 #ifdef CAPER_HAS_QUADPACK
-  if (std::getenv("CAPER_SKATO_COMPARE_QUADPACK") != nullptr) {
+  if (use_quadpack || compare_quadpack) {
+    double boost_p_value = p_value;
     std::function<double(double)> quadpack_integrand_fn = katint;
     QuadpackResult quadpack =
         integrate_dqags(quadpack_integrand_fn, 0., std::sqrt(q1), 0.,
                         tolerance, 200);
     double quadpack_p_value = T0 + quadpack.result;
-    double abs_diff = std::abs(p_value - quadpack_p_value);
-    std::cerr << std::setprecision(17)
-              << "SKATO integration comparison boost=" << p_value
-              << " quadpack=" << quadpack_p_value
-              << " abs_diff=" << abs_diff
-              << " boost_abserr=" << error_estimate
-              << " quadpack_abserr=" << quadpack.abserr
-              << " quadpack_ier=" << quadpack.ier
-              << " quadpack_neval=" << quadpack.neval
-              << " quadpack_last=" << quadpack.last << "\n";
+    double abs_diff = std::abs(boost_p_value - quadpack_p_value);
+    bool quadpack_usable = quadpack.ier == 0 &&
+                           std::isfinite(quadpack_p_value) &&
+                           quadpack_p_value > 0;
+
+    if (use_quadpack) {
+      if (quadpack_usable) {
+        p_value = quadpack_p_value;
+      } else {
+        std::ostringstream warning;
+        warning << "CAPER_SKATO_USE_QUADPACK was requested, but DQAGS did not "
+                   "return a usable p-value; falling back to Boost integration. "
+                << "quadpack=" << std::setprecision(17) << quadpack_p_value
+                << " quadpack_ier=" << quadpack.ier
+                << " quadpack_abserr=" << quadpack.abserr << "\n";
+        write_diagnostic(warning.str());
+      }
+    }
+
+    if (compare_quadpack) {
+      std::ostringstream comparison;
+      comparison << std::setprecision(17)
+                 << "SKATO integration comparison boost=" << boost_p_value
+                 << " quadpack=" << quadpack_p_value
+                 << " abs_diff=" << abs_diff
+                 << " boost_abserr=" << error_estimate
+                 << " quadpack_abserr=" << quadpack.abserr
+                 << " quadpack_ier=" << quadpack.ier
+                 << " quadpack_neval=" << quadpack.neval
+                 << " quadpack_last=" << quadpack.last
+                 << " selected="
+                 << (use_quadpack && quadpack_usable ? "quadpack" : "boost")
+                 << "\n";
+      write_diagnostic(comparison.str());
+    }
   }
 #else
   static bool warned_missing_quadpack = false;
-  if (!warned_missing_quadpack &&
-      std::getenv("CAPER_SKATO_COMPARE_QUADPACK") != nullptr) {
+  if (!warned_missing_quadpack && (use_quadpack || compare_quadpack)) {
     warned_missing_quadpack = true;
-    std::cerr << "CAPER_SKATO_COMPARE_QUADPACK was requested, but this build "
-                 "does not include QUADPACK support.\n";
+    write_diagnostic("CAPER_SKATO_USE_QUADPACK or "
+                     "CAPER_SKATO_COMPARE_QUADPACK was requested, but this "
+                     "build does not include QUADPACK support.\n");
   }
 #endif
 
