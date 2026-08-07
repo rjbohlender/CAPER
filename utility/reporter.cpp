@@ -701,7 +701,12 @@ auto Reporter::sort_simple(const TaskParams &tp) -> void {
     // Print command to run unfinished
     std::stringstream uf_ss;
     uf_ss << tp.program_path << " ";
-    uf_ss << "-i " << tp.input_path << " ";
+    const auto &input_paths = tp.input_paths.empty()
+                                  ? std::vector<std::string>{tp.input_path}
+                                  : tp.input_paths;
+    for (const auto &input_path : input_paths) {
+      uf_ss << "-i " << input_path << " ";
+    }
     uf_ss << "-c " << tp.covariates_path << " ";
     uf_ss << "-o " << tp.output_path << " ";
     uf_ss << "-p " << tp.ped_path << " ";

@@ -23,10 +23,11 @@ public:
     int perm_offset;
     std::vector<std::vector<int8_t>> *permutations;
     TaskParams *params;
+    std::unordered_map<std::string, arma::sp_mat> genotypes;
     DummyTask(Stage, Gene &g, std::shared_ptr<Covariates>, TaskParams &tp, std::vector<std::vector<int8_t>> &perms)
-        : gene(g.gene_name), success(0), perm_count(0), perm_offset(0), permutations(&perms), params(&tp) {}
+        : gene(g.gene_name), success(0), perm_count(0), perm_offset(0), permutations(&perms), params(&tp), genotypes(g.genotypes) {}
     DummyTask(Stage, Gene &g, std::shared_ptr<Covariates>, TaskParams &tp, arma::uword s, arma::uword pc, int off, arma::uword, std::vector<std::vector<int8_t>> &perms)
-        : gene(g.gene_name), success(s), perm_count(pc), perm_offset(off), permutations(&perms), params(&tp) {}
+        : gene(g.gene_name), success(s), perm_count(pc), perm_offset(off), permutations(&perms), params(&tp), genotypes(g.genotypes) {}
 };
 
 class DummyReporter {
@@ -111,6 +112,113 @@ public:
         finish_calls.fetch_add(1);
     }
 };
+
+using DummyDispatcher = JobDispatcher<DummyOp, DummyTask, DummyReporter>;
+
+TEST_CASE("multi-input headers allow reordered samples") {
+    const std::string metadata =
+        "Chr\tStart\tEnd\tRef\tAlt\tType\tGenes\tTranscripts\tRegion\tFunction\tAnnotation";
+    const auto canonical = DummyDispatcher::parse_matrix_header(
+        metadata + "\tcase1\tcase2\tcontrol1\tcontrol2", "first.tsv");
+    const auto reordered = DummyDispatcher::parse_matrix_header(
+        metadata + "\tcontrol2\tcase1\tcontrol1\tcase2", "second.tsv");
+
+    const auto mapping = DummyDispatcher::validate_header_and_build_mapping(
+        canonical, reordered, "second.tsv");
+    REQUIRE(mapping == std::vector<size_t>{1, 3, 2, 0});
+    REQUIRE(DummyDispatcher::reorder_genotypes("0123", mapping, "second.tsv", 2)
+            == "1320");
+}
+
+TEST_CASE("multi-input headers reject missing and unexpected samples") {
+    const std::string metadata =
+        "Chr\tStart\tEnd\tRef\tAlt\tType\tGenes\tTranscripts\tRegion\tFunction\tAnnotation";
+    const auto canonical = DummyDispatcher::parse_matrix_header(
+        metadata + "\tcase1\tcase2\tcontrol1\tcontrol2", "first.tsv");
+    const auto incompatible = DummyDispatcher::parse_matrix_header(
+        metadata + "\tcase1\tcontrol1\tcontrol2\tother", "second.tsv");
+
+    REQUIRE_THROWS_WITH(
+        DummyDispatcher::validate_header_and_build_mapping(
+            canonical, incompatible, "second.tsv"),
+        Catch::Matchers::Contains("Missing samples: case2") &&
+            Catch::Matchers::Contains("Unexpected samples: other"));
+}
+
+TEST_CASE("multi-input headers reject duplicate samples") {
+    const std::string metadata =
+        "Chr\tStart\tEnd\tRef\tAlt\tType\tGenes\tTranscripts\tRegion\tFunction\tAnnotation";
+    REQUIRE_THROWS_WITH(
+        DummyDispatcher::parse_matrix_header(
+            metadata + "\tcase1\tcase1\tcontrol1\tcontrol2", "duplicate.tsv"),
+        Catch::Matchers::Contains("duplicate sample ID 'case1'"));
+}
+
+TEST_CASE("multi-input headers require identical metadata columns") {
+    const std::string metadata =
+        "Chr\tStart\tEnd\tRef\tAlt\tType\tGenes\tTranscripts\tRegion\tFunction\tAnnotation";
+    const auto canonical = DummyDispatcher::parse_matrix_header(
+        metadata + "\tcase1\tcase2", "first.tsv");
+    const auto incompatible = DummyDispatcher::parse_matrix_header(
+        "Start\tChr\tEnd\tRef\tAlt\tType\tGenes\tTranscripts\tRegion\tFunction\tAnnotation\tcase2\tcase1",
+        "second.tsv");
+
+    REQUIRE_THROWS_WITH(
+        DummyDispatcher::validate_header_and_build_mapping(
+            canonical, incompatible, "second.tsv"),
+        Catch::Matchers::Contains("metadata columns differ"));
+}
+
+TEST_CASE("JobDispatcher merges one gene and normalizes sample order") {
+    namespace fs = std::filesystem;
+    const auto fixture = fs::path(__FILE__).parent_path() / "fixtures" /
+                         "multi_input_gene";
+    const auto whitelist = fs::path(__FILE__).parent_path().parent_path() /
+                           "filter" / "filter_whitelist.csv";
+
+    auto make_params = [&](std::vector<std::string> inputs) {
+        TaskParams tp{};
+        tp.covariates_path.clear();
+        tp.ped_path = (fixture / "samples.ped").string();
+        tp.input_path = inputs.front();
+        tp.input_paths = std::move(inputs);
+        tp.gene_list = "SPLIT1";
+        tp.whitelist_path = whitelist.string();
+        tp.nthreads = 2;
+        tp.nperm = 0;
+        tp.mac = std::numeric_limits<arma::uword>::max();
+        tp.maf = 1.0;
+        tp.min_variant_count = 0;
+        tp.min_minor_allele_count = 0;
+        tp.no_weights = true;
+        tp.nocovadj = true;
+        tp.optimizer = "irls";
+        tp.method = "BURDEN";
+        return tp;
+    };
+
+    auto multi_tp = make_params({(fixture / "split_1.matrix").string(),
+                                 (fixture / "split_2.matrix").string()});
+    auto merged_tp = make_params({(fixture / "merged.matrix").string()});
+    auto multi_reporter = std::make_shared<DummyReporter>();
+    auto merged_reporter = std::make_shared<DummyReporter>();
+    DummyDispatcher multi_dispatcher(multi_tp, multi_reporter);
+    DummyDispatcher merged_dispatcher(merged_tp, merged_reporter);
+
+    REQUIRE(multi_reporter->tasks.size() == 1);
+    REQUIRE(merged_reporter->tasks.size() == 1);
+    const auto &multi = multi_reporter->tasks.front().genotypes;
+    const auto &merged = merged_reporter->tasks.front().genotypes;
+    REQUIRE(multi.size() == 2);
+    REQUIRE(merged.size() == 2);
+    for (const auto &transcript : {"SPLIT1.1", "SPLIT1.2"}) {
+        REQUIRE(multi.at(transcript).n_rows == 8);
+        REQUIRE(multi.at(transcript).n_cols == 2);
+        REQUIRE(arma::approx_equal(arma::mat(multi.at(transcript)),
+                                   arma::mat(merged.at(transcript)),
+                                   "absdiff", 0.0));
+    }
+}
 
 TEST_CASE("JobDispatcher dispatches tasks for each gene") {
     namespace fs = std::filesystem;
@@ -594,4 +702,3 @@ TEST_CASE("JobDispatcher redispatches until max_perms reached") {
     }
     REQUIRE(line_count == static_cast<int>(*tp.max_perms));
 }
-

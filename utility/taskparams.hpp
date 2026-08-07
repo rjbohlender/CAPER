@@ -11,6 +11,7 @@
 
 #include <armadillo>
 #include <string>
+#include <vector>
 
 #include <boost/optional.hpp>
 
@@ -47,6 +48,7 @@ struct TaskParams {
   // General options
   std::string program_path;
   std::string input_path;
+  std::vector<std::string> input_paths;
   std::string covariates_path;
   std::string ped_path;
   std::string whitelist_path;

@@ -1,0 +1,7 @@
+Chr	Start	End	Ref	Alt	Type	Genes	Transcripts	Region	Function	Annotation(c.change:p.change)	case1	case2	case3	case4	control1	control2	control3	control4
+chr1	50	50	A	G	SNV	BEFORE	BEFORE.1	coding	nonsynonymous SNV	.	10000001
+chr1	100	100	A	C	SNV	SPLIT1	SPLIT1.1	coding	nonsynonymous SNV	p.Target1	11000000
+chr1	200	200	G	T	SNV	SPLIT1	SPLIT1.1	coding	nonsynonymous SNV	p.Target2	00110000
+chr1	300	300	C	T	SNV	SPLIT1	SPLIT1.2	coding	nonsynonymous SNV	p.Target3	10001000
+chr1	400	400	T	G	SNV	SPLIT1	SPLIT1.2	coding	nonsynonymous SNV	p.Target4	01000100
+chr1	450	450	G	C	SNV	AFTER	AFTER.1	coding	nonsynonymous SNV	.	00100010

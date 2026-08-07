@@ -1,0 +1,9 @@
+#FID	IID	Father	Mother	Sex	Phenotype
+case1	case1	0	0	0	2
+case2	case2	0	0	0	2
+case3	case3	0	0	0	2
+case4	case4	0	0	0	2
+control1	control1	0	0	0	1
+control2	control2	0	0	0	1
+control3	control3	0	0	0	1
+control4	control4	0	0	0	1

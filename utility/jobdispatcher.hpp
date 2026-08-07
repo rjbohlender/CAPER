@@ -5,9 +5,13 @@
 #ifndef PERMUTE_ASSOCIATE_JOBDISPATCHER_HPP
 #define PERMUTE_ASSOCIATE_JOBDISPATCHER_HPP
 
+#include <algorithm>
 #include <chrono>
 #include <memory>
+#include <sstream>
+#include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
@@ -48,6 +52,13 @@ public:
         gene_list_.emplace(RJBUtil::Splitter<std::string>::str(gene_token));
       }
     }
+    if (tp_.input_paths.empty()) {
+      tp_.input_paths.push_back(tp_.input_path);
+    }
+    if (tp_.input_paths.size() > 1 && gene_list_.size() != 1) {
+      throw std::runtime_error(
+          "Multiple input files require exactly one gene specified with --genes.");
+    }
     if (tp_.bed) {
       bed_ = Bed(*tp_.bed);
     }
@@ -81,7 +92,14 @@ public:
     }
 
     // Retrieve header line
-    std::getline(gt_ifs_, header_);
+    if (!std::getline(gt_ifs_, header_)) {
+      throw std::runtime_error("Unable to read matrix header from: " +
+                               tp_.input_path);
+    }
+
+    if (tp_.input_paths.size() > 1) {
+      prepare_multi_input_gene(*gene_list_.begin());
+    }
 
     // Cleanup previous permutations if looping because we append to the file
     if (tp_.permute_set) {
@@ -161,13 +179,7 @@ public:
         pset_ofs.close();
       }
 
-      if (!tp_.gene_list) {
-        // Parse if no gene_list
-        all_gene_dispatcher(gt_ifs_, filter);
-      } else {
-        // Parse with gene_list
-        gene_list_dispatcher(gt_ifs_, filter);
-      }
+      dispatch_input(filter);
 
     } else {
       arma::uword remaining = *tp_.max_perms;
@@ -247,13 +259,7 @@ public:
 #if 1
         // First loop
         if (remaining >= *tp_.max_perms - tp_.nperm) {
-	        if (!tp_.gene_list) {
-		        // Parse if no gene_list
-		        all_gene_dispatcher(gt_ifs_, filter);
-	        } else {
-		        // Parse with gene_list
-		        gene_list_dispatcher(gt_ifs_, filter);
-	        }
+	        dispatch_input(filter);
 	        tq_.wait(); // Need to wait here until all jobs are done, otherwise
 	        // permutations will update during processing
 	        if (tq_.continue_.size() == 0) { // Terminate if all jobs are done.
@@ -325,8 +331,260 @@ public:
   }
 
 private:
+  struct MatrixHeader {
+    std::vector<std::string> metadata_columns;
+    std::vector<std::string> samples;
+  };
+
+  struct CollectedLine {
+    std::string transcript;
+    std::string variant_key;
+    std::string line;
+    std::string path;
+    int line_number;
+  };
+
   // Member functions
   // Dispatch
+  void dispatch_input(Filter &filter) {
+    if (tp_.input_paths.size() > 1) {
+      multi_file_single_gene_dispatcher(filter);
+    } else if (tp_.gene_list) {
+      gene_list_dispatcher(gt_ifs_, filter);
+    } else {
+      all_gene_dispatcher(gt_ifs_, filter);
+    }
+  }
+
+  static MatrixHeader parse_matrix_header(const std::string &header,
+                                          const std::string &path) {
+    RJBUtil::Splitter<std::string> fields(header, "\t", 0, true);
+    const auto first_sample = static_cast<size_t>(Indices::first);
+    if (fields.size() <= first_sample) {
+      throw std::runtime_error("Matrix header contains no sample columns: " +
+                               path);
+    }
+
+    MatrixHeader result;
+    result.metadata_columns.reserve(first_sample);
+    result.samples.reserve(fields.size() - first_sample);
+    for (size_t i = 0; i < first_sample; ++i) {
+      result.metadata_columns.push_back(fields.str(i));
+    }
+
+    std::unordered_set<std::string> seen;
+    for (size_t i = first_sample; i < fields.size(); ++i) {
+      auto sample = fields.str(i);
+      if (sample.empty()) {
+        throw std::runtime_error(
+            "Matrix header contains an empty sample ID: " + path);
+      }
+      if (!seen.insert(sample).second) {
+        throw std::runtime_error("Matrix header contains duplicate sample ID '" +
+                                 sample + "': " + path);
+      }
+      result.samples.push_back(std::move(sample));
+    }
+    return result;
+  }
+
+  static std::vector<size_t>
+  validate_header_and_build_mapping(const MatrixHeader &canonical,
+                                    const MatrixHeader &current,
+                                    const std::string &path) {
+    if (current.metadata_columns != canonical.metadata_columns) {
+      throw std::runtime_error(
+          "Matrix metadata columns differ from the first input file: " +
+          path);
+    }
+
+    std::unordered_set<std::string> canonical_samples(
+        canonical.samples.begin(), canonical.samples.end());
+    std::unordered_set<std::string> current_samples(current.samples.begin(),
+                                                    current.samples.end());
+    std::vector<std::string> missing;
+    std::vector<std::string> unexpected;
+
+    for (const auto &sample : canonical.samples) {
+      if (!current_samples.contains(sample)) {
+        missing.push_back(sample);
+      }
+    }
+    for (const auto &sample : current.samples) {
+      if (!canonical_samples.contains(sample)) {
+        unexpected.push_back(sample);
+      }
+    }
+
+    if (!missing.empty() || !unexpected.empty() ||
+        current.samples.size() != canonical.samples.size()) {
+      std::ostringstream message;
+      message << "Matrix samples differ from the first input file: " << path;
+      if (!missing.empty()) {
+        message << ". Missing samples: ";
+        for (size_t i = 0; i < missing.size(); ++i) {
+          if (i > 0) message << ", ";
+          message << missing[i];
+        }
+      }
+      if (!unexpected.empty()) {
+        message << ". Unexpected samples: ";
+        for (size_t i = 0; i < unexpected.size(); ++i) {
+          if (i > 0) message << ", ";
+          message << unexpected[i];
+        }
+      }
+      throw std::runtime_error(message.str());
+    }
+
+    std::unordered_map<std::string, size_t> current_positions;
+    current_positions.reserve(current.samples.size());
+    for (size_t i = 0; i < current.samples.size(); ++i) {
+      current_positions.emplace(current.samples[i], i);
+    }
+
+    std::vector<size_t> mapping;
+    mapping.reserve(canonical.samples.size());
+    for (const auto &sample : canonical.samples) {
+      mapping.push_back(current_positions.at(sample));
+    }
+    return mapping;
+  }
+
+  static std::string reorder_genotypes(
+      std::string_view genotypes, const std::vector<size_t> &mapping,
+      const std::string &path, int line_number) {
+    if (genotypes.size() != mapping.size()) {
+      throw std::runtime_error(
+          "Genotype count differs from the matrix header in " + path +
+          " at line " + std::to_string(line_number));
+    }
+
+    std::string reordered(mapping.size(), '\0');
+    for (size_t canonical_index = 0; canonical_index < mapping.size();
+         ++canonical_index) {
+      reordered[canonical_index] = genotypes[mapping[canonical_index]];
+    }
+    return reordered;
+  }
+
+  static std::string rebuild_matrix_line(
+      RJBUtil::Splitter<std::string> &fields,
+      const std::string &genotypes) {
+    std::ostringstream result;
+    const auto first_sample = static_cast<size_t>(Indices::first);
+    for (size_t i = 0; i < first_sample; ++i) {
+      if (i > 0) result << '\t';
+      result << fields[i];
+    }
+    result << '\t' << genotypes;
+    return result.str();
+  }
+
+  void prepare_multi_input_gene(const std::string &target_gene) {
+    const auto canonical =
+        parse_matrix_header(header_, tp_.input_paths.front());
+    std::unordered_map<std::string, std::pair<std::string, int>> variants;
+
+    for (const auto &path : tp_.input_paths) {
+      boost::iostreams::filtering_istream input;
+      boost::iostreams::file_source file(path);
+      if (!file.is_open()) {
+        throw std::runtime_error("Unable to open genotype matrix: " + path);
+      }
+      if (is_gzipped(path)) {
+        input.push(boost::iostreams::gzip_decompressor());
+      } else if (is_zstd(path)) {
+        input.push(boost::iostreams::zstd_decompressor());
+      }
+      input.push(file);
+
+      std::string file_header;
+      if (!std::getline(input, file_header)) {
+        throw std::runtime_error("Unable to read matrix header from: " + path);
+      }
+      const auto current = parse_matrix_header(file_header, path);
+      const auto mapping =
+          validate_header_and_build_mapping(canonical, current, path);
+      FileValidator validator;
+      validator.set_matrix_header(file_header);
+
+      std::string line;
+      int line_number = 1;
+      while (std::getline(input, line)) {
+        ++line_number;
+        RJBUtil::Splitter<std::string> prefix(line, "\t", 7, true);
+        if (prefix.size() <= static_cast<size_t>(Indices::gene)) {
+          throw std::runtime_error("Truncated matrix line in " + path +
+                                   " at line " +
+                                   std::to_string(line_number));
+        }
+        if (prefix.str(static_cast<int>(Indices::gene)) != target_gene) {
+          continue;
+        }
+
+        RJBUtil::Splitter<std::string> fields(line, "\t", 11, true);
+        validator.validate_matrix_line(fields, line_number);
+        const auto reordered = reorder_genotypes(
+            fields[static_cast<int>(Indices::first)], mapping, path,
+            line_number);
+
+        std::ostringstream key;
+        key << fields[static_cast<int>(Indices::chrom)] << '\x1f'
+            << fields[static_cast<int>(Indices::start)] << '\x1f'
+            << fields[static_cast<int>(Indices::end)] << '\x1f'
+            << fields[static_cast<int>(Indices::ref)] << '\x1f'
+            << fields[static_cast<int>(Indices::alt)] << '\x1f'
+            << fields[static_cast<int>(Indices::transcript)];
+        const auto variant_key = key.str();
+        const auto [found, inserted] =
+            variants.emplace(variant_key, std::make_pair(path, line_number));
+        if (!inserted) {
+          throw std::runtime_error(
+              "Duplicate variant/transcript entry for gene " + target_gene +
+              " in " + path + " at line " + std::to_string(line_number) +
+              "; first seen in " + found->second.first + " at line " +
+              std::to_string(found->second.second));
+        }
+
+        multi_input_lines_.push_back(
+            {fields.str(static_cast<int>(Indices::transcript)), variant_key,
+             rebuild_matrix_line(fields, reordered), path, line_number});
+      }
+    }
+
+    if (multi_input_lines_.empty()) {
+      throw std::runtime_error("Gene " + target_gene +
+                               " was not found in any input matrix.");
+    }
+    std::stable_sort(multi_input_lines_.begin(), multi_input_lines_.end(),
+                     [](const CollectedLine &lhs, const CollectedLine &rhs) {
+                       return lhs.transcript < rhs.transcript;
+                     });
+    multi_input_gene_ = target_gene;
+  }
+
+  void multi_file_single_gene_dispatcher(Filter &filter) {
+    std::stringstream current;
+    reset_gene(current);
+    current << header_ << '\n';
+    for (auto &collected : multi_input_lines_) {
+      RJBUtil::Splitter<std::string> fields(collected.line, "\t", 11, true);
+      add_line(current, collected.line, fields);
+    }
+    gene_ = multi_input_gene_;
+
+    if (!std::any_of(nvariants_.cbegin(), nvariants_.cend(),
+                     [](const auto &value) { return value.second > 0; })) {
+      return;
+    }
+    Gene gene_data(current, cov_, cov_->get_nsamples(), nvariants_, weight_,
+                   tp_, filter);
+    if (!gene_data.is_skippable()) {
+      multiple_dispatch(gene_data);
+    }
+  }
+
   void all_gene_dispatcher(std::istream &gt_stream, Filter &filter) {
     std::string line;
     std::stringstream current;
@@ -617,6 +875,8 @@ private:
   std::string header_;
   std::string gene_;
   std::string transcript_;
+  std::string multi_input_gene_;
+  std::vector<CollectedLine> multi_input_lines_;
   Stage stage_;
   std::unordered_map<std::string, arma::uword> nvariants_;
 

@@ -54,6 +54,7 @@ int main(int argc, char **argv) {
   boost::optional<int> var_collapsing;
   std::vector<int> gene_range;
   std::vector<std::string> power;
+  std::vector<std::string> input_paths;
   boost::optional<std::string> bed;
   boost::optional<std::string> weights;
   boost::optional<std::string> gene_list;
@@ -69,8 +70,8 @@ int main(int argc, char **argv) {
   try {
     required.add_options()
         ("input,i",
-         po::value<std::string>()->required(),
-         "Genotype matrix file path.")
+         po::value(&input_paths)->multitoken()->composing()->required(),
+         "One or more genotype matrix file paths. Multiple inputs require exactly one gene specified with --genes.")
         ("ped,p",
          po::value<std::string>()->required(),
          "Path to the .ped file containing the sample phenotypes.")
@@ -240,6 +241,18 @@ int main(int argc, char **argv) {
 
     po::notify(vm);
 
+    if (input_paths.size() > 1) {
+      if (!gene_list) {
+        throw po::error(
+            "Multiple input files require exactly one gene specified with --genes.");
+      }
+      RJBUtil::Splitter<std::string> genes(*gene_list, ",");
+      if (genes.size() != 1 || genes.str(0).empty()) {
+        throw po::error(
+            "Multiple input files require exactly one gene; --genes cannot contain a comma-separated list.");
+      }
+    }
+
     if (vm.count("quiet")) {
       verbose = false;
     }
@@ -352,7 +365,8 @@ int main(int argc, char **argv) {
   std::cerr << "Program directory: " << tp.program_directory << std::endl;
   std::cerr << "Whitelist path: " << tp.whitelist_path << std::endl;
   tp.seed = seed;
-  tp.input_path = vm["input"].as<std::string>();
+  tp.input_paths = input_paths;
+  tp.input_path = input_paths.front();
   if (vm.count("covariates") > 0) {
     tp.covariates_path = vm["covariates"].as<std::string>();
   } else {
@@ -439,7 +453,11 @@ int main(int argc, char **argv) {
   }
 
   if (tp.verbose) {
-    std::cerr << "genotypes: " << tp.input_path << "\n";
+    std::cerr << "genotypes:";
+    for (const auto &input_path : tp.input_paths) {
+      std::cerr << " " << input_path;
+    }
+    std::cerr << "\n";
     std::cerr << "covariates: " << tp.covariates_path << "\n";
     std::cerr << "ped: " << tp.ped_path << "\n";
     if (tp.bed)
@@ -464,10 +482,13 @@ int main(int argc, char **argv) {
   }
 
   // Check for correct file paths
-  if (!check_file_exists(tp.input_path)) {
-    std::cerr << "Incorrect file path for genotypes." << std::endl;
-    std::cerr << visible << "\n";
-    std::exit(1);
+  for (const auto &input_path : tp.input_paths) {
+    if (!check_file_exists(input_path)) {
+      std::cerr << "Incorrect file path for genotypes: " << input_path
+                << std::endl;
+      std::cerr << visible << "\n";
+      std::exit(1);
+    }
   }
   if (vm.count("covariates") != 0 && !check_file_exists(tp.covariates_path)) {
     std::cerr << "Incorrect file path for covariates." << std::endl;

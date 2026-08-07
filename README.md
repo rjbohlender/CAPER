@@ -237,7 +237,7 @@ Permutation tool for gene-based rare-variant analysis.
 Allowed options:
 
 Required:
-    -i [ --input ] arg                    Genotype matrix file path.
+    -i [ --input ] arg                    One or more genotype matrix file paths. Multiple inputs require exactly one gene specified with --genes.
     -p [ --ped ] arg                      Path to the .ped file containing the sample phenotypes.
     -o [ --output ] arg                   Path to output directory. Two files will be output: a simple transcript level results file, and a detailed variant level result file.
 
