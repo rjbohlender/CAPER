@@ -237,62 +237,152 @@ Permutation tool for gene-based rare-variant analysis.
 Allowed options:
 
 Required:
-    -i [ --input ] arg                    One or more genotype matrix file paths. Multiple inputs require exactly one gene specified with --genes.
-    -p [ --ped ] arg                      Path to the .ped file containing the sample phenotypes.
-    -o [ --output ] arg                   Path to output directory. Two files will be output: a simple transcript level results file, and a detailed variant level result file.
+  -i [ --input ] arg                    One or more genotype matrix file paths.
+                                        Multiple inputs require exactly one 
+                                        gene specified with --genes.
+  -p [ --ped ] arg                      Path to the .ped file containing the 
+                                        sample phenotypes.
+  -o [ --output ] arg                   Path to output directory. Two files 
+                                        will be output: a simple transcript 
+                                        level results file, and a detailed 
+                                        variant level result file.
 
 Optional:
-    -c [ --covariates ] arg               The covariate matrix file, tab or space separated. Format = sample_id cov1 ...
-    -b [ --bed_filter ] arg               A bed file, or a comma separated list of bed files, to be used as a filter. All specified variants will be excluded.
-    -f [ --filter ] arg                   A csv whitelist of TYPE and FUNCTION annotations. Default whitelist can be found in the filter directory.
-    -w [ --weights ] arg                  A file providing weights.
-    --no_weights                          Disable weights. Disables default CASM weights.
-    --impute_to_mean                      Impute the to mean AF of cases for case samples, and the mean AF of controls for control samples.
-    --whole_gene                          Analyze the union of all transcripts for a gene.
-    -t [ --nthreads ]                     The number of threads. Minimum number of threads = 2. n + 1 threads, with one parent thread and n threads processing genes.
-    -m [ --method ] arg (=VAAST)          The statistical method to be used. Options: {BURDEN, CALPHA, CMC, CMC1df, RVT1, RVT2, SKAT, SKATO, SKATC, VAAST, VT, WSS}.
-    --optimizer arg (=irls)               The optimizer used to fit the GLM. Options: {irls, irls_svdnewton, irls_qr, irls_qr_R, gradient_descent}.
-    --range arg                           A range of genes to analyze from the matrix file. Takes two values, a start gene number, and end gene number. The program will only provide results for the values in that range. Gene count starts at 1. Useful for starting multiple jobs on a cluster each processing part of a file. Note: Somewhat slower than splitting the input matrix file.
-    --nperm arg (=10000)                  The maximum number of permutations to be performed.
-    --mac arg                             Alternative or minor allele count cutoff per variant.
-    -r [ --maf ] arg (=0.5)               Alternative or minor allele frequency cutoff per variant. We recommend using an external sample and filtering variants based on the frequency in that sample, rather than filtering within. Can result in a reduction in power for variants near the threshold.
-    --ma_count                            Treat genotypes as minor-allele counts and disable the automatic alternate-allele filter.
-    -j [ --pthresh ] arg                  The threshold to terminate permutation based on whether it is outside the p-value CI.
-    --top_only                            Output only the top transcript in the simple file.
-    -s [ --successes ] arg (=200)         Number of successes for early termination.
-    -l [ --genes ] arg                    A comma-separated list of genes to analyze.
-    --no_detail                           Don't produce detailed, variant level output.
-    --output_stats                        Write permuted statistics to .simple file following default output.
-    --permute_out arg                     Output permutations to the given file. Exits after generating permutations.
-    --wald                                Use a Wald test instead of the deviance for RVT2.
-    --var_collapsing                      Collapse variants with <10 minor allele count into a single pseudo variant. Will convert to minor allele counting instead of alternate allele counting.
-    --external arg                        Use external permutations.
-    -q [ --quiet ]                        Don't print status messages.
-    --min_minor_allele_count arg (=1)     Minimum number of minor allele copies to test a gene.
-    --min_variant_count arg (=1)          Minimum number of variants to test a gene.
-    --max_levels arg (=100)               Maximum number of levels for a single variable. Will be split into n-1 dummy variables.
-    --bin_epsilon arg (=0.0001)           Odds closer together than the given value will be collapsed into a single bin for permutation.
-    --max_perms arg                       Maximum number of permutations, used in combination with --nperm to manage memory usage. Run permutation in blocks of size nperm, up to the maximum set here. Only genes requiring additional permutation will be permuted. If you are running a small number of permutations, do not set this option.
-    --seed arg                            A defined seed passed to the random number generators used for each gene.
-    --check_testability arg               Return results for genes with a minimum achievable p-value less than or equal to what is given.
+  -c [ --covariates ] arg               The covariate matrix file, tab or space
+                                        separated.
+                                        Format = sample_id cov1 ...
+  -b [ --bed_filter ] arg               A bed file, or a comma separated list 
+                                        of bed files, to be used as a filter. 
+                                        All specified variants will be 
+                                        excluded.
+  -f [ --filter ] arg                   A csv whitelist of TYPE and FUNCTION 
+                                        annotations. Default whitelist can be 
+                                        found in the filter directory.
+  -w [ --weights ] arg                  A file providing weights. Replaces the 
+                                        CASM scores provided in the matrix 
+                                        file.
+  --no_weights                          Disable weights.
+  --impute_to_mean                      Impute the to mean AF of cases for case
+                                        samples, and the mean AF of controls 
+                                        for control samples.
+  --whole_gene                          Analyze the union of all transcripts 
+                                        for a gene.
+  -t [ --nthreads ] arg (=9)            The number of threads. Minimum number 
+                                        of threads = 2. n + 1 threads, with one
+                                        parent thread and n threads processing 
+                                        genes.
+  -m [ --method ] arg (=VAAST)          The statistical method to be used.
+                                        Options: {BURDEN, CALPHA, CMC, CMC1df, 
+                                        RVT1, RVT2, SKAT, SKATO, SKATC, VAAST, 
+                                        VT, WSS}.
+  --optimizer arg (=irls)               The optimizer used to fit the GLM.
+                                        Options: {irls, irls_svdnewton, 
+                                        irls_qr, irls_qr_R, gradient_descent}.
+  --range arg                           A range of genes to analyze from the 
+                                        matrix file. Takes two values, a start 
+                                        gene number, and end gene number.
+                                        The program will only provide results 
+                                        for the values in that range. Gene 
+                                        count starts at 1.
+                                        Useful for starting multiple jobs on a 
+                                        cluster each processing part of a file.
+                                        Note: Somewhat slower than splitting 
+                                        the input matrix file.
+  --nperm arg (=10000)                  The maximum number of permutations to 
+                                        be performed.
+  --mac arg                             Alternative or minor allele count 
+                                        cutoff per variant.
+  -r [ --maf ] arg (=0.5)               Alternative or minor allele frequency 
+                                        cutoff per variant. We recommend using 
+                                        an external sample and filtering 
+                                        variants based on the frequency in that
+                                        sample, rather than filtering within. 
+                                        Can result in a reduction in power for 
+                                        variants near the threshold.
+  --ma_count                            Change genotype matrix to minor allele 
+                                        counting.
+  -j [ --pthresh ] arg                  The threshold to terminate permutation 
+                                        based on whether it is outside the 
+                                        p-value CI.
+  --top_only                            Output only the top transcript in the 
+                                        simple file.
+  -s [ --successes ] arg (=200)         Number of successes for early 
+                                        termination.
+  -l [ --genes ] arg                    A comma-separated list of genes to 
+                                        analyze.
+  --no_detail                           Don't produce detailed, variant level 
+                                        output.
+  --output_stats                        Write permuted statistics to .simple 
+                                        file following default output.
+  --permute_out arg                     Output permutations to the given file. 
+                                        Exits after generating permutations.
+  --min_minor_allele_count arg (=1)     Minimum number of minor allele copies 
+                                        to test a gene.
+  --min_variant_count arg (=1)          Minimum number of variants to test a 
+                                        gene.
+  --max_levels arg (=100)               Maximum number of levels for a single 
+                                        variable. Will be split into n-1 dummy 
+                                        variables.
+  --bin_epsilon arg (=0.0001)           Odds closer together than the given 
+                                        value will be collapsed into a single 
+                                        bin for permutation.
+  --max_perms arg                       Maximum number of permutations, used in
+                                        combination with --nperm to manage 
+                                        memory usage. Run permutation in blocks
+                                        of size nperm, up to the maximum set 
+                                        here. Only genes requiring additional 
+                                        permutation will be permuted. If you 
+                                        are running a small number of 
+                                        permutations, do not set this option.
+  --seed arg                            A defined seed passed to the random 
+                                        number generators used for each gene.
+  --check_testability arg               Return results for genes with a minimum
+                                        achievable p-value less than or equal 
+                                        to what is given.
+  --var_collapsing [=arg(=10)]          Collapse variants with a default <10 
+                                        minor allele count into a single pseudo
+                                        variant. If a value is passed a 
+                                        different threshold can be set. Will 
+                                        convert to minor allele counting 
+                                        instead of alternate allele counting.
 
 VAAST Options:
-    -g [ --group_size ] arg (=4)          Group size, minor allele count threshold for grouping a variant. VAAST can collapse variants into groups of variants, dependent upon the collapse having a higher total VAAST score.
-    --soft_maf_filter arg                 Caps the highest allele frequency for the control set in the likelihood calculation. Penalizes common variants without removing them.
-    --biallelic                           Additional term for biallelic variants. For detecting potentially recessive variants.
-    --site_penalty arg (=2)               VAAST site penalty. AIC penalty applied to each site in VAAST.
-    --alternate_grouping                  If enabled variants are grouped all together, otherwise by VAAST 2.0 type annotation.
+  -g [ --group_size ] arg (=4)          Group size, minor allele count 
+                                        threshold for grouping a variant. VAAST
+                                        can collapse variants into groups of 
+                                        variants, dependent upon the collapse 
+                                        having a higher total VAAST score.
+  --soft_maf_filter arg                 Caps the highest allele frequency for 
+                                        the control set in the likelihood 
+                                        calculation. Penalizes common variants 
+                                        without removing them.
+  --biallelic                           Additional term for biallelic variants.
+                                        For detecting potentially recessive 
+                                        variants.
+  --site_penalty arg (=2)               VAAST site penalty. AIC penalty applied
+                                        to each site in VAAST.
+  --alternate_grouping                  If enabled variants are grouped all 
+                                        together, otherwise by VAAST 2.0 type 
+                                        annotation.
 
 SKAT Options:
-    -k [ --kernel ] arg (=wLinear)        Kernel for use with SKAT. One of: {wLinear, Linear}.
-    --qtl                                 Analyze a quantitative trait. Values are assumed to be finite floating point values.
-    --beta_weights arg (=1,25)            Parameters for the beta distribution. Two values, comma separated corresponding to a,b.
-    --saddlepoint                         Force the saddlepoint approximation. Useful for highly skewed case/control sample sizes.
+  -k [ --kernel ] arg (=wLinear)        Kernel for use with SKAT / SKATO.
+                                        One of: {Linear, wLinear}.
+  --qtl                                 Analyze a quantitative trait. Values 
+                                        are assumed to be finite floating point
+                                        values.
+  --beta_weights arg (=1,25)            Parameters for the beta distribution. 
+                                        Two values, comma separated 
+                                        corresponding to a,b.
+  --saddlepoint                         Force the saddlepoint approximation. 
+                                        Useful for highly skewed case/control 
+                                        sample sizes.
 
 CMC Options:
-    --cmcmaf arg (=0.005)                 Minor allele frequency cutoff for CMC collapsing.
-    --hotellings                          Use Hotellings T2 instead of a chi-square test.
-
+  --cmcmaf arg (=0.0050000000000000001) Minor allele frequency cutoff for CMC 
+                                        collapsing.
+  --hotellings                          Use Hotellings T2 instead of a 
+                                        chi-square test.
 ```
 
 Without `--ma_count`, CAPER applies the alternate-allele frequency filter by default.

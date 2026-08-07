@@ -87,3 +87,4 @@ bernoulli.R
 /cmake-build-relwithdebinfo/
 /filter/filter_whitelist_test.csv
 /build/
+/cmake-build-quadpack/
