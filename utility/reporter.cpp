@@ -785,22 +785,17 @@ auto Reporter::sync_write_vaast(CAPERTask &ct, const TaskParams &tp) -> void {
 
   for (const auto &sorted : ordered_transcripts) {
     auto ts = sorted.transcript;
-    double z2 = std::pow(1.96, 2);
     double n = ct.results[ts].permutations;
     double ns = ct.results[ts].successes;
-    double nf =
-        ct.results[sorted.transcript].permutations - ct.results[sorted.transcript].successes;
     double p = (ns + 1.) / (n + 1.);
-    double sp = (p + z2 / (2 * (n + 1.))) / (1. + z2 / (n + 1.));
-    double ci = 1.96 / (1. + z2 / n) *
-                std::sqrt((p * (1 - p) / (n + 1.) + z2 / (4 * n * n)));
     vaast_file_ << ct.gene.get_vaast()[ts];
     vaast_file_ << "SCORE: "
                 << boost::format("%1$.2f") % ct.results[ts].original
                 << std::endl;
     vaast_file_ << "genome_permutation_p: " << p << std::endl;
-    vaast_file_ << "genome_permutation_p_ci: " << ((sp - ci > 0) ? sp - ci : 0)
-                << "," << ((sp + ci > 1) ? 1 : sp + ci) << std::endl;
+    vaast_file_ << "genome_permutation_p_ci: "
+                << ct.results[ts].empirical_ci.first << ","
+                << ct.results[ts].empirical_ci.second << std::endl;
     vaast_file_ << "num_permutations: " << ct.results[ts].permutations
                 << std::endl;
     vaast_file_ << "total_success: " << ct.results[ts].successes
